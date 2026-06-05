@@ -1,0 +1,502 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  name             String
+  email            String?  @unique
+  phone            String?  @unique
+  passwordHash     String   @default("")
+  authProvider     String   @default("password")
+  googleSub        String?  @unique
+  avatarUrl        String?
+  profile          Json     @default("{}")
+  role             String
+  isActive         Boolean  @default(true)
+  adminPermissions Json     @default("[]")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  provider Provider?
+
+  transactions   Transaction[]
+  contactUnlocks ContactUnlock[]
+  favorites      Favorite[]
+  reviews        Review[]
+  profileVisits  ProfileVisit[]
+  contactEvents  ContactEvent[]
+  searchEvents   SearchEvent[]
+  inquiries      Inquiry[]
+  orders         Order[]
+  auditLogs      AuditLog[] @relation("AuditActor")
+  requestedWithdrawals WithdrawalRequest[] @relation("WithdrawalRequestedBy")
+  approvedWithdrawals  WithdrawalRequest[] @relation("WithdrawalApprovedBy")
+  rejectedWithdrawals  WithdrawalRequest[] @relation("WithdrawalRejectedBy")
+  paidWithdrawals      WithdrawalRequest[] @relation("WithdrawalPaidBy")
+
+  @@index([role])
+  @@index([isActive])
+  @@index([authProvider])
+  @@map("users")
+}
+
+model Provider {
+  id                 String                   @id @default(cuid())
+  userId             String                   @unique
+  businessName       String
+  description        String                   @default("")
+  categoryId         String?
+  publicSlug         String?                  @unique
+  contact            Json                     @default("{}")
+  media              Json                     @default("{}")
+  customFields       Json                     @default("{}")
+  location           Json                     @default("{}")
+  isApproved         Boolean                  @default(false)
+  moderationStatus   String                   @default("pending")
+  onboardingStatus   String                   @default("draft")
+  invitationSentAt   DateTime?
+  invitationAcceptedAt DateTime?
+  registeredAt       DateTime?
+  ratingAvg          Float                    @default(0)
+  ratingCount        Int                      @default(0)
+  profileViews       Int                      @default(0)
+  contactClicks      Int                      @default(0)
+  subscriptionStatus String                   @default("none")
+  walletEnabled      Boolean                  @default(false)
+  settingsOverrides  Json                     @default("{}")
+  availability       Json                     @default("{}")
+  verification       Json                     @default("{}")
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  listings       ServiceProduct[]
+  transactions   Transaction[]
+  wallets        Wallet?
+  subscriptions  Subscription[]
+  contactUnlocks ContactUnlock[]
+  invitations    ProviderInvitation[]
+  withdrawals    WithdrawalRequest[]
+  favorites      Favorite[]
+  reviews        Review[]
+  profileVisits  ProfileVisit[]
+  contactEvents  ContactEvent[]
+  inquiries      Inquiry[]
+  mediaAssets    MediaAsset[]
+  orders         Order[]
+
+  @@index([categoryId, createdAt])
+  @@index([publicSlug])
+  @@index([isApproved, moderationStatus, createdAt])
+  @@index([onboardingStatus, createdAt])
+  @@index([isApproved, moderationStatus, ratingAvg, ratingCount, createdAt])
+  @@map("providers")
+}
+
+model Category {
+  id             String           @id @default(cuid())
+  name           String
+  parentId       String?
+  behavior       String           @default("general")
+  viewType       String           @default("directory")
+  appView        String           @default("directory")
+  providerFields Json             @default("[]")
+  listingFields  Json             @default("[]")
+  settings       Json             @default("{}")
+  sortOrder      Int              @default(0)
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  parent   Category? @relation("CategoryToCategory", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryToCategory")
+
+  providers Provider[]
+
+  @@unique([parentId, name])
+  @@index([parentId])
+  @@index([behavior])
+  @@index([viewType])
+  @@index([isActive, sortOrder])
+  @@map("categories")
+}
+
+model ServiceProduct {
+  id           String              @id @default(cuid())
+  providerId   String
+  name         String
+  description  String              @default("")
+  price        Decimal             @default(0.00)
+  type         String
+  status       String              @default("pending")
+  featured     Boolean             @default(false)
+  media        Json                @default("{}")
+  customFields Json                @default("{}")
+  inventory    Int?
+  sku          String?
+  availability Json                @default("{}")
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([providerId, type, createdAt])
+  @@index([status, createdAt])
+  @@index([featured, status])
+  @@map("service_products")
+}
+
+model ProviderInvitation {
+  id          String   @id @default(cuid())
+  providerId  String
+  email       String
+  tokenHash   String   @unique
+  status      String   @default("sent")
+  sentAt      DateTime @default(now())
+  resentCount Int      @default(0)
+  lastSentAt  DateTime @default(now())
+  acceptedAt  DateTime?
+  expiresAt   DateTime
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, status])
+  @@index([email])
+  @@index([expiresAt])
+  @@map("provider_invitations")
+}
+
+model AdminSettings {
+  id                   String   @id @default(cuid())
+  enableSubscription    Boolean  @default(true)
+  enableContactFee      Boolean  @default(true)
+  enableWallet          Boolean  @default(true)
+  enableEcommerce       Boolean  @default(true)
+  subscriptionFee       Decimal  @default(0.00)
+  contactFee            Decimal  @default(0.00)
+  transactionFeePercent Int      @default(0)
+  minimumWithdrawalAmount Decimal @default(0.00)
+  platformName          String   @default("Sidra")
+  supportEmail          String?
+  supportPhone          String?
+  featureFlags          Json     @default("{}")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("admin_settings")
+}
+
+model ContactUnlock {
+  id         String   @id @default(cuid())
+  userId     String
+  providerId String
+  paid       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, providerId])
+  @@index([userId])
+  @@index([providerId])
+  @@index([paid])
+  @@map("contact_unlocks")
+}
+
+model Subscription {
+  id         String            @id @default(cuid())
+  providerId String
+  amount     Decimal           @default(0.00)
+  expiresAt  DateTime
+  status     String
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, expiresAt])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("subscriptions")
+}
+
+model Transaction {
+  id         String           @id @default(cuid())
+  type       String
+  status     String
+  userId     String?
+  providerId String?
+  amount     Decimal          @default(0.00)
+  fee        Decimal          @default(0.00)
+  netAmount  Decimal          @default(0.00)
+  metadata   Json             @default("{}")
+  reference  String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  provider Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  withdrawal WithdrawalRequest?
+  order Order?
+
+  @@index([providerId, createdAt])
+  @@index([userId, createdAt])
+  @@index([type])
+  @@index([status])
+  @@index([reference])
+  @@map("transactions")
+}
+
+model Wallet {
+  id         String   @id @default(cuid())
+  providerId String   @unique
+  balance    Decimal  @default(0.00)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@map("wallets")
+}
+
+model WithdrawalRequest {
+  id            String           @id @default(cuid())
+  providerId    String
+  amount        Decimal          @default(0.00)
+  fee           Decimal          @default(0.00)
+  netAmount     Decimal          @default(0.00)
+  status        String
+  transactionId String           @unique
+  requestedBy   String
+  approvedBy    String?
+  rejectedBy    String?
+  paidBy        String?
+  approvedAt    DateTime?
+  rejectedAt    DateTime?
+  paidAt        DateTime?
+  note          String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  provider     Provider    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  transaction  Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  requestedByUser User     @relation("WithdrawalRequestedBy", fields: [requestedBy], references: [id], onDelete: Restrict)
+  approvedByUser  User?    @relation("WithdrawalApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
+  rejectedByUser  User?    @relation("WithdrawalRejectedBy", fields: [rejectedBy], references: [id], onDelete: SetNull)
+  paidByUser      User?    @relation("WithdrawalPaidBy", fields: [paidBy], references: [id], onDelete: SetNull)
+
+  @@index([providerId, createdAt])
+  @@index([status])
+  @@map("withdrawal_requests")
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  providerId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, providerId])
+  @@index([userId, createdAt])
+  @@index([providerId])
+  @@map("favorites")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  userId     String
+  providerId String
+  rating     Int
+  comment    String   @default("")
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, providerId])
+  @@index([providerId, status, createdAt])
+  @@index([userId])
+  @@map("reviews")
+}
+
+model ProfileVisit {
+  id         String   @id @default(cuid())
+  providerId String
+  userId     String?
+  source     String?
+  sessionId  String?
+  ipHash     String?
+  userAgent  String?
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([providerId, createdAt])
+  @@index([userId, createdAt])
+  @@index([sessionId])
+  @@map("profile_visits")
+}
+
+model ContactEvent {
+  id         String   @id @default(cuid())
+  providerId String
+  userId     String?
+  type       String
+  value      String?
+  paid       Boolean  @default(false)
+  source     String?
+  sessionId  String?
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([providerId, type, createdAt])
+  @@index([userId, createdAt])
+  @@index([sessionId])
+  @@map("contact_events")
+}
+
+model SearchEvent {
+  id         String   @id @default(cuid())
+  userId     String?
+  query      String?
+  categoryId String?
+  filters    Json     @default("{}")
+  resultCount Int     @default(0)
+  sessionId  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([categoryId, createdAt])
+  @@index([sessionId])
+  @@map("search_events")
+}
+
+model MediaAsset {
+  id         String   @id @default(cuid())
+  providerId String?
+  ownerId    String?
+  key        String
+  url        String
+  mimeType   String?
+  size       Int?
+  kind       String   @default("image")
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  provider Provider? @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, createdAt])
+  @@index([ownerId, createdAt])
+  @@index([kind])
+  @@map("media_assets")
+}
+
+model Inquiry {
+  id         String   @id @default(cuid())
+  userId     String?
+  providerId String
+  listingId  String?
+  type       String   @default("general")
+  status     String   @default("new")
+  name       String?
+  email      String?
+  phone      String?
+  message    String   @default("")
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, status, createdAt])
+  @@index([userId, createdAt])
+  @@index([type])
+  @@map("inquiries")
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  userId        String?
+  providerId    String
+  transactionId String?  @unique
+  status        String   @default("pending")
+  subtotal      Decimal  @default(0.00)
+  fee           Decimal  @default(0.00)
+  total         Decimal  @default(0.00)
+  customer      Json     @default("{}")
+  fulfillment   Json     @default("{}")
+  metadata      Json     @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  provider    Provider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  items       OrderItem[]
+
+  @@index([providerId, status, createdAt])
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  listingId String?
+  name      String
+  quantity  Int     @default(1)
+  unitPrice Decimal @default(0.00)
+  total     Decimal @default(0.00)
+  metadata  Json    @default("{}")
+
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  listing ServiceProduct? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([listingId])
+  @@map("order_items")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([entity, entityId])
+  @@index([action])
+  @@map("audit_logs")
+}

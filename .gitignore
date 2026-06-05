@@ -1,0 +1,16 @@
+node_modules/
+npm-debug.log*
+.env
+.env.*
+!.env.example
+
+admin_ui/
+
+prisma/*.db
+prisma/*.db-journal
+prisma/*.db-wal
+prisma/*.db-shm
+
+.DS_Store
+coverage/
+dist/
