@@ -42,6 +42,15 @@ export class CategoryController {
     }
   };
 
+  reorderCategories = async (req, res, next) => {
+    try {
+      const result = await this.categoryService.reorderCategories(req.body);
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   listNested = async (_req, res, next) => {
     try {
       const result = await this.categoryService.getNestedCategories();
@@ -51,4 +60,3 @@ export class CategoryController {
     }
   };
 }
-

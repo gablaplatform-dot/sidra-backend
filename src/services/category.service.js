@@ -6,8 +6,9 @@ const uniqueError = (e) => e?.code === "P2002";
 export class CategoryService {
   async createCategory({ name, behavior = "general", viewType = "directory", appView, providerFields = [], listingFields = [], settings = {} }) {
     try {
+      const sortOrder = await this.getNextSortOrder(null);
       const created = await prisma.category.create({
-        data: { name, parentId: null, behavior, viewType, appView: appView ?? viewType, providerFields, listingFields, settings }
+        data: { name, parentId: null, behavior, viewType, appView: appView ?? viewType, providerFields, listingFields, settings, sortOrder }
       });
       return this.toDto(created);
     } catch (e) {
@@ -32,6 +33,7 @@ export class CategoryService {
     }
 
     try {
+      const sortOrder = await this.getNextSortOrder(parentId);
       const created = await prisma.category.create({
         data: {
           name,
@@ -41,7 +43,8 @@ export class CategoryService {
           appView: appView ?? viewType ?? parent.appView ?? parent.viewType ?? "directory",
           providerFields: providerFields ?? parent.providerFields ?? [],
           listingFields: listingFields ?? parent.listingFields ?? [],
-          settings: settings ?? parent.settings ?? {}
+          settings: settings ?? parent.settings ?? {},
+          sortOrder
         }
       });
       return this.toDto(created);
@@ -120,8 +123,46 @@ export class CategoryService {
     return { deleted: true };
   }
 
+  async reorderCategories({ parentId = null, orderedIds = [] }) {
+    if (!Array.isArray(orderedIds) || !orderedIds.length) {
+      throw new AppError({ message: "orderedIds is required", statusCode: 400, code: "INVALID_ORDERED_IDS" });
+    }
+
+    if (parentId !== null && parentId !== "" && typeof parentId !== "string") {
+      throw new AppError({ message: "Invalid parentId", statusCode: 400, code: "INVALID_PARENT_ID" });
+    }
+
+    const normalizedParentId = parentId || null;
+    const siblings = await prisma.category.findMany({
+      where: { parentId: normalizedParentId },
+      select: { id: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+    });
+
+    if (siblings.length !== orderedIds.length) {
+      throw new AppError({ message: "Reorder payload does not match sibling count", statusCode: 400, code: "INVALID_REORDER_PAYLOAD" });
+    }
+
+    const siblingIds = siblings.map((item) => item.id).sort();
+    const requestedIds = [...orderedIds].sort();
+    if (JSON.stringify(siblingIds) !== JSON.stringify(requestedIds)) {
+      throw new AppError({ message: "Reorder payload must contain the exact sibling set", statusCode: 400, code: "INVALID_REORDER_PAYLOAD" });
+    }
+
+    await prisma.$transaction(
+      orderedIds.map((id, index) =>
+        prisma.category.update({
+          where: { id },
+          data: { sortOrder: index }
+        })
+      )
+    );
+
+    return { reordered: true, parentId: normalizedParentId, orderedIds };
+  }
+
   async getNestedCategories() {
-    const categories = await prisma.category.findMany({ orderBy: { name: "asc" } });
+    const categories = await prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] });
 
     const byId = new Map(categories.map((c) => [c.id, c]));
     const top = [];
@@ -165,8 +206,17 @@ export class CategoryService {
       providerFields: category.providerFields ?? [],
       listingFields: category.listingFields ?? [],
       settings: category.settings ?? {},
+      sortOrder: category.sortOrder ?? 0,
       createdAt: category.createdAt,
       updatedAt: category.updatedAt
     };
+  }
+
+  async getNextSortOrder(parentId) {
+    const currentMax = await prisma.category.aggregate({
+      where: { parentId },
+      _max: { sortOrder: true }
+    });
+    return (currentMax._max.sortOrder ?? -1) + 1;
   }
 }

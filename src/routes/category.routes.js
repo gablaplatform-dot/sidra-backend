@@ -57,6 +57,18 @@ export const buildCategoryRoutes = ({ categoryController }) => {
   );
 
   router.patch(
+    "/reorder",
+    requireAuth([Roles.ADMIN]),
+    validate(
+      Joi.object({
+        parentId: id.allow(null).optional(),
+        orderedIds: Joi.array().items(id.required()).min(1).required()
+      })
+    ),
+    categoryController.reorderCategories
+  );
+
+  router.patch(
     "/:categoryId",
     requireAuth([Roles.ADMIN]),
     validate(
