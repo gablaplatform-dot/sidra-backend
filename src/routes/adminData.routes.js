@@ -65,6 +65,11 @@ export const buildAdminDataRoutes = ({ adminController }) => {
     validate(Joi.object({ status: Joi.string().valid(...Object.values(ProviderModerationStatus)).required() })),
     adminController.setProviderStatus
   );
+  router.delete(
+    "/providers/:providerId",
+    validate(Joi.object({ providerId: id.required() }), "params"),
+    adminController.deleteProvider
+  );
 
   router.get("/categories", adminController.listCategories);
   router.get(

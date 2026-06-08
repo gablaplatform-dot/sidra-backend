@@ -214,6 +214,23 @@ export class AdminService {
     return (await this.hydrateProviders([provider]))[0];
   }
 
+  async deleteProvider({ providerId }) {
+    if (!providerId) {
+      throw new AppError({ message: "Invalid provider id", statusCode: 400, code: "INVALID_PROVIDER_ID" });
+    }
+
+    try {
+      await prisma.provider.delete({ where: { id: objectId(providerId, "INVALID_PROVIDER_ID") } });
+    } catch (e) {
+      if (e?.code === "P2025") {
+        throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+      }
+      throw e;
+    }
+
+    return { deleted: true };
+  }
+
   async listCategories() {
     const [categories, providerCounts, listingCounts] = await Promise.all([
       prisma.category.findMany({ orderBy: [{ parentId: "asc" }, { name: "asc" }] }),
@@ -244,7 +261,7 @@ export class AdminService {
       settings: c.settings ?? {},
       providers: providerMap.get(String(c.id)) ?? 0,
       listings: listingMap.get(String(c.id)) ?? 0,
-      status: "active",
+      status: String(c.settings?.status ?? (c.isActive ? "active" : "paused")).toLowerCase(),
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
       children: (children.get(String(c.id)) ?? []).map(toDto)

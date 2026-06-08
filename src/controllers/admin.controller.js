@@ -59,6 +59,14 @@ export class AdminController {
     }
   };
 
+  deleteProvider = async (req, res, next) => {
+    try {
+      res.status(200).json({ data: await this.adminService.deleteProvider({ providerId: req.params.providerId }) });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   listCategories = async (_req, res, next) => {
     try {
       res.status(200).json({ data: await this.adminService.listCategories() });
