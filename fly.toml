@@ -11,6 +11,7 @@ primary_region = "jnb"
   JWT_ISSUER = "sidra"
   JWT_ACCESS_TTL_SECONDS = "3600"
   ALLOW_PROVIDER_SELF_REGISTER = "false"
+  R2_ENDPOINT = "https://e9a3c1b023e2b538e16ac5e846b4d947.r2.cloudflarestorage.com"
 
 [mounts]
   source = "sidra_data"
