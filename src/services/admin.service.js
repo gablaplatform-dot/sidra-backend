@@ -233,7 +233,7 @@ export class AdminService {
 
   async listCategories() {
     const [categories, providerCounts, listingCounts] = await Promise.all([
-      prisma.category.findMany({ orderBy: [{ parentId: "asc" }, { name: "asc" }] }),
+      prisma.category.findMany({ orderBy: [{ parentId: "asc" }, { sortOrder: "asc" }, { name: "asc" }] }),
       prisma.provider.groupBy({ by: ["categoryId"], _count: { _all: true } }),
       prisma.$queryRaw`SELECT p.categoryId as categoryId, COUNT(sp.id) as count
         FROM service_products sp

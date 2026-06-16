@@ -28,9 +28,6 @@ export class CategoryService {
     if (!parent) {
       throw new AppError({ message: "Parent category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
     }
-    if (parent.parentId) {
-      throw new AppError({ message: "Parent must be a top-level category", statusCode: 400, code: "INVALID_PARENT" });
-    }
 
     try {
       const sortOrder = await this.getNextSortOrder(parentId);
@@ -79,12 +76,22 @@ export class CategoryService {
       }
 
       if (parentId) {
+        if (parentId === id) {
+          throw new AppError({ message: "Category cannot be its own parent", statusCode: 400, code: "INVALID_PARENT" });
+        }
         const parent = await prisma.category.findUnique({ where: { id: parentId } });
         if (!parent) {
           throw new AppError({ message: "Parent category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
         }
-        if (parent.parentId) {
-          throw new AppError({ message: "Parent must be a top-level category", statusCode: 400, code: "INVALID_PARENT" });
+
+        const pairs = await prisma.category.findMany({ select: { id: true, parentId: true } });
+        const parentById = new Map(pairs.map((c) => [c.id, c.parentId ?? null]));
+        let current = parentId;
+        while (current) {
+          if (current === id) {
+            throw new AppError({ message: "Invalid parent (cycle detected)", statusCode: 400, code: "INVALID_PARENT" });
+          }
+          current = parentById.get(current) ?? null;
         }
       }
 
@@ -116,10 +123,25 @@ export class CategoryService {
       throw new AppError({ message: "Category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
     }
 
-    await prisma.$transaction([
-      prisma.category.deleteMany({ where: { parentId: id } }),
-      prisma.category.delete({ where: { id } })
-    ]);
+    const pairs = await prisma.category.findMany({ select: { id: true, parentId: true } });
+    const childrenByParent = new Map();
+    for (const item of pairs) {
+      if (!item.parentId) continue;
+      if (!childrenByParent.has(item.parentId)) childrenByParent.set(item.parentId, []);
+      childrenByParent.get(item.parentId).push(item.id);
+    }
+
+    const stack = [id];
+    const toDelete = new Set();
+    while (stack.length) {
+      const current = stack.pop();
+      if (!current || toDelete.has(current)) continue;
+      toDelete.add(current);
+      const children = childrenByParent.get(current) ?? [];
+      for (const childId of children) stack.push(childId);
+    }
+
+    await prisma.category.deleteMany({ where: { id: { in: [...toDelete] } } });
     return { deleted: true };
   }
 
