@@ -19,6 +19,7 @@ export const env = {
   providerOnboardingBaseUrl: process.env.PROVIDER_ONBOARDING_BASE_URL ?? "",
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   resendFromEmail: process.env.RESEND_FROM_EMAIL ?? "",
+  emailAssetBaseUrl: process.env.EMAIL_ASSET_BASE_URL ?? "https://gabla-admin.pages.dev/email",
   r2Endpoint: process.env.R2_ENDPOINT ?? "",
   r2AccessKeyId: process.env.R2_ACCESS_KEY_ID ?? "",
   r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? "",

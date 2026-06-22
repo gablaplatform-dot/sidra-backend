@@ -5,6 +5,7 @@ npm-debug.log*
 !.env.example
 
 admin_ui/
+public_app/
 
 prisma/*.db
 prisma/*.db-journal

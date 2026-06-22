@@ -15,6 +15,13 @@ const safeSlug = (value) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 70) || "provider";
 const tokenHash = (token) => crypto.createHash("sha256").update(token).digest("hex");
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 
 export class ProviderService {
   constructor({ hashPassword, paymentService = new PaymentService() }) {
@@ -63,6 +70,11 @@ export class ProviderService {
       return { sent: false, deliveryStatus: "not_configured" };
     }
     const link = this.onboardingUrl(token);
+    const safeBusinessName = escapeHtml(businessName);
+    const safeLink = escapeHtml(link);
+    const assetBase = String(env.emailAssetBaseUrl || "").replace(/\/$/, "");
+    const heroUrl = escapeHtml(`${assetBase}/gabla-provider-welcome.png`);
+    const subject = `You're invited to bring ${businessName} to Gabla`;
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -72,8 +84,86 @@ export class ProviderService {
       body: JSON.stringify({
         from: env.resendFromEmail,
         to,
-        subject: `Complete your Sidra provider profile`,
-        html: `<p>Hello,</p><p>You have been invited to complete the provider profile for <strong>${businessName}</strong> on Sidra.</p><p><a href="${link}">Complete registration</a></p>`
+        subject,
+        text: `Welcome to Gabla. You have been invited to complete the provider profile for ${businessName}. Complete your registration within 7 days: ${link}`,
+        html: `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>${escapeHtml(subject)}</title>
+  </head>
+  <body style="margin:0;padding:0;background:#F2F5F9;font-family:Arial,Helvetica,sans-serif;color:#0F172A;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Complete your Gabla provider profile and get ready to be discovered.</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#F2F5F9;">
+      <tr>
+        <td align="center" style="padding:28px 12px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:620px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+            <tr><td style="height:8px;background:#FACC15;font-size:0;line-height:0;">&nbsp;</td></tr>
+            <tr>
+              <td align="center" style="padding:30px 32px 8px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                  <tr>
+                    <td align="center" valign="middle" style="width:42px;height:42px;background:#FACC15;border-radius:8px;color:#0B2046;font-size:25px;font-weight:800;">G</td>
+                    <td style="padding-left:12px;color:#0B2046;font-size:25px;font-weight:800;letter-spacing:0;">Gabla</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:8px 32px 0;">
+                <img src="${heroUrl}" width="360" alt="Welcome to Gabla" style="display:block;width:100%;max-width:360px;height:auto;border:0;">
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:4px 40px 12px;">
+                <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:#E8F7F4;color:#087F70;font-size:12px;font-weight:700;text-transform:uppercase;">Provider invitation</div>
+                <h1 style="margin:18px 0 10px;color:#0B2046;font-size:30px;line-height:1.2;font-weight:800;letter-spacing:0;">Your Gabla profile is waiting</h1>
+                <p style="margin:0;color:#526174;font-size:16px;line-height:1.65;">You have been invited to complete the service provider profile for <strong style="color:#0F172A;">${safeBusinessName}</strong>. Add your business details so customers can discover and contact you on Gabla.</p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:16px 40px 30px;">
+                <a href="${safeLink}" style="display:inline-block;background:#0B2046;color:#FFFFFF;text-decoration:none;font-size:16px;font-weight:700;line-height:1;padding:16px 26px;border-radius:7px;">Complete registration&nbsp;&nbsp;&rarr;</a>
+                <p style="margin:14px 0 0;color:#8491A3;font-size:12px;line-height:1.5;">This secure invitation expires in 7 days.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 40px;"><div style="height:1px;background:#E2E8F0;font-size:0;">&nbsp;</div></td>
+            </tr>
+            <tr>
+              <td style="padding:28px 40px 30px;">
+                <h2 style="margin:0 0 20px;color:#0F172A;font-size:19px;line-height:1.3;text-align:center;">What happens next?</h2>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                  <tr>
+                    <td valign="top" style="width:42px;padding-bottom:18px;"><div style="width:34px;height:34px;border-radius:7px;background:#FFF4B8;color:#0B2046;text-align:center;line-height:34px;font-weight:800;">1</div></td>
+                    <td valign="top" style="padding:1px 0 18px 12px;"><strong style="display:block;color:#0F172A;font-size:14px;">Create your password</strong><span style="display:block;margin-top:4px;color:#64748B;font-size:13px;line-height:1.5;">Secure your provider account and confirm your contact details.</span></td>
+                  </tr>
+                  <tr>
+                    <td valign="top" style="width:42px;padding-bottom:18px;"><div style="width:34px;height:34px;border-radius:7px;background:#DFF5F1;color:#087F70;text-align:center;line-height:34px;font-weight:800;">2</div></td>
+                    <td valign="top" style="padding:1px 0 18px 12px;"><strong style="display:block;color:#0F172A;font-size:14px;">Complete your business profile</strong><span style="display:block;margin-top:4px;color:#64748B;font-size:13px;line-height:1.5;">Add your location, services, photos and the details customers need.</span></td>
+                  </tr>
+                  <tr>
+                    <td valign="top" style="width:42px;"><div style="width:34px;height:34px;border-radius:7px;background:#E6EEF9;color:#0B2046;text-align:center;line-height:34px;font-weight:800;">3</div></td>
+                    <td valign="top" style="padding:1px 0 0 12px;"><strong style="display:block;color:#0F172A;font-size:14px;">Get reviewed and go live</strong><span style="display:block;margin-top:4px;color:#64748B;font-size:13px;line-height:1.5;">Gabla reviews your profile before it appears to customers.</span></td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:24px 32px;background:#0B2046;">
+                <p style="margin:0;color:#FFFFFF;font-size:15px;font-weight:700;">Gabla</p>
+                <p style="margin:7px 0 0;color:#AFC0D9;font-size:12px;line-height:1.6;">Helping people discover trusted services across Uganda.</p>
+                <p style="margin:12px 0 0;color:#8298B7;font-size:11px;line-height:1.5;">If you were not expecting this invitation, you can safely ignore this email.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`
       })
     });
     const body = await response.json().catch(() => ({}));
