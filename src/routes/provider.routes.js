@@ -94,7 +94,7 @@ export const buildProviderRoutes = ({ providerController }) => {
     "/onboarding/:token/complete",
     validate(
       Joi.object({
-        password: Joi.string().min(8).max(128).required(),
+        password: Joi.string().min(8).max(128).optional(),
         profile: Joi.object({
           businessName: Joi.string().trim().max(200).optional(),
           description: Joi.string().trim().max(5000).optional(),

@@ -410,7 +410,9 @@ export class ProviderService {
       throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
     }
 
-    const passwordHash = await this.hashPassword(password);
+    // Providers now authenticate with Google, so a typed password is no longer collected here.
+    // A random one still backs the account in case password login is ever needed later.
+    const passwordHash = await this.hashPassword(password || crypto.randomBytes(32).toString("hex"));
     await prisma.user.update({ where: { id: provider.userId }, data: { passwordHash } });
 
     const data = {};
