@@ -27,6 +27,8 @@ import { AdminService } from "./services/admin.service.js";
 import { AdminController } from "./controllers/admin.controller.js";
 import { EngagementService } from "./services/engagement.service.js";
 import { EngagementController } from "./controllers/engagement.controller.js";
+import { SearchService } from "./services/search.service.js";
+import { SearchController } from "./controllers/search.controller.js";
 import { hashPassword, verifyPassword } from "./utils/password.js";
 import { signAccessToken } from "./utils/jwt.js";
 import { env } from "./config/env.js";
@@ -93,6 +95,9 @@ export const buildApp = () => {
   const engagementService = new EngagementService();
   const engagementController = new EngagementController({ engagementService });
 
+  const searchService = new SearchService();
+  const searchController = new SearchController({ searchService });
+
   app.use(
     "/api/v1",
     buildRoutes({
@@ -105,7 +110,8 @@ export const buildApp = () => {
       paymentController,
       storageController,
       adminController,
-      engagementController
+      engagementController,
+      searchController
     })
   );
   app.use(errorMiddleware);

@@ -9,6 +9,7 @@ import { buildPaymentRoutes } from "./payment.routes.js";
 import { buildStorageRoutes } from "./storage.routes.js";
 import { buildAdminDataRoutes } from "./adminData.routes.js";
 import { buildEngagementRoutes } from "./engagement.routes.js";
+import { buildSearchRoutes } from "./search.routes.js";
 
 export const buildRoutes = ({
   authController,
@@ -20,7 +21,8 @@ export const buildRoutes = ({
   paymentController,
   storageController,
   adminController,
-  engagementController
+  engagementController,
+  searchController
 }) => {
   const router = Router();
 
@@ -32,6 +34,7 @@ export const buildRoutes = ({
   router.use("/payments", buildPaymentRoutes({ paymentController }));
   router.use("/storage", buildStorageRoutes({ storageController }));
   router.use("/engagement", buildEngagementRoutes({ engagementController }));
+  router.use("/search", buildSearchRoutes({ searchController }));
   router.use("/admin", buildAdminDataRoutes({ adminController }));
   router.use("/admin", buildAdminSettingsRoutes({ adminSettingsController }));
   router.use("/admin", buildAdminTransactionsRoutes({ transactionController }));
