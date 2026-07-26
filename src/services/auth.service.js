@@ -268,10 +268,12 @@ export class AuthService {
       ttlSeconds: this.jwt.accessTtlSeconds
     });
 
+    const provider = user.role === "provider" ? await prisma.provider.findUnique({ where: { userId: user.id } }) : null;
+
     return {
       accessToken,
       user: this.userDto(user),
-      provider: null
+      provider: provider ? { id: provider.id, userId: provider.userId } : null
     };
   }
 

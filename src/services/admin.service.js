@@ -219,13 +219,36 @@ export class AdminService {
       throw new AppError({ message: "Invalid provider id", statusCode: 400, code: "INVALID_PROVIDER_ID" });
     }
 
+    const provider = await prisma.provider.findUnique({
+      where: { id: objectId(providerId, "INVALID_PROVIDER_ID") },
+      select: { userId: true }
+    });
+    if (!provider) {
+      throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+    }
+
     try {
-      await prisma.provider.delete({ where: { id: objectId(providerId, "INVALID_PROVIDER_ID") } });
+      // Deleting the user cascades to the provider profile and everything it owns,
+      // so no orphaned login account is left behind.
+      await prisma.user.delete({ where: { id: provider.userId } });
     } catch (e) {
-      if (e?.code === "P2025") {
-        throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+      if (e?.code === "P2003") {
+        // The user directly requested a withdrawal (restricted reference), blocking its own
+        // removal. Deleting the provider first cascades that withdrawal away, so retry the
+        // user delete afterward — it only stays around if it has ties to other providers too.
+        await prisma.provider.delete({ where: { id: providerId } });
+        try {
+          await prisma.user.delete({ where: { id: provider.userId } });
+        } catch (e2) {
+          if (e2?.code === "P2003") {
+            await prisma.user.update({ where: { id: provider.userId }, data: { isActive: false } });
+          } else if (e2?.code !== "P2025") {
+            throw e2;
+          }
+        }
+      } else {
+        throw e;
       }
-      throw e;
     }
 
     return { deleted: true };

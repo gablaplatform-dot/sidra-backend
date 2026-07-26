@@ -52,6 +52,16 @@ export class ProviderService {
     };
   }
 
+  redactLocation(location) {
+    return {
+      address: null,
+      city: location?.city ?? null,
+      region: location?.region ?? null,
+      country: location?.country ?? null,
+      geo: null
+    };
+  }
+
   signOnboardingToken({ userId, providerId }) {
     return jwt.sign(
       { sub: String(userId), providerId: String(providerId), purpose: "provider_onboarding" },
@@ -414,6 +424,8 @@ export class ProviderService {
     data.onboardingStatus = "registered";
     data.registeredAt = new Date();
     data.invitationAcceptedAt = new Date();
+    data.isApproved = true;
+    data.moderationStatus = "approved";
 
     if (Object.keys(data).length) {
       await prisma.provider.update({ where: { id: provider.id }, data });
@@ -546,6 +558,7 @@ export class ProviderService {
           const contactLocked = Boolean(effective.enableContactFee);
           return {
             contact: contactLocked ? this.redactContact(p.contact) : p.contact,
+            location: contactLocked ? this.redactLocation(p.location) : p.location,
             contactLocked
           };
         })(),
@@ -553,7 +566,6 @@ export class ProviderService {
         businessName: p.businessName,
         description: p.description,
         categoryId: p.categoryId,
-        location: p.location,
         media: p.media,
         customFields: p.customFields,
         isApproved: p.isApproved,
@@ -592,7 +604,7 @@ export class ProviderService {
       businessName: provider.businessName,
       description: provider.description,
       categoryId: provider.categoryId,
-      location: provider.location,
+      location: contactLocked ? this.redactLocation(provider.location) : provider.location,
       contact: contactLocked ? this.redactContact(provider.contact) : provider.contact,
       contactLocked,
       media: provider.media,

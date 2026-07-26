@@ -123,25 +123,16 @@ export class CategoryService {
       throw new AppError({ message: "Category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
     }
 
-    const pairs = await prisma.category.findMany({ select: { id: true, parentId: true } });
-    const childrenByParent = new Map();
-    for (const item of pairs) {
-      if (!item.parentId) continue;
-      if (!childrenByParent.has(item.parentId)) childrenByParent.set(item.parentId, []);
-      childrenByParent.get(item.parentId).push(item.id);
+    const subcategoryCount = await prisma.category.count({ where: { parentId: id } });
+    if (subcategoryCount > 0) {
+      throw new AppError({
+        message: "This category has subcategories. Delete or move them first.",
+        statusCode: 409,
+        code: "CATEGORY_HAS_SUBCATEGORIES"
+      });
     }
 
-    const stack = [id];
-    const toDelete = new Set();
-    while (stack.length) {
-      const current = stack.pop();
-      if (!current || toDelete.has(current)) continue;
-      toDelete.add(current);
-      const children = childrenByParent.get(current) ?? [];
-      for (const childId of children) stack.push(childId);
-    }
-
-    await prisma.category.deleteMany({ where: { id: { in: [...toDelete] } } });
+    await prisma.category.delete({ where: { id } });
     return { deleted: true };
   }
 
