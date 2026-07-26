@@ -11,6 +11,7 @@ export const buildListingRoutes = ({ listingController }) => {
     imageUrl: Joi.string().uri().max(1000).allow(null).optional(),
     gallery: Joi.array().items(Joi.string().uri().max(1000)).max(40).optional()
   });
+  const id = Joi.string().trim().min(1).max(64);
 
   router.get("/", listingController.publicList);
   router.get(
@@ -38,6 +39,7 @@ export const buildListingRoutes = ({ listingController }) => {
         description: Joi.string().trim().max(5000).optional(),
         price: Joi.number().min(0).optional(),
         type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).required(),
+        categoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
         customFields: Joi.object().unknown(true).optional()
       })
@@ -54,6 +56,7 @@ export const buildListingRoutes = ({ listingController }) => {
         description: Joi.string().trim().max(5000).optional(),
         price: Joi.number().min(0).optional(),
         type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).optional(),
+        categoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
         customFields: Joi.object().unknown(true).optional()
       }).min(1)

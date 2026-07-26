@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS providers (
 CREATE TABLE IF NOT EXISTS service_products (
   id TEXT PRIMARY KEY NOT NULL,
   providerId TEXT NOT NULL,
+  categoryId TEXT,
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   price DECIMAL NOT NULL DEFAULT 0.00,
@@ -123,7 +124,8 @@ CREATE TABLE IF NOT EXISTS service_products (
   availability JSONB NOT NULL DEFAULT '{}',
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE
+  FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS provider_invitations (
@@ -472,7 +474,8 @@ const ensureColumn = (table, column, definition) => {
   ["providers", "invitationAcceptedAt", "DATETIME"],
   ["providers", "registeredAt", "DATETIME"],
   ["providers", "profileViews", "INTEGER NOT NULL DEFAULT 0"],
-  ["providers", "contactClicks", "INTEGER NOT NULL DEFAULT 0"]
+  ["providers", "contactClicks", "INTEGER NOT NULL DEFAULT 0"],
+  ["service_products", "categoryId", "TEXT"]
 ].forEach(([table, column, definition]) => ensureColumn(table, column, definition));
 
 [
@@ -481,7 +484,8 @@ const ensureColumn = (table, column, definition) => {
   "CREATE INDEX IF NOT EXISTS categories_viewType_idx ON categories(viewType);",
   "CREATE UNIQUE INDEX IF NOT EXISTS providers_publicSlug_key ON providers(publicSlug);",
   "CREATE INDEX IF NOT EXISTS providers_publicSlug_idx ON providers(publicSlug);",
-  "CREATE INDEX IF NOT EXISTS providers_onboardingStatus_createdAt_idx ON providers(onboardingStatus, createdAt);"
+  "CREATE INDEX IF NOT EXISTS providers_onboardingStatus_createdAt_idx ON providers(onboardingStatus, createdAt);",
+  "CREATE INDEX IF NOT EXISTS service_products_categoryId_status_idx ON service_products(categoryId, status);"
 ].forEach(runSql);
 
 process.stdout.write(`SQLite schema is ready at ${databasePath}\n`);

@@ -10,7 +10,7 @@ export class ListingService {
     return provider;
   }
 
-  async createListing({ actorUserId, name, description, price = 0, type, media, customFields }) {
+  async createListing({ actorUserId, name, description, price = 0, type, categoryId, media, customFields }) {
     const provider = await this.getProviderForUser(actorUserId);
 
     const normalizedType = String(type ?? "").toLowerCase();
@@ -21,6 +21,7 @@ export class ListingService {
     const obj = await prisma.serviceProduct.create({
       data: {
         providerId: provider.id,
+        categoryId: categoryId !== undefined ? categoryId : provider.categoryId,
         name,
         description: description ?? "",
         price,
@@ -34,6 +35,7 @@ export class ListingService {
     return {
       id: obj.id,
       providerId: obj.providerId,
+      categoryId: obj.categoryId,
       name: obj.name,
       description: obj.description,
       price: obj.price,
@@ -60,6 +62,7 @@ export class ListingService {
     if (updates.name !== undefined) update.name = updates.name;
     if (updates.description !== undefined) update.description = updates.description ?? "";
     if (updates.price !== undefined) update.price = updates.price;
+    if (updates.categoryId !== undefined) update.categoryId = updates.categoryId;
     if (updates.media !== undefined) update.media = updates.media ?? {};
     if (updates.customFields !== undefined) update.customFields = updates.customFields ?? {};
     if (updates.type !== undefined) {
@@ -75,6 +78,7 @@ export class ListingService {
     return {
       id: updated.id,
       providerId: updated.providerId,
+      categoryId: updated.categoryId,
       name: updated.name,
       description: updated.description,
       price: updated.price,
@@ -122,6 +126,7 @@ export class ListingService {
       items: items.map((i) => ({
         id: i.id,
         providerId: i.providerId,
+        categoryId: i.categoryId,
         name: i.name,
         description: i.description,
         price: i.price,
@@ -179,6 +184,7 @@ export class ListingService {
       items: items.map((i) => ({
         id: i.id,
         providerId: i.providerId,
+        categoryId: i.categoryId,
         name: i.name,
         description: i.description,
         price: i.price,
@@ -209,45 +215,21 @@ export class ListingService {
       filter.type = normalizedType;
     }
 
-    if (providerId) {
-      if (!providerId) {
-        throw new AppError({ message: "Invalid providerId", statusCode: 400, code: "INVALID_PROVIDER_ID" });
-      }
-      filter.providerId = providerId;
-    }
-
     if (q) {
       filter.name = { contains: String(q).trim() };
     }
 
-    let approvedProviderIds = null;
-
+    // A listing is only ever shown once its own provider is approved. categoryId matches the
+    // listing's own category first; listings created before categoryId existed (null) fall back
+    // to matching their provider's category, so older data stays browsable.
+    const providerFilter = { isApproved: true, moderationStatus: "approved", ...(providerId ? { id: providerId } : {}) };
     if (categoryId) {
-      if (!categoryId) {
-        throw new AppError({ message: "Invalid categoryId", statusCode: 400, code: "INVALID_CATEGORY_ID" });
-      }
-      approvedProviderIds = (
-        await prisma.provider.findMany({
-          where: { isApproved: true, moderationStatus: "approved", categoryId },
-          select: { id: true }
-        })
-      ).map((p) => p.id);
-    } else if (!providerId) {
-      approvedProviderIds = (
-        await prisma.provider.findMany({
-          where: { isApproved: true, moderationStatus: "approved" },
-          select: { id: true }
-        })
-      ).map((p) => p.id);
+      filter.OR = [
+        { categoryId, provider: providerFilter },
+        { categoryId: null, provider: { ...providerFilter, categoryId } }
+      ];
     } else {
-      const provider = await prisma.provider.findUnique({ where: { id: providerId } });
-      if (!provider || !provider.isApproved || provider.moderationStatus !== "approved") {
-        throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
-      }
-    }
-
-    if (approvedProviderIds) {
-      filter.providerId = { in: approvedProviderIds };
+      filter.provider = providerFilter;
     }
 
     const [items, total] = await Promise.all([
@@ -259,6 +241,7 @@ export class ListingService {
       items: items.map((i) => ({
         id: i.id,
         providerId: i.providerId,
+        categoryId: i.categoryId,
         name: i.name,
         description: i.description,
         price: i.price,

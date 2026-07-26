@@ -120,6 +120,7 @@ model Category {
   children Category[] @relation("CategoryToCategory")
 
   providers Provider[]
+  serviceProducts ServiceProduct[]
 
   @@unique([parentId, name])
   @@index([parentId])
@@ -132,6 +133,7 @@ model Category {
 model ServiceProduct {
   id           String              @id @default(cuid())
   providerId   String
+  categoryId   String?
   name         String
   description  String              @default("")
   price        Decimal             @default(0.00)
@@ -147,11 +149,13 @@ model ServiceProduct {
   updatedAt    DateTime            @updatedAt
 
   provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   orderItems OrderItem[]
 
   @@index([providerId, type, createdAt])
   @@index([status, createdAt])
   @@index([featured, status])
+  @@index([categoryId, status])
   @@map("service_products")
 }
 
