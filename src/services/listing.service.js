@@ -233,7 +233,13 @@ export class ListingService {
     }
 
     const [items, total] = await Promise.all([
-      prisma.serviceProduct.findMany({ where: filter, orderBy: { createdAt: "desc" }, skip, take: normalizedLimit }),
+      prisma.serviceProduct.findMany({
+        where: filter,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: normalizedLimit,
+        include: { provider: { select: { id: true, businessName: true } } }
+      }),
       prisma.serviceProduct.count({ where: filter })
     ]);
 
@@ -241,6 +247,7 @@ export class ListingService {
       items: items.map((i) => ({
         id: i.id,
         providerId: i.providerId,
+        provider: i.provider ? { id: i.provider.id, businessName: i.provider.businessName } : null,
         categoryId: i.categoryId,
         name: i.name,
         description: i.description,

@@ -36,7 +36,7 @@ export const buildListingRoutes = ({ listingController }) => {
     validate(
       Joi.object({
         name: Joi.string().trim().max(200).required(),
-        description: Joi.string().trim().max(5000).optional(),
+        description: Joi.string().trim().max(5000).allow("").optional(),
         price: Joi.number().min(0).optional(),
         type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).required(),
         categoryId: id.allow(null).optional(),
@@ -53,7 +53,7 @@ export const buildListingRoutes = ({ listingController }) => {
     validate(
       Joi.object({
         name: Joi.string().trim().max(200).optional(),
-        description: Joi.string().trim().max(5000).optional(),
+        description: Joi.string().trim().max(5000).allow("").optional(),
         price: Joi.number().min(0).optional(),
         type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).optional(),
         categoryId: id.allow(null).optional(),
