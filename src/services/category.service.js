@@ -4,11 +4,11 @@ import { prisma } from "../config/db.js";
 const uniqueError = (e) => e?.code === "P2002";
 
 export class CategoryService {
-  async createCategory({ name, behavior = "general", viewType = "directory", appView, providerFields = [], listingFields = [], settings = {} }) {
+  async createCategory({ name, behavior = "general", viewType = "directory", appView, providerFields = [], listingFields = [], settings = {}, isActive }) {
     try {
       const sortOrder = await this.getNextSortOrder(null);
       const created = await prisma.category.create({
-        data: { name, parentId: null, behavior, viewType, appView: appView ?? viewType, providerFields, listingFields, settings, sortOrder }
+        data: { name, parentId: null, behavior, viewType, appView: appView ?? viewType, providerFields, listingFields, settings, sortOrder, isActive: isActive ?? true }
       });
       return this.toDto(created);
     } catch (e) {
@@ -19,7 +19,7 @@ export class CategoryService {
     }
   }
 
-  async createSubcategory({ name, parentId, behavior, viewType, appView, providerFields, listingFields, settings }) {
+  async createSubcategory({ name, parentId, behavior, viewType, appView, providerFields, listingFields, settings, isActive }) {
     if (!parentId) {
       throw new AppError({ message: "Invalid parentId", statusCode: 400, code: "INVALID_PARENT_ID" });
     }
@@ -41,6 +41,7 @@ export class CategoryService {
           providerFields: providerFields ?? parent.providerFields ?? [],
           listingFields: listingFields ?? parent.listingFields ?? [],
           settings: settings ?? parent.settings ?? {},
+          isActive: isActive ?? true,
           sortOrder
         }
       });
@@ -57,7 +58,7 @@ export class CategoryService {
     }
   }
 
-  async updateCategory({ id, name, parentId, behavior, viewType, appView, providerFields, listingFields, settings }) {
+  async updateCategory({ id, name, parentId, behavior, viewType, appView, providerFields, listingFields, settings, isActive }) {
     if (!id) {
       throw new AppError({ message: "Invalid id", statusCode: 400, code: "INVALID_CATEGORY_ID" });
     }
@@ -70,6 +71,7 @@ export class CategoryService {
     if (providerFields !== undefined) update.providerFields = providerFields;
     if (listingFields !== undefined) update.listingFields = listingFields;
     if (settings !== undefined) update.settings = settings ?? {};
+    if (isActive !== undefined) update.isActive = isActive;
     if (parentId !== undefined) {
       if (parentId !== null && parentId !== "" && typeof parentId !== "string") {
         throw new AppError({ message: "Invalid parentId", statusCode: 400, code: "INVALID_PARENT_ID" });
@@ -175,7 +177,12 @@ export class CategoryService {
   }
 
   async getNestedCategories() {
-    const categories = await prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] });
+    // Public-facing tree: an inactive category is dropped along with its entire subtree, since
+    // an inactive parent never makes it into `top` for its active children to be nested under.
+    const categories = await prisma.category.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+    });
 
     const byId = new Map(categories.map((c) => [c.id, c]));
     const top = [];
@@ -219,6 +226,7 @@ export class CategoryService {
       providerFields: category.providerFields ?? [],
       listingFields: category.listingFields ?? [],
       settings: category.settings ?? {},
+      isActive: category.isActive ?? true,
       sortOrder: category.sortOrder ?? 0,
       createdAt: category.createdAt,
       updatedAt: category.updatedAt

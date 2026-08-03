@@ -32,7 +32,8 @@ export const buildCategoryRoutes = ({ categoryController }) => {
         appView: Joi.string().valid(...Object.values(CategoryViewType)).optional(),
         providerFields: Joi.array().items(fieldSchema).optional(),
         listingFields: Joi.array().items(fieldSchema).optional(),
-        settings: Joi.object().unknown(true).optional()
+        settings: Joi.object().unknown(true).optional(),
+        isActive: Joi.boolean().optional()
       })
     ),
     categoryController.createCategory
@@ -50,7 +51,8 @@ export const buildCategoryRoutes = ({ categoryController }) => {
         appView: Joi.string().valid(...Object.values(CategoryViewType)).optional(),
         providerFields: Joi.array().items(fieldSchema).optional(),
         listingFields: Joi.array().items(fieldSchema).optional(),
-        settings: Joi.object().unknown(true).optional()
+        settings: Joi.object().unknown(true).optional(),
+        isActive: Joi.boolean().optional()
       })
     ),
     categoryController.createSubcategory
@@ -80,7 +82,8 @@ export const buildCategoryRoutes = ({ categoryController }) => {
         appView: Joi.string().valid(...Object.values(CategoryViewType)).optional(),
         providerFields: Joi.array().items(fieldSchema).optional(),
         listingFields: Joi.array().items(fieldSchema).optional(),
-        settings: Joi.object().unknown(true).optional()
+        settings: Joi.object().unknown(true).optional(),
+        isActive: Joi.boolean().optional()
       }).min(1)
     ),
     categoryController.updateCategory

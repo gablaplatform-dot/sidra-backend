@@ -284,7 +284,8 @@ export class AdminService {
       settings: c.settings ?? {},
       providers: providerMap.get(String(c.id)) ?? 0,
       listings: listingMap.get(String(c.id)) ?? 0,
-      status: String(c.settings?.status ?? (c.isActive ? "active" : "paused")).toLowerCase(),
+      isActive: c.isActive ?? true,
+      status: c.isActive ? "active" : "paused",
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
       children: (children.get(String(c.id)) ?? []).map(toDto)
