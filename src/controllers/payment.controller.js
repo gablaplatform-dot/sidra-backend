@@ -20,7 +20,8 @@ export class PaymentController {
     try {
       const result = await this.paymentService.unlockContact({
         actorUserId: req.user.id,
-        providerId: req.body.providerId
+        providerId: req.body.providerId,
+        phone: req.body.phone
       });
       res.status(200).json({ data: result });
     } catch (e) {
@@ -33,7 +34,20 @@ export class PaymentController {
       const result = await this.paymentService.purchaseProduct({
         actorUserId: req.user.id,
         listingId: req.body.listingId,
-        quantity: req.body.quantity
+        quantity: req.body.quantity,
+        phone: req.body.phone
+      });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  getTransactionStatus = async (req, res, next) => {
+    try {
+      const result = await this.paymentService.getTransactionStatus({
+        actorUserId: req.user.id,
+        transactionId: req.params.transactionId
       });
       res.status(200).json({ data: result });
     } catch (e) {
@@ -120,6 +134,26 @@ export class PaymentController {
         withdrawalRequestId: req.params.withdrawalRequestId,
         note: req.body.note
       });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  // Public webhooks called by the mobile money gateway itself — no user session, so any
+  // trust decision happens inside the service by matching against a transaction we created.
+  mobileMoneySuccessWebhook = async (req, res, next) => {
+    try {
+      const result = await this.paymentService.handleMobileMoneySuccess(req.body);
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  mobileMoneyFailedWebhook = async (req, res, next) => {
+    try {
+      const result = await this.paymentService.handleMobileMoneyFailed(req.body);
       res.status(200).json({ data: result });
     } catch (e) {
       next(e);

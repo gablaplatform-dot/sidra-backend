@@ -1,8 +1,12 @@
+import crypto from "crypto";
+
 import { AppError } from "../utils/AppError.js";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../config/db.js";
+import { env } from "../config/env.js";
 import { WalletService } from "./wallet.service.js";
 import { TransactionService } from "./transaction.service.js";
+import { MobileMoneyService } from "./mobileMoney.service.js";
 
 const normalizeMoneyInput = (value) => {
   if (value instanceof Prisma.Decimal) return value.toString();
@@ -39,9 +43,21 @@ const feeFromPercentCents = ({ amountCents, percent }) => {
 };
 
 export class PaymentService {
-  constructor({ walletService = new WalletService(), transactionService = new TransactionService() } = {}) {
+  constructor({
+    walletService = new WalletService(),
+    transactionService = new TransactionService(),
+    mobileMoneyService = new MobileMoneyService()
+  } = {}) {
     this.walletService = walletService;
     this.transactionService = transactionService;
+    this.mobileMoneyService = mobileMoneyService;
+  }
+
+  mobileMoneyCallbackUrls() {
+    return {
+      successUrl: `${env.apiBaseUrl}/api/v1/payments/webhooks/mobilemoney/success`,
+      failedUrl: `${env.apiBaseUrl}/api/v1/payments/webhooks/mobilemoney/failed`
+    };
   }
 
   async getMyWallet({ actorUserId }) {
@@ -59,6 +75,16 @@ export class PaymentService {
       throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
     }
     return this.transactionService.adminList({ page, limit, status, type, providerId: provider.id });
+  }
+
+  // Lets the customer who initiated a deposit poll for its outcome while they approve the
+  // USSD prompt on their phone (the real result only lands via the webhook).
+  async getTransactionStatus({ actorUserId, transactionId }) {
+    const transaction = await prisma.transaction.findFirst({ where: { id: transactionId, userId: actorUserId } });
+    if (!transaction) {
+      throw new AppError({ message: "Transaction not found", statusCode: 404, code: "TRANSACTION_NOT_FOUND" });
+    }
+    return { id: transaction.id, type: transaction.type, status: transaction.status, amount: transaction.amount.toString() };
   }
 
   async listMyWithdrawals({ actorUserId, page = 1, limit = 50 }) {
@@ -212,12 +238,18 @@ export class PaymentService {
     });
   }
 
-  async unlockContact({ actorUserId, providerId }) {
+  // Contact-unlock revenue belongs entirely to the platform (no provider split), so it's
+  // credited to the platform wallet (Wallet.providerId = null) once the mobile money
+  // deposit actually succeeds via the webhook — not here.
+  async unlockContact({ actorUserId, providerId, phone }) {
     if (!providerId) {
       throw new AppError({ message: "Invalid providerId", statusCode: 400, code: "INVALID_PROVIDER_ID" });
     }
+    if (!phone) {
+      throw new AppError({ message: "A phone number is required to pay by mobile money", statusCode: 400, code: "PHONE_REQUIRED" });
+    }
 
-    return prisma.$transaction(async (tx) => {
+    const { transactionId, unlockId, reference, feeDec } = await prisma.$transaction(async (tx) => {
       const [settings, provider] = await Promise.all([
         this.getSettings(tx),
         tx.provider.findUnique({ where: { id: providerId } })
@@ -240,14 +272,18 @@ export class PaymentService {
       }
 
       const feeCents = parseMoneyToCents(effective.contactFee);
+      if (feeCents <= 0n) {
+        throw new AppError({ message: "Contact fee is not configured", statusCode: 400, code: "INVALID_CONTACT_FEE" });
+      }
       const feeDec = centsToDecimal(feeCents);
 
       const unlock = await tx.contactUnlock.upsert({
         where: { userId_providerId: { userId: actorUserId, providerId } },
-        update: { paid: true },
-        create: { userId: actorUserId, providerId, paid: true }
+        update: {},
+        create: { userId: actorUserId, providerId, paid: false }
       });
 
+      const reference = `contact-${crypto.randomUUID()}`;
       const transaction = await tx.transaction.create({
         data: {
           type: "contact_unlock",
@@ -256,23 +292,46 @@ export class PaymentService {
           amount: feeDec,
           fee: centsToDecimal(0n),
           netAmount: feeDec,
-          status: "succeeded",
-          metadata: { contactUnlockId: unlock.id }
+          status: "pending",
+          reference,
+          metadata: { contactUnlockId: unlock.id, phone }
         }
       });
 
-      return { contactUnlockId: unlock.id, transactionId: transaction.id };
+      return { transactionId: transaction.id, unlockId: unlock.id, reference, feeDec };
     });
+
+    try {
+      await this.mobileMoneyService.initiateDeposit({
+        amount: feeDec,
+        phone,
+        reference,
+        ...this.mobileMoneyCallbackUrls()
+      });
+    } catch (gatewayError) {
+      await prisma.transaction.update({ where: { id: transactionId }, data: { status: "failed" } });
+      throw gatewayError;
+    }
+
+    return {
+      contactUnlockId: unlockId,
+      transactionId,
+      status: "pending",
+      message: "Check your phone to approve the mobile money payment."
+    };
   }
 
-  async purchaseProduct({ actorUserId, listingId, quantity = 1 }) {
+  async purchaseProduct({ actorUserId, listingId, quantity = 1, phone }) {
     if (!listingId) {
       throw new AppError({ message: "Invalid listingId", statusCode: 400, code: "INVALID_LISTING_ID" });
+    }
+    if (!phone) {
+      throw new AppError({ message: "A phone number is required to pay by mobile money", statusCode: 400, code: "PHONE_REQUIRED" });
     }
 
     const q = Math.max(1, Math.min(99, Number(quantity) || 1));
 
-    return prisma.$transaction(async (tx) => {
+    const { transactionId, providerId, reference, amountDec } = await prisma.$transaction(async (tx) => {
       const settings = await this.getSettings(tx);
 
       const listing = await tx.serviceProduct.findUnique({ where: { id: listingId } });
@@ -302,6 +361,7 @@ export class PaymentService {
       const feeDec = centsToDecimal(feeCents);
       const netDec = centsToDecimal(netCents);
 
+      const reference = `purchase-${crypto.randomUUID()}`;
       const transaction = await tx.transaction.create({
         data: {
           type: "purchase",
@@ -310,15 +370,101 @@ export class PaymentService {
           amount: amountDec,
           fee: feeDec,
           netAmount: netDec,
-          status: "succeeded",
-          metadata: { listingId: listing.id, quantity: q }
+          status: "pending",
+          reference,
+          metadata: { listingId: listing.id, quantity: q, phone }
         }
       });
 
-      await this.walletService.creditBalance({ providerId: provider.id, amountDec: netDec, session: tx });
-
-      return { transactionId: transaction.id, providerId: provider.id };
+      return { transactionId: transaction.id, providerId: provider.id, reference, amountDec };
     });
+
+    try {
+      await this.mobileMoneyService.initiateDeposit({
+        amount: amountDec,
+        phone,
+        reference,
+        ...this.mobileMoneyCallbackUrls()
+      });
+    } catch (gatewayError) {
+      await prisma.transaction.update({ where: { id: transactionId }, data: { status: "failed" } });
+      throw gatewayError;
+    }
+
+    return {
+      transactionId,
+      providerId,
+      status: "pending",
+      message: "Check your phone to approve the mobile money payment."
+    };
+  }
+
+  // Called from the mobile money webhook once a deposit actually completes. Credits the
+  // provider's wallet for a purchase (plus the platform wallet for its cut), or the platform
+  // wallet outright for a contact unlock.
+  async handleMobileMoneySuccess(payload) {
+    const reference = String(payload?.external_ref || "").trim();
+    if (!reference) {
+      throw new AppError({ message: "external_ref is required", statusCode: 400, code: "MISSING_EXTERNAL_REF" });
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const transaction = await tx.transaction.findFirst({ where: { reference } });
+      if (!transaction) {
+        return { ok: false, reason: "unknown_reference" };
+      }
+      if (transaction.status !== "pending") {
+        return { ok: true, reason: "already_processed" };
+      }
+
+      const networkMetadata = {
+        networkRef: payload.network_ref ?? null,
+        msisdn: payload.msisdn ?? null,
+        payerNames: payload.payer_names ?? null,
+        payerEmail: payload.payer_email ?? null,
+        dateTime: payload.date_time ?? null
+      };
+
+      await tx.transaction.update({
+        where: { id: transaction.id },
+        data: { status: "succeeded", metadata: { ...(transaction.metadata ?? {}), ...networkMetadata } }
+      });
+
+      if (transaction.type === "purchase") {
+        if (transaction.providerId) {
+          await this.walletService.creditBalance({ providerId: transaction.providerId, amountDec: transaction.netAmount, session: tx });
+        }
+        if (Number(transaction.fee) > 0) {
+          await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
+        }
+      } else if (transaction.type === "contact_unlock") {
+        const contactUnlockId = transaction.metadata?.contactUnlockId;
+        if (contactUnlockId) {
+          await tx.contactUnlock.update({ where: { id: contactUnlockId }, data: { paid: true } });
+        }
+        await this.walletService.creditBalance({ providerId: null, amountDec: transaction.netAmount, session: tx });
+      }
+
+      return { ok: true, transactionId: transaction.id, type: transaction.type };
+    });
+  }
+
+  async handleMobileMoneyFailed(payload) {
+    const reference = String(payload?.failed_transaction_reference || "").trim();
+    if (!reference) {
+      throw new AppError({ message: "failed_transaction_reference is required", statusCode: 400, code: "MISSING_REFERENCE" });
+    }
+
+    const transaction = await prisma.transaction.findFirst({ where: { reference } });
+    if (!transaction) {
+      return { ok: false, reason: "unknown_reference" };
+    }
+    if (transaction.status !== "pending") {
+      return { ok: true, reason: "already_processed" };
+    }
+
+    await prisma.transaction.update({ where: { id: transaction.id }, data: { status: "failed" } });
+    return { ok: true, transactionId: transaction.id };
   }
 
   async requestWithdrawal({ actorUserId, amount, note }) {
@@ -404,27 +550,62 @@ export class PaymentService {
     });
   }
 
+  // Approving a withdrawal pays it out immediately: the gateway's withdraw call responds
+  // synchronously (no webhook), so we mark it approved first (so it can't be approved twice
+  // concurrently), attempt the real payout, and land on "paid" or roll back to "rejected"
+  // based on that one response.
   async adminApproveWithdrawal({ adminUserId, withdrawalRequestId, note }) {
     if (!withdrawalRequestId) {
       throw new AppError({ message: "Invalid withdrawalRequestId", statusCode: 400, code: "INVALID_WITHDRAWAL_ID" });
     }
 
-    return prisma.$transaction(async (tx) => {
-      const reqDoc = await tx.withdrawalRequest.findUnique({ where: { id: withdrawalRequestId } });
-      if (!reqDoc) {
-        throw new AppError({ message: "Withdrawal not found", statusCode: 404, code: "WITHDRAWAL_NOT_FOUND" });
-      }
-      if (reqDoc.status !== "requested") {
-        throw new AppError({ message: "Invalid state", statusCode: 409, code: "INVALID_WITHDRAWAL_STATE" });
-      }
+    const reqDoc = await prisma.withdrawalRequest.findUnique({ where: { id: withdrawalRequestId } });
+    if (!reqDoc) {
+      throw new AppError({ message: "Withdrawal not found", statusCode: 404, code: "WITHDRAWAL_NOT_FOUND" });
+    }
+    if (reqDoc.status !== "requested") {
+      throw new AppError({ message: "Invalid state", statusCode: 409, code: "INVALID_WITHDRAWAL_STATE" });
+    }
 
-      const updated = await tx.withdrawalRequest.update({
-        where: { id: withdrawalRequestId },
-        data: { status: "approved", approvedBy: adminUserId, approvedAt: new Date(), ...(note !== undefined ? { note } : {}) }
-      });
+    const provider = await prisma.provider.findUnique({ where: { id: reqDoc.providerId } });
+    const phone = provider?.contact?.phone || provider?.contact?.whatsapp;
+    if (!phone) {
+      throw new AppError({ message: "This provider has no phone number on file for payout", statusCode: 400, code: "PROVIDER_PHONE_MISSING" });
+    }
 
-      return { withdrawalRequestId: updated.id, status: updated.status };
+    await prisma.withdrawalRequest.update({
+      where: { id: withdrawalRequestId },
+      data: { status: "approved", approvedBy: adminUserId, approvedAt: new Date(), ...(note !== undefined ? { note } : {}) }
     });
+
+    try {
+      await this.mobileMoneyService.initiateWithdrawal({
+        amount: reqDoc.netAmount,
+        phone,
+        reference: `withdraw-${withdrawalRequestId}`,
+        userId: reqDoc.providerId
+      });
+    } catch (payoutError) {
+      await prisma.$transaction(async (tx) => {
+        await this.walletService.creditBalance({ providerId: reqDoc.providerId, amountDec: reqDoc.amount, session: tx });
+        await tx.transaction.update({ where: { id: reqDoc.transactionId }, data: { status: "failed" } });
+        await tx.withdrawalRequest.update({
+          where: { id: withdrawalRequestId },
+          data: { status: "rejected", rejectedBy: adminUserId, rejectedAt: new Date(), note: `Payout failed: ${payoutError.message}` }
+        });
+      });
+      throw payoutError;
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.transaction.update({ where: { id: reqDoc.transactionId }, data: { status: "succeeded" } });
+      return tx.withdrawalRequest.update({
+        where: { id: withdrawalRequestId },
+        data: { status: "paid", paidBy: adminUserId, paidAt: new Date() }
+      });
+    });
+
+    return { withdrawalRequestId: updated.id, status: updated.status };
   }
 
   async adminRejectWithdrawal({ adminUserId, withdrawalRequestId, note }) {

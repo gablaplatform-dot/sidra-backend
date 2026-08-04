@@ -28,7 +28,11 @@ export const env = {
   seedAdminEmail: process.env.SEED_ADMIN_EMAIL ?? "",
   seedAdminPassword: process.env.SEED_ADMIN_PASSWORD ?? "",
   seedAdminName: process.env.SEED_ADMIN_NAME ?? "Admin",
-  seedAdminPhone: process.env.SEED_ADMIN_PHONE ?? ""
+  seedAdminPhone: process.env.SEED_ADMIN_PHONE ?? "",
+  apiBaseUrl: process.env.API_BASE_URL ?? "http://localhost:3000",
+  mobileMoneyBaseUrl: (process.env.MOBILE_MONEY_BASE_URL ?? "https://hive-sooty-eight.vercel.app").replace(/\/$/, ""),
+  mobileMoneyApiKey: process.env.MOBILE_MONEY_API_KEY ?? "",
+  mobileMoneyApiPassword: process.env.MOBILE_MONEY_API_PASSWORD ?? ""
 };
 
 export const assertRequiredEnv = () => {

@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 CREATE TABLE IF NOT EXISTS wallets (
   id TEXT PRIMARY KEY NOT NULL,
-  providerId TEXT NOT NULL UNIQUE,
+  providerId TEXT UNIQUE,
   balance DECIMAL NOT NULL DEFAULT 0.00,
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -477,6 +477,33 @@ const ensureColumn = (table, column, definition) => {
   ["providers", "contactClicks", "INTEGER NOT NULL DEFAULT 0"],
   ["service_products", "categoryId", "TEXT"]
 ].forEach(([table, column, definition]) => ensureColumn(table, column, definition));
+
+// wallets.providerId used to be NOT NULL (one wallet per provider). A platform-owned wallet
+// (providerId = NULL) needs that relaxed. SQLite can't ALTER COLUMN, so on databases that still
+// have the old NOT NULL constraint, recreate the table and copy the data across.
+const walletsColumnInfo = runSql("PRAGMA table_info(wallets);")
+  .split("\n")
+  .filter(Boolean)
+  .map((line) => line.split("|"));
+const providerIdColumn = walletsColumnInfo.find((cols) => cols[1] === "providerId");
+if (providerIdColumn && providerIdColumn[3] === "1") {
+  runSql(`
+    PRAGMA foreign_keys = OFF;
+    CREATE TABLE wallets_new (
+      id TEXT PRIMARY KEY NOT NULL,
+      providerId TEXT UNIQUE,
+      balance DECIMAL NOT NULL DEFAULT 0.00,
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE
+    );
+    INSERT INTO wallets_new (id, providerId, balance, createdAt, updatedAt)
+      SELECT id, providerId, balance, createdAt, updatedAt FROM wallets;
+    DROP TABLE wallets;
+    ALTER TABLE wallets_new RENAME TO wallets;
+    PRAGMA foreign_keys = ON;
+  `);
+}
 
 [
   "CREATE UNIQUE INDEX IF NOT EXISTS users_googleSub_key ON users(googleSub);",

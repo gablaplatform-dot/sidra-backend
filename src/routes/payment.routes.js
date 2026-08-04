@@ -10,6 +10,7 @@ export const buildPaymentRoutes = ({ paymentController }) => {
   const id = Joi.string().trim().min(1).max(64);
   const money = Joi.alternatives().try(Joi.number().min(0), Joi.string().pattern(/^\d+(\.\d{1,2})?$/));
   const note = Joi.string().trim().max(2000).allow(null).optional();
+  const phone = Joi.string().trim().min(6).max(20).required();
 
   router.post(
     "/subscriptions/activate",
@@ -26,7 +27,7 @@ export const buildPaymentRoutes = ({ paymentController }) => {
   router.post(
     "/contacts/unlock",
     requireAuth([Roles.USER]),
-    validate(Joi.object({ providerId: id.required() })),
+    validate(Joi.object({ providerId: id.required(), phone })),
     paymentController.unlockContact
   );
 
@@ -36,11 +37,24 @@ export const buildPaymentRoutes = ({ paymentController }) => {
     validate(
       Joi.object({
         listingId: id.required(),
-        quantity: Joi.number().integer().min(1).max(99).optional()
+        quantity: Joi.number().integer().min(1).max(99).optional(),
+        phone
       })
     ),
     paymentController.purchaseProduct
   );
+
+  router.get(
+    "/transactions/:transactionId/status",
+    requireAuth([Roles.USER]),
+    validate(Joi.object({ transactionId: id.required() }), "params"),
+    paymentController.getTransactionStatus
+  );
+
+  // Public mobile money gateway webhooks — no user session, verified against a matching
+  // transaction record instead (see PaymentService#handleMobileMoneySuccess/Failed).
+  router.post("/webhooks/mobilemoney/success", paymentController.mobileMoneySuccessWebhook);
+  router.post("/webhooks/mobilemoney/failed", paymentController.mobileMoneyFailedWebhook);
 
   router.get("/wallet", requireAuth([Roles.PROVIDER]), paymentController.getMyWallet);
 

@@ -266,12 +266,14 @@ model Transaction {
 
 model Wallet {
   id         String   @id @default(cuid())
-  providerId String   @unique
+  // Null represents the single platform-owned wallet (contact-unlock and other platform
+  // revenue). Every provider-owned wallet has a real providerId.
+  providerId String?  @unique
   balance    Decimal  @default(0.00)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  provider Provider? @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   @@map("wallets")
 }
