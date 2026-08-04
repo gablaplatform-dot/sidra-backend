@@ -34,6 +34,18 @@ export class ProviderController {
     }
   };
 
+  linkGoogleAccount = async (req, res, next) => {
+    try {
+      const result = await this.providerService.linkGoogleAccount({
+        onboardingToken: req.params.token,
+        idToken: req.body.idToken
+      });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   updateMyProfile = async (req, res, next) => {
     try {
       const result = await this.providerService.updateMyProviderProfile({

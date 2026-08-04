@@ -1,6 +1,7 @@
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 import { env } from "../config/env.js";
+import { verifyGoogleIdToken } from "../utils/googleAuth.js";
 
 const uniqueError = (e, field) => e?.code === "P2002" && Array.isArray(e?.meta?.target) && e.meta.target.includes(field);
 
@@ -223,17 +224,7 @@ export class AuthService {
     if (!env.googleClientId) {
       throw new AppError({ message: "Google login is not configured", statusCode: 503, code: "GOOGLE_LOGIN_NOT_CONFIGURED" });
     }
-    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
-    if (!response.ok) {
-      throw new AppError({ message: "Invalid Google token", statusCode: 401, code: "INVALID_GOOGLE_TOKEN" });
-    }
-    const profile = await response.json();
-    if (profile.aud !== env.googleClientId) {
-      throw new AppError({ message: "Invalid Google audience", statusCode: 401, code: "INVALID_GOOGLE_AUDIENCE" });
-    }
-    if (!profile.email) {
-      throw new AppError({ message: "Google email is required", statusCode: 400, code: "GOOGLE_EMAIL_REQUIRED" });
-    }
+    const profile = await verifyGoogleIdToken(idToken, env.googleClientId);
 
     const email = this.normalizeEmail(profile.email);
     const googleSub = String(profile.sub);

@@ -109,6 +109,12 @@ export const buildProviderRoutes = ({ providerController }) => {
     providerController.completeOnboarding
   );
 
+  router.post(
+    "/onboarding/:token/link-google",
+    validate(Joi.object({ idToken: Joi.string().trim().required() })),
+    providerController.linkGoogleAccount
+  );
+
   router.put(
     "/me",
     requireAuth([Roles.PROVIDER]),

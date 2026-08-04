@@ -5,6 +5,7 @@ import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 import { PaymentService } from "./payment.service.js";
 import { env } from "../config/env.js";
+import { verifyGoogleIdToken } from "../utils/googleAuth.js";
 
 const uniqueError = (e, field) => e?.code === "P2002" && Array.isArray(e?.meta?.target) && e.meta.target.includes(field);
 const safeSlug = (value) =>
@@ -440,6 +441,85 @@ export class ProviderService {
     return this.getProviderProfile({ providerId: provider.id, includeUnapproved: true });
   }
 
+  // Linking Google here — right after onboarding, while we still have proof of exactly which
+  // account this is via the onboarding token — is what makes every later "Sign in with Google"
+  // reliably land on the same account. Matching by email string alone (as the general login
+  // does) silently fails whenever the invited email differs even slightly from the Google
+  // account the provider actually signs in with, which is why providers were landing on a
+  // fresh customer account instead of their own profile.
+  async linkGoogleAccount({ onboardingToken, idToken }) {
+    const payload = this.verifyOnboardingToken(onboardingToken);
+    const userId = String(payload.sub);
+
+    if (!env.googleClientId) {
+      throw new AppError({ message: "Google login is not configured", statusCode: 503, code: "GOOGLE_LOGIN_NOT_CONFIGURED" });
+    }
+    const profile = await verifyGoogleIdToken(idToken, env.googleClientId);
+    const googleSub = String(profile.sub);
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new AppError({ message: "User not found", statusCode: 404, code: "USER_NOT_FOUND" });
+    }
+
+    const conflict = await prisma.user.findFirst({ where: { googleSub, NOT: { id: userId } } });
+    if (conflict) {
+      throw new AppError({
+        message: "This Google account is already linked to a different Gabla account. Please use a different Google account for this provider profile.",
+        statusCode: 409,
+        code: "GOOGLE_ACCOUNT_ALREADY_LINKED"
+      });
+    }
+
+    const email = this.normalizeEmail(profile.email);
+    let updatedUser;
+    try {
+      updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          googleSub,
+          authProvider: "google",
+          avatarUrl: profile.picture ?? user.avatarUrl,
+          name: user.name || profile.name || email
+        }
+      });
+    } catch (e) {
+      if (uniqueError(e, "googleSub")) {
+        throw new AppError({
+          message: "This Google account is already linked to a different Gabla account. Please use a different Google account for this provider profile.",
+          statusCode: 409,
+          code: "GOOGLE_ACCOUNT_ALREADY_LINKED"
+        });
+      }
+      throw e;
+    }
+
+    const accessToken = jwt.sign(
+      { sub: updatedUser.id, role: updatedUser.role },
+      env.jwtSecret,
+      { issuer: env.jwtIssuer, expiresIn: env.jwtAccessTtlSeconds }
+    );
+
+    const provider = await prisma.provider.findUnique({ where: { userId: updatedUser.id } });
+
+    return {
+      accessToken,
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        phone: updatedUser.phone,
+        authProvider: updatedUser.authProvider,
+        avatarUrl: updatedUser.avatarUrl,
+        profile: updatedUser.profile ?? {},
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt
+      },
+      provider: provider ? { id: provider.id, userId: provider.userId } : null
+    };
+  }
+
   async updateMyProviderProfile({ actorUserId, updates }) {
     const provider = await prisma.provider.findUnique({ where: { userId: actorUserId } });
     if (!provider) {
@@ -633,7 +713,7 @@ export class ProviderService {
 
     const effective = await this.getEffectiveSettingsForProvider(provider);
     if (!effective.enableContactFee) {
-      return { providerId: provider.id, unlocked: true, contact: provider.contact };
+      return { providerId: provider.id, unlocked: true, contact: provider.contact, location: provider.location };
     }
 
     const unlocked = await prisma.contactUnlock.findUnique({
@@ -648,6 +728,6 @@ export class ProviderService {
       });
     }
 
-    return { providerId: provider.id, unlocked: true, contact: provider.contact };
+    return { providerId: provider.id, unlocked: true, contact: provider.contact, location: provider.location };
   }
 }
