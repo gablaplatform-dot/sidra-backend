@@ -41,6 +41,39 @@ export class PaymentController {
     }
   };
 
+  getMyWallet = async (req, res, next) => {
+    try {
+      const result = await this.paymentService.getMyWallet({ actorUserId: req.user.id });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  listMyTransactions = async (req, res, next) => {
+    try {
+      const result = await this.paymentService.listMyTransactions({
+        actorUserId: req.user.id,
+        ...req.query
+      });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  listMyWithdrawals = async (req, res, next) => {
+    try {
+      const result = await this.paymentService.listMyWithdrawals({
+        actorUserId: req.user.id,
+        ...req.query
+      });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   requestWithdrawal = async (req, res, next) => {
     try {
       const result = await this.paymentService.requestWithdrawal({

@@ -42,6 +42,36 @@ export const buildPaymentRoutes = ({ paymentController }) => {
     paymentController.purchaseProduct
   );
 
+  router.get("/wallet", requireAuth([Roles.PROVIDER]), paymentController.getMyWallet);
+
+  router.get(
+    "/transactions",
+    requireAuth([Roles.PROVIDER]),
+    validate(
+      Joi.object({
+        page: Joi.number().integer().min(1).optional(),
+        limit: Joi.number().integer().min(1).max(200).optional(),
+        status: Joi.string().trim().max(40).optional(),
+        type: Joi.string().trim().max(40).optional()
+      }),
+      "query"
+    ),
+    paymentController.listMyTransactions
+  );
+
+  router.get(
+    "/withdrawals",
+    requireAuth([Roles.PROVIDER]),
+    validate(
+      Joi.object({
+        page: Joi.number().integer().min(1).optional(),
+        limit: Joi.number().integer().min(1).max(100).optional()
+      }),
+      "query"
+    ),
+    paymentController.listMyWithdrawals
+  );
+
   router.post(
     "/withdrawals",
     requireAuth([Roles.PROVIDER]),

@@ -2,6 +2,7 @@ import { AppError } from "../utils/AppError.js";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../config/db.js";
 import { WalletService } from "./wallet.service.js";
+import { TransactionService } from "./transaction.service.js";
 
 const normalizeMoneyInput = (value) => {
   if (value instanceof Prisma.Decimal) return value.toString();
@@ -38,8 +39,64 @@ const feeFromPercentCents = ({ amountCents, percent }) => {
 };
 
 export class PaymentService {
-  constructor({ walletService = new WalletService() } = {}) {
+  constructor({ walletService = new WalletService(), transactionService = new TransactionService() } = {}) {
     this.walletService = walletService;
+    this.transactionService = transactionService;
+  }
+
+  async getMyWallet({ actorUserId }) {
+    const provider = await prisma.provider.findUnique({ where: { userId: actorUserId } });
+    if (!provider) {
+      throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+    }
+    const wallet = await this.walletService.ensureWallet({ providerId: provider.id });
+    return { providerId: provider.id, balance: wallet.balance.toString(), updatedAt: wallet.updatedAt };
+  }
+
+  async listMyTransactions({ actorUserId, page, limit, status, type }) {
+    const provider = await prisma.provider.findUnique({ where: { userId: actorUserId } });
+    if (!provider) {
+      throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+    }
+    return this.transactionService.adminList({ page, limit, status, type, providerId: provider.id });
+  }
+
+  async listMyWithdrawals({ actorUserId, page = 1, limit = 50 }) {
+    const provider = await prisma.provider.findUnique({ where: { userId: actorUserId } });
+    if (!provider) {
+      throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+    }
+
+    const normalizedPage = Math.max(1, Number(page) || 1);
+    const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 50));
+
+    const [items, total] = await Promise.all([
+      prisma.withdrawalRequest.findMany({
+        where: { providerId: provider.id },
+        orderBy: { createdAt: "desc" },
+        skip: (normalizedPage - 1) * normalizedLimit,
+        take: normalizedLimit
+      }),
+      prisma.withdrawalRequest.count({ where: { providerId: provider.id } })
+    ]);
+
+    return {
+      items: items.map((w) => ({
+        id: w.id,
+        amount: w.amount.toString(),
+        fee: w.fee.toString(),
+        netAmount: w.netAmount.toString(),
+        status: w.status,
+        note: w.note,
+        createdAt: w.createdAt,
+        approvedAt: w.approvedAt,
+        rejectedAt: w.rejectedAt,
+        paidAt: w.paidAt
+      })),
+      page: normalizedPage,
+      limit: normalizedLimit,
+      total
+    };
   }
 
   async getSettings(session) {
