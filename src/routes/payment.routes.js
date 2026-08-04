@@ -26,14 +26,14 @@ export const buildPaymentRoutes = ({ paymentController }) => {
 
   router.post(
     "/contacts/unlock",
-    requireAuth([Roles.USER]),
+    requireAuth([Roles.USER, Roles.PROVIDER]),
     validate(Joi.object({ providerId: id.required(), phone })),
     paymentController.unlockContact
   );
 
   router.post(
     "/products/purchase",
-    requireAuth([Roles.USER]),
+    requireAuth([Roles.USER, Roles.PROVIDER]),
     validate(
       Joi.object({
         listingId: id.required(),
@@ -46,7 +46,7 @@ export const buildPaymentRoutes = ({ paymentController }) => {
 
   router.get(
     "/transactions/:transactionId/status",
-    requireAuth([Roles.USER]),
+    requireAuth([Roles.USER, Roles.PROVIDER]),
     validate(Joi.object({ transactionId: id.required() }), "params"),
     paymentController.getTransactionStatus
   );
