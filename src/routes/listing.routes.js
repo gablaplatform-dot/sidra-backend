@@ -41,7 +41,8 @@ export const buildListingRoutes = ({ listingController }) => {
         type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).required(),
         categoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
-        customFields: Joi.object().unknown(true).optional()
+        customFields: Joi.object().unknown(true).optional(),
+        featured: Joi.boolean().optional()
       })
     ),
     listingController.create
@@ -58,7 +59,8 @@ export const buildListingRoutes = ({ listingController }) => {
         type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).optional(),
         categoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
-        customFields: Joi.object().unknown(true).optional()
+        customFields: Joi.object().unknown(true).optional(),
+        featured: Joi.boolean().optional()
       }).min(1)
     ),
     listingController.update
