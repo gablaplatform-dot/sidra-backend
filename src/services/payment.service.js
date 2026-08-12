@@ -33,6 +33,8 @@ const centsToDecimal = (cents) => {
   return new Prisma.Decimal(str);
 };
 
+const SUBSCRIPTION_PERIOD_DAYS = 30;
+
 const feeFromPercentCents = ({ amountCents, percent }) => {
   const n = Number(percent ?? 0);
   if (!Number.isFinite(n) || n < 0 || n > 100) {
@@ -183,13 +185,37 @@ export class PaymentService {
     };
   }
 
-  async activateSubscription({ actorUserId, amount, days = 30 }) {
+  async getMySubscription({ actorUserId }) {
+    const provider = await prisma.provider.findUnique({ where: { userId: actorUserId } });
+    if (!provider) {
+      throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+    }
+    const [settings, activeSubscription] = await Promise.all([
+      this.getSettings(),
+      prisma.subscription.findFirst({
+        where: { providerId: provider.id, status: "active", expiresAt: { gt: new Date() } },
+        orderBy: { expiresAt: "desc" }
+      })
+    ]);
+    const effective = this.computeEffectiveForProvider({ global: settings, provider });
+    return {
+      status: activeSubscription ? "active" : "inactive",
+      expiresAt: activeSubscription?.expiresAt ?? null,
+      fee: effective.subscriptionFee?.toString?.() ?? "0.00",
+      enabled: effective.enableSubscription
+    };
+  }
+
+  async activateSubscription({ actorUserId, phone }) {
+    if (!phone) {
+      throw new AppError({ message: "A phone number is required to pay by mobile money", statusCode: 400, code: "PHONE_REQUIRED" });
+    }
     const provider = await prisma.provider.findUnique({ where: { userId: actorUserId } });
     if (!provider) {
       throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
     }
 
-    return prisma.$transaction(async (tx) => {
+    const { transactionId, reference, feeDec } = await prisma.$transaction(async (tx) => {
       const [settings, freshProvider] = await Promise.all([
         this.getSettings(tx),
         tx.provider.findUnique({ where: { id: provider.id } })
@@ -205,37 +231,48 @@ export class PaymentService {
         throw new AppError({ message: "Subscription disabled", statusCode: 400, code: "SUBSCRIPTION_DISABLED" });
       }
 
-      const amountCents = amount !== undefined ? parseMoneyToCents(amount) : parseMoneyToCents(effective.subscriptionFee);
-      const amountDec = centsToDecimal(amountCents);
+      const feeCents = parseMoneyToCents(effective.subscriptionFee);
+      if (feeCents <= 0n) {
+        throw new AppError({ message: "Subscription fee is not configured", statusCode: 400, code: "INVALID_SUBSCRIPTION_FEE" });
+      }
+      const feeDec = centsToDecimal(feeCents);
 
-      const expiresAt = new Date(Date.now() + Math.max(1, Number(days) || 30) * 24 * 60 * 60 * 1000);
-
-      const subscription = await tx.subscription.create({
-        data: {
-          providerId: provider.id,
-          amount: amountDec,
-          expiresAt,
-          status: "active"
-        }
-      });
-
-      await tx.provider.update({ where: { id: provider.id }, data: { subscriptionStatus: "active" } });
-
+      const reference = `subscription-${crypto.randomUUID()}`;
       const transaction = await tx.transaction.create({
         data: {
           type: "subscription",
           userId: provider.userId,
           providerId: provider.id,
-          amount: amountDec,
+          amount: feeDec,
           fee: centsToDecimal(0n),
-          netAmount: amountDec,
-          status: "succeeded",
-          metadata: { subscriptionId: subscription.id }
+          netAmount: feeDec,
+          status: "pending",
+          reference,
+          metadata: { days: SUBSCRIPTION_PERIOD_DAYS, phone }
         }
       });
 
-      return { subscriptionId: subscription.id, transactionId: transaction.id, providerId: provider.id, expiresAt };
+      return { transactionId: transaction.id, reference, feeDec };
     });
+
+    try {
+      await this.mobileMoneyService.initiateDeposit({
+        amount: feeDec,
+        phone,
+        reference,
+        ...this.mobileMoneyCallbackUrls()
+      });
+    } catch (gatewayError) {
+      await prisma.transaction.update({ where: { id: transactionId }, data: { status: "failed" } });
+      throw gatewayError;
+    }
+
+    return {
+      transactionId,
+      providerId: provider.id,
+      status: "pending",
+      message: "Check your phone to approve the mobile money payment."
+    };
   }
 
   // Contact-unlock revenue belongs entirely to the platform (no provider split), so it's
@@ -351,6 +388,12 @@ export class PaymentService {
       if (!effective.enableWallet) {
         throw new AppError({ message: "Wallet disabled", statusCode: 400, code: "WALLET_DISABLED" });
       }
+      if (!provider.onlinePaymentsEnabled) {
+        throw new AppError({ message: "This provider does not accept online payments", statusCode: 400, code: "PROVIDER_ONLINE_PAYMENTS_DISABLED" });
+      }
+      if (!listing.onlinePaymentEnabled) {
+        throw new AppError({ message: "Online purchase is disabled for this listing", statusCode: 400, code: "LISTING_ONLINE_PAYMENT_DISABLED" });
+      }
 
       const unitCents = parseMoneyToCents(listing.price);
       const amountCents = unitCents * BigInt(q);
@@ -442,6 +485,21 @@ export class PaymentService {
         if (contactUnlockId) {
           await tx.contactUnlock.update({ where: { id: contactUnlockId }, data: { paid: true } });
         }
+        await this.walletService.creditBalance({ providerId: null, amountDec: transaction.netAmount, session: tx });
+      } else if (transaction.type === "subscription") {
+        const days = Number(transaction.metadata?.days) || SUBSCRIPTION_PERIOD_DAYS;
+        const now = new Date();
+        const activeSubscription = await tx.subscription.findFirst({
+          where: { providerId: transaction.providerId, status: "active", expiresAt: { gt: now } },
+          orderBy: { expiresAt: "desc" }
+        });
+        const baseDate = activeSubscription?.expiresAt ?? now;
+        const expiresAt = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
+
+        await tx.subscription.create({
+          data: { providerId: transaction.providerId, amount: transaction.netAmount, expiresAt, status: "active" }
+        });
+        await tx.provider.update({ where: { id: transaction.providerId }, data: { subscriptionStatus: "active" } });
         await this.walletService.creditBalance({ providerId: null, amountDec: transaction.netAmount, session: tx });
       }
 
@@ -657,5 +715,128 @@ export class PaymentService {
 
       return { withdrawalRequestId: updated.id, status: updated.status };
     });
+  }
+
+  async getPlatformWallet() {
+    const wallet = await this.walletService.ensureWallet({ providerId: null });
+    return { balance: wallet.balance.toString(), updatedAt: wallet.updatedAt };
+  }
+
+  // Revenue type isn't its own ledger — it's derived from which field of which transaction type
+  // actually gets credited to the platform wallet (see handleMobileMoneySuccess): the full
+  // netAmount for contact_unlock and subscription, but only the fee cut for purchase (the rest
+  // goes to the provider). "Available" nets out prior platform withdrawals tagged to that type,
+  // so a type can't be withdrawn against twice, and is capped at the real wallet balance so a
+  // bookkeeping mismatch can never let anyone withdraw more than physically exists.
+  async getPlatformRevenueByType() {
+    const REVENUE_TYPES = [
+      { type: "contact_unlock", field: "netAmount" },
+      { type: "subscription", field: "netAmount" },
+      { type: "purchase", field: "fee" }
+    ];
+
+    const [aggregates, platformWithdrawals, wallet] = await Promise.all([
+      Promise.all(
+        REVENUE_TYPES.map(({ type, field }) =>
+          prisma.transaction.aggregate({ where: { type, status: "succeeded" }, _sum: { [field]: true } })
+        )
+      ),
+      prisma.transaction.findMany({ where: { type: "platform_withdrawal", status: "succeeded" }, select: { amount: true, metadata: true } }),
+      this.walletService.ensureWallet({ providerId: null })
+    ]);
+
+    const withdrawnCentsByType = new Map();
+    for (const w of platformWithdrawals) {
+      const sourceType = w.metadata?.sourceType;
+      if (!sourceType) continue;
+      const cents = parseMoneyToCents(w.amount);
+      withdrawnCentsByType.set(sourceType, (withdrawnCentsByType.get(sourceType) ?? 0n) + cents);
+    }
+
+    const balanceCents = parseMoneyToCents(wallet.balance);
+
+    const byType = REVENUE_TYPES.map(({ type, field }, index) => {
+      const sumValue = aggregates[index]._sum[field];
+      const earnedCents = sumValue ? parseMoneyToCents(sumValue) : 0n;
+      const withdrawnCents = withdrawnCentsByType.get(type) ?? 0n;
+      let availableCents = earnedCents - withdrawnCents;
+      if (availableCents < 0n) availableCents = 0n;
+      if (availableCents > balanceCents) availableCents = balanceCents;
+      return {
+        type,
+        earned: centsToDecimal(earnedCents).toString(),
+        withdrawn: centsToDecimal(withdrawnCents).toString(),
+        available: centsToDecimal(availableCents).toString()
+      };
+    });
+
+    return { balance: wallet.balance.toString(), byType };
+  }
+
+  async platformWithdraw({ adminUserId, amount, phone, type, note }) {
+    if (!phone) {
+      throw new AppError({ message: "A destination phone number is required", statusCode: 400, code: "PHONE_REQUIRED" });
+    }
+    const amountCents = parseMoneyToCents(amount);
+    if (amountCents <= 0n) {
+      throw new AppError({ message: "Invalid amount", statusCode: 400, code: "INVALID_AMOUNT" });
+    }
+
+    const normalizedType = type ? String(type).toLowerCase() : null;
+    if (normalizedType && !["contact_unlock", "subscription", "purchase"].includes(normalizedType)) {
+      throw new AppError({ message: "Invalid type", statusCode: 400, code: "INVALID_TYPE" });
+    }
+
+    const revenue = await this.getPlatformRevenueByType();
+    const capDec = normalizedType ? revenue.byType.find((r) => r.type === normalizedType)?.available ?? "0.00" : revenue.balance;
+    const capCents = parseMoneyToCents(capDec);
+    if (amountCents > capCents) {
+      throw new AppError({
+        message: normalizedType ? "Amount exceeds available balance for this revenue type" : "Amount exceeds wallet balance",
+        statusCode: 409,
+        code: "INSUFFICIENT_FUNDS",
+        details: { available: capDec }
+      });
+    }
+
+    const amountDec = centsToDecimal(amountCents);
+
+    const transactionId = await prisma.$transaction(async (tx) => {
+      const wallet = await this.walletService.debitBalance({ providerId: null, amountDec, session: tx });
+      if (!wallet) {
+        throw new AppError({ message: "Insufficient funds", statusCode: 409, code: "INSUFFICIENT_FUNDS" });
+      }
+      const transaction = await tx.transaction.create({
+        data: {
+          type: "platform_withdrawal",
+          userId: null,
+          providerId: null,
+          amount: amountDec,
+          fee: centsToDecimal(0n),
+          netAmount: amountDec,
+          status: "pending",
+          metadata: { sourceType: normalizedType, phone, note: note ?? null, initiatedBy: adminUserId }
+        }
+      });
+      return transaction.id;
+    });
+
+    try {
+      await this.mobileMoneyService.initiateWithdrawal({
+        amount: amountDec,
+        phone,
+        reference: `platform-withdraw-${transactionId}`,
+        userId: "platform"
+      });
+    } catch (payoutError) {
+      await prisma.$transaction(async (tx) => {
+        await this.walletService.creditBalance({ providerId: null, amountDec, session: tx });
+        await tx.transaction.update({ where: { id: transactionId }, data: { status: "failed" } });
+      });
+      throw payoutError;
+    }
+
+    const updated = await prisma.transaction.update({ where: { id: transactionId }, data: { status: "succeeded" } });
+    return { transactionId: updated.id, status: updated.status, amount: updated.amount.toString() };
   }
 }

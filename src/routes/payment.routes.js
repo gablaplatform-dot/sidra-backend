@@ -15,14 +15,11 @@ export const buildPaymentRoutes = ({ paymentController }) => {
   router.post(
     "/subscriptions/activate",
     requireAuth([Roles.PROVIDER]),
-    validate(
-      Joi.object({
-        amount: money.optional(),
-        days: Joi.number().integer().min(1).max(366).optional()
-      })
-    ),
+    validate(Joi.object({ phone })),
     paymentController.activateSubscription
   );
+
+  router.get("/subscription", requireAuth([Roles.PROVIDER]), paymentController.getMySubscription);
 
   router.post(
     "/contacts/unlock",

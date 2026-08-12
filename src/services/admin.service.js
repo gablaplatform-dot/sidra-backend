@@ -1,6 +1,7 @@
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 import { PaymentService } from "./payment.service.js";
+import { TransactionService } from "./transaction.service.js";
 
 const decimalToNumber = (value) => Number(value?.toString?.() ?? value ?? 0) || 0;
 const moneyString = (value) => (value?.toString ? value.toString() : String(value ?? "0.00"));
@@ -41,9 +42,10 @@ const adminPermissions = [
 ];
 
 export class AdminService {
-  constructor({ hashPassword, paymentService = new PaymentService() }) {
+  constructor({ hashPassword, paymentService = new PaymentService(), transactionService = new TransactionService() }) {
     this.hashPassword = hashPassword;
     this.paymentService = paymentService;
+    this.transactionService = transactionService;
   }
 
   async dashboard() {
@@ -424,6 +426,25 @@ export class AdminService {
 
   async markWithdrawalPaid({ adminUserId, withdrawalRequestId, note }) {
     return this.paymentService.adminMarkWithdrawalPaid({ adminUserId, withdrawalRequestId, note });
+  }
+
+  async getPlatformWallet() {
+    return this.paymentService.getPlatformWallet();
+  }
+
+  // The generic /admin/transactions endpoint can't filter for "platform-owned" rows (a falsy
+  // providerId there just means "no filter"), so the platform wallet view goes through
+  // TransactionService.adminList directly, which treats providerId: null as a real filter.
+  async listPlatformWalletTransactions(query) {
+    return this.transactionService.adminList({ ...query, providerId: null });
+  }
+
+  async getPlatformRevenueByType() {
+    return this.paymentService.getPlatformRevenueByType();
+  }
+
+  async platformWithdraw({ adminUserId, amount, phone, type, note }) {
+    return this.paymentService.platformWithdraw({ adminUserId, amount, phone, type, note });
   }
 
   async listWallets() {

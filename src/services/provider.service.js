@@ -317,6 +317,7 @@ export class ProviderService {
         ratingCount: createdProvider.ratingCount ?? 0,
         subscriptionStatus: createdProvider.subscriptionStatus,
         walletEnabled: createdProvider.walletEnabled,
+        onlinePaymentsEnabled: createdProvider.onlinePaymentsEnabled,
         createdAt: createdProvider.createdAt,
         updatedAt: createdProvider.updatedAt
       }
@@ -398,6 +399,7 @@ export class ProviderService {
         ratingCount: provider.ratingCount ?? 0,
         subscriptionStatus: provider.subscriptionStatus,
         walletEnabled: provider.walletEnabled,
+        onlinePaymentsEnabled: provider.onlinePaymentsEnabled,
         createdAt: provider.createdAt,
         updatedAt: provider.updatedAt
       }
@@ -534,6 +536,7 @@ export class ProviderService {
     if (updates.contact !== undefined) data.contact = updates.contact ?? {};
     if (updates.media !== undefined) data.media = updates.media ?? {};
     if (updates.customFields !== undefined) data.customFields = updates.customFields ?? {};
+    if (updates.onlinePaymentsEnabled !== undefined) data.onlinePaymentsEnabled = Boolean(updates.onlinePaymentsEnabled);
 
     if (Object.keys(data).length) {
       await prisma.provider.update({ where: { id: provider.id }, data });
@@ -575,6 +578,7 @@ export class ProviderService {
       ratingCount: updated.ratingCount ?? 0,
       subscriptionStatus: updated.subscriptionStatus,
       walletEnabled: updated.walletEnabled,
+      onlinePaymentsEnabled: updated.onlinePaymentsEnabled,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt
     };
@@ -655,6 +659,7 @@ export class ProviderService {
         ratingCount: p.ratingCount ?? 0,
         subscriptionStatus: p.subscriptionStatus,
         walletEnabled: p.walletEnabled,
+        onlinePaymentsEnabled: p.onlinePaymentsEnabled,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt
       })),
@@ -696,6 +701,7 @@ export class ProviderService {
       ratingCount: provider.ratingCount ?? 0,
       subscriptionStatus: provider.subscriptionStatus,
       walletEnabled: provider.walletEnabled,
+      onlinePaymentsEnabled: provider.onlinePaymentsEnabled,
       createdAt: provider.createdAt,
       updatedAt: provider.updatedAt
     };

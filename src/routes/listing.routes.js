@@ -42,7 +42,8 @@ export const buildListingRoutes = ({ listingController }) => {
         categoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
         customFields: Joi.object().unknown(true).optional(),
-        featured: Joi.boolean().optional()
+        featured: Joi.boolean().optional(),
+        onlinePaymentEnabled: Joi.boolean().optional()
       })
     ),
     listingController.create
@@ -60,7 +61,8 @@ export const buildListingRoutes = ({ listingController }) => {
         categoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
         customFields: Joi.object().unknown(true).optional(),
-        featured: Joi.boolean().optional()
+        featured: Joi.boolean().optional(),
+        onlinePaymentEnabled: Joi.boolean().optional()
       }).min(1)
     ),
     listingController.update

@@ -89,7 +89,7 @@ export const buildApp = () => {
   const storageService = new StorageService();
   const storageController = new StorageController({ storageService });
 
-  const adminService = new AdminService({ hashPassword });
+  const adminService = new AdminService({ hashPassword, paymentService, transactionService });
   const adminController = new AdminController({ adminService });
 
   const engagementService = new EngagementService();

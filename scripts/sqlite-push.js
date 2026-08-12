@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS providers (
   contactClicks INTEGER NOT NULL DEFAULT 0,
   subscriptionStatus TEXT NOT NULL DEFAULT 'none',
   walletEnabled BOOLEAN NOT NULL DEFAULT 0,
+  onlinePaymentsEnabled BOOLEAN NOT NULL DEFAULT 1,
   settingsOverrides JSONB NOT NULL DEFAULT '{}',
   availability JSONB NOT NULL DEFAULT '{}',
   verification JSONB NOT NULL DEFAULT '{}',
@@ -121,6 +122,7 @@ CREATE TABLE IF NOT EXISTS service_products (
   customFields JSONB NOT NULL DEFAULT '{}',
   inventory INTEGER,
   sku TEXT,
+  onlinePaymentEnabled BOOLEAN NOT NULL DEFAULT 1,
   availability JSONB NOT NULL DEFAULT '{}',
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -475,7 +477,9 @@ const ensureColumn = (table, column, definition) => {
   ["providers", "registeredAt", "DATETIME"],
   ["providers", "profileViews", "INTEGER NOT NULL DEFAULT 0"],
   ["providers", "contactClicks", "INTEGER NOT NULL DEFAULT 0"],
-  ["service_products", "categoryId", "TEXT"]
+  ["providers", "onlinePaymentsEnabled", "BOOLEAN NOT NULL DEFAULT 1"],
+  ["service_products", "categoryId", "TEXT"],
+  ["service_products", "onlinePaymentEnabled", "BOOLEAN NOT NULL DEFAULT 1"]
 ].forEach(([table, column, definition]) => ensureColumn(table, column, definition));
 
 // wallets.providerId used to be NOT NULL (one wallet per provider). A platform-owned wallet

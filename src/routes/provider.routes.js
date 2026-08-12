@@ -126,7 +126,8 @@ export const buildProviderRoutes = ({ providerController }) => {
         location: locationSchema.optional(),
         contact: contactSchema.optional(),
         media: mediaSchema.optional(),
-        customFields: Joi.object().unknown(true).optional()
+        customFields: Joi.object().unknown(true).optional(),
+        onlinePaymentsEnabled: Joi.boolean().optional()
       })
     ),
     providerController.updateMyProfile

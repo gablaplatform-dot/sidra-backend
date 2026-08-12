@@ -7,9 +7,17 @@ export class PaymentController {
     try {
       const result = await this.paymentService.activateSubscription({
         actorUserId: req.user.id,
-        amount: req.body.amount,
-        days: req.body.days
+        phone: req.body.phone
       });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  getMySubscription = async (req, res, next) => {
+    try {
+      const result = await this.paymentService.getMySubscription({ actorUserId: req.user.id });
       res.status(200).json({ data: result });
     } catch (e) {
       next(e);

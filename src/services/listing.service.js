@@ -10,7 +10,7 @@ export class ListingService {
     return provider;
   }
 
-  async createListing({ actorUserId, name, description, price = 0, type, categoryId, media, customFields, featured }) {
+  async createListing({ actorUserId, name, description, price = 0, type, categoryId, media, customFields, featured, onlinePaymentEnabled }) {
     const provider = await this.getProviderForUser(actorUserId);
 
     const normalizedType = String(type ?? "").toLowerCase();
@@ -29,7 +29,8 @@ export class ListingService {
         status: "pending",
         featured: Boolean(featured),
         media: media ?? {},
-        customFields: customFields ?? {}
+        customFields: customFields ?? {},
+        onlinePaymentEnabled: onlinePaymentEnabled === undefined ? true : Boolean(onlinePaymentEnabled)
       }
     });
     return {
@@ -43,6 +44,7 @@ export class ListingService {
       featured: obj.featured,
       media: obj.media,
       customFields: obj.customFields,
+      onlinePaymentEnabled: obj.onlinePaymentEnabled,
       createdAt: obj.createdAt,
       updatedAt: obj.updatedAt
     };
@@ -67,6 +69,7 @@ export class ListingService {
     if (updates.media !== undefined) update.media = updates.media ?? {};
     if (updates.customFields !== undefined) update.customFields = updates.customFields ?? {};
     if (updates.featured !== undefined) update.featured = Boolean(updates.featured);
+    if (updates.onlinePaymentEnabled !== undefined) update.onlinePaymentEnabled = Boolean(updates.onlinePaymentEnabled);
     if (updates.type !== undefined) {
       const normalizedType = String(updates.type ?? "").toLowerCase();
       if (!["service", "product"].includes(normalizedType)) {
@@ -88,6 +91,7 @@ export class ListingService {
       featured: updated.featured,
       media: updated.media,
       customFields: updated.customFields,
+      onlinePaymentEnabled: updated.onlinePaymentEnabled,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt
     };
@@ -140,6 +144,7 @@ export class ListingService {
         customFields: i.customFields,
         inventory: i.inventory,
         sku: i.sku,
+        onlinePaymentEnabled: i.onlinePaymentEnabled,
         availability: i.availability,
         createdAt: i.createdAt,
         updatedAt: i.updatedAt
@@ -195,6 +200,7 @@ export class ListingService {
         featured: i.featured,
         media: i.media,
         customFields: i.customFields,
+        onlinePaymentEnabled: i.onlinePaymentEnabled,
         createdAt: i.createdAt,
         updatedAt: i.updatedAt
       })),
@@ -260,6 +266,7 @@ export class ListingService {
         featured: i.featured,
         media: i.media,
         customFields: i.customFields,
+        onlinePaymentEnabled: i.onlinePaymentEnabled,
         createdAt: i.createdAt,
         updatedAt: i.updatedAt
       })),

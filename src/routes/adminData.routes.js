@@ -141,6 +141,36 @@ export const buildAdminDataRoutes = ({ adminController }) => {
     ),
     adminController.listTransactions
   );
+  router.get("/platform-wallet", adminController.getPlatformWallet);
+  router.get("/platform-wallet/revenue-by-type", adminController.getPlatformRevenueByType);
+  router.get(
+    "/platform-wallet/transactions",
+    validate(
+      Joi.object({
+        type: Joi.string().valid(...Object.values(TransactionType)).optional(),
+        status: Joi.string().valid(...Object.values(TransactionStatus)).optional(),
+        from: Joi.date().iso().optional(),
+        to: Joi.date().iso().optional(),
+        sort: Joi.string().valid("newest", "oldest", "amount").optional(),
+        page: Joi.number().integer().min(1).optional(),
+        limit: Joi.number().integer().min(1).max(200).optional()
+      }),
+      "query"
+    ),
+    adminController.listPlatformWalletTransactions
+  );
+  router.post(
+    "/platform-wallet/withdraw",
+    validate(
+      Joi.object({
+        amount: Joi.alternatives().try(Joi.number().min(0), Joi.string().pattern(/^\d+(\.\d{1,2})?$/)).required(),
+        phone: Joi.string().trim().min(6).max(20).required(),
+        type: Joi.string().valid("contact_unlock", "subscription", "purchase").optional(),
+        note: Joi.string().trim().max(2000).allow(null).optional()
+      })
+    ),
+    adminController.platformWithdraw
+  );
   router.get("/wallets", adminController.listWallets);
   router.get("/withdrawals", adminController.listWithdrawals);
   router.post(

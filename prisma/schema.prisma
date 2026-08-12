@@ -69,6 +69,7 @@ model Provider {
   contactClicks      Int                      @default(0)
   subscriptionStatus String                   @default("none")
   walletEnabled      Boolean                  @default(false)
+  onlinePaymentsEnabled Boolean               @default(true)
   settingsOverrides  Json                     @default("{}")
   availability       Json                     @default("{}")
   verification       Json                     @default("{}")
@@ -144,6 +145,7 @@ model ServiceProduct {
   customFields Json                @default("{}")
   inventory    Int?
   sku          String?
+  onlinePaymentEnabled Boolean     @default(true)
   availability Json                @default("{}")
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt

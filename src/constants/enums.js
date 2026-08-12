@@ -54,7 +54,8 @@ export const TransactionType = Object.freeze({
   SUBSCRIPTION: "subscription",
   CONTACT_UNLOCK: "contact_unlock",
   PURCHASE: "purchase",
-  WITHDRAWAL: "withdrawal"
+  WITHDRAWAL: "withdrawal",
+  PLATFORM_WITHDRAWAL: "platform_withdrawal"
 });
 
 export const TransactionStatus = Object.freeze({

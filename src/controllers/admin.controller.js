@@ -115,6 +115,46 @@ export class AdminController {
     }
   };
 
+  getPlatformWallet = async (_req, res, next) => {
+    try {
+      res.status(200).json({ data: await this.adminService.getPlatformWallet() });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  listPlatformWalletTransactions = async (req, res, next) => {
+    try {
+      res.status(200).json({ data: await this.adminService.listPlatformWalletTransactions(req.query) });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  getPlatformRevenueByType = async (_req, res, next) => {
+    try {
+      res.status(200).json({ data: await this.adminService.getPlatformRevenueByType() });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  platformWithdraw = async (req, res, next) => {
+    try {
+      res.status(200).json({
+        data: await this.adminService.platformWithdraw({
+          adminUserId: req.user.id,
+          amount: req.body.amount,
+          phone: req.body.phone,
+          type: req.body.type,
+          note: req.body.note
+        })
+      });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   listWallets = async (_req, res, next) => {
     try {
       res.status(200).json({ data: await this.adminService.listWallets() });
