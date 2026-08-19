@@ -38,8 +38,11 @@ export class CategoryService {
           behavior: behavior ?? parent.behavior ?? "general",
           viewType: viewType ?? parent.viewType ?? "directory",
           appView: appView ?? viewType ?? parent.appView ?? parent.viewType ?? "directory",
-          providerFields: providerFields ?? parent.providerFields ?? [],
-          listingFields: listingFields ?? parent.listingFields ?? [],
+          // Provider/listing fields are no longer copied from the parent here — a subcategory
+          // starts with none of its own and inherits the parent's live (see getNestedCategories),
+          // so editing the parent later reaches every subcategory instead of only new ones.
+          providerFields: providerFields ?? [],
+          listingFields: listingFields ?? [],
           settings: settings ?? parent.settings ?? {},
           isActive: isActive ?? true,
           sortOrder
@@ -200,17 +203,34 @@ export class CategoryService {
       if (!c.parentId) top.push(c);
     }
 
-    const toDto = (c) => {
+    // A field a subcategory defines with the same key as an ancestor's overrides that
+    // ancestor's definition (e.g. to tighten `required` or change `options`) rather than
+    // showing twice; a Map preserves the ancestor's original position when a later `set` on the
+    // same key only updates its value, so inherited fields keep their order.
+    const mergeFields = (inherited, own) => {
+      const merged = new Map();
+      for (const field of inherited) merged.set(field.key, field);
+      for (const field of own) merged.set(field.key, field);
+      return Array.from(merged.values());
+    };
+
+    const toDto = (c, inheritedProviderFields = [], inheritedListingFields = []) => {
       const id = c.id;
       const children = childrenByParent.get(id) ?? [];
+      const ownProviderFields = Array.isArray(c.providerFields) ? c.providerFields : [];
+      const ownListingFields = Array.isArray(c.listingFields) ? c.listingFields : [];
+      const effectiveProviderFields = mergeFields(inheritedProviderFields, ownProviderFields);
+      const effectiveListingFields = mergeFields(inheritedListingFields, ownListingFields);
       return {
         ...this.toDto(c),
-        children: children.map(toDto),
+        effectiveProviderFields,
+        effectiveListingFields,
+        children: children.map((child) => toDto(child, effectiveProviderFields, effectiveListingFields)),
       };
     };
 
     return {
-      items: top.map(toDto),
+      items: top.map((c) => toDto(c)),
       total: byId.size
     };
   }
