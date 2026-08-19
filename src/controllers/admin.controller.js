@@ -59,6 +59,16 @@ export class AdminController {
     }
   };
 
+  setProviderOnlinePayments = async (req, res, next) => {
+    try {
+      res.status(200).json({
+        data: await this.adminService.setProviderOnlinePayments({ providerId: req.params.providerId, enabled: req.body.enabled })
+      });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   deleteProvider = async (req, res, next) => {
     try {
       res.status(200).json({ data: await this.adminService.deleteProvider({ providerId: req.params.providerId }) });

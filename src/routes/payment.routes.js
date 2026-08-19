@@ -1,7 +1,7 @@
 import { Router } from "express";
 import Joi from "joi";
 
-import { requireAuth } from "../middlewares/auth.middleware.js";
+import { requireAuth, optionalAuth } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { Roles } from "../constants/enums.js";
 
@@ -21,9 +21,12 @@ export const buildPaymentRoutes = ({ paymentController }) => {
 
   router.get("/subscription", requireAuth([Roles.PROVIDER]), paymentController.getMySubscription);
 
+  // Unlocking a provider's contact doesn't require an account — anyone can pay by mobile money
+  // anonymously. optionalAuth still attaches actorUserId when a session is present, so logged-in
+  // customers get the "already unlocked" convenience on return visits; anonymous ones don't.
   router.post(
     "/contacts/unlock",
-    requireAuth([Roles.USER, Roles.PROVIDER]),
+    optionalAuth(),
     validate(Joi.object({ providerId: id.required(), phone })),
     paymentController.unlockContact
   );
@@ -41,9 +44,12 @@ export const buildPaymentRoutes = ({ paymentController }) => {
     paymentController.purchaseProduct
   );
 
+  // Also polled by anonymous contact-unlock payments — see optionalAuth note above. The
+  // transaction id is an unguessable cuid, and the service matches it against the exact
+  // (possibly null) userId that created it, so this stays scoped to the poller's own payment.
   router.get(
     "/transactions/:transactionId/status",
-    requireAuth([Roles.USER, Roles.PROVIDER]),
+    optionalAuth(),
     validate(Joi.object({ transactionId: id.required() }), "params"),
     paymentController.getTransactionStatus
   );

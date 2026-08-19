@@ -65,6 +65,12 @@ export const buildAdminDataRoutes = ({ adminController }) => {
     validate(Joi.object({ status: Joi.string().valid(...Object.values(ProviderModerationStatus)).required() })),
     adminController.setProviderStatus
   );
+  router.patch(
+    "/providers/:providerId/online-payments",
+    validate(Joi.object({ providerId: id.required() }), "params"),
+    validate(Joi.object({ enabled: Joi.boolean().required() })),
+    adminController.setProviderOnlinePayments
+  );
   router.delete(
     "/providers/:providerId",
     validate(Joi.object({ providerId: id.required() }), "params"),
@@ -99,6 +105,7 @@ export const buildAdminDataRoutes = ({ adminController }) => {
         type: Joi.string().valid(...Object.values(ServiceProductType)).required(),
         status: Joi.string().valid(...Object.values(ServiceProductStatus)).optional(),
         featured: Joi.boolean().optional(),
+        onlinePaymentEnabled: Joi.boolean().optional(),
         media: Joi.object().unknown(true).optional(),
         customFields: Joi.object().unknown(true).optional()
       })
@@ -116,6 +123,7 @@ export const buildAdminDataRoutes = ({ adminController }) => {
         type: Joi.string().valid(...Object.values(ServiceProductType)).optional(),
         status: Joi.string().valid(...Object.values(ServiceProductStatus)).optional(),
         featured: Joi.boolean().optional(),
+        onlinePaymentEnabled: Joi.boolean().optional(),
         media: Joi.object().unknown(true).optional(),
         customFields: Joi.object().unknown(true).optional()
       }).min(1)

@@ -206,13 +206,15 @@ model AdminSettings {
 
 model ContactUnlock {
   id         String   @id @default(cuid())
-  userId     String
+  // Null means an anonymous (not-logged-in) unlock — there's no account to tie it to, so it
+  // can't be checked for "already unlocked" on a future visit like a logged-in user's can.
+  userId     String?
   providerId String
   paid       Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   @@unique([userId, providerId])

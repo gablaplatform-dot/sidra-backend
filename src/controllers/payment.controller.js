@@ -27,7 +27,7 @@ export class PaymentController {
   unlockContact = async (req, res, next) => {
     try {
       const result = await this.paymentService.unlockContact({
-        actorUserId: req.user.id,
+        actorUserId: req.user?.id ?? null,
         providerId: req.body.providerId,
         phone: req.body.phone
       });
@@ -54,7 +54,7 @@ export class PaymentController {
   getTransactionStatus = async (req, res, next) => {
     try {
       const result = await this.paymentService.getTransactionStatus({
-        actorUserId: req.user.id,
+        actorUserId: req.user?.id ?? null,
         transactionId: req.params.transactionId
       });
       res.status(200).json({ data: result });

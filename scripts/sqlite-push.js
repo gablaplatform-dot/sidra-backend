@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS admin_settings (
 
 CREATE TABLE IF NOT EXISTS contact_unlocks (
   id TEXT PRIMARY KEY NOT NULL,
-  userId TEXT NOT NULL,
+  userId TEXT,
   providerId TEXT NOT NULL,
   paid BOOLEAN NOT NULL DEFAULT 0,
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -505,6 +505,40 @@ if (providerIdColumn && providerIdColumn[3] === "1") {
       SELECT id, providerId, balance, createdAt, updatedAt FROM wallets;
     DROP TABLE wallets;
     ALTER TABLE wallets_new RENAME TO wallets;
+    PRAGMA foreign_keys = ON;
+  `);
+}
+
+// contact_unlocks.userId used to be NOT NULL (one row per logged-in customer). Anonymous
+// contact-unlock payments (no account required) need that relaxed too. SQLite can't ALTER
+// COLUMN, so recreate the table on databases that still have the old constraint, then restore
+// the indexes that get dropped along with it (they aren't declared inline on this table).
+const contactUnlocksColumnInfo = runSql("PRAGMA table_info(contact_unlocks);")
+  .split("\n")
+  .filter(Boolean)
+  .map((line) => line.split("|"));
+const contactUnlockUserIdColumn = contactUnlocksColumnInfo.find((cols) => cols[1] === "userId");
+if (contactUnlockUserIdColumn && contactUnlockUserIdColumn[3] === "1") {
+  runSql(`
+    PRAGMA foreign_keys = OFF;
+    CREATE TABLE contact_unlocks_new (
+      id TEXT PRIMARY KEY NOT NULL,
+      userId TEXT,
+      providerId TEXT NOT NULL,
+      paid BOOLEAN NOT NULL DEFAULT 0,
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+      FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE
+    );
+    INSERT INTO contact_unlocks_new (id, userId, providerId, paid, createdAt, updatedAt)
+      SELECT id, userId, providerId, paid, createdAt, updatedAt FROM contact_unlocks;
+    DROP TABLE contact_unlocks;
+    ALTER TABLE contact_unlocks_new RENAME TO contact_unlocks;
+    CREATE UNIQUE INDEX IF NOT EXISTS contact_unlocks_userId_providerId_key ON contact_unlocks(userId, providerId);
+    CREATE INDEX IF NOT EXISTS contact_unlocks_userId_idx ON contact_unlocks(userId);
+    CREATE INDEX IF NOT EXISTS contact_unlocks_providerId_idx ON contact_unlocks(providerId);
+    CREATE INDEX IF NOT EXISTS contact_unlocks_paid_idx ON contact_unlocks(paid);
     PRAGMA foreign_keys = ON;
   `);
 }

@@ -216,6 +216,20 @@ export class AdminService {
     return (await this.hydrateProviders([provider]))[0];
   }
 
+  async setProviderOnlinePayments({ providerId, enabled }) {
+    let provider;
+    try {
+      provider = await prisma.provider.update({
+        where: { id: objectId(providerId, "INVALID_PROVIDER_ID") },
+        data: { onlinePaymentsEnabled: Boolean(enabled) }
+      });
+    } catch (e) {
+      if (e?.code === "P2025") throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+      throw e;
+    }
+    return (await this.hydrateProviders([provider]))[0];
+  }
+
   async deleteProvider({ providerId }) {
     if (!providerId) {
       throw new AppError({ message: "Invalid provider id", statusCode: 400, code: "INVALID_PROVIDER_ID" });
@@ -328,6 +342,7 @@ export class AdminService {
     if (patch.type !== undefined) update.type = patch.type;
     if (patch.status !== undefined) update.status = patch.status;
     if (patch.featured !== undefined) update.featured = Boolean(patch.featured);
+    if (patch.onlinePaymentEnabled !== undefined) update.onlinePaymentEnabled = Boolean(patch.onlinePaymentEnabled);
     if (patch.media !== undefined) update.media = patch.media ?? {};
     if (patch.customFields !== undefined) update.customFields = patch.customFields ?? {};
     let listing;
@@ -340,7 +355,7 @@ export class AdminService {
     return (await this.hydrateListings([listing]))[0];
   }
 
-  async createListing({ providerId, name, description, price = 0, type, status, featured, media, customFields }) {
+  async createListing({ providerId, name, description, price = 0, type, status, featured, onlinePaymentEnabled, media, customFields }) {
     const provider = await prisma.provider.findUnique({ where: { id: objectId(providerId, "INVALID_PROVIDER_ID") } });
     if (!provider) throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
     const created = await prisma.serviceProduct.create({
@@ -352,6 +367,7 @@ export class AdminService {
         type,
         status: status ?? "approved",
         featured: Boolean(featured),
+        onlinePaymentEnabled: onlinePaymentEnabled === undefined ? true : Boolean(onlinePaymentEnabled),
         media: media ?? {},
         customFields: customFields ?? {}
       }
@@ -775,6 +791,7 @@ export class AdminService {
         contactClicks: p.contactClicks ?? 0,
         subscriptionStatus: p.subscriptionStatus,
         walletEnabled: Boolean(p.walletEnabled),
+        onlinePaymentsEnabled: p.onlinePaymentsEnabled !== false,
         walletBalance: moneyString(walletMap.get(String(p.id))?.balance),
         listingCount: countMap.get(String(p.id)) ?? 0,
         createdAt: p.createdAt,
@@ -801,6 +818,7 @@ export class AdminService {
         typeLabel: titleCase(i.type),
         status: i.status ?? "pending",
         featured: Boolean(i.featured),
+        onlinePaymentEnabled: i.onlinePaymentEnabled !== false,
         media: i.media ?? {},
         customFields: i.customFields ?? {},
         createdAt: i.createdAt,

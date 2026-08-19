@@ -694,6 +694,7 @@ export class ProviderService {
       location: contactLocked ? this.redactLocation(provider.location) : provider.location,
       contact: contactLocked ? this.redactContact(provider.contact) : provider.contact,
       contactLocked,
+      contactFee: effective ? (effective.contactFee?.toString?.() ?? "0.00") : null,
       media: provider.media,
       customFields: provider.customFields,
       isApproved: provider.isApproved,

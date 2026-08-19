@@ -81,12 +81,23 @@ export class PaymentService {
 
   // Lets the customer who initiated a deposit poll for its outcome while they approve the
   // USSD prompt on their phone (the real result only lands via the webhook).
+  // actorUserId must be normalized to `null` (never left undefined) before this filter — an
+  // anonymous poller (no session) must only ever match anonymous (userId: null) transactions,
+  // never any transaction regardless of owner.
   async getTransactionStatus({ actorUserId, transactionId }) {
-    const transaction = await prisma.transaction.findFirst({ where: { id: transactionId, userId: actorUserId } });
+    const transaction = await prisma.transaction.findFirst({ where: { id: transactionId, userId: actorUserId ?? null } });
     if (!transaction) {
       throw new AppError({ message: "Transaction not found", statusCode: 404, code: "TRANSACTION_NOT_FOUND" });
     }
-    return { id: transaction.id, type: transaction.type, status: transaction.status, amount: transaction.amount.toString() };
+    const result = { id: transaction.id, type: transaction.type, status: transaction.status, amount: transaction.amount.toString() };
+    if (transaction.type === "contact_unlock" && transaction.status === "succeeded") {
+      const provider = await prisma.provider.findUnique({ where: { id: transaction.providerId } });
+      if (provider) {
+        result.contact = provider.contact;
+        result.location = provider.location;
+      }
+    }
+    return result;
   }
 
   async listMyWithdrawals({ actorUserId, page = 1, limit = 50 }) {
@@ -301,11 +312,18 @@ export class PaymentService {
         throw new AppError({ message: "Contact fee disabled", statusCode: 400, code: "CONTACT_FEE_DISABLED" });
       }
 
-      const existing = await tx.contactUnlock.findUnique({
-        where: { userId_providerId: { userId: actorUserId, providerId } }
-      });
-      if (existing?.paid) {
-        throw new AppError({ message: "Already unlocked", statusCode: 409, code: "ALREADY_UNLOCKED" });
+      // Anonymous visitors (actorUserId null) have no account to key an "already unlocked"
+      // check off of, so that check — and the upsert that relies on the userId+providerId
+      // unique key — only applies to logged-in customers. Anonymous unlocks just get their own
+      // plain row each time and will pay again on a future visit.
+      let unlockId;
+      if (actorUserId) {
+        const existing = await tx.contactUnlock.findUnique({
+          where: { userId_providerId: { userId: actorUserId, providerId } }
+        });
+        if (existing?.paid) {
+          throw new AppError({ message: "Already unlocked", statusCode: 409, code: "ALREADY_UNLOCKED" });
+        }
       }
 
       const feeCents = parseMoneyToCents(effective.contactFee);
@@ -314,11 +332,17 @@ export class PaymentService {
       }
       const feeDec = centsToDecimal(feeCents);
 
-      const unlock = await tx.contactUnlock.upsert({
-        where: { userId_providerId: { userId: actorUserId, providerId } },
-        update: {},
-        create: { userId: actorUserId, providerId, paid: false }
-      });
+      if (actorUserId) {
+        const unlock = await tx.contactUnlock.upsert({
+          where: { userId_providerId: { userId: actorUserId, providerId } },
+          update: {},
+          create: { userId: actorUserId, providerId, paid: false }
+        });
+        unlockId = unlock.id;
+      } else {
+        const unlock = await tx.contactUnlock.create({ data: { userId: null, providerId, paid: false } });
+        unlockId = unlock.id;
+      }
 
       const reference = `contact-${crypto.randomUUID()}`;
       const transaction = await tx.transaction.create({
@@ -331,11 +355,11 @@ export class PaymentService {
           netAmount: feeDec,
           status: "pending",
           reference,
-          metadata: { contactUnlockId: unlock.id, phone }
+          metadata: { contactUnlockId: unlockId, phone }
         }
       });
 
-      return { transactionId: transaction.id, unlockId: unlock.id, reference, feeDec };
+      return { transactionId: transaction.id, unlockId, reference, feeDec };
     });
 
     try {
