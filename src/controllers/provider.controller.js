@@ -137,4 +137,16 @@ export class ProviderController {
       next(e);
     }
   };
+
+  getUnlockedContact = async (req, res, next) => {
+    try {
+      const result = await this.providerService.getUnlockedContactByProof({
+        providerId: req.params.providerId,
+        unlockId: req.query.unlockId
+      });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
 }

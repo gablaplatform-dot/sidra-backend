@@ -844,4 +844,26 @@ export class ProviderService {
 
     return { providerId: provider.id, unlocked: true, contact: provider.contact, location: provider.location };
   }
+
+  // Anonymous counterpart to getProviderContactForUser: no account to check "already unlocked"
+  // against, so the caller instead proves payment by holding the ContactUnlock id it got back
+  // from the original unlock request. Scoped to one provider per id+providerId pair, same as the
+  // logged-in path — a proof for provider A can never reveal provider B's contact.
+  async getUnlockedContactByProof({ providerId, unlockId }) {
+    if (!providerId || !unlockId) {
+      throw new AppError({ message: "Invalid request", statusCode: 400, code: "INVALID_REQUEST" });
+    }
+
+    const unlock = await prisma.contactUnlock.findFirst({ where: { id: unlockId, providerId, paid: true } });
+    if (!unlock) {
+      throw new AppError({ message: "Contact is locked", statusCode: 403, code: "CONTACT_LOCKED" });
+    }
+
+    const provider = await prisma.provider.findUnique({ where: { id: providerId } });
+    if (!provider || !provider.isApproved || provider.moderationStatus !== "approved") {
+      throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+    }
+
+    return { providerId: provider.id, unlocked: true, contact: provider.contact, location: provider.location };
+  }
 }

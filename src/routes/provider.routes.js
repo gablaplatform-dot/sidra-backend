@@ -152,6 +152,15 @@ export const buildProviderRoutes = ({ providerController }) => {
     validate(Joi.object({ providerId: id.required() }), "params"),
     providerController.getProviderContact
   );
+  // Re-reveals a contact that was unlocked anonymously (no account to check "already unlocked"
+  // against) — the browser holds onto the ContactUnlock id it got back from the payment as its
+  // own proof, scoped to this one provider, and this just re-verifies it's real and paid.
+  router.get(
+    "/:providerId/contact/unlocked",
+    validate(Joi.object({ providerId: id.required() }), "params"),
+    validate(Joi.object({ unlockId: id.required() }), "query"),
+    providerController.getUnlockedContact
+  );
   router.get("/:providerId", providerController.getPublicProviderProfile);
 
   return router;
