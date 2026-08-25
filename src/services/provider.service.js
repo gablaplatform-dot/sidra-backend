@@ -362,6 +362,112 @@ export class ProviderService {
     return { onboardingToken: token, invitationId: invitation.id, delivery: emailDelivery };
   }
 
+  async sendLinkGoogleEmail({ to, businessName, token }) {
+    if (!env.resendApiKey || !env.resendFromEmail) {
+      return { sent: false, deliveryStatus: "not_configured" };
+    }
+    const link = this.onboardingUrl(token);
+    const safeBusinessName = escapeHtml(businessName);
+    const safeLink = escapeHtml(link);
+    const subject = `Reconnect Google sign-in for ${businessName}`;
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.resendApiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: env.resendFromEmail,
+        to,
+        subject,
+        text: `Sign in with Google to reconnect your Gabla provider profile for ${businessName} and see your dashboard, wallet, and orders again: ${link}`,
+        html: `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>${escapeHtml(subject)}</title>
+  </head>
+  <body style="margin:0;padding:0;background:#F2F5F9;font-family:Arial,Helvetica,sans-serif;color:#0F172A;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#F2F5F9;">
+      <tr>
+        <td align="center" style="padding:28px 12px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+            <tr><td style="height:8px;background:#FACC15;font-size:0;line-height:0;">&nbsp;</td></tr>
+            <tr>
+              <td align="center" style="padding:30px 32px 8px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                  <tr>
+                    <td align="center" valign="middle" style="width:42px;height:42px;background:#FACC15;border-radius:8px;color:#0B2046;font-size:25px;font-weight:800;">G</td>
+                    <td style="padding-left:12px;color:#0B2046;font-size:25px;font-weight:800;">Gabla</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:20px 40px 8px;">
+                <h1 style="margin:0 0 10px;color:#0B2046;font-size:24px;line-height:1.3;font-weight:800;">Reconnect your Google sign-in</h1>
+                <p style="margin:0;color:#526174;font-size:15px;line-height:1.65;">Sign in with Google to reconnect your provider profile for <strong style="color:#0F172A;">${safeBusinessName}</strong> and get back to your dashboard, wallet, and orders.</p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:20px 40px 34px;">
+                <a href="${safeLink}" style="display:inline-block;background:#0B2046;color:#FFFFFF;text-decoration:none;font-size:16px;font-weight:700;line-height:1;padding:16px 26px;border-radius:7px;">Continue with Google&nbsp;&nbsp;&rarr;</a>
+                <p style="margin:14px 0 0;color:#8491A3;font-size:12px;line-height:1.5;">This secure link expires in 7 days. If you didn't request this, you can safely ignore this email.</p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:20px 32px;background:#0B2046;">
+                <p style="margin:0;color:#FFFFFF;font-size:14px;font-weight:700;">Gabla</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`
+      })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) return { sent: false, deliveryStatus: "failed", providerResponse: body };
+    return { sent: true, deliveryStatus: "sent", providerResponse: body };
+  }
+
+  // Reconnects an already-registered provider's Google sign-in without touching onboarding
+  // status/approval — this is a distinct concern from the original invitation lifecycle
+  // (resendInvitation), which mutates onboardingStatus in ways that would misrepresent an
+  // active provider as "not yet onboarded".
+  async resendGoogleLink({ providerId }) {
+    const provider = await prisma.provider.findUnique({ where: { id: providerId } });
+    if (!provider) throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+    const user = await prisma.user.findUnique({ where: { id: provider.userId } });
+    if (!user?.email) throw new AppError({ message: "Provider email is required", statusCode: 400, code: "EMAIL_REQUIRED" });
+    const token = this.signOnboardingToken({ userId: user.id, providerId: provider.id });
+    const delivery = await this.sendLinkGoogleEmail({ to: user.email, businessName: provider.businessName, token });
+    return { onboardingToken: token, delivery };
+  }
+
+  // Public, self-service version of the above — a provider who can't see their profile after
+  // signing in can request their own reconnect link without waiting on an admin. Always returns
+  // the same generic response regardless of whether the email matched, so this can't be used to
+  // enumerate which emails have a provider account.
+  async requestGoogleLink({ email }) {
+    const normalizedEmail = this.normalizeEmail(email);
+    if (normalizedEmail) {
+      const user = await prisma.user.findFirst({ where: { email: normalizedEmail, role: "provider" } });
+      if (user) {
+        const provider = await prisma.provider.findUnique({ where: { userId: user.id } });
+        if (provider) {
+          const token = this.signOnboardingToken({ userId: user.id, providerId: provider.id });
+          await this.sendLinkGoogleEmail({ to: user.email, businessName: provider.businessName, token });
+        }
+      }
+    }
+    return { requested: true };
+  }
+
   async getOnboardingInfo({ token }) {
     const payload = this.verifyOnboardingToken(token);
     const provider = await prisma.provider.findUnique({ where: { id: String(payload.providerId) } });
@@ -395,6 +501,7 @@ export class ProviderService {
         media: provider.media,
         customFields: provider.customFields,
         isApproved: provider.isApproved,
+        onboardingStatus: provider.onboardingStatus,
         ratingAvg: provider.ratingAvg ?? 0,
         ratingCount: provider.ratingCount ?? 0,
         subscriptionStatus: provider.subscriptionStatus,

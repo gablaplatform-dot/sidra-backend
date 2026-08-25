@@ -90,6 +90,24 @@ export class ProviderController {
     }
   };
 
+  adminResendGoogleLink = async (req, res, next) => {
+    try {
+      const result = await this.providerService.resendGoogleLink({ providerId: req.params.providerId });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  requestGoogleLink = async (req, res, next) => {
+    try {
+      const result = await this.providerService.requestGoogleLink({ email: req.body.email });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   listPublicProviders = async (req, res, next) => {
     try {
       const result = await this.providerService.listPublicProviders(req.query);

@@ -88,6 +88,18 @@ export const buildProviderRoutes = ({ providerController }) => {
     validate(Joi.object({ providerId: id.required() }), "params"),
     providerController.adminResendInvitation
   );
+  router.post(
+    "/admin/:providerId/resend-google-link",
+    requireAuth([Roles.ADMIN]),
+    validate(Joi.object({ providerId: id.required() }), "params"),
+    providerController.adminResendGoogleLink
+  );
+
+  router.post(
+    "/link-google/request",
+    validate(Joi.object({ email: Joi.string().email().max(254).required() })),
+    providerController.requestGoogleLink
+  );
 
   router.get("/onboarding/:token", providerController.getOnboardingInfo);
   router.post(
