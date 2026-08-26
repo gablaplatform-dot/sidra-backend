@@ -12,7 +12,7 @@ const normalizeStatusFilter = (status) => {
 const normalizeTypeFilter = (type) => {
   if (!type) return null;
   const t = String(type).toLowerCase();
-  if (["subscription", "contact_unlock", "purchase", "withdrawal", "platform_withdrawal"].includes(t)) return t;
+  if (["subscription", "contact_unlock", "purchase", "withdrawal", "platform_withdrawal", "cart_purchase"].includes(t)) return t;
   throw new AppError({ message: "Invalid type", statusCode: 400, code: "INVALID_TYPE" });
 };
 

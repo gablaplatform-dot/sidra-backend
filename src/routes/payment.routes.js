@@ -44,6 +44,27 @@ export const buildPaymentRoutes = ({ paymentController }) => {
     paymentController.purchaseProduct
   );
 
+  router.post(
+    "/cart/checkout",
+    requireAuth([Roles.USER, Roles.PROVIDER]),
+    validate(
+      Joi.object({
+        items: Joi.array()
+          .items(
+            Joi.object({
+              listingId: id.required(),
+              quantity: Joi.number().integer().min(1).max(99).optional()
+            })
+          )
+          .min(1)
+          .max(50)
+          .required(),
+        phone
+      })
+    ),
+    paymentController.cartCheckout
+  );
+
   // Also polled by anonymous contact-unlock payments — see optionalAuth note above. The
   // transaction id is an unguessable cuid, and the service matches it against the exact
   // (possibly null) userId that created it, so this stays scoped to the poller's own payment.

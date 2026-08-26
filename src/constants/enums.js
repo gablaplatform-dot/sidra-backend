@@ -55,7 +55,8 @@ export const TransactionType = Object.freeze({
   CONTACT_UNLOCK: "contact_unlock",
   PURCHASE: "purchase",
   WITHDRAWAL: "withdrawal",
-  PLATFORM_WITHDRAWAL: "platform_withdrawal"
+  PLATFORM_WITHDRAWAL: "platform_withdrawal",
+  CART_PURCHASE: "cart_purchase"
 });
 
 export const TransactionStatus = Object.freeze({

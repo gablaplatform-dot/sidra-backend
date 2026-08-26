@@ -30,6 +30,11 @@ export const buildListingRoutes = ({ listingController }) => {
     listingController.listMine
   );
   router.get("/provider/:providerId", listingController.listByProvider);
+  router.get(
+    "/:listingId",
+    validate(Joi.object({ listingId: id.required() }), "params"),
+    listingController.getPublicListing
+  );
 
   router.post(
     "/",

@@ -69,4 +69,13 @@ export class ListingController {
       next(e);
     }
   };
+
+  getPublicListing = async (req, res, next) => {
+    try {
+      const result = await this.listingService.getPublicListing({ listingId: req.params.listingId });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
 }

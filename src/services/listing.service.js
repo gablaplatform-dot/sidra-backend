@@ -298,4 +298,39 @@ export class ListingService {
       total
     };
   }
+
+  async getPublicListing({ listingId }) {
+    if (!listingId) {
+      throw new AppError({ message: "Invalid listingId", statusCode: 400, code: "INVALID_LISTING_ID" });
+    }
+    const listing = await prisma.serviceProduct.findUnique({
+      where: { id: listingId },
+      include: { provider: { select: { id: true, businessName: true, isApproved: true, moderationStatus: true, onlinePaymentsEnabled: true } } }
+    });
+    if (
+      !listing ||
+      listing.status !== "approved" ||
+      !listing.provider?.isApproved ||
+      listing.provider.moderationStatus !== "approved"
+    ) {
+      throw new AppError({ message: "Listing not found", statusCode: 404, code: "LISTING_NOT_FOUND" });
+    }
+    return {
+      id: listing.id,
+      providerId: listing.providerId,
+      provider: { id: listing.provider.id, businessName: listing.provider.businessName, onlinePaymentsEnabled: listing.provider.onlinePaymentsEnabled },
+      categoryId: listing.categoryId,
+      shopCategoryId: listing.shopCategoryId,
+      name: listing.name,
+      description: listing.description,
+      price: listing.price,
+      type: listing.type,
+      featured: listing.featured,
+      media: listing.media,
+      customFields: listing.customFields,
+      onlinePaymentEnabled: listing.onlinePaymentEnabled,
+      createdAt: listing.createdAt,
+      updatedAt: listing.updatedAt
+    };
+  }
 }

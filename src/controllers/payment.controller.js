@@ -51,6 +51,19 @@ export class PaymentController {
     }
   };
 
+  cartCheckout = async (req, res, next) => {
+    try {
+      const result = await this.paymentService.cartCheckout({
+        actorUserId: req.user.id,
+        items: req.body.items,
+        phone: req.body.phone
+      });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   getTransactionStatus = async (req, res, next) => {
     try {
       const result = await this.paymentService.getTransactionStatus({

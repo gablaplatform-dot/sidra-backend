@@ -96,6 +96,15 @@ export class PaymentService {
         result.contact = provider.contact;
         result.location = provider.location;
       }
+    } else if (transaction.type === "cart_purchase") {
+      const items = Array.isArray(transaction.metadata?.items) ? transaction.metadata.items : [];
+      result.items = items.map((item) => ({
+        listingId: item.listingId,
+        providerId: item.providerId,
+        name: item.name,
+        quantity: item.quantity,
+        amount: centsToDecimal(BigInt(item.amountCents ?? "0")).toString()
+      }));
     }
     return result;
   }
@@ -466,6 +475,124 @@ export class PaymentService {
     };
   }
 
+  // One mobile money deposit for the whole cart, potentially spanning multiple sellers - each
+  // line item is priced and fee'd against its own provider's effective settings up front, and
+  // the split only actually happens once the single deposit succeeds (see handleMobileMoneySuccess).
+  async cartCheckout({ actorUserId, items, phone }) {
+    if (!phone) {
+      throw new AppError({ message: "A phone number is required to pay by mobile money", statusCode: 400, code: "PHONE_REQUIRED" });
+    }
+    if (!Array.isArray(items) || !items.length) {
+      throw new AppError({ message: "Your cart is empty", statusCode: 400, code: "EMPTY_CART" });
+    }
+
+    // Merge duplicate listingIds defensively - the client-side cart already prevents this, but
+    // the request body can't be trusted to enforce it.
+    const quantityByListingId = new Map();
+    for (const item of items) {
+      if (!item?.listingId) {
+        throw new AppError({ message: "Invalid cart item", statusCode: 400, code: "INVALID_CART_ITEM" });
+      }
+      const q = Math.max(1, Math.min(99, Number(item.quantity) || 1));
+      quantityByListingId.set(item.listingId, (quantityByListingId.get(item.listingId) ?? 0) + q);
+    }
+
+    const { transactionId, reference, amountDec } = await prisma.$transaction(async (tx) => {
+      const settings = await this.getSettings(tx);
+      const lineItems = [];
+      let totalAmountCents = 0n;
+      let totalFeeCents = 0n;
+
+      for (const [listingId, quantity] of quantityByListingId) {
+        const listing = await tx.serviceProduct.findUnique({ where: { id: listingId } });
+        if (!listing || listing.type !== "product" || listing.status !== "approved") {
+          throw new AppError({ message: "One of the items in your cart is no longer available", statusCode: 404, code: "PRODUCT_NOT_FOUND", details: { listingId } });
+        }
+
+        const provider = await tx.provider.findUnique({ where: { id: listing.providerId } });
+        if (!provider || !provider.isApproved || provider.moderationStatus !== "approved") {
+          throw new AppError({ message: "One of the sellers in your cart is no longer available", statusCode: 404, code: "PROVIDER_NOT_FOUND", details: { listingId } });
+        }
+
+        const effective = this.computeEffectiveForProvider({ global: settings, provider });
+        if (!effective.enableEcommerce) {
+          throw new AppError({ message: "Online purchases are disabled for one of the items in your cart", statusCode: 400, code: "ECOMMERCE_DISABLED", details: { listingId } });
+        }
+        if (!effective.enableWallet) {
+          throw new AppError({ message: "One of the sellers in your cart has their wallet disabled", statusCode: 400, code: "WALLET_DISABLED", details: { listingId } });
+        }
+        if (!provider.onlinePaymentsEnabled) {
+          throw new AppError({ message: "One of the sellers in your cart does not accept online payments", statusCode: 400, code: "PROVIDER_ONLINE_PAYMENTS_DISABLED", details: { listingId } });
+        }
+        if (!listing.onlinePaymentEnabled) {
+          throw new AppError({ message: "Online purchase is disabled for one of the items in your cart", statusCode: 400, code: "LISTING_ONLINE_PAYMENT_DISABLED", details: { listingId } });
+        }
+
+        const unitCents = parseMoneyToCents(listing.price);
+        const amountCents = unitCents * BigInt(quantity);
+        const feeCents = feeFromPercentCents({ amountCents, percent: effective.transactionFeePercent });
+        const netCents = amountCents - feeCents;
+
+        totalAmountCents += amountCents;
+        totalFeeCents += feeCents;
+
+        lineItems.push({
+          listingId: listing.id,
+          providerId: provider.id,
+          name: listing.name,
+          quantity,
+          unitPriceCents: unitCents.toString(),
+          amountCents: amountCents.toString(),
+          feeCents: feeCents.toString(),
+          netCents: netCents.toString()
+        });
+      }
+
+      if (totalAmountCents <= 0n) {
+        throw new AppError({ message: "Your cart total must be greater than zero", statusCode: 400, code: "INVALID_AMOUNT" });
+      }
+
+      const amountDec = centsToDecimal(totalAmountCents);
+      const feeDec = centsToDecimal(totalFeeCents);
+      const netDec = centsToDecimal(totalAmountCents - totalFeeCents);
+
+      const reference = `cart-${crypto.randomUUID()}`;
+      const transaction = await tx.transaction.create({
+        data: {
+          type: "cart_purchase",
+          userId: actorUserId,
+          providerId: null,
+          amount: amountDec,
+          fee: feeDec,
+          netAmount: netDec,
+          status: "pending",
+          reference,
+          metadata: { items: lineItems, phone }
+        }
+      });
+
+      return { transactionId: transaction.id, reference, amountDec };
+    });
+
+    try {
+      await this.mobileMoneyService.initiateDeposit({
+        amount: amountDec,
+        phone,
+        reference,
+        ...this.mobileMoneyCallbackUrls()
+      });
+    } catch (gatewayError) {
+      await prisma.transaction.update({ where: { id: transactionId }, data: { status: "failed" } });
+      throw gatewayError;
+    }
+
+    return {
+      transactionId,
+      status: "pending",
+      message: "Check your phone to approve the mobile money payment."
+    };
+  }
+
   // Called from the mobile money webhook once a deposit actually completes. Credits the
   // provider's wallet for a purchase (plus the platform wallet for its cut), or the platform
   // wallet outright for a contact unlock.
@@ -525,6 +652,44 @@ export class PaymentService {
         });
         await tx.provider.update({ where: { id: transaction.providerId }, data: { subscriptionStatus: "active" } });
         await this.walletService.creditBalance({ providerId: null, amountDec: transaction.netAmount, session: tx });
+      } else if (transaction.type === "cart_purchase") {
+        const items = Array.isArray(transaction.metadata?.items) ? transaction.metadata.items : [];
+        const itemsByProvider = new Map();
+        for (const item of items) {
+          if (!itemsByProvider.has(item.providerId)) itemsByProvider.set(item.providerId, []);
+          itemsByProvider.get(item.providerId).push(item);
+        }
+
+        for (const [providerId, providerItems] of itemsByProvider) {
+          const amountCents = providerItems.reduce((sum, i) => sum + BigInt(i.amountCents ?? "0"), 0n);
+          const feeCents = providerItems.reduce((sum, i) => sum + BigInt(i.feeCents ?? "0"), 0n);
+          const netCents = amountCents - feeCents;
+
+          if (netCents > 0n) {
+            await this.walletService.creditBalance({ providerId, amountDec: centsToDecimal(netCents), session: tx });
+          }
+
+          // Give each seller their own succeeded "purchase" record so this cart purchase shows
+          // up in their normal wallet/transaction history exactly like a single-item Buy Now
+          // would - the parent cart_purchase transaction (providerId: null) can't, since it spans
+          // multiple sellers and would never match any one provider's transaction list filter.
+          await tx.transaction.create({
+            data: {
+              type: "purchase",
+              userId: transaction.userId,
+              providerId,
+              amount: centsToDecimal(amountCents),
+              fee: centsToDecimal(feeCents),
+              netAmount: centsToDecimal(netCents),
+              status: "succeeded",
+              metadata: { cartTransactionId: transaction.id, items: providerItems }
+            }
+          });
+        }
+
+        if (Number(transaction.fee) > 0) {
+          await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
+        }
       }
 
       return { ok: true, transactionId: transaction.id, type: transaction.type };
