@@ -13,6 +13,8 @@ import { ProviderService } from "./services/provider.service.js";
 import { ProviderController } from "./controllers/provider.controller.js";
 import { CategoryService } from "./services/category.service.js";
 import { CategoryController } from "./controllers/category.controller.js";
+import { ShopCategoryService } from "./services/shopCategory.service.js";
+import { ShopCategoryController } from "./controllers/shopCategory.controller.js";
 import { ListingService } from "./services/listing.service.js";
 import { ListingController } from "./controllers/listing.controller.js";
 import { AdminSettingsService } from "./services/adminSettings.service.js";
@@ -74,6 +76,9 @@ export const buildApp = () => {
   const categoryService = new CategoryService();
   const categoryController = new CategoryController({ categoryService });
 
+  const shopCategoryService = new ShopCategoryService();
+  const shopCategoryController = new ShopCategoryController({ shopCategoryService });
+
   const listingService = new ListingService();
   const listingController = new ListingController({ listingService });
 
@@ -104,6 +109,7 @@ export const buildApp = () => {
       authController,
       providerController,
       categoryController,
+      shopCategoryController,
       listingController,
       adminSettingsController,
       transactionController,

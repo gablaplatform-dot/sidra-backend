@@ -2,6 +2,7 @@ import { Router } from "express";
 import { buildAuthRoutes } from "./auth.routes.js";
 import { buildProviderRoutes } from "./provider.routes.js";
 import { buildCategoryRoutes } from "./category.routes.js";
+import { buildShopCategoryRoutes } from "./shopCategory.routes.js";
 import { buildListingRoutes } from "./listing.routes.js";
 import { buildAdminSettingsRoutes } from "./adminSettings.routes.js";
 import { buildAdminTransactionsRoutes } from "./adminTransactions.routes.js";
@@ -15,6 +16,7 @@ export const buildRoutes = ({
   authController,
   providerController,
   categoryController,
+  shopCategoryController,
   listingController,
   adminSettingsController,
   transactionController,
@@ -30,6 +32,7 @@ export const buildRoutes = ({
   router.use("/auth", buildAuthRoutes({ authController }));
   router.use("/providers", buildProviderRoutes({ providerController }));
   router.use("/categories", buildCategoryRoutes({ categoryController }));
+  router.use("/shop-categories", buildShopCategoryRoutes({ shopCategoryController }));
   router.use("/listings", buildListingRoutes({ listingController }));
   router.use("/payments", buildPaymentRoutes({ paymentController }));
   router.use("/storage", buildStorageRoutes({ storageController }));

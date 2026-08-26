@@ -93,6 +93,7 @@ model Provider {
   inquiries      Inquiry[]
   mediaAssets    MediaAsset[]
   orders         Order[]
+  shopCategories ShopCategory[]
 
   @@index([categoryId, createdAt])
   @@index([publicSlug])
@@ -135,6 +136,7 @@ model ServiceProduct {
   id           String              @id @default(cuid())
   providerId   String
   categoryId   String?
+  shopCategoryId String?
   name         String
   description  String              @default("")
   price        Decimal             @default(0.00)
@@ -152,13 +154,37 @@ model ServiceProduct {
 
   provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  shopCategory ShopCategory? @relation(fields: [shopCategoryId], references: [id], onDelete: SetNull)
   orderItems OrderItem[]
 
   @@index([providerId, type, createdAt])
   @@index([status, createdAt])
   @@index([featured, status])
   @@index([categoryId, status])
+  @@index([shopCategoryId, status])
   @@map("service_products")
+}
+
+// A provider's own product/service category tree for organizing their shop (e.g. "Electronics" >
+// "TVs") - distinct from the platform-wide Category tree (which drives the marketplace's
+// directory/browse structure and is admin-managed). Scoped per-provider throughout.
+model ShopCategory {
+  id         String   @id @default(cuid())
+  providerId String
+  parentId   String?
+  name       String
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  provider Provider       @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  parent   ShopCategory?  @relation("ShopCategoryToShopCategory", fields: [parentId], references: [id], onDelete: SetNull)
+  children ShopCategory[] @relation("ShopCategoryToShopCategory")
+  listings ServiceProduct[]
+
+  @@unique([providerId, parentId, name])
+  @@index([providerId, parentId])
+  @@map("shop_categories")
 }
 
 model ProviderInvitation {

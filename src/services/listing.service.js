@@ -10,18 +10,30 @@ export class ListingService {
     return provider;
   }
 
-  async createListing({ actorUserId, name, description, price = 0, type, categoryId, media, customFields, featured, onlinePaymentEnabled }) {
+  // A listing's shop category is the provider's own (ShopCategory), never another provider's -
+  // callers only ever pass an id they claim to own, so this is the one place that actually checks.
+  async assertShopCategoryOwnership({ shopCategoryId, providerId }) {
+    if (!shopCategoryId) return;
+    const category = await prisma.shopCategory.findUnique({ where: { id: shopCategoryId } });
+    if (!category || category.providerId !== providerId) {
+      throw new AppError({ message: "Shop category not found", statusCode: 404, code: "SHOP_CATEGORY_NOT_FOUND" });
+    }
+  }
+
+  async createListing({ actorUserId, name, description, price = 0, type, categoryId, shopCategoryId, media, customFields, featured, onlinePaymentEnabled }) {
     const provider = await this.getProviderForUser(actorUserId);
 
     const normalizedType = String(type ?? "").toLowerCase();
     if (!["service", "product"].includes(normalizedType)) {
       throw new AppError({ message: "Invalid type", statusCode: 400, code: "INVALID_TYPE" });
     }
+    await this.assertShopCategoryOwnership({ shopCategoryId, providerId: provider.id });
 
     const obj = await prisma.serviceProduct.create({
       data: {
         providerId: provider.id,
         categoryId: categoryId !== undefined ? categoryId : provider.categoryId,
+        shopCategoryId: shopCategoryId ?? null,
         name,
         description: description ?? "",
         price,
@@ -37,6 +49,7 @@ export class ListingService {
       id: obj.id,
       providerId: obj.providerId,
       categoryId: obj.categoryId,
+      shopCategoryId: obj.shopCategoryId,
       name: obj.name,
       description: obj.description,
       price: obj.price,
@@ -66,6 +79,10 @@ export class ListingService {
     if (updates.description !== undefined) update.description = updates.description ?? "";
     if (updates.price !== undefined) update.price = updates.price;
     if (updates.categoryId !== undefined) update.categoryId = updates.categoryId;
+    if (updates.shopCategoryId !== undefined) {
+      await this.assertShopCategoryOwnership({ shopCategoryId: updates.shopCategoryId, providerId: provider.id });
+      update.shopCategoryId = updates.shopCategoryId || null;
+    }
     if (updates.media !== undefined) update.media = updates.media ?? {};
     if (updates.customFields !== undefined) update.customFields = updates.customFields ?? {};
     if (updates.featured !== undefined) update.featured = Boolean(updates.featured);
@@ -84,6 +101,7 @@ export class ListingService {
       id: updated.id,
       providerId: updated.providerId,
       categoryId: updated.categoryId,
+      shopCategoryId: updated.shopCategoryId,
       name: updated.name,
       description: updated.description,
       price: updated.price,
@@ -111,13 +129,14 @@ export class ListingService {
     return { deleted: true };
   }
 
-  async listMine({ actorUserId, page = 1, limit = 50, type, status }) {
+  async listMine({ actorUserId, page = 1, limit = 50, type, status, shopCategoryId }) {
     const provider = await this.getProviderForUser(actorUserId);
     const normalizedPage = Math.max(1, Number(page) || 1);
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 50));
     const where = { providerId: provider.id };
     if (type) where.type = String(type).toLowerCase();
     if (status) where.status = String(status).toLowerCase();
+    if (shopCategoryId) where.shopCategoryId = shopCategoryId;
 
     const [items, total] = await Promise.all([
       prisma.serviceProduct.findMany({
@@ -134,6 +153,7 @@ export class ListingService {
         id: i.id,
         providerId: i.providerId,
         categoryId: i.categoryId,
+        shopCategoryId: i.shopCategoryId,
         name: i.name,
         description: i.description,
         price: i.price,
@@ -155,7 +175,7 @@ export class ListingService {
     };
   }
 
-  async listByProvider({ providerId, page = 1, limit = 20, type }) {
+  async listByProvider({ providerId, page = 1, limit = 20, type, shopCategoryId }) {
     if (!providerId) {
       throw new AppError({ message: "Invalid providerId", statusCode: 400, code: "INVALID_PROVIDER_ID" });
     }
@@ -177,6 +197,7 @@ export class ListingService {
       }
       filter.type = normalizedType;
     }
+    if (shopCategoryId) filter.shopCategoryId = shopCategoryId;
 
     const [items, total] = await Promise.all([
       prisma.serviceProduct.findMany({
@@ -193,6 +214,7 @@ export class ListingService {
         id: i.id,
         providerId: i.providerId,
         categoryId: i.categoryId,
+        shopCategoryId: i.shopCategoryId,
         name: i.name,
         description: i.description,
         price: i.price,
@@ -259,6 +281,7 @@ export class ListingService {
         providerId: i.providerId,
         provider: i.provider ? { id: i.provider.id, businessName: i.provider.businessName } : null,
         categoryId: i.categoryId,
+        shopCategoryId: i.shopCategoryId,
         name: i.name,
         description: i.description,
         price: i.price,

@@ -22,7 +22,8 @@ export const buildListingRoutes = ({ listingController }) => {
         page: Joi.number().integer().min(1).optional(),
         limit: Joi.number().integer().min(1).max(100).optional(),
         type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).optional(),
-        status: Joi.string().valid("pending", "approved", "suspended").optional()
+        status: Joi.string().valid("pending", "approved", "suspended").optional(),
+        shopCategoryId: id.optional()
       }),
       "query"
     ),
@@ -40,6 +41,7 @@ export const buildListingRoutes = ({ listingController }) => {
         price: Joi.number().min(0).optional(),
         type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).required(),
         categoryId: id.allow(null).optional(),
+        shopCategoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
         customFields: Joi.object().unknown(true).optional(),
         featured: Joi.boolean().optional(),
@@ -59,6 +61,7 @@ export const buildListingRoutes = ({ listingController }) => {
         price: Joi.number().min(0).optional(),
         type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).optional(),
         categoryId: id.allow(null).optional(),
+        shopCategoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
         customFields: Joi.object().unknown(true).optional(),
         featured: Joi.boolean().optional(),
