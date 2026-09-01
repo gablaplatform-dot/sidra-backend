@@ -47,7 +47,10 @@ export const buildRideRoutes = ({ rideController }) => {
     ),
     rideController.registerDriver
   );
-  router.get("/drivers/me", requireAuth([Roles.DRIVER]), rideController.getMyDriverProfile);
+  // Any authenticated account can check "do I have a driver profile yet?" - not just accounts
+  // that already have one. Gating this to Roles.DRIVER made it impossible for a plain user to
+  // ever reach the DRIVER_NOT_FOUND signal that tells a client to show the application form.
+  router.get("/drivers/me", requireAuth(anyAccount), rideController.getMyDriverProfile);
   router.patch(
     "/drivers/me",
     requireAuth([Roles.DRIVER]),
