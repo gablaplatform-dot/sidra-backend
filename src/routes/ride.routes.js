@@ -12,7 +12,7 @@ export const buildRideRoutes = ({ rideController }) => {
   const point = Joi.object({
     lat: Joi.number().min(-90).max(90).required(),
     lng: Joi.number().min(-180).max(180).required(),
-    address: Joi.string().trim().max(500).allow("").optional()
+    address: Joi.string().trim().max(500).allow("", null).optional()
   });
   // Any logged-in account (customer, provider, or driver) can request a ride or register as a
   // driver - these are not mutually exclusive with other roles on this platform.
