@@ -24,8 +24,10 @@ model User {
   updatedAt        DateTime @updatedAt
 
   provider Provider?
+  rideDriver RideDriver?
 
   transactions   Transaction[]
+  rideTrips      RideTrip[]
   contactUnlocks ContactUnlock[]
   favorites      Favorite[]
   reviews        Review[]
@@ -285,6 +287,7 @@ model Transaction {
   provider Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
   withdrawal WithdrawalRequest?
   order Order?
+  rideTrip RideTrip?
 
   @@index([providerId, createdAt])
   @@index([userId, createdAt])
@@ -535,4 +538,133 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([action])
   @@map("audit_logs")
+}
+
+// --- Gabla Ride ---------------------------------------------------------------
+// A driver is its own actor type (like Provider), onboarded and approved separately from
+// marketplace sellers. Location is denormalized directly on the row (lat/lng + two geohash
+// precisions) because it's written frequently (driver app polling) and read on every matching
+// query - a separate location-history table can be added later if trip replay is ever needed,
+// but isn't required for matching.
+model RideDriver {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  vehicleType      String
+  vehicleModel     String?
+  licensePlate     String?
+  isApproved       Boolean   @default(false)
+  moderationStatus String    @default("pending")
+  isOnline         Boolean   @default(false)
+  lat              Float?
+  lng              Float?
+  // geohash5 (~4.9km cell) is the coarse fallback bucket; geohash6 (~1.2km x 0.6km) is the
+  // first-pass bucket most searches resolve against. Both are indexed so "drivers near here" is
+  // an indexed prefix/IN lookup over a handful of cells, never a scan of every driver.
+  geohash5         String?
+  geohash6         String?
+  lastLocationAt   DateTime?
+  ratingAvg        Float     @default(0)
+  ratingCount      Int       @default(0)
+  contact          Json      @default("{}")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet RideDriverWallet?
+  trips  RideTrip[]
+
+  @@index([isOnline, vehicleType, geohash6])
+  @@index([isOnline, vehicleType, geohash5])
+  @@index([moderationStatus, createdAt])
+  @@map("ride_drivers")
+}
+
+// Deliberately separate from the marketplace Wallet model (providerId-scoped) rather than
+// retrofitted onto it - driver payouts are a distinct ledger from seller payouts, and this keeps
+// the proven marketplace wallet code untouched.
+model RideDriverWallet {
+  id           String   @id @default(cuid())
+  rideDriverId String   @unique
+  balance      Decimal  @default(0.00)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  rideDriver RideDriver @relation(fields: [rideDriverId], references: [id], onDelete: Cascade)
+
+  @@map("ride_driver_wallets")
+}
+
+model RideTrip {
+  id       String  @id @default(cuid())
+  riderId  String
+  driverId String?
+
+  vehicleType String
+  // searching -> matched -> arrived -> in_progress -> completed
+  // or: cancelled_by_rider, cancelled_by_driver, no_drivers_found
+  status String @default("searching")
+
+  pickupLat      Float
+  pickupLng      Float
+  pickupAddress  String @default("")
+  dropoffLat     Float
+  dropoffLng     Float
+  dropoffAddress String @default("")
+
+  estimatedDistanceKm Float   @default(0)
+  estimatedDurationMin Float  @default(0)
+  estimatedFare       Decimal @default(0.00)
+  finalFare           Decimal @default(0.00)
+  driverEarning       Decimal @default(0.00)
+  platformFee         Decimal @default(0.00)
+
+  paymentMethod String  @default("cash")
+  paymentStatus String  @default("pending")
+  transactionId String? @unique
+
+  requestedAt   DateTime  @default(now())
+  matchedAt     DateTime?
+  arrivedAt     DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+  cancelReason  String?
+
+  riderRating  Int?
+  driverRating Int?
+  metadata     Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rider       User         @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  driver      RideDriver?  @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([status, requestedAt])
+  @@index([riderId, createdAt])
+  @@index([driverId, createdAt])
+  @@map("ride_trips")
+}
+
+// Fare rules and platform commission, per vehicle type. Singleton-per-vehicleType rows,
+// mirroring how AdminSettings holds the marketplace's global config.
+model RideSettings {
+  id                     String   @id @default(cuid())
+  vehicleType            String   @unique
+  baseFare               Decimal  @default(0.00)
+  perKmRate              Decimal  @default(0.00)
+  perMinuteRate          Decimal  @default(0.00)
+  minimumFare            Decimal  @default(0.00)
+  commissionPercent      Int      @default(0)
+  // Straight-line (haversine) pickup->dropoff distance is multiplied by this to approximate real
+  // road distance (no routing/Directions API call from the backend in this phase), then divided
+  // by avgSpeedKmh for the duration estimate.
+  roadDistanceMultiplier Float    @default(1.3)
+  avgSpeedKmh            Float    @default(25)
+  isActive               Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@map("ride_settings")
 }

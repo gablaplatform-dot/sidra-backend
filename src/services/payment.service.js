@@ -7,52 +7,22 @@ import { env } from "../config/env.js";
 import { WalletService } from "./wallet.service.js";
 import { TransactionService } from "./transaction.service.js";
 import { MobileMoneyService } from "./mobileMoney.service.js";
-
-const normalizeMoneyInput = (value) => {
-  if (value instanceof Prisma.Decimal) return value.toString();
-  if (typeof value === "number") return value.toFixed(2);
-  return String(value ?? "").trim();
-};
-
-const parseMoneyToCents = (value) => {
-  const s = normalizeMoneyInput(value);
-  if (!/^\d+(\.\d{1,2})?$/.test(s)) {
-    throw new AppError({ message: "Invalid amount", statusCode: 400, code: "INVALID_AMOUNT" });
-  }
-  const [w, f = ""] = s.split(".");
-  const cents = (f + "00").slice(0, 2);
-  return BigInt(w) * 100n + BigInt(cents);
-};
-
-const centsToDecimal = (cents) => {
-  const sign = cents < 0n ? "-" : "";
-  const abs = cents < 0n ? -cents : cents;
-  const whole = abs / 100n;
-  const frac = abs % 100n;
-  const str = `${sign}${whole.toString()}.${frac.toString().padStart(2, "0")}`;
-  return new Prisma.Decimal(str);
-};
+import { RideDriverWalletService } from "./rideDriverWallet.service.js";
+import { parseMoneyToCents, centsToDecimal, feeFromPercentCents } from "../utils/money.js";
 
 const SUBSCRIPTION_PERIOD_DAYS = 30;
-
-const feeFromPercentCents = ({ amountCents, percent }) => {
-  const n = Number(percent ?? 0);
-  if (!Number.isFinite(n) || n < 0 || n > 100) {
-    throw new AppError({ message: "Invalid fee percent", statusCode: 400, code: "INVALID_FEE_PERCENT" });
-  }
-  const basisPoints = BigInt(Math.round(n * 100));
-  return (amountCents * basisPoints) / 10000n;
-};
 
 export class PaymentService {
   constructor({
     walletService = new WalletService(),
     transactionService = new TransactionService(),
-    mobileMoneyService = new MobileMoneyService()
+    mobileMoneyService = new MobileMoneyService(),
+    rideDriverWalletService = new RideDriverWalletService()
   } = {}) {
     this.walletService = walletService;
     this.transactionService = transactionService;
     this.mobileMoneyService = mobileMoneyService;
+    this.rideDriverWalletService = rideDriverWalletService;
   }
 
   mobileMoneyCallbackUrls() {
@@ -687,6 +657,17 @@ export class PaymentService {
           });
         }
 
+        if (Number(transaction.fee) > 0) {
+          await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
+        }
+      } else if (transaction.type === "ride_trip") {
+        const tripId = transaction.metadata?.tripId;
+        const trip = tripId ? await tx.rideTrip.findUnique({ where: { id: tripId } }) : null;
+        if (trip?.driverId) {
+          await this.rideDriverWalletService.creditBalance({ rideDriverId: trip.driverId, amountDec: transaction.netAmount, session: tx });
+          await tx.rideTrip.update({ where: { id: tripId }, data: { paymentStatus: "succeeded" } });
+        }
+        // Ride commission is platform revenue, same wallet as contact-unlock/purchase-fee/subscription.
         if (Number(transaction.fee) > 0) {
           await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
         }

@@ -391,6 +391,97 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   FOREIGN KEY (actorId) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS ride_drivers (
+  id TEXT PRIMARY KEY NOT NULL,
+  userId TEXT NOT NULL UNIQUE,
+  vehicleType TEXT NOT NULL,
+  vehicleModel TEXT,
+  licensePlate TEXT,
+  isApproved BOOLEAN NOT NULL DEFAULT 0,
+  moderationStatus TEXT NOT NULL DEFAULT 'pending',
+  isOnline BOOLEAN NOT NULL DEFAULT 0,
+  lat REAL,
+  lng REAL,
+  geohash5 TEXT,
+  geohash6 TEXT,
+  lastLocationAt DATETIME,
+  ratingAvg REAL NOT NULL DEFAULT 0,
+  ratingCount INTEGER NOT NULL DEFAULT 0,
+  contact JSONB NOT NULL DEFAULT '{}',
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS ride_driver_wallets (
+  id TEXT PRIMARY KEY NOT NULL,
+  rideDriverId TEXT NOT NULL UNIQUE,
+  balance DECIMAL NOT NULL DEFAULT 0.00,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (rideDriverId) REFERENCES ride_drivers(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS ride_trips (
+  id TEXT PRIMARY KEY NOT NULL,
+  riderId TEXT NOT NULL,
+  driverId TEXT,
+  vehicleType TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'searching',
+  pickupLat REAL NOT NULL,
+  pickupLng REAL NOT NULL,
+  pickupAddress TEXT NOT NULL DEFAULT '',
+  dropoffLat REAL NOT NULL,
+  dropoffLng REAL NOT NULL,
+  dropoffAddress TEXT NOT NULL DEFAULT '',
+  estimatedDistanceKm REAL NOT NULL DEFAULT 0,
+  estimatedDurationMin REAL NOT NULL DEFAULT 0,
+  estimatedFare DECIMAL NOT NULL DEFAULT 0.00,
+  finalFare DECIMAL NOT NULL DEFAULT 0.00,
+  driverEarning DECIMAL NOT NULL DEFAULT 0.00,
+  platformFee DECIMAL NOT NULL DEFAULT 0.00,
+  paymentMethod TEXT NOT NULL DEFAULT 'cash',
+  paymentStatus TEXT NOT NULL DEFAULT 'pending',
+  transactionId TEXT UNIQUE,
+  requestedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  matchedAt DATETIME,
+  arrivedAt DATETIME,
+  startedAt DATETIME,
+  completedAt DATETIME,
+  cancelledAt DATETIME,
+  cancelReason TEXT,
+  riderRating INTEGER,
+  driverRating INTEGER,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (riderId) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (driverId) REFERENCES ride_drivers(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (transactionId) REFERENCES transactions(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS ride_settings (
+  id TEXT PRIMARY KEY NOT NULL,
+  vehicleType TEXT NOT NULL UNIQUE,
+  baseFare DECIMAL NOT NULL DEFAULT 0.00,
+  perKmRate DECIMAL NOT NULL DEFAULT 0.00,
+  perMinuteRate DECIMAL NOT NULL DEFAULT 0.00,
+  minimumFare DECIMAL NOT NULL DEFAULT 0.00,
+  commissionPercent INTEGER NOT NULL DEFAULT 0,
+  roadDistanceMultiplier REAL NOT NULL DEFAULT 1.3,
+  avgSpeedKmh REAL NOT NULL DEFAULT 25,
+  isActive BOOLEAN NOT NULL DEFAULT 1,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS ride_drivers_isOnline_vehicleType_geohash6_idx ON ride_drivers(isOnline, vehicleType, geohash6);
+CREATE INDEX IF NOT EXISTS ride_drivers_isOnline_vehicleType_geohash5_idx ON ride_drivers(isOnline, vehicleType, geohash5);
+CREATE INDEX IF NOT EXISTS ride_drivers_moderationStatus_createdAt_idx ON ride_drivers(moderationStatus, createdAt);
+CREATE INDEX IF NOT EXISTS ride_trips_status_requestedAt_idx ON ride_trips(status, requestedAt);
+CREATE INDEX IF NOT EXISTS ride_trips_riderId_createdAt_idx ON ride_trips(riderId, createdAt);
+CREATE INDEX IF NOT EXISTS ride_trips_driverId_createdAt_idx ON ride_trips(driverId, createdAt);
+
 CREATE UNIQUE INDEX IF NOT EXISTS categories_parentId_name_key ON categories(parentId, name);
 CREATE INDEX IF NOT EXISTS users_role_idx ON users(role);
 CREATE INDEX IF NOT EXISTS users_isActive_idx ON users(isActive);
