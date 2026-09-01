@@ -109,6 +109,12 @@ export const buildRideRoutes = ({ rideController }) => {
     validate(Joi.object({ reason: Joi.string().trim().max(500).allow(null).optional() })),
     rideController.cancelTrip
   );
+  router.post(
+    "/trips/:tripId/confirm",
+    requireAuth(anyAccount),
+    validate(Joi.object({ tripId: id.required() }), "params"),
+    rideController.confirmMatch
+  );
 
   // --- Driver acting on a trip ---
   router.post(

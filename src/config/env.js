@@ -32,7 +32,11 @@ export const env = {
   apiBaseUrl: process.env.API_BASE_URL ?? "http://localhost:3000",
   mobileMoneyBaseUrl: (process.env.MOBILE_MONEY_BASE_URL ?? "https://hive-sooty-eight.vercel.app").replace(/\/$/, ""),
   mobileMoneyApiKey: process.env.MOBILE_MONEY_API_KEY ?? "",
-  mobileMoneyApiPassword: process.env.MOBILE_MONEY_API_PASSWORD ?? ""
+  mobileMoneyApiPassword: process.env.MOBILE_MONEY_API_PASSWORD ?? "",
+  // Server-side key for the Google Routes API (real road distance/duration/polyline for ride
+  // fares and navigation). Falls back to a straight-line estimate wherever this is unset or the
+  // API call fails, so it's safe to leave empty until Routes API is enabled for the key.
+  googleRoutesApiKey: process.env.GOOGLE_ROUTES_API_KEY ?? ""
 };
 
 export const assertRequiredEnv = () => {

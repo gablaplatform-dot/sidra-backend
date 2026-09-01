@@ -6,6 +6,7 @@ import { parseMoneyToCents, centsToDecimal, feeFromPercentCents } from "../utils
 import { geohashEncode, geohashSearchCells, haversineDistanceKm } from "../utils/geohash.js";
 import { RideDriverWalletService } from "./rideDriverWallet.service.js";
 import { MobileMoneyService } from "./mobileMoney.service.js";
+import { RoutingService } from "./routing.service.js";
 
 const VEHICLE_TYPES = ["boda", "car"];
 const GEOHASH_PRECISION_FINE = 6; // ~1.2km x 0.6km cells - the primary search
@@ -36,6 +37,8 @@ const tripDto = (trip) => ({
   requestedAt: trip.requestedAt,
   matchedAt: trip.matchedAt,
   acceptedAt: trip.acceptedAt,
+  riderConfirmedAt: trip.riderConfirmedAt,
+  routePolyline: trip.routePolyline,
   arrivedAt: trip.arrivedAt,
   startedAt: trip.startedAt,
   completedAt: trip.completedAt,
@@ -74,10 +77,12 @@ const driverDto = (driver) => ({
 export class RideService {
   constructor({
     rideDriverWalletService = new RideDriverWalletService(),
-    mobileMoneyService = new MobileMoneyService()
+    mobileMoneyService = new MobileMoneyService(),
+    routingService = new RoutingService()
   } = {}) {
     this.rideDriverWalletService = rideDriverWalletService;
     this.mobileMoneyService = mobileMoneyService;
+    this.routingService = routingService;
   }
 
   mobileMoneyCallbackUrls() {
@@ -212,9 +217,17 @@ export class RideService {
   // only widens to a coarser grid if the fine one comes up empty. See src/utils/geohash.js.
   async findNearestDriver({ lat, lng, vehicleType, excludeDriverIds = [] }) {
     // A driver already on an active trip must never be handed a second one, or they'd end up
-    // double-booked with two riders expecting the same physical vehicle at once.
+    // double-booked with two riders expecting the same physical vehicle at once. A "matched"
+    // trip the rider hasn't confirmed yet doesn't count - otherwise an abandoned, unconfirmed
+    // match would tie up a driver indefinitely.
     const busyDrivers = await prisma.rideTrip.findMany({
-      where: { status: { in: ["searching", "matched", "arrived", "in_progress"] }, driverId: { not: null } },
+      where: {
+        driverId: { not: null },
+        OR: [
+          { status: { in: ["searching", "arrived", "in_progress"] } },
+          { status: "matched", riderConfirmedAt: { not: null } }
+        ]
+      },
       select: { driverId: true },
       distinct: ["driverId"]
     });
@@ -258,9 +271,30 @@ export class RideService {
   async estimateFare({ vehicleType, pickup, dropoff }) {
     this.assertVehicleType(vehicleType);
     const settings = await this.getRideSettings(vehicleType);
-    const straightLineKm = haversineDistanceKm(pickup.lat, pickup.lng, dropoff.lat, dropoff.lng);
-    const distanceKm = straightLineKm * settings.roadDistanceMultiplier;
-    const durationMin = (distanceKm / settings.avgSpeedKmh) * 60;
+
+    const route = await this.routingService.computeRoute({
+      originLat: pickup.lat,
+      originLng: pickup.lng,
+      destLat: dropoff.lat,
+      destLng: dropoff.lng
+    });
+
+    let distanceKm;
+    let durationMin;
+    let polyline = null;
+    let routed = false;
+    if (route) {
+      distanceKm = route.distanceKm;
+      durationMin = route.durationMin;
+      polyline = route.polyline;
+      routed = true;
+    } else {
+      // Routes API unavailable/unreachable - approximate road distance from the straight-line
+      // distance the same way this code always has.
+      const straightLineKm = haversineDistanceKm(pickup.lat, pickup.lng, dropoff.lat, dropoff.lng);
+      distanceKm = straightLineKm * settings.roadDistanceMultiplier;
+      durationMin = (distanceKm / settings.avgSpeedKmh) * 60;
+    }
 
     const baseCents = parseMoneyToCents(settings.baseFare);
     const perKmCents = parseMoneyToCents(settings.perKmRate);
@@ -275,7 +309,9 @@ export class RideService {
     return {
       distanceKm,
       durationMin,
-      fare: centsToDecimal(fareCents).toString()
+      fare: centsToDecimal(fareCents).toString(),
+      polyline,
+      routed
     };
   }
 
@@ -320,6 +356,7 @@ export class RideService {
         estimatedDistanceKm: estimate.distanceKm,
         estimatedDurationMin: estimate.durationMin,
         estimatedFare: estimate.fare,
+        routePolyline: estimate.polyline,
         paymentMethod,
         matchedAt: match ? new Date() : null,
         metadata: paymentMethod === "mobile_money" ? { riderPhone: phone } : {}
@@ -327,6 +364,62 @@ export class RideService {
     });
 
     return tripDto(trip);
+  }
+
+  // Called by the RIDER to confirm the auto-matched driver before the driver is ever notified.
+  // Since an unconfirmed match doesn't count as "busy" (see findNearestDriver), the same driver
+  // could have been tentatively matched to a different rider in the meantime - re-check
+  // freshness and re-match if needed rather than trusting the driverId blindly.
+  async confirmMatch({ actorUserId, tripId }) {
+    return prisma.$transaction(async (tx) => {
+      const trip = await tx.rideTrip.findUnique({ where: { id: tripId } });
+      if (!trip || trip.riderId !== actorUserId) {
+        throw new AppError({ message: "Trip not found", statusCode: 404, code: "TRIP_NOT_FOUND" });
+      }
+      if (trip.riderConfirmedAt) {
+        return tripDto(trip);
+      }
+      if (trip.status !== "matched") {
+        throw new AppError({ message: "This trip is no longer awaiting confirmation", statusCode: 409, code: "INVALID_TRIP_STATE" });
+      }
+
+      const candidate = trip.driverId
+        ? await tx.rideDriver.findFirst({
+            where: { id: trip.driverId, isOnline: true, isApproved: true, moderationStatus: "approved" }
+          })
+        : null;
+      const grabbedElsewhere = candidate
+        ? await tx.rideTrip.findFirst({
+            where: {
+              id: { not: tripId },
+              driverId: trip.driverId,
+              OR: [
+                { status: { in: ["searching", "arrived", "in_progress"] } },
+                { status: "matched", riderConfirmedAt: { not: null } }
+              ]
+            }
+          })
+        : null;
+
+      if (candidate && !grabbedElsewhere) {
+        const updated = await tx.rideTrip.update({ where: { id: tripId }, data: { riderConfirmedAt: new Date() } });
+        return tripDto(updated);
+      }
+
+      // The original match is gone (went offline) or was confirmed by another rider first -
+      // find a fresh one rather than confirming a driver that's no longer actually available.
+      const match = await this.findNearestDriver({ lat: trip.pickupLat, lng: trip.pickupLng, vehicleType: trip.vehicleType });
+      const updated = await tx.rideTrip.update({
+        where: { id: tripId },
+        data: {
+          driverId: match?.driver?.id ?? null,
+          status: match ? "matched" : "no_drivers_found",
+          matchedAt: match ? new Date() : trip.matchedAt,
+          riderConfirmedAt: match ? new Date() : null
+        }
+      });
+      return tripDto(updated);
+    });
   }
 
   async getTripStatus({ actorUserId, tripId }) {
@@ -366,6 +459,9 @@ export class RideService {
       }
       if (trip.status !== "matched" || trip.acceptedAt) {
         throw new AppError({ message: "This trip is no longer awaiting a response", statusCode: 409, code: "INVALID_TRIP_STATE" });
+      }
+      if (!trip.riderConfirmedAt) {
+        throw new AppError({ message: "The rider hasn't confirmed this match yet", statusCode: 409, code: "RIDE_NOT_CONFIRMED_BY_RIDER" });
       }
 
       if (accept) {

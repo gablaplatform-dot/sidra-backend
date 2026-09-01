@@ -442,12 +442,14 @@ CREATE TABLE IF NOT EXISTS ride_trips (
   finalFare DECIMAL NOT NULL DEFAULT 0.00,
   driverEarning DECIMAL NOT NULL DEFAULT 0.00,
   platformFee DECIMAL NOT NULL DEFAULT 0.00,
+  routePolyline TEXT,
   paymentMethod TEXT NOT NULL DEFAULT 'cash',
   paymentStatus TEXT NOT NULL DEFAULT 'pending',
   transactionId TEXT UNIQUE,
   requestedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   matchedAt DATETIME,
   acceptedAt DATETIME,
+  riderConfirmedAt DATETIME,
   arrivedAt DATETIME,
   startedAt DATETIME,
   completedAt DATETIME,
@@ -593,7 +595,9 @@ const ensureColumn = (table, column, definition) => {
   ["service_products", "shopCategoryId", "TEXT"],
   ["ride_drivers", "licensePhotoUrl", "TEXT"],
   ["ride_drivers", "rejectionReason", "TEXT"],
-  ["ride_trips", "acceptedAt", "DATETIME"]
+  ["ride_trips", "acceptedAt", "DATETIME"],
+  ["ride_trips", "riderConfirmedAt", "DATETIME"],
+  ["ride_trips", "routePolyline", "TEXT"]
 ].forEach(([table, column, definition]) => ensureColumn(table, column, definition));
 
 // wallets.providerId used to be NOT NULL (one wallet per provider). A platform-owned wallet

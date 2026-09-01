@@ -619,6 +619,10 @@ model RideTrip {
   finalFare           Decimal @default(0.00)
   driverEarning       Decimal @default(0.00)
   platformFee         Decimal @default(0.00)
+  // Encoded polyline (Google's standard format) for the pickup->dropoff road route, captured
+  // once at request time from the Routes API. Null when the Routes API isn't reachable/enabled -
+  // clients fall back to drawing a straight line between the two points.
+  routePolyline String?
 
   paymentMethod String  @default("cash")
   paymentStatus String  @default("pending")
@@ -630,6 +634,10 @@ model RideTrip {
   // (status "matched", acceptedAt null) from one already accepted and en route to pickup
   // (status still "matched", acceptedAt set), since both share the same status value.
   acceptedAt    DateTime?
+  // Set when the RIDER confirms the driver auto-matched to them. Before this, the trip doesn't
+  // count as "busy" for matching purposes (so an abandoned, unconfirmed match doesn't tie up a
+  // driver indefinitely) and the driver app never surfaces it as an incoming offer.
+  riderConfirmedAt DateTime?
   arrivedAt     DateTime?
   startedAt     DateTime?
   completedAt   DateTime?

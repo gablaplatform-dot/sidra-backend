@@ -115,6 +115,15 @@ export class RideController {
     }
   };
 
+  confirmMatch = async (req, res, next) => {
+    try {
+      const result = await this.rideService.confirmMatch({ actorUserId: req.user.id, tripId: req.params.tripId });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   respondToTripOffer = async (req, res, next) => {
     try {
       const result = await this.rideService.respondToTripOffer({ actorUserId: req.user.id, tripId: req.params.tripId, accept: req.body.accept });
