@@ -1,6 +1,7 @@
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 import { env } from "../config/env.js";
+import { signAccessToken } from "../utils/jwt.js";
 import { parseMoneyToCents, centsToDecimal, feeFromPercentCents } from "../utils/money.js";
 import { geohashEncode, geohashSearchCells, haversineDistanceKm } from "../utils/geohash.js";
 import { RideDriverWalletService } from "./rideDriverWallet.service.js";
@@ -138,7 +139,17 @@ export class RideService {
       return driver;
     });
 
-    return driverDto(created);
+    // The caller's existing access token still carries the pre-registration role (e.g. "user")
+    // baked in at sign-in - every driver-only endpoint would reject it until they got a new one.
+    // Mint a fresh token reflecting the role change right away instead of forcing a re-login.
+    const accessToken = signAccessToken({
+      payload: { sub: actorUserId, role: "driver" },
+      secret: env.jwtSecret,
+      issuer: env.jwtIssuer,
+      ttlSeconds: env.jwtAccessTtlSeconds
+    });
+
+    return { ...driverDto(created), accessToken };
   }
 
   async getMyDriverProfile({ actorUserId }) {
