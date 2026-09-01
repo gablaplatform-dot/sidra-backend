@@ -50,6 +50,20 @@ const tripDto = (trip) => ({
   updatedAt: trip.updatedAt
 });
 
+// The compact driver shape shown to a rider (never the driver's own full profile/PII).
+const driverSummary = (driver) =>
+  driver
+    ? {
+        id: driver.id,
+        vehicleModel: driver.vehicleModel,
+        licensePlate: driver.licensePlate,
+        lat: driver.lat,
+        lng: driver.lng,
+        ratingAvg: driver.ratingAvg,
+        contact: driver.contact
+      }
+    : null;
+
 const driverDto = (driver) => ({
   id: driver.id,
   userId: driver.userId,
@@ -363,7 +377,7 @@ export class RideService {
       }
     });
 
-    return tripDto(trip);
+    return { ...tripDto(trip), driver: driverSummary(match?.driver) };
   }
 
   // Called by the RIDER to confirm the auto-matched driver before the driver is ever notified.
@@ -376,18 +390,18 @@ export class RideService {
       if (!trip || trip.riderId !== actorUserId) {
         throw new AppError({ message: "Trip not found", statusCode: 404, code: "TRIP_NOT_FOUND" });
       }
-      if (trip.riderConfirmedAt) {
-        return tripDto(trip);
-      }
-      if (trip.status !== "matched") {
-        throw new AppError({ message: "This trip is no longer awaiting confirmation", statusCode: 409, code: "INVALID_TRIP_STATE" });
-      }
-
       const candidate = trip.driverId
         ? await tx.rideDriver.findFirst({
             where: { id: trip.driverId, isOnline: true, isApproved: true, moderationStatus: "approved" }
           })
         : null;
+      if (trip.riderConfirmedAt) {
+        return { ...tripDto(trip), driver: driverSummary(candidate) };
+      }
+      if (trip.status !== "matched") {
+        throw new AppError({ message: "This trip is no longer awaiting confirmation", statusCode: 409, code: "INVALID_TRIP_STATE" });
+      }
+
       const grabbedElsewhere = candidate
         ? await tx.rideTrip.findFirst({
             where: {
@@ -403,7 +417,7 @@ export class RideService {
 
       if (candidate && !grabbedElsewhere) {
         const updated = await tx.rideTrip.update({ where: { id: tripId }, data: { riderConfirmedAt: new Date() } });
-        return tripDto(updated);
+        return { ...tripDto(updated), driver: driverSummary(candidate) };
       }
 
       // The original match is gone (went offline) or was confirmed by another rider first -
@@ -418,7 +432,7 @@ export class RideService {
           riderConfirmedAt: match ? new Date() : null
         }
       });
-      return tripDto(updated);
+      return { ...tripDto(updated), driver: driverSummary(match?.driver) };
     });
   }
 
@@ -433,7 +447,7 @@ export class RideService {
     if (!isRider && !isAssignedDriver) {
       throw new AppError({ message: "Trip not found", statusCode: 404, code: "TRIP_NOT_FOUND" });
     }
-    return { ...tripDto(trip), driver: driver ? { id: driver.id, vehicleModel: driver.vehicleModel, licensePlate: driver.licensePlate, lat: driver.lat, lng: driver.lng, ratingAvg: driver.ratingAvg, contact: driver.contact } : null };
+    return { ...tripDto(trip), driver: driverSummary(driver) };
   }
 
   async listMyTripsAsRider({ actorUserId, limit = 20 }) {
