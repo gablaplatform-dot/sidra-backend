@@ -233,8 +233,7 @@ export class RideService {
     return {
       distanceKm,
       durationMin,
-      fare: centsToDecimal(fareCents).toString(),
-      fareCents
+      fare: centsToDecimal(fareCents).toString()
     };
   }
 
