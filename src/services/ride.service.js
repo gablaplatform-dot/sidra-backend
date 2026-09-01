@@ -15,7 +15,11 @@ const decToString = (v) => (v ? v.toString() : "0.00");
 const tripDto = (trip) => ({
   id: trip.id,
   riderId: trip.riderId,
+  riderName: trip.rider?.name ?? null,
+  riderPhone: trip.rider?.phone ?? null,
   driverId: trip.driverId,
+  driverName: trip.driver?.user?.name ?? null,
+  driverPhone: trip.driver?.user?.phone ?? null,
   vehicleType: trip.vehicleType,
   status: trip.status,
   pickup: { lat: trip.pickupLat, lng: trip.pickupLng, address: trip.pickupAddress },
@@ -45,6 +49,9 @@ const tripDto = (trip) => ({
 const driverDto = (driver) => ({
   id: driver.id,
   userId: driver.userId,
+  userName: driver.user?.name ?? null,
+  userPhone: driver.user?.phone ?? null,
+  userEmail: driver.user?.email ?? null,
   vehicleType: driver.vehicleType,
   vehicleModel: driver.vehicleModel,
   licensePlate: driver.licensePlate,
@@ -312,7 +319,7 @@ export class RideService {
   }
 
   async getTripStatus({ actorUserId, tripId }) {
-    const trip = await prisma.rideTrip.findUnique({ where: { id: tripId } });
+    const trip = await prisma.rideTrip.findUnique({ where: { id: tripId }, include: { rider: { select: { name: true, phone: true } } } });
     if (!trip) {
       throw new AppError({ message: "Trip not found", statusCode: 404, code: "TRIP_NOT_FOUND" });
     }
@@ -498,7 +505,13 @@ export class RideService {
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 50));
     const where = moderationStatus ? { moderationStatus } : {};
     const [items, total] = await Promise.all([
-      prisma.rideDriver.findMany({ where, orderBy: { createdAt: "desc" }, skip: (normalizedPage - 1) * normalizedLimit, take: normalizedLimit }),
+      prisma.rideDriver.findMany({
+        where,
+        include: { user: { select: { name: true, phone: true, email: true } } },
+        orderBy: { createdAt: "desc" },
+        skip: (normalizedPage - 1) * normalizedLimit,
+        take: normalizedLimit
+      }),
       prisma.rideDriver.count({ where })
     ]);
     return { items: items.map(driverDto), page: normalizedPage, limit: normalizedLimit, total };
@@ -521,7 +534,16 @@ export class RideService {
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 50));
     const where = status ? { status } : {};
     const [items, total] = await Promise.all([
-      prisma.rideTrip.findMany({ where, orderBy: { createdAt: "desc" }, skip: (normalizedPage - 1) * normalizedLimit, take: normalizedLimit }),
+      prisma.rideTrip.findMany({
+        where,
+        include: {
+          rider: { select: { name: true, phone: true } },
+          driver: { include: { user: { select: { name: true, phone: true } } } }
+        },
+        orderBy: { createdAt: "desc" },
+        skip: (normalizedPage - 1) * normalizedLimit,
+        take: normalizedLimit
+      }),
       prisma.rideTrip.count({ where })
     ]);
     return { items: items.map(tripDto), page: normalizedPage, limit: normalizedLimit, total };
