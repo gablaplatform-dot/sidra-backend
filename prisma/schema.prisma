@@ -552,8 +552,10 @@ model RideDriver {
   vehicleType      String
   vehicleModel     String?
   licensePlate     String?
+  licensePhotoUrl  String?
   isApproved       Boolean   @default(false)
   moderationStatus String    @default("pending")
+  rejectionReason  String?
   isOnline         Boolean   @default(false)
   lat              Float?
   lng              Float?
@@ -624,6 +626,10 @@ model RideTrip {
 
   requestedAt   DateTime  @default(now())
   matchedAt     DateTime?
+  // Set when the assigned driver taps "Accept" — distinguishes a fresh, unanswered offer
+  // (status "matched", acceptedAt null) from one already accepted and en route to pickup
+  // (status still "matched", acceptedAt set), since both share the same status value.
+  acceptedAt    DateTime?
   arrivedAt     DateTime?
   startedAt     DateTime?
   completedAt   DateTime?

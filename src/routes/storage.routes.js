@@ -10,7 +10,7 @@ export const buildStorageRoutes = ({ storageController }) => {
 
   router.post(
     "/upload-url",
-    requireAuth([Roles.ADMIN, Roles.PROVIDER]),
+    requireAuth([Roles.ADMIN, Roles.PROVIDER, Roles.USER, Roles.DRIVER]),
     validate(
       Joi.object({
         contentType: Joi.string().valid("image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4").required(),

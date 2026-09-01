@@ -30,6 +30,7 @@ const tripDto = (trip) => ({
   paymentStatus: trip.paymentStatus,
   requestedAt: trip.requestedAt,
   matchedAt: trip.matchedAt,
+  acceptedAt: trip.acceptedAt,
   arrivedAt: trip.arrivedAt,
   startedAt: trip.startedAt,
   completedAt: trip.completedAt,
@@ -47,8 +48,10 @@ const driverDto = (driver) => ({
   vehicleType: driver.vehicleType,
   vehicleModel: driver.vehicleModel,
   licensePlate: driver.licensePlate,
+  licensePhotoUrl: driver.licensePhotoUrl,
   isApproved: driver.isApproved,
   moderationStatus: driver.moderationStatus,
+  rejectionReason: driver.rejectionReason,
   isOnline: driver.isOnline,
   lat: driver.lat,
   lng: driver.lng,
@@ -101,8 +104,11 @@ export class RideService {
 
   // --- Driver management --------------------------------------------------------
 
-  async registerDriver({ actorUserId, vehicleType, vehicleModel, licensePlate, contact }) {
+  async registerDriver({ actorUserId, vehicleType, vehicleModel, licensePlate, licensePhotoUrl, contact }) {
     this.assertVehicleType(vehicleType);
+    if (!licensePhotoUrl) {
+      throw new AppError({ message: "A photo of your permit/license is required", statusCode: 400, code: "LICENSE_PHOTO_REQUIRED" });
+    }
     const existing = await prisma.rideDriver.findUnique({ where: { userId: actorUserId } });
     if (existing) {
       throw new AppError({ message: "You already have a driver profile", statusCode: 409, code: "DRIVER_ALREADY_EXISTS" });
@@ -115,6 +121,7 @@ export class RideService {
           vehicleType,
           vehicleModel: vehicleModel ?? null,
           licensePlate: licensePlate ?? null,
+          licensePhotoUrl,
           contact: contact ?? {},
           moderationStatus: "pending",
           isApproved: false
@@ -140,6 +147,14 @@ export class RideService {
     if (updates.vehicleType !== undefined) {
       this.assertVehicleType(updates.vehicleType);
       data.vehicleType = updates.vehicleType;
+    }
+    if (updates.licensePhotoUrl !== undefined) {
+      data.licensePhotoUrl = updates.licensePhotoUrl;
+      // A rejected driver resubmitting a new permit photo goes back into the review queue.
+      if (driver.moderationStatus === "rejected") {
+        data.moderationStatus = "pending";
+        data.rejectionReason = null;
+      }
     }
     const updated = await prisma.rideDriver.update({ where: { id: driver.id }, data });
     return driverDto(updated);
@@ -178,6 +193,15 @@ export class RideService {
   // point (an indexed lookup), computes exact distance for just that small candidate set, and
   // only widens to a coarser grid if the fine one comes up empty. See src/utils/geohash.js.
   async findNearestDriver({ lat, lng, vehicleType, excludeDriverIds = [] }) {
+    // A driver already on an active trip must never be handed a second one, or they'd end up
+    // double-booked with two riders expecting the same physical vehicle at once.
+    const busyDrivers = await prisma.rideTrip.findMany({
+      where: { status: { in: ["searching", "matched", "arrived", "in_progress"] }, driverId: { not: null } },
+      select: { driverId: true },
+      distinct: ["driverId"]
+    });
+    const excludeIds = [...new Set([...excludeDriverIds, ...busyDrivers.map((t) => t.driverId)])];
+
     const tryPrecision = async (precision) => {
       const cells = geohashSearchCells(lat, lng, precision);
       const geohashField = precision === GEOHASH_PRECISION_FINE ? "geohash6" : "geohash5";
@@ -188,7 +212,7 @@ export class RideService {
           isApproved: true,
           moderationStatus: "approved",
           [geohashField]: { in: cells },
-          id: excludeDriverIds.length ? { notIn: excludeDriverIds } : undefined,
+          id: excludeIds.length ? { notIn: excludeIds } : undefined,
           lat: { not: null },
           lng: { not: null }
         },
@@ -322,12 +346,13 @@ export class RideService {
       if (!trip || trip.driverId !== driver.id) {
         throw new AppError({ message: "Trip not found", statusCode: 404, code: "TRIP_NOT_FOUND" });
       }
-      if (trip.status !== "matched") {
+      if (trip.status !== "matched" || trip.acceptedAt) {
         throw new AppError({ message: "This trip is no longer awaiting a response", statusCode: 409, code: "INVALID_TRIP_STATE" });
       }
 
       if (accept) {
-        return tripDto(trip);
+        const updated = await tx.rideTrip.update({ where: { id: tripId }, data: { acceptedAt: new Date() } });
+        return tripDto(updated);
       }
 
       const declinedIds = [...(trip.metadata?.declinedDriverIds ?? []), driver.id];
@@ -356,6 +381,9 @@ export class RideService {
     const VALID_TRANSITIONS = { matched: "arrived", arrived: "in_progress", in_progress: "completed" };
     if (VALID_TRANSITIONS[trip.status] !== status) {
       throw new AppError({ message: `Cannot move a trip from "${trip.status}" to "${status}"`, statusCode: 409, code: "INVALID_TRIP_STATE" });
+    }
+    if (status === "arrived" && !trip.acceptedAt) {
+      throw new AppError({ message: "Accept the trip before marking it arrived", statusCode: 409, code: "TRIP_NOT_ACCEPTED" });
     }
 
     if (status === "completed") {
@@ -476,10 +504,14 @@ export class RideService {
     return { items: items.map(driverDto), page: normalizedPage, limit: normalizedLimit, total };
   }
 
-  async adminSetDriverApproval({ driverId, approved }) {
+  async adminSetDriverApproval({ driverId, approved, rejectionReason }) {
     const updated = await prisma.rideDriver.update({
       where: { id: driverId },
-      data: { isApproved: Boolean(approved), moderationStatus: approved ? "approved" : "rejected" }
+      data: {
+        isApproved: Boolean(approved),
+        moderationStatus: approved ? "approved" : "rejected",
+        rejectionReason: approved ? null : (rejectionReason ?? null)
+      }
     });
     return driverDto(updated);
   }

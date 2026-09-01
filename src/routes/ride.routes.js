@@ -39,6 +39,7 @@ export const buildRideRoutes = ({ rideController }) => {
         vehicleType: vehicleType.required(),
         vehicleModel: Joi.string().trim().max(120).allow(null).optional(),
         licensePlate: Joi.string().trim().max(40).allow(null).optional(),
+        licensePhotoUrl: Joi.string().uri().max(2000).required(),
         contact: Joi.object({
           phone: Joi.string().trim().max(32).allow(null).optional()
         }).unknown(true).optional()
@@ -55,6 +56,7 @@ export const buildRideRoutes = ({ rideController }) => {
         vehicleType: vehicleType.optional(),
         vehicleModel: Joi.string().trim().max(120).allow(null).optional(),
         licensePlate: Joi.string().trim().max(40).allow(null).optional(),
+        licensePhotoUrl: Joi.string().uri().max(2000).optional(),
         contact: Joi.object().unknown(true).optional()
       }).min(1)
     ),
@@ -139,7 +141,7 @@ export const buildRideRoutes = ({ rideController }) => {
     "/admin/drivers/:driverId/approval",
     requireAuth([Roles.ADMIN]),
     validate(Joi.object({ driverId: id.required() }), "params"),
-    validate(Joi.object({ approved: Joi.boolean().required() })),
+    validate(Joi.object({ approved: Joi.boolean().required(), rejectionReason: Joi.string().trim().max(500).allow(null).optional() })),
     rideController.adminSetDriverApproval
   );
   router.get(

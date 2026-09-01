@@ -144,7 +144,7 @@ export class RideController {
 
   adminSetDriverApproval = async (req, res, next) => {
     try {
-      const result = await this.rideService.adminSetDriverApproval({ driverId: req.params.driverId, approved: req.body.approved });
+      const result = await this.rideService.adminSetDriverApproval({ driverId: req.params.driverId, approved: req.body.approved, rejectionReason: req.body.rejectionReason });
       res.status(200).json({ data: result });
     } catch (e) {
       next(e);
