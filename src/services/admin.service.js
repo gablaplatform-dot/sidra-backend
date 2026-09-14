@@ -49,10 +49,11 @@ export class AdminService {
   }
 
   async dashboard() {
-    const [users, providers, pendingProviders, listings, txAgg, walletAgg, subscriptions, reviews, inquiries, orders] = await Promise.all([
+    const [users, providers, pendingProviders, pendingCategories, listings, txAgg, walletAgg, subscriptions, reviews, inquiries, orders] = await Promise.all([
       prisma.user.count({ where: { role: "user" } }),
       prisma.provider.count(),
       prisma.provider.count({ where: { moderationStatus: "pending" } }),
+      prisma.category.count({ where: { moderationStatus: "pending" } }),
       prisma.serviceProduct.count(),
       prisma.transaction.aggregate({
         where: { status: "succeeded" },
@@ -71,6 +72,7 @@ export class AdminService {
         users,
         providers,
         pendingProviders,
+        pendingCategories,
         listings,
         activeSubscriptions: subscriptions,
         transactions: txAgg._count?._all ?? 0,
@@ -270,9 +272,15 @@ export class AdminService {
     return { deleted: true };
   }
 
-  async listCategories() {
+  // Note: deliberately no moderationStatus filter here - this always returns the full tree
+  // (admin_ui flattens it client-side to build the "pending review" list) since filtering server-
+  // side by moderationStatus would silently drop a pending subcategory whose parent is already
+  // approved (and vice versa), breaking the parent/child nesting below.
+  async listCategories({ viewType } = {}) {
+    const where = {};
+    if (viewType) where.viewType = viewType;
     const [categories, providerCounts, listingCounts] = await Promise.all([
-      prisma.category.findMany({ orderBy: [{ parentId: "asc" }, { sortOrder: "asc" }, { name: "asc" }] }),
+      prisma.category.findMany({ where, orderBy: [{ parentId: "asc" }, { sortOrder: "asc" }, { name: "asc" }] }),
       prisma.provider.groupBy({ by: ["categoryId"], _count: { _all: true } }),
       prisma.$queryRaw`SELECT p.categoryId as categoryId, COUNT(sp.id) as count
         FROM service_products sp
@@ -302,6 +310,8 @@ export class AdminService {
       listings: listingMap.get(String(c.id)) ?? 0,
       isActive: c.isActive ?? true,
       status: c.isActive ? "active" : "paused",
+      moderationStatus: c.moderationStatus ?? "approved",
+      createdByProviderId: c.createdByProviderId ?? null,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
       children: (children.get(String(c.id)) ?? []).map(toDto)

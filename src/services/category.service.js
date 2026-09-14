@@ -1,5 +1,6 @@
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
+import { CategoryBehavior, CategoryModerationStatus, CategoryViewType } from "../constants/enums.js";
 
 const uniqueError = (e) => e?.code === "P2002";
 
@@ -14,6 +15,53 @@ export class CategoryService {
     } catch (e) {
       if (uniqueError(e)) {
         throw new AppError({ message: "Category already exists", statusCode: 409, code: "CATEGORY_EXISTS" });
+      }
+      throw e;
+    }
+  }
+
+  async getProviderForUser(userId) {
+    const provider = await prisma.provider.findUnique({ where: { userId } });
+    if (!provider) {
+      throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+    }
+    return provider;
+  }
+
+  // A provider self-creating a category (because nothing existing fits their product) goes live
+  // immediately - isActive stays true so it's usable right away in the same submission - but is
+  // flagged moderationStatus "pending" so admin's category screens can surface it for review.
+  async createFromProvider({ actorUserId, name, parentId }) {
+    const provider = await this.getProviderForUser(actorUserId);
+
+    let parent = null;
+    if (parentId) {
+      parent = await prisma.category.findUnique({ where: { id: parentId } });
+      if (!parent) {
+        throw new AppError({ message: "Parent category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
+      }
+    }
+
+    try {
+      const sortOrder = await this.getNextSortOrder(parentId ?? null);
+      const created = await prisma.category.create({
+        data: {
+          name,
+          parentId: parentId ?? null,
+          behavior: parent?.behavior ?? CategoryBehavior.ONLINE_SHOP,
+          viewType: parent?.viewType ?? CategoryViewType.ECOMMERCE,
+          appView: parent?.appView ?? CategoryViewType.ECOMMERCE,
+          settings: parent?.settings ?? {},
+          isActive: true,
+          moderationStatus: CategoryModerationStatus.PENDING,
+          createdByProviderId: provider.id,
+          sortOrder
+        }
+      });
+      return this.toDto(created);
+    } catch (e) {
+      if (uniqueError(e)) {
+        throw new AppError({ message: "A category with this name already exists here", statusCode: 409, code: "CATEGORY_EXISTS" });
       }
       throw e;
     }
@@ -61,7 +109,7 @@ export class CategoryService {
     }
   }
 
-  async updateCategory({ id, name, parentId, behavior, viewType, appView, providerFields, listingFields, settings, isActive }) {
+  async updateCategory({ id, name, parentId, behavior, viewType, appView, providerFields, listingFields, settings, isActive, moderationStatus }) {
     if (!id) {
       throw new AppError({ message: "Invalid id", statusCode: 400, code: "INVALID_CATEGORY_ID" });
     }
@@ -75,6 +123,7 @@ export class CategoryService {
     if (listingFields !== undefined) update.listingFields = listingFields;
     if (settings !== undefined) update.settings = settings ?? {};
     if (isActive !== undefined) update.isActive = isActive;
+    if (moderationStatus !== undefined) update.moderationStatus = moderationStatus;
     if (parentId !== undefined) {
       if (parentId !== null && parentId !== "" && typeof parentId !== "string") {
         throw new AppError({ message: "Invalid parentId", statusCode: 400, code: "INVALID_PARENT_ID" });
@@ -179,11 +228,13 @@ export class CategoryService {
     return { reordered: true, parentId: normalizedParentId, orderedIds };
   }
 
-  async getNestedCategories() {
+  async getNestedCategories({ viewType } = {}) {
     // Public-facing tree: an inactive category is dropped along with its entire subtree, since
     // an inactive parent never makes it into `top` for its active children to be nested under.
+    // A pending (provider-created) category is NOT excluded here - it's meant to be live for
+    // users right away, only flagged for admin review elsewhere.
     const categories = await prisma.category.findMany({
-      where: { isActive: true },
+      where: { isActive: true, ...(viewType ? { viewType } : {}) },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
     });
 
@@ -247,6 +298,8 @@ export class CategoryService {
       listingFields: category.listingFields ?? [],
       settings: category.settings ?? {},
       isActive: category.isActive ?? true,
+      moderationStatus: category.moderationStatus ?? "approved",
+      createdByProviderId: category.createdByProviderId ?? null,
       sortOrder: category.sortOrder ?? 0,
       createdAt: category.createdAt,
       updatedAt: category.updatedAt

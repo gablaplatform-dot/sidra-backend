@@ -70,6 +70,8 @@ CREATE TABLE IF NOT EXISTS categories (
   settings JSONB NOT NULL DEFAULT '{}',
   sortOrder INTEGER NOT NULL DEFAULT 0,
   isActive BOOLEAN NOT NULL DEFAULT 1,
+  moderationStatus TEXT NOT NULL DEFAULT 'approved',
+  createdByProviderId TEXT,
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (parentId) REFERENCES categories(id) ON DELETE SET NULL ON UPDATE CASCADE
@@ -597,7 +599,9 @@ const ensureColumn = (table, column, definition) => {
   ["ride_drivers", "rejectionReason", "TEXT"],
   ["ride_trips", "acceptedAt", "DATETIME"],
   ["ride_trips", "riderConfirmedAt", "DATETIME"],
-  ["ride_trips", "routePolyline", "TEXT"]
+  ["ride_trips", "routePolyline", "TEXT"],
+  ["categories", "moderationStatus", "TEXT NOT NULL DEFAULT 'approved'"],
+  ["categories", "createdByProviderId", "TEXT"]
 ].forEach(([table, column, definition]) => ensureColumn(table, column, definition));
 
 // wallets.providerId used to be NOT NULL (one wallet per provider). A platform-owned wallet
@@ -669,7 +673,8 @@ if (contactUnlockUserIdColumn && contactUnlockUserIdColumn[3] === "1") {
   "CREATE INDEX IF NOT EXISTS providers_publicSlug_idx ON providers(publicSlug);",
   "CREATE INDEX IF NOT EXISTS providers_onboardingStatus_createdAt_idx ON providers(onboardingStatus, createdAt);",
   "CREATE INDEX IF NOT EXISTS service_products_categoryId_status_idx ON service_products(categoryId, status);",
-  "CREATE INDEX IF NOT EXISTS service_products_shopCategoryId_status_idx ON service_products(shopCategoryId, status);"
+  "CREATE INDEX IF NOT EXISTS service_products_shopCategoryId_status_idx ON service_products(shopCategoryId, status);",
+  "CREATE INDEX IF NOT EXISTS categories_viewType_moderationStatus_idx ON categories(viewType, moderationStatus);"
 ].forEach(runSql);
 
 process.stdout.write(`SQLite schema is ready at ${databasePath}\n`);

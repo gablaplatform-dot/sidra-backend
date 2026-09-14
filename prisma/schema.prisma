@@ -96,6 +96,7 @@ model Provider {
   mediaAssets    MediaAsset[]
   orders         Order[]
   shopCategories ShopCategory[]
+  createdCategories Category[] @relation("CategoryCreatedBy")
 
   @@index([categoryId, createdAt])
   @@index([publicSlug])
@@ -117,6 +118,11 @@ model Category {
   settings       Json             @default("{}")
   sortOrder      Int              @default(0)
   isActive       Boolean          @default(true)
+  // "approved" for admin-created categories; a provider-created category (see createdByProviderId)
+  // starts "pending" - it's usable immediately (isActive stays true), this only flags it for
+  // admin review in the admin category screens.
+  moderationStatus    String      @default("approved")
+  createdByProviderId String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -125,12 +131,14 @@ model Category {
 
   providers Provider[]
   serviceProducts ServiceProduct[]
+  createdByProvider Provider? @relation("CategoryCreatedBy", fields: [createdByProviderId], references: [id], onDelete: SetNull)
 
   @@unique([parentId, name])
   @@index([parentId])
   @@index([behavior])
   @@index([viewType])
   @@index([isActive, sortOrder])
+  @@index([viewType, moderationStatus])
   @@map("categories")
 }
 

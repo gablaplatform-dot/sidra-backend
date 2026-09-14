@@ -77,9 +77,9 @@ export class AdminController {
     }
   };
 
-  listCategories = async (_req, res, next) => {
+  listCategories = async (req, res, next) => {
     try {
-      res.status(200).json({ data: await this.adminService.listCategories() });
+      res.status(200).json({ data: await this.adminService.listCategories(req.query) });
     } catch (e) {
       next(e);
     }

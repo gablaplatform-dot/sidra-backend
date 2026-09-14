@@ -1,5 +1,6 @@
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
+import { CategoryViewType } from "../constants/enums.js";
 
 export class ListingService {
   async getProviderForUser(userId) {
@@ -20,6 +21,28 @@ export class ListingService {
     }
   }
 
+  // A product must be placed in the e-commerce category tree, and specifically at a leaf of it -
+  // if the chosen category has subcategories, the provider has to drill into one of them (or
+  // create a new one via /categories/mine) rather than leave the product sitting one level too
+  // high. Services keep using the general directory category (optional, inherited from the
+  // provider), unaffected by this rule.
+  async assertProductCategory(categoryId) {
+    if (!categoryId) {
+      throw new AppError({ message: "Choose a category for this product", statusCode: 400, code: "CATEGORY_REQUIRED" });
+    }
+    const category = await prisma.category.findUnique({ where: { id: categoryId } });
+    if (!category) {
+      throw new AppError({ message: "Category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
+    }
+    if (category.viewType !== CategoryViewType.ECOMMERCE) {
+      throw new AppError({ message: "Choose a product category", statusCode: 400, code: "INVALID_CATEGORY_TYPE" });
+    }
+    const childCount = await prisma.category.count({ where: { parentId: categoryId } });
+    if (childCount > 0) {
+      throw new AppError({ message: "Choose a more specific subcategory", statusCode: 400, code: "CATEGORY_NOT_LEAF" });
+    }
+  }
+
   async createListing({ actorUserId, name, description, price = 0, type, categoryId, shopCategoryId, media, customFields, featured, onlinePaymentEnabled }) {
     const provider = await this.getProviderForUser(actorUserId);
 
@@ -28,6 +51,9 @@ export class ListingService {
       throw new AppError({ message: "Invalid type", statusCode: 400, code: "INVALID_TYPE" });
     }
     await this.assertShopCategoryOwnership({ shopCategoryId, providerId: provider.id });
+    if (normalizedType === "product") {
+      await this.assertProductCategory(categoryId);
+    }
 
     const obj = await prisma.serviceProduct.create({
       data: {
@@ -38,7 +64,8 @@ export class ListingService {
         description: description ?? "",
         price,
         type: normalizedType,
-        status: "pending",
+        // Providers go live immediately - no admin moderation gate on listing creation.
+        status: "approved",
         featured: Boolean(featured),
         media: media ?? {},
         customFields: customFields ?? {},
@@ -93,6 +120,18 @@ export class ListingService {
         throw new AppError({ message: "Invalid type", statusCode: 400, code: "INVALID_TYPE" });
       }
       update.type = normalizedType;
+    }
+
+    // Only re-run the leaf/e-commerce category check when the category is actually being
+    // changed, or the listing is being converted from a service into a product - not on every
+    // save. The form always resends both `type` and `categoryId`, so gating on their mere
+    // presence would trap any listing that predates this rule (e.g. no category, or a directory
+    // category) into never being editable again until its category is fixed.
+    const effectiveType = update.type ?? listing.type;
+    const categoryChanging = updates.categoryId !== undefined && updates.categoryId !== listing.categoryId;
+    const becomingProduct = effectiveType === "product" && listing.type !== "product";
+    if (effectiveType === "product" && (categoryChanging || becomingProduct)) {
+      await this.assertProductCategory(update.categoryId !== undefined ? update.categoryId : listing.categoryId);
     }
 
     const updated = await prisma.serviceProduct.update({ where: { id: listingId }, data: update });
@@ -270,7 +309,7 @@ export class ListingService {
         orderBy: { createdAt: "desc" },
         skip,
         take: normalizedLimit,
-        include: { provider: { select: { id: true, businessName: true } } }
+        include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
       }),
       prisma.serviceProduct.count({ where: filter })
     ]);
@@ -279,7 +318,7 @@ export class ListingService {
       items: items.map((i) => ({
         id: i.id,
         providerId: i.providerId,
-        provider: i.provider ? { id: i.provider.id, businessName: i.provider.businessName } : null,
+        provider: i.provider ? { id: i.provider.id, businessName: i.provider.businessName, onlinePaymentsEnabled: i.provider.onlinePaymentsEnabled } : null,
         categoryId: i.categoryId,
         shopCategoryId: i.shopCategoryId,
         name: i.name,

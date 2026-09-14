@@ -27,6 +27,11 @@ export const CategoryBehavior = Object.freeze({
   FITNESS: "fitness"
 });
 
+export const CategoryModerationStatus = Object.freeze({
+  PENDING: "pending",
+  APPROVED: "approved"
+});
+
 export const CategoryViewType = Object.freeze({
   DIRECTORY: "directory",
   PROFESSIONAL: "professional",

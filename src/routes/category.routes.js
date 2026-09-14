@@ -3,7 +3,7 @@ import Joi from "joi";
 
 import { validate } from "../middlewares/validate.middleware.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
-import { CategoryBehavior, CategoryViewType, Roles } from "../constants/enums.js";
+import { CategoryBehavior, CategoryModerationStatus, CategoryViewType, Roles } from "../constants/enums.js";
 
 export const buildCategoryRoutes = ({ categoryController }) => {
   const router = Router();
@@ -19,7 +19,28 @@ export const buildCategoryRoutes = ({ categoryController }) => {
     unit: Joi.string().trim().max(40).allow(null).optional()
   });
 
-  router.get("/", categoryController.listNested);
+  router.get(
+    "/",
+    validate(
+      Joi.object({
+        viewType: Joi.string().valid(...Object.values(CategoryViewType)).optional()
+      }),
+      "query"
+    ),
+    categoryController.listNested
+  );
+
+  router.post(
+    "/mine",
+    requireAuth([Roles.PROVIDER]),
+    validate(
+      Joi.object({
+        name: Joi.string().trim().max(120).required(),
+        parentId: id.allow(null).optional()
+      })
+    ),
+    categoryController.createMine
+  );
 
   router.post(
     "/",
@@ -83,7 +104,8 @@ export const buildCategoryRoutes = ({ categoryController }) => {
         providerFields: Joi.array().items(fieldSchema).optional(),
         listingFields: Joi.array().items(fieldSchema).optional(),
         settings: Joi.object().unknown(true).optional(),
-        isActive: Joi.boolean().optional()
+        isActive: Joi.boolean().optional(),
+        moderationStatus: Joi.string().valid(...Object.values(CategoryModerationStatus)).optional()
       }).min(1)
     ),
     categoryController.updateCategory

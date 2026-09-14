@@ -3,7 +3,7 @@ import Joi from "joi";
 
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
-import { ProviderModerationStatus, Roles, ServiceProductStatus, ServiceProductType, TransactionStatus, TransactionType } from "../constants/enums.js";
+import { CategoryViewType, ProviderModerationStatus, Roles, ServiceProductStatus, ServiceProductType, TransactionStatus, TransactionType } from "../constants/enums.js";
 
 export const buildAdminDataRoutes = ({ adminController }) => {
   const router = Router();
@@ -77,7 +77,16 @@ export const buildAdminDataRoutes = ({ adminController }) => {
     adminController.deleteProvider
   );
 
-  router.get("/categories", adminController.listCategories);
+  router.get(
+    "/categories",
+    validate(
+      Joi.object({
+        viewType: Joi.string().valid(...Object.values(CategoryViewType)).optional()
+      }),
+      "query"
+    ),
+    adminController.listCategories
+  );
   router.get(
     "/listings",
     validate(
