@@ -2,6 +2,9 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import morgan from "morgan";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { defaultRateLimit } from "./middlewares/rateLimit.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
@@ -132,6 +135,30 @@ export const buildApp = () => {
       promotionController
     })
   );
+
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const publicDist = path.resolve(__dirname, "..", "public_dist");
+  if (fs.existsSync(publicDist)) {
+    app.use(
+      express.static(publicDist, {
+        maxAge: "1h",
+        setHeaders(res, filePath) {
+          if (filePath.endsWith("index.html")) {
+            res.setHeader("Cache-Control", "no-cache");
+          }
+        }
+      })
+    );
+    const indexHtml = path.join(publicDist, "index.html");
+    app.get("*", (_req, res, next) => {
+      if (fs.existsSync(indexHtml)) {
+        res.sendFile(indexHtml);
+      } else {
+        next();
+      }
+    });
+  }
+
   app.use(errorMiddleware);
 
   return app;

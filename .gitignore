@@ -5,8 +5,10 @@ npm-debug.log*
 !.env.example
 
 admin_ui/
-public_app/
 driver_app/
+
+public_app/node_modules/
+public_app/dist/
 
 .claude/
 .trae/
