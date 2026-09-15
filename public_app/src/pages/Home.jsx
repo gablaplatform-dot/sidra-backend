@@ -27,7 +27,7 @@ export default function Home() {
   useEffect(() => {
     let active = true;
     Promise.all([
-      request("/categories/ecommerce?limit=18").catch(() => ({ items: [] })),
+      request("/categories"),
       request("/providers?sort=top-rated&limit=8")
     ])
       .then(([categoryResult, providerResult]) => {
@@ -300,16 +300,13 @@ export default function Home() {
             <h2 className="home-section-title">Browse by category</h2>
             <p className="home-section-subtitle">Tap into what you love, curated for you.</p>
           </div>
-          <Link to="/shop" className="home-view-all">
-            View all categories <IconArrowRight />
-          </Link>
         </div>
 
         {!loading && !categories.length ? <p className="home-empty">No categories yet.</p> : null}
         <div className="home-category-grid">
           {categories.map((c, idx) => (
             <Link
-              to={`/shop/${c.id}`}
+              to={`/category/${c.id}`}
               key={c.id}
               className="home-category-card home-animate-reveal"
               style={{ animationDelay: `${50 + idx * 60}ms` }}
@@ -317,7 +314,7 @@ export default function Home() {
               <div className="home-category-img">
                 <img src={c.image} alt={c.name} loading="lazy" />
                 <div className="home-category-overlay" />
-                <span className="home-category-chip">{Math.max(40, 18 + ((idx + 1) * 7))}+ items</span>
+                <span className="home-category-chip">{Math.max(40, 18 + ((idx + 1) * 7))}+ providers</span>
               </div>
               <div className="home-category-body">
                 <span className="home-category-initials">{initials(c.name)}</span>
