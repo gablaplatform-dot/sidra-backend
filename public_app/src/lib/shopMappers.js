@@ -32,7 +32,7 @@ export const mapProductDto = (p, opts = {}) => {
     discount: p?.discountPercent ? `-${Number(p.discountPercent)}%` : null,
     isNew: Boolean(p?.isNew),
     rating: 4.5 + Math.min(0.5, (Number(p?.soldCount ?? 0) % 10) / 20),
-    reviews: syntheticReviews + Math.round(((Number(p?.id ?? "0").charCodeAt(0) || 0) % 7) * 123),
+    reviews: syntheticReviews + Math.round(((String(p?.id ?? "0").charCodeAt(0) || 0) % 7) * 123),
     image: listingCover(p),
     description: p?.description?.slice(0, 90) ?? "Premium product crafted for quality and comfort."
   };
