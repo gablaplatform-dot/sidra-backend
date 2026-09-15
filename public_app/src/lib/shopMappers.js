@@ -15,7 +15,7 @@ export const listingCover = (listing) => {
 export const mapCategoryDto = (cat) => ({
   id: cat?.id ?? `cat-${Math.random().toString(36).slice(2, 8)}`,
   name: cat?.name ?? "Category",
-  image: cat?.imageUrl || null
+  image: cat?.imageUrl || cat?.settings?.imageUrl || cat?.settings?.pictureUrl || null
 });
 
 export const mapProductDto = (p, opts = {}) => {
