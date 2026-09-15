@@ -61,8 +61,12 @@ export default function ShopCategoryRow({ categories = [] }) {
         >
           {items.map((cat) => (
             <Link to={`/shop/${cat.id}`} className="shop-category-card" key={cat.id}>
-              <div className="shop-category-img">
-                <img src={cat.image} alt={cat.name} loading="lazy" />
+              <div className={`shop-category-img ${cat.image ? "" : "shop-category-img-fallback"}`}>
+                {cat.image ? (
+                  <img src={cat.image} alt={cat.name} loading="lazy" />
+                ) : (
+                  <span className="shop-category-fallback-mark">{(cat.name || "G").trim().slice(0, 1).toUpperCase()}</span>
+                )}
               </div>
               <div className="shop-category-info">
                 <h3>{cat.name}</h3>

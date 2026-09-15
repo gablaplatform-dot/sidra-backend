@@ -1767,6 +1767,17 @@ button { cursor: pointer; }
   transition: transform 0.5s ease;
 }
 .shop-category-card:hover .shop-category-img img { transform: scale(1.06); }
+.shop-category-img-fallback {
+  background: linear-gradient(135deg, #7c2d12, #c2410c);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.shop-category-fallback-mark {
+  font-size: 34px;
+  font-weight: 900;
+  color: #fff;
+}
 
 .shop-category-info { padding: 14px 4px 0; }
 .shop-category-info h3 {
@@ -2991,6 +3002,19 @@ button { cursor: pointer; }
   transition: transform 0.55s cubic-bezier(.2,.7,.2,1);
 }
 .home-category-card:hover .home-category-img img { transform: scale(1.08); }
+.home-category-img-fallback {
+  background: linear-gradient(135deg, #fff7ed, #ffedd5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.home-category-fallback-mark {
+  font-size: 42px;
+  font-weight: 900;
+  color: #ea580c;
+  transition: transform 0.3s;
+}
+.home-category-card:hover .home-category-fallback-mark { transform: scale(1.08); }
 .home-category-overlay {
   position: absolute; inset: auto 0 0 0; height: 65%;
   background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 100%);

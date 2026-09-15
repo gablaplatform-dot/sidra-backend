@@ -1,7 +1,6 @@
 import { formatUgx } from "./format";
 
 const PLACEHOLDER_COVER = "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=premium%20product%20packaging%20minimal%20white%20background&image_size=square_hd";
-const PLACEHOLDER_CATEGORY = "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=abstract%20pastel%20beige%20gradient%20mesh%20background&image_size=square_hd";
 const PLACEHOLDER_PROMO = "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=abstract%20orange%20coral%20gradient%20mesh%20banner&image_size=landscape_16_9";
 
 export const listingCover = (listing) => {
@@ -16,7 +15,7 @@ export const listingCover = (listing) => {
 export const mapCategoryDto = (cat) => ({
   id: cat?.id ?? `cat-${Math.random().toString(36).slice(2, 8)}`,
   name: cat?.name ?? "Category",
-  image: cat?.imageUrl ?? PLACEHOLDER_CATEGORY
+  image: cat?.imageUrl || null
 });
 
 export const mapProductDto = (p, opts = {}) => {

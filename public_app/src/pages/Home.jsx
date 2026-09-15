@@ -207,16 +207,16 @@ export default function Home() {
               </div>
               {heroFeatureCategories.length ? (
                 <>
-                  {heroFeatureCategories[0] ? (
+                  {heroFeatureCategories[0]?.image ? (
                     <img className="home-hero-ring-img home-hero-ring-img-1" src={heroFeatureCategories[0].image} alt={heroFeatureCategories[0].name} />
                   ) : null}
-                  {heroFeatureCategories[1] ? (
+                  {heroFeatureCategories[1]?.image ? (
                     <img className="home-hero-ring-img home-hero-ring-img-2" src={heroFeatureCategories[1].image} alt={heroFeatureCategories[1].name} />
                   ) : null}
-                  {heroFeatureCategories[2] ? (
+                  {heroFeatureCategories[2]?.image ? (
                     <img className="home-hero-ring-img home-hero-ring-img-3" src={heroFeatureCategories[2].image} alt={heroFeatureCategories[2].name} />
                   ) : null}
-                  {heroFeatureCategories[3] ? (
+                  {heroFeatureCategories[3]?.image ? (
                     <img className="home-hero-ring-img home-hero-ring-img-4" src={heroFeatureCategories[3].image} alt={heroFeatureCategories[3].name} />
                   ) : null}
                 </>
@@ -311,8 +311,12 @@ export default function Home() {
               className="home-category-card home-animate-reveal"
               style={{ animationDelay: `${50 + idx * 60}ms` }}
             >
-              <div className="home-category-img">
-                <img src={c.image} alt={c.name} loading="lazy" />
+              <div className={`home-category-img ${c.image ? "" : "home-category-img-fallback"}`}>
+                {c.image ? (
+                  <img src={c.image} alt={c.name} loading="lazy" />
+                ) : (
+                  <span className="home-category-fallback-mark">{initials(c.name)}</span>
+                )}
                 <div className="home-category-overlay" />
                 <span className="home-category-chip">{Math.max(40, 18 + ((idx + 1) * 7))}+ providers</span>
               </div>
