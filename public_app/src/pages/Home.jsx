@@ -27,7 +27,7 @@ export default function Home() {
   useEffect(() => {
     let active = true;
     Promise.all([
-      request("/categories/ecommerce?limit=18").catch(() => request("/categories")),
+      request("/categories/ecommerce?limit=18").catch(() => ({ items: [] })),
       request("/providers?sort=top-rated&limit=8")
     ])
       .then(([categoryResult, providerResult]) => {
