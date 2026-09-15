@@ -68,4 +68,13 @@ export class CategoryController {
       next(e);
     }
   };
+
+  listEcommerce = async (req, res, next) => {
+    try {
+      const result = await this.categoryService.publicListEcommerce(req.query);
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
 }

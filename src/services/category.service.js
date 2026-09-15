@@ -5,11 +5,11 @@ import { CategoryBehavior, CategoryModerationStatus, CategoryViewType } from "..
 const uniqueError = (e) => e?.code === "P2002";
 
 export class CategoryService {
-  async createCategory({ name, behavior = "general", viewType = "directory", appView, providerFields = [], listingFields = [], settings = {}, isActive }) {
+  async createCategory({ name, behavior = "general", viewType = "directory", appView, providerFields = [], listingFields = [], settings = {}, isActive, imageUrl }) {
     try {
       const sortOrder = await this.getNextSortOrder(null);
       const created = await prisma.category.create({
-        data: { name, parentId: null, behavior, viewType, appView: appView ?? viewType, providerFields, listingFields, settings, sortOrder, isActive: isActive ?? true }
+        data: { name, parentId: null, behavior, viewType, appView: appView ?? viewType, providerFields, listingFields, settings, sortOrder, isActive: isActive ?? true, imageUrl: imageUrl ?? null }
       });
       return this.toDto(created);
     } catch (e) {
@@ -28,10 +28,7 @@ export class CategoryService {
     return provider;
   }
 
-  // A provider self-creating a category (because nothing existing fits their product) goes live
-  // immediately - isActive stays true so it's usable right away in the same submission - but is
-  // flagged moderationStatus "pending" so admin's category screens can surface it for review.
-  async createFromProvider({ actorUserId, name, parentId }) {
+  async createFromProvider({ actorUserId, name, parentId, imageUrl }) {
     const provider = await this.getProviderForUser(actorUserId);
 
     let parent = null;
@@ -55,7 +52,8 @@ export class CategoryService {
           isActive: true,
           moderationStatus: CategoryModerationStatus.PENDING,
           createdByProviderId: provider.id,
-          sortOrder
+          sortOrder,
+          imageUrl: imageUrl ?? parent?.imageUrl ?? null
         }
       });
       return this.toDto(created);
@@ -67,7 +65,7 @@ export class CategoryService {
     }
   }
 
-  async createSubcategory({ name, parentId, behavior, viewType, appView, providerFields, listingFields, settings, isActive }) {
+  async createSubcategory({ name, parentId, behavior, viewType, appView, providerFields, listingFields, settings, isActive, imageUrl }) {
     if (!parentId) {
       throw new AppError({ message: "Invalid parentId", statusCode: 400, code: "INVALID_PARENT_ID" });
     }
@@ -86,14 +84,12 @@ export class CategoryService {
           behavior: behavior ?? parent.behavior ?? "general",
           viewType: viewType ?? parent.viewType ?? "directory",
           appView: appView ?? viewType ?? parent.appView ?? parent.viewType ?? "directory",
-          // Provider/listing fields are no longer copied from the parent here — a subcategory
-          // starts with none of its own and inherits the parent's live (see getNestedCategories),
-          // so editing the parent later reaches every subcategory instead of only new ones.
           providerFields: providerFields ?? [],
           listingFields: listingFields ?? [],
           settings: settings ?? parent.settings ?? {},
           isActive: isActive ?? true,
-          sortOrder
+          sortOrder,
+          imageUrl: imageUrl ?? parent.imageUrl ?? null
         }
       });
       return this.toDto(created);
@@ -109,7 +105,7 @@ export class CategoryService {
     }
   }
 
-  async updateCategory({ id, name, parentId, behavior, viewType, appView, providerFields, listingFields, settings, isActive, moderationStatus }) {
+  async updateCategory({ id, name, parentId, behavior, viewType, appView, providerFields, listingFields, settings, isActive, moderationStatus, imageUrl }) {
     if (!id) {
       throw new AppError({ message: "Invalid id", statusCode: 400, code: "INVALID_CATEGORY_ID" });
     }
@@ -124,6 +120,7 @@ export class CategoryService {
     if (settings !== undefined) update.settings = settings ?? {};
     if (isActive !== undefined) update.isActive = isActive;
     if (moderationStatus !== undefined) update.moderationStatus = moderationStatus;
+    if (imageUrl !== undefined) update.imageUrl = imageUrl === null ? null : imageUrl;
     if (parentId !== undefined) {
       if (parentId !== null && parentId !== "" && typeof parentId !== "string") {
         throw new AppError({ message: "Invalid parentId", statusCode: 400, code: "INVALID_PARENT_ID" });
@@ -301,6 +298,7 @@ export class CategoryService {
       moderationStatus: category.moderationStatus ?? "approved",
       createdByProviderId: category.createdByProviderId ?? null,
       sortOrder: category.sortOrder ?? 0,
+      imageUrl: category.imageUrl ?? null,
       createdAt: category.createdAt,
       updatedAt: category.updatedAt
     };
@@ -312,5 +310,23 @@ export class CategoryService {
       _max: { sortOrder: true }
     });
     return (currentMax._max.sortOrder ?? -1) + 1;
+  }
+
+  async publicListEcommerce({ limit = 6 } = {}) {
+    const normalizedLimit = Math.min(60, Math.max(1, Number(limit) || 6));
+    const rows = await prisma.category.findMany({
+      where: {
+        parentId: null,
+        viewType: CategoryViewType.ECOMMERCE,
+        isActive: true,
+        moderationStatus: CategoryModerationStatus.APPROVED
+      },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      take: normalizedLimit
+    });
+    return {
+      items: rows.map((r) => this.toDto(r)),
+      total: rows.length
+    };
   }
 }

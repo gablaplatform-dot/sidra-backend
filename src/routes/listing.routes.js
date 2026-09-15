@@ -12,8 +12,33 @@ export const buildListingRoutes = ({ listingController }) => {
     gallery: Joi.array().items(Joi.string().uri().max(1000)).max(40).optional()
   });
   const id = Joi.string().trim().min(1).max(64);
+  const sortOptions = ["newest", "price_asc", "price_desc", "bestsellers", "featured"];
+  const enrichmentFields = {
+    originalPrice: Joi.number().min(0).optional(),
+    discountPercent: Joi.number().integer().min(1).max(100).allow(null).optional(),
+    isNew: Joi.boolean().optional(),
+    sku: Joi.string().trim().max(120).allow(null).optional(),
+    inventory: Joi.number().integer().min(0).allow(null).optional()
+  };
 
-  router.get("/", listingController.publicList);
+  router.get(
+    "/",
+    validate(
+      Joi.object({
+        page: Joi.number().integer().min(1).optional(),
+        limit: Joi.number().integer().min(1).max(100).optional(),
+        type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).optional(),
+        q: Joi.string().trim().max(200).optional(),
+        categoryId: id.optional(),
+        providerId: id.optional(),
+        sort: Joi.string().valid(...sortOptions).optional(),
+        discountOnly: Joi.boolean().optional(),
+        isNew: Joi.boolean().optional()
+      }),
+      "query"
+    ),
+    listingController.publicList
+  );
   router.get(
     "/me",
     requireAuth([Roles.PROVIDER]),
@@ -30,6 +55,39 @@ export const buildListingRoutes = ({ listingController }) => {
     listingController.listMine
   );
   router.get("/provider/:providerId", listingController.listByProvider);
+  router.get(
+    "/new-arrivals",
+    validate(
+      Joi.object({
+        limit: Joi.number().integer().min(1).max(60).optional(),
+        type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).optional()
+      }),
+      "query"
+    ),
+    listingController.listNewArrivals
+  );
+  router.get(
+    "/best-sellers",
+    validate(
+      Joi.object({
+        limit: Joi.number().integer().min(1).max(60).optional(),
+        type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).optional()
+      }),
+      "query"
+    ),
+    listingController.listBestSellers
+  );
+  router.get(
+    "/featured",
+    validate(
+      Joi.object({
+        limit: Joi.number().integer().min(1).max(60).optional(),
+        type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).optional()
+      }),
+      "query"
+    ),
+    listingController.listFeatured
+  );
   router.get(
     "/:listingId",
     validate(Joi.object({ listingId: id.required() }), "params"),
@@ -50,7 +108,8 @@ export const buildListingRoutes = ({ listingController }) => {
         media: mediaSchema.optional(),
         customFields: Joi.object().unknown(true).optional(),
         featured: Joi.boolean().optional(),
-        onlinePaymentEnabled: Joi.boolean().optional()
+        onlinePaymentEnabled: Joi.boolean().optional(),
+        ...enrichmentFields
       })
     ),
     listingController.create
@@ -70,7 +129,8 @@ export const buildListingRoutes = ({ listingController }) => {
         media: mediaSchema.optional(),
         customFields: Joi.object().unknown(true).optional(),
         featured: Joi.boolean().optional(),
-        onlinePaymentEnabled: Joi.boolean().optional()
+        onlinePaymentEnabled: Joi.boolean().optional(),
+        ...enrichmentFields
       }).min(1)
     ),
     listingController.update

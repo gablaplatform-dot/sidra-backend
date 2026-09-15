@@ -96,6 +96,7 @@ model Provider {
   mediaAssets    MediaAsset[]
   orders         Order[]
   shopCategories ShopCategory[]
+  promotions     Promotion[]
   createdCategories Category[] @relation("CategoryCreatedBy")
 
   @@index([categoryId, createdAt])
@@ -117,6 +118,7 @@ model Category {
   listingFields  Json             @default("[]")
   settings       Json             @default("{}")
   sortOrder      Int              @default(0)
+  imageUrl       String?
   isActive       Boolean          @default(true)
   // "approved" for admin-created categories; a provider-created category (see createdByProviderId)
   // starts "pending" - it's usable immediately (isActive stays true), this only flags it for
@@ -131,6 +133,7 @@ model Category {
 
   providers Provider[]
   serviceProducts ServiceProduct[]
+  promotions Promotion[]
   createdByProvider Provider? @relation("CategoryCreatedBy", fields: [createdByProviderId], references: [id], onDelete: SetNull)
 
   @@unique([parentId, name])
@@ -155,17 +158,24 @@ model ServiceProduct {
   featured     Boolean             @default(false)
   media        Json                @default("{}")
   customFields Json                @default("{}")
-  inventory    Int?
-  sku          String?
+  inventory      Int?
+  sku            String?
+  originalPrice  Decimal           @default(0.00)
+  discountPercent Int?
+  isNew          Boolean           @default(false)
+  soldCount      Int               @default(0)
+  viewCount      Int               @default(0)
   onlinePaymentEnabled Boolean     @default(true)
-  availability Json                @default("{}")
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  availability   Json              @default("{}")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   shopCategory ShopCategory? @relation(fields: [shopCategoryId], references: [id], onDelete: SetNull)
   orderItems OrderItem[]
+  favorites  Favorite[]
+  reviews    Review[]
 
   @@index([providerId, type, createdAt])
   @@index([status, createdAt])
@@ -184,6 +194,7 @@ model ShopCategory {
   parentId   String?
   name       String
   sortOrder  Int      @default(0)
+  imageUrl   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -354,14 +365,16 @@ model Favorite {
   id         String   @id @default(cuid())
   userId     String
   providerId String
+  listingId  String?
   createdAt  DateTime @default(now())
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider Provider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  listing  ServiceProduct?  @relation(fields: [listingId], references: [id], onDelete: SetNull)
 
-  @@unique([userId, providerId])
   @@index([userId, createdAt])
   @@index([providerId])
+  @@index([listingId])
   @@map("favorites")
 }
 
@@ -369,18 +382,20 @@ model Review {
   id         String   @id @default(cuid())
   userId     String
   providerId String
+  listingId  String?
   rating     Int
   comment    String   @default("")
   status     String   @default("pending")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider Provider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  listing  ServiceProduct?  @relation(fields: [listingId], references: [id], onDelete: SetNull)
 
-  @@unique([userId, providerId])
   @@index([providerId, status, createdAt])
   @@index([userId])
+  @@index([listingId])
   @@map("reviews")
 }
 
@@ -546,6 +561,44 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([action])
   @@map("audit_logs")
+}
+
+// A promotional banner / flash sale / new-collection highlight shown on the Shop
+// homepage and category views. Scope is one of: specific listingIds, a category-wide
+// discount, or all products from one provider. The public endpoint exposes
+// `remainingSecs = endsAt - now()` so clients render countdowns without relying on
+// their local system clock (avoids clock-skew negative countdowns). Phase 1 uses this
+// for display/countdown only; true cart-level percentage-off math is Phase 2.
+model Promotion {
+  id              String   @id @default(cuid())
+  title           String
+  subtitle        String?
+  type            String   @default("banner")
+  startsAt        DateTime
+  endsAt          DateTime
+  discountPercent Int?
+  imageUrl        String?
+  ctaLabel        String?
+  ctaHref         String?
+  listingIds      Json?
+  categoryId      String?
+  providerId      String?
+  isFeatured      Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  isActive        Boolean  @default(true)
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  provider Provider?  @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  category Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([type, isActive])
+  @@index([startsAt, endsAt])
+  @@index([isFeatured, isActive, sortOrder])
+  @@index([categoryId])
+  @@index([providerId])
+  @@map("promotions")
 }
 
 // --- Gabla Ride ---------------------------------------------------------------

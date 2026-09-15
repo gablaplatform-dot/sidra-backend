@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS categories (
   listingFields JSONB NOT NULL DEFAULT '[]',
   settings JSONB NOT NULL DEFAULT '{}',
   sortOrder INTEGER NOT NULL DEFAULT 0,
+  imageUrl TEXT,
   isActive BOOLEAN NOT NULL DEFAULT 1,
   moderationStatus TEXT NOT NULL DEFAULT 'approved',
   createdByProviderId TEXT,
@@ -116,6 +117,7 @@ CREATE TABLE IF NOT EXISTS shop_categories (
   parentId TEXT,
   name TEXT NOT NULL,
   sortOrder INTEGER NOT NULL DEFAULT 0,
+  imageUrl TEXT,
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -137,6 +139,11 @@ CREATE TABLE IF NOT EXISTS service_products (
   customFields JSONB NOT NULL DEFAULT '{}',
   inventory INTEGER,
   sku TEXT,
+  originalPrice DECIMAL NOT NULL DEFAULT 0.00,
+  discountPercent INTEGER,
+  isNew BOOLEAN NOT NULL DEFAULT 0,
+  soldCount INTEGER NOT NULL DEFAULT 0,
+  viewCount INTEGER NOT NULL DEFAULT 0,
   onlinePaymentEnabled BOOLEAN NOT NULL DEFAULT 1,
   availability JSONB NOT NULL DEFAULT '{}',
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -259,22 +266,26 @@ CREATE TABLE IF NOT EXISTS favorites (
   id TEXT PRIMARY KEY NOT NULL,
   userId TEXT NOT NULL,
   providerId TEXT NOT NULL,
+  listingId TEXT,
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE
+  FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (listingId) REFERENCES service_products(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS reviews (
   id TEXT PRIMARY KEY NOT NULL,
   userId TEXT NOT NULL,
   providerId TEXT NOT NULL,
+  listingId TEXT,
   rating INTEGER NOT NULL,
   comment TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'pending',
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE
+  FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (listingId) REFERENCES service_products(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS profile_visits (
@@ -391,6 +402,30 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   metadata JSONB NOT NULL DEFAULT '{}',
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (actorId) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS promotions (
+  id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL,
+  subtitle TEXT,
+  type TEXT NOT NULL DEFAULT 'banner',
+  startsAt DATETIME NOT NULL,
+  endsAt DATETIME NOT NULL,
+  discountPercent INTEGER,
+  imageUrl TEXT,
+  ctaLabel TEXT,
+  ctaHref TEXT,
+  listingIds JSONB,
+  categoryId TEXT,
+  providerId TEXT,
+  isFeatured BOOLEAN NOT NULL DEFAULT 0,
+  sortOrder INTEGER NOT NULL DEFAULT 0,
+  isActive BOOLEAN NOT NULL DEFAULT 1,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS ride_drivers (
@@ -601,7 +636,16 @@ const ensureColumn = (table, column, definition) => {
   ["ride_trips", "riderConfirmedAt", "DATETIME"],
   ["ride_trips", "routePolyline", "TEXT"],
   ["categories", "moderationStatus", "TEXT NOT NULL DEFAULT 'approved'"],
-  ["categories", "createdByProviderId", "TEXT"]
+  ["categories", "createdByProviderId", "TEXT"],
+  ["categories", "imageUrl", "TEXT"],
+  ["shop_categories", "imageUrl", "TEXT"],
+  ["service_products", "originalPrice", "DECIMAL NOT NULL DEFAULT 0.00"],
+  ["service_products", "discountPercent", "INTEGER"],
+  ["service_products", "isNew", "BOOLEAN NOT NULL DEFAULT 0"],
+  ["service_products", "soldCount", "INTEGER NOT NULL DEFAULT 0"],
+  ["service_products", "viewCount", "INTEGER NOT NULL DEFAULT 0"],
+  ["favorites", "listingId", "TEXT"],
+  ["reviews", "listingId", "TEXT"]
 ].forEach(([table, column, definition]) => ensureColumn(table, column, definition));
 
 // wallets.providerId used to be NOT NULL (one wallet per provider). A platform-owned wallet
@@ -674,7 +718,15 @@ if (contactUnlockUserIdColumn && contactUnlockUserIdColumn[3] === "1") {
   "CREATE INDEX IF NOT EXISTS providers_onboardingStatus_createdAt_idx ON providers(onboardingStatus, createdAt);",
   "CREATE INDEX IF NOT EXISTS service_products_categoryId_status_idx ON service_products(categoryId, status);",
   "CREATE INDEX IF NOT EXISTS service_products_shopCategoryId_status_idx ON service_products(shopCategoryId, status);",
-  "CREATE INDEX IF NOT EXISTS categories_viewType_moderationStatus_idx ON categories(viewType, moderationStatus);"
+  "CREATE INDEX IF NOT EXISTS categories_viewType_moderationStatus_idx ON categories(viewType, moderationStatus);",
+  "CREATE INDEX IF NOT EXISTS service_products_soldCount_status_idx ON service_products(soldCount, status);",
+  "CREATE INDEX IF NOT EXISTS favorites_listingId_idx ON favorites(listingId);",
+  "CREATE INDEX IF NOT EXISTS reviews_listingId_idx ON reviews(listingId);",
+  "CREATE INDEX IF NOT EXISTS promotions_type_isActive_idx ON promotions(type, isActive);",
+  "CREATE INDEX IF NOT EXISTS promotions_startsAt_endsAt_idx ON promotions(startsAt, endsAt);",
+  "CREATE INDEX IF NOT EXISTS promotions_featured_isActive_sortOrder_idx ON promotions(isFeatured, isActive, sortOrder);",
+  "CREATE INDEX IF NOT EXISTS promotions_categoryId_idx ON promotions(categoryId);",
+  "CREATE INDEX IF NOT EXISTS promotions_providerId_idx ON promotions(providerId);"
 ].forEach(runSql);
 
 process.stdout.write(`SQLite schema is ready at ${databasePath}\n`);

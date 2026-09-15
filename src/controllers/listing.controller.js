@@ -78,4 +78,31 @@ export class ListingController {
       next(e);
     }
   };
+
+  listNewArrivals = async (req, res, next) => {
+    try {
+      const result = await this.listingService.listNewArrivals(req.query);
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  listBestSellers = async (req, res, next) => {
+    try {
+      const result = await this.listingService.listBestSellers(req.query);
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  listFeatured = async (req, res, next) => {
+    try {
+      const result = await this.listingService.listFeatured(req.query);
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
 }

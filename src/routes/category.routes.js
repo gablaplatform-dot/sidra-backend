@@ -18,6 +18,7 @@ export const buildCategoryRoutes = ({ categoryController }) => {
     options: Joi.array().items(Joi.string().trim().max(120)).default([]),
     unit: Joi.string().trim().max(40).allow(null).optional()
   });
+  const imageUrlField = Joi.string().uri().max(1000).allow(null).optional();
 
   router.get(
     "/",
@@ -30,13 +31,25 @@ export const buildCategoryRoutes = ({ categoryController }) => {
     categoryController.listNested
   );
 
+  router.get(
+    "/ecommerce",
+    validate(
+      Joi.object({
+        limit: Joi.number().integer().min(1).max(60).optional()
+      }),
+      "query"
+    ),
+    categoryController.listEcommerce
+  );
+
   router.post(
     "/mine",
     requireAuth([Roles.PROVIDER]),
     validate(
       Joi.object({
         name: Joi.string().trim().max(120).required(),
-        parentId: id.allow(null).optional()
+        parentId: id.allow(null).optional(),
+        imageUrl: imageUrlField
       })
     ),
     categoryController.createMine
@@ -54,7 +67,8 @@ export const buildCategoryRoutes = ({ categoryController }) => {
         providerFields: Joi.array().items(fieldSchema).optional(),
         listingFields: Joi.array().items(fieldSchema).optional(),
         settings: Joi.object().unknown(true).optional(),
-        isActive: Joi.boolean().optional()
+        isActive: Joi.boolean().optional(),
+        imageUrl: imageUrlField
       })
     ),
     categoryController.createCategory
@@ -73,7 +87,8 @@ export const buildCategoryRoutes = ({ categoryController }) => {
         providerFields: Joi.array().items(fieldSchema).optional(),
         listingFields: Joi.array().items(fieldSchema).optional(),
         settings: Joi.object().unknown(true).optional(),
-        isActive: Joi.boolean().optional()
+        isActive: Joi.boolean().optional(),
+        imageUrl: imageUrlField
       })
     ),
     categoryController.createSubcategory
@@ -105,7 +120,8 @@ export const buildCategoryRoutes = ({ categoryController }) => {
         listingFields: Joi.array().items(fieldSchema).optional(),
         settings: Joi.object().unknown(true).optional(),
         isActive: Joi.boolean().optional(),
-        moderationStatus: Joi.string().valid(...Object.values(CategoryModerationStatus)).optional()
+        moderationStatus: Joi.string().valid(...Object.values(CategoryModerationStatus)).optional(),
+        imageUrl: imageUrlField
       }).min(1)
     ),
     categoryController.updateCategory

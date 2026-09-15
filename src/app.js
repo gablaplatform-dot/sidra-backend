@@ -33,6 +33,8 @@ import { SearchService } from "./services/search.service.js";
 import { SearchController } from "./controllers/search.controller.js";
 import { RideService } from "./services/ride.service.js";
 import { RideController } from "./controllers/ride.controller.js";
+import { PromotionService } from "./services/promotion.service.js";
+import { PromotionController } from "./controllers/promotion.controller.js";
 import { hashPassword, verifyPassword } from "./utils/password.js";
 import { signAccessToken } from "./utils/jwt.js";
 import { env } from "./config/env.js";
@@ -108,6 +110,9 @@ export const buildApp = () => {
   const rideService = new RideService();
   const rideController = new RideController({ rideService });
 
+  const promotionService = new PromotionService();
+  const promotionController = new PromotionController({ promotionService });
+
   app.use(
     "/api/v1",
     buildRoutes({
@@ -123,7 +128,8 @@ export const buildApp = () => {
       adminController,
       engagementController,
       searchController,
-      rideController
+      rideController,
+      promotionController
     })
   );
   app.use(errorMiddleware);

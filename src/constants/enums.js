@@ -101,3 +101,18 @@ export const RidePaymentMethod = Object.freeze({
   CASH: "cash",
   MOBILE_MONEY: "mobile_money"
 });
+
+export const PromotionType = Object.freeze({
+  FLASH_SALE: "flash_sale",
+  NEW_COLLECTION: "new_collection",
+  BANNER: "banner"
+});
+
+export const OrderStatus = Object.freeze({
+  PENDING: "pending",
+  CONFIRMED: "confirmed",
+  SHIPPED: "shipped",
+  DELIVERED: "delivered",
+  CANCELLED: "cancelled",
+  REFUNDED: "refunded"
+});

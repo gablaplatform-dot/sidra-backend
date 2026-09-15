@@ -40,6 +40,7 @@ export class ShopCategoryService {
       providerId: category.providerId,
       parentId: category.parentId ?? null,
       name: category.name,
+      imageUrl: category.imageUrl ?? null,
       sortOrder: category.sortOrder ?? 0,
       createdAt: category.createdAt,
       updatedAt: category.updatedAt
@@ -78,7 +79,7 @@ export class ShopCategoryService {
     return category;
   }
 
-  async create({ actorUserId, name, parentId }) {
+  async create({ actorUserId, name, parentId, imageUrl }) {
     const provider = await this.getProviderForUser(actorUserId);
 
     let normalizedParentId = null;
@@ -90,7 +91,7 @@ export class ShopCategoryService {
     try {
       const sortOrder = await this.getNextSortOrder(provider.id, normalizedParentId);
       const created = await prisma.shopCategory.create({
-        data: { providerId: provider.id, parentId: normalizedParentId, name, sortOrder }
+        data: { providerId: provider.id, parentId: normalizedParentId, name, sortOrder, imageUrl: imageUrl ?? null }
       });
       return this.toDto(created);
     } catch (e) {
@@ -101,35 +102,37 @@ export class ShopCategoryService {
     }
   }
 
-  async update({ actorUserId, id, name, parentId }) {
+  async update({ actorUserId, id, name, parentId, imageUrl }) {
     const provider = await this.getProviderForUser(actorUserId);
     await this.assertOwnedByProvider({ id, providerId: provider.id });
 
     const update = {};
     if (name !== undefined) update.name = name;
+    if (imageUrl !== undefined) update.imageUrl = imageUrl === null ? null : imageUrl;
 
     if (parentId !== undefined) {
       if (parentId === null || parentId === "") {
         update.parentId = null;
       } else {
-        if (parentId === id) {
-          throw new AppError({ message: "A category cannot be its own parent", statusCode: 400, code: "INVALID_PARENT" });
-        }
-        await this.assertOwnedByProvider({ id: parentId, providerId: provider.id });
-
-        const siblings = await prisma.shopCategory.findMany({
-          where: { providerId: provider.id },
-          select: { id: true, parentId: true }
-        });
-        const parentById = new Map(siblings.map((c) => [c.id, c.parentId ?? null]));
-        let current = parentId;
-        while (current) {
-          if (current === id) {
-            throw new AppError({ message: "Invalid parent (cycle detected)", statusCode: 400, code: "INVALID_PARENT" });
+          if (parentId === id) {
+            throw new AppError({ message: "A category cannot be its own parent", statusCode: 400, code: "INVALID_PARENT" });
           }
-          current = parentById.get(current) ?? null;
+          await this.assertOwnedByProvider({ id: parentId, providerId: provider.id });
+
+          const siblings = await prisma.shopCategory.findMany({
+            where: { providerId: provider.id },
+            select: { id: true, parentId: true }
+          });
+          const parentById = new Map(siblings.map((c) => [c.id, c.parentId ?? null]));
+          let current = parentId;
+          while (current) {
+            if (current === id) {
+              throw new AppError({ message: "Invalid parent (cycle detected)", statusCode: 400, code: "INVALID_PARENT" });
+            }
+            current = parentById.get(current) ?? null;
+          }
+          update.parentId = parentId;
         }
-        update.parentId = parentId;
       }
     }
 

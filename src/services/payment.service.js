@@ -75,6 +75,24 @@ export class PaymentService {
         quantity: item.quantity,
         amount: centsToDecimal(BigInt(item.amountCents ?? "0")).toString()
       }));
+      const createdOrders = Array.isArray(transaction.metadata?.createdOrders) ? transaction.metadata.createdOrders : [];
+      if (createdOrders.length) {
+        const orderProviderIds = [...new Set(createdOrders.map((o) => o.providerId).filter(Boolean))];
+        let providerNameById = {};
+        if (orderProviderIds.length) {
+          const providers = await prisma.provider.findMany({
+            where: { id: { in: orderProviderIds } },
+            select: { id: true, businessName: true }
+          });
+          providerNameById = Object.fromEntries(providers.map((p) => [p.id, p.businessName]));
+        }
+        result.createdOrders = createdOrders.map((o) => ({
+          id: o.id,
+          providerId: o.providerId,
+          providerName: providerNameById[o.providerId] ?? null,
+          status: o.status
+        }));
+      }
     }
     return result;
   }
@@ -630,20 +648,14 @@ export class PaymentService {
           itemsByProvider.get(item.providerId).push(item);
         }
 
+        const createdOrders = [];
+
         for (const [providerId, providerItems] of itemsByProvider) {
           const amountCents = providerItems.reduce((sum, i) => sum + BigInt(i.amountCents ?? "0"), 0n);
           const feeCents = providerItems.reduce((sum, i) => sum + BigInt(i.feeCents ?? "0"), 0n);
           const netCents = amountCents - feeCents;
 
-          if (netCents > 0n) {
-            await this.walletService.creditBalance({ providerId, amountDec: centsToDecimal(netCents), session: tx });
-          }
-
-          // Give each seller their own succeeded "purchase" record so this cart purchase shows
-          // up in their normal wallet/transaction history exactly like a single-item Buy Now
-          // would - the parent cart_purchase transaction (providerId: null) can't, since it spans
-          // multiple sellers and would never match any one provider's transaction list filter.
-          await tx.transaction.create({
+          const childTx = await tx.transaction.create({
             data: {
               type: "purchase",
               userId: transaction.userId,
@@ -654,6 +666,56 @@ export class PaymentService {
               status: "succeeded",
               metadata: { cartTransactionId: transaction.id, items: providerItems }
             }
+          });
+
+          const orderItemsData = providerItems.map((item) => ({
+            listingId: item.listingId,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: centsToDecimal(BigInt(item.unitPriceCents ?? "0")),
+            total: centsToDecimal(BigInt(item.amountCents ?? "0")),
+            metadata: item.customFields ? { customFields: item.customFields } : {}
+          }));
+
+          const order = await tx.order.create({
+            data: {
+              userId: transaction.userId,
+              providerId,
+              transactionId: childTx.id,
+              status: "pending",
+              subtotal: centsToDecimal(amountCents),
+              fee: centsToDecimal(feeCents),
+              total: centsToDecimal(amountCents),
+              customer: { phone: transaction.metadata?.phone ?? null },
+              fulfillment: {},
+              metadata: { cartTransactionId: transaction.id }
+            }
+          });
+
+          for (const oi of orderItemsData) {
+            await tx.orderItem.create({
+              data: { ...oi, orderId: order.id }
+            });
+          }
+
+          for (const item of providerItems) {
+            await tx.serviceProduct.update({
+              where: { id: item.listingId },
+              data: { soldCount: { increment: item.quantity } }
+            });
+          }
+
+          if (netCents > 0n) {
+            await this.walletService.creditBalance({ providerId, amountDec: centsToDecimal(netCents), session: tx });
+          }
+
+          createdOrders.push({ id: order.id, providerId, status: order.status });
+        }
+
+        if (createdOrders.length) {
+          await tx.transaction.update({
+            where: { id: transaction.id },
+            data: { metadata: { ...(transaction.metadata ?? {}), createdOrders } }
           });
         }
 

@@ -6,6 +6,10 @@ npm-debug.log*
 
 admin_ui/
 public_app/
+driver_app/
+
+.claude/
+.trae/
 
 prisma/*.db
 prisma/*.db-journal

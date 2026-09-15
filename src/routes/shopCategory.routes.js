@@ -8,6 +8,7 @@ import { Roles } from "../constants/enums.js";
 export const buildShopCategoryRoutes = ({ shopCategoryController }) => {
   const router = Router();
   const id = Joi.string().trim().min(1).max(64);
+  const imageUrlField = Joi.string().uri().max(1000).allow(null).optional();
 
   router.get("/mine", requireAuth([Roles.PROVIDER]), shopCategoryController.listMine);
   router.get(
@@ -22,7 +23,8 @@ export const buildShopCategoryRoutes = ({ shopCategoryController }) => {
     validate(
       Joi.object({
         name: Joi.string().trim().max(120).required(),
-        parentId: id.allow(null).optional()
+        parentId: id.allow(null).optional(),
+        imageUrl: imageUrlField
       })
     ),
     shopCategoryController.create
@@ -35,7 +37,8 @@ export const buildShopCategoryRoutes = ({ shopCategoryController }) => {
     validate(
       Joi.object({
         name: Joi.string().trim().max(120).optional(),
-        parentId: id.allow(null).optional()
+        parentId: id.allow(null).optional(),
+        imageUrl: imageUrlField
       }).min(1)
     ),
     shopCategoryController.update
