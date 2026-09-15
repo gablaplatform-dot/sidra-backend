@@ -3,7 +3,7 @@ import prettier from "eslint-config-prettier";
 
 export default [
   {
-    ignores: ["admin_ui/dist/**", "node_modules/**"]
+    ignores: ["admin_ui/dist/**", "node_modules/**", "public_app/dist/**", "public_app/node_modules/**"]
   },
   {
     files: ["**/*.js"],

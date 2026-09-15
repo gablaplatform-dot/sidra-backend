@@ -574,8 +574,8 @@ model Promotion {
   title           String
   subtitle        String?
   type            String   @default("banner")
-  startsAt        DateTime
-  endsAt          DateTime
+  startsAt        DateTime?
+  endsAt          DateTime?
   discountPercent Int?
   imageUrl        String?
   ctaLabel        String?

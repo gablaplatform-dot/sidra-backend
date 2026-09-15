@@ -409,8 +409,8 @@ CREATE TABLE IF NOT EXISTS promotions (
   title TEXT NOT NULL,
   subtitle TEXT,
   type TEXT NOT NULL DEFAULT 'banner',
-  startsAt DATETIME NOT NULL,
-  endsAt DATETIME NOT NULL,
+  startsAt DATETIME,
+  endsAt DATETIME,
   discountPercent INTEGER,
   imageUrl TEXT,
   ctaLabel TEXT,
@@ -705,6 +705,53 @@ if (contactUnlockUserIdColumn && contactUnlockUserIdColumn[3] === "1") {
     CREATE INDEX IF NOT EXISTS contact_unlocks_userId_idx ON contact_unlocks(userId);
     CREATE INDEX IF NOT EXISTS contact_unlocks_providerId_idx ON contact_unlocks(providerId);
     CREATE INDEX IF NOT EXISTS contact_unlocks_paid_idx ON contact_unlocks(paid);
+    PRAGMA foreign_keys = ON;
+  `);
+}
+
+// promotions.startsAt/endsAt used to be NOT NULL. "Always-on" promotions with no fixed time
+// window need that relaxed. SQLite can't ALTER COLUMN, so recreate the table on databases that
+// still have the old constraint, then restore the indexes that get dropped along with it.
+const promotionsColumnInfo = runSql("PRAGMA table_info(promotions);")
+  .split("\n")
+  .filter(Boolean)
+  .map((line) => line.split("|"));
+const promotionsStartsAtColumn = promotionsColumnInfo.find((cols) => cols[1] === "startsAt");
+if (promotionsStartsAtColumn && promotionsStartsAtColumn[3] === "1") {
+  runSql(`
+    PRAGMA foreign_keys = OFF;
+    CREATE TABLE promotions_new (
+      id TEXT PRIMARY KEY NOT NULL,
+      title TEXT NOT NULL,
+      subtitle TEXT,
+      type TEXT NOT NULL DEFAULT 'banner',
+      startsAt DATETIME,
+      endsAt DATETIME,
+      discountPercent INTEGER,
+      imageUrl TEXT,
+      ctaLabel TEXT,
+      ctaHref TEXT,
+      listingIds JSONB,
+      categoryId TEXT,
+      providerId TEXT,
+      isFeatured BOOLEAN NOT NULL DEFAULT 0,
+      sortOrder INTEGER NOT NULL DEFAULT 0,
+      isActive BOOLEAN NOT NULL DEFAULT 1,
+      metadata JSONB NOT NULL DEFAULT '{}',
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE SET NULL ON UPDATE CASCADE,
+      FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE SET NULL ON UPDATE CASCADE
+    );
+    INSERT INTO promotions_new (id, title, subtitle, type, startsAt, endsAt, discountPercent, imageUrl, ctaLabel, ctaHref, listingIds, categoryId, providerId, isFeatured, sortOrder, isActive, metadata, createdAt, updatedAt)
+      SELECT id, title, subtitle, type, startsAt, endsAt, discountPercent, imageUrl, ctaLabel, ctaHref, listingIds, categoryId, providerId, isFeatured, sortOrder, isActive, metadata, createdAt, updatedAt FROM promotions;
+    DROP TABLE promotions;
+    ALTER TABLE promotions_new RENAME TO promotions;
+    CREATE INDEX IF NOT EXISTS promotions_type_isActive_idx ON promotions(type, isActive);
+    CREATE INDEX IF NOT EXISTS promotions_startsAt_endsAt_idx ON promotions(startsAt, endsAt);
+    CREATE INDEX IF NOT EXISTS promotions_featured_isActive_sortOrder_idx ON promotions(isFeatured, isActive, sortOrder);
+    CREATE INDEX IF NOT EXISTS promotions_categoryId_idx ON promotions(categoryId);
+    CREATE INDEX IF NOT EXISTS promotions_providerId_idx ON promotions(providerId);
     PRAGMA foreign_keys = ON;
   `);
 }

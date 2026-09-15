@@ -134,7 +134,6 @@ export class ShopCategoryService {
           update.parentId = parentId;
         }
       }
-    }
 
     try {
       const updated = await prisma.shopCategory.update({ where: { id }, data: update });
