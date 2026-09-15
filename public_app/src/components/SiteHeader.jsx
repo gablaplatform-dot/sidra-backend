@@ -32,10 +32,13 @@ export default function SiteHeader({ session, onLogout }) {
 
   return (
     <>
-      <header className="site-header" id="top">
-        <div className="brand"><span className="brand-mark">G</span><strong>Gabla</strong></div>
+      <header className="site-header shop-themed-header" id="top">
+        <Link to="/home#top" className="brand shop-themed-brand">
+          <span className="brand-mark shop-themed-brand-mark">G</span>
+          <strong>Gabla</strong>
+        </Link>
 
-        <nav className="site-nav">
+        <nav className="site-nav shop-themed-nav">
           {NAV_LINKS.map((link) => (
             <Link key={link.label} to={link.href}>{link.label}</Link>
           ))}
@@ -43,24 +46,24 @@ export default function SiteHeader({ session, onLogout }) {
         </nav>
 
         <div className="header-actions">
-          <Link to="/search" className="icon-button" aria-label="Search">
+          <Link to="/search" className="icon-button shop-themed-icon" aria-label="Search">
             <IconSearch />
           </Link>
-          <button type="button" className="icon-button" aria-label="Saved providers">
+          <button type="button" className="icon-button shop-themed-icon" aria-label="Saved providers">
             <IconBookmark />
           </button>
-          <Link to="/cart" className="icon-button cart-button" aria-label="Cart">
+          <Link to="/cart" className="icon-button shop-themed-icon cart-button" aria-label="Cart">
             <IconCart />
-            {cartCount > 0 ? <span className="cart-badge">{cartCount}</span> : null}
+            {cartCount > 0 ? <span className="cart-badge shop-themed-cart-badge">{cartCount}</span> : null}
           </Link>
           {session ? (
-            <button type="button" className="cta-button" onClick={onLogout}>Log out</button>
+            <button type="button" className="cta-button shop-themed-cta" onClick={onLogout}>Log out</button>
           ) : (
-            <Link className="cta-button" to="/login">Sign in</Link>
+            <Link className="cta-button shop-themed-cta" to="/login">Sign in</Link>
           )}
           <button
             type="button"
-            className="icon-button hamburger"
+            className="icon-button shop-themed-icon hamburger"
             aria-label="Open menu"
             onClick={() => setDrawerOpen(true)}
           >
@@ -70,14 +73,17 @@ export default function SiteHeader({ session, onLogout }) {
       </header>
 
       <div className={`drawer-overlay ${drawerOpen ? "is-open" : ""}`} onClick={closeDrawer} />
-      <aside className={`drawer ${drawerOpen ? "is-open" : ""}`}>
+      <aside className={`drawer shop-themed-drawer ${drawerOpen ? "is-open" : ""}`}>
         <div className="drawer-top">
-          <div className="brand"><span className="brand-mark">G</span><strong>Gabla</strong></div>
-          <button type="button" className="icon-button" aria-label="Close menu" onClick={closeDrawer}>
+          <div className="brand shop-themed-brand">
+            <span className="brand-mark shop-themed-brand-mark">G</span>
+            <strong>Gabla</strong>
+          </div>
+          <button type="button" className="icon-button shop-themed-icon" aria-label="Close menu" onClick={closeDrawer}>
             <IconClose />
           </button>
         </div>
-        <nav className="drawer-links">
+        <nav className="drawer-links shop-themed-drawer-links">
           {NAV_LINKS.map((link) => (
             <Link key={link.label} to={link.href} onClick={closeDrawer}>{link.label}</Link>
           ))}
@@ -85,9 +91,9 @@ export default function SiteHeader({ session, onLogout }) {
           {isProvider ? <Link to="/profile" onClick={closeDrawer}>Profile</Link> : null}
         </nav>
         {session ? (
-          <button type="button" className="cta-button drawer-cta" onClick={() => { closeDrawer(); onLogout(); }}>Log out</button>
+          <button type="button" className="cta-button drawer-cta shop-themed-cta" onClick={() => { closeDrawer(); onLogout(); }}>Log out</button>
         ) : (
-          <Link className="cta-button drawer-cta" to="/login" onClick={closeDrawer}>Sign in</Link>
+          <Link className="cta-button drawer-cta shop-themed-cta" to="/login" onClick={closeDrawer}>Sign in</Link>
         )}
       </aside>
     </>

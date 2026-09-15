@@ -202,3 +202,20 @@ export const IconCash = (props) => (
     <path d="M6 9v.01M18 15v.01" />
   </svg>
 );
+
+export const IconSparkles = (props) => (
+  <svg {...base} {...props}>
+    <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3z" fill="currentColor" />
+    <path d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14z" fill="currentColor" />
+    <path d="M5 13l.7 1.6L7.3 15l-1.6.7L5 17.3l-.7-1.6L2.7 15l1.6-.7L5 13z" fill="currentColor" />
+  </svg>
+);
+
+export const IconTruck = (props) => (
+  <svg {...base} {...props}>
+    <rect x="1" y="7" width="13" height="10" rx="1.5" />
+    <path d="M14 10h3l3 3v4h-6v-7z" />
+    <circle cx="6" cy="18" r="2" />
+    <circle cx="17" cy="18" r="2" />
+  </svg>
+);
