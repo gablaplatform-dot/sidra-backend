@@ -49,39 +49,6 @@ export const TRUST_BADGES = [
   { icon: "headset", title: "24/7 Support", subtitle: "Always here to help" }
 ];
 
-export const SHOP_CATEGORIES = [
-  {
-    id: "cat-fashion",
-    name: "Fashion",
-    image: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=beautiful%20woman%20wearing%20beige%20hoodie%20fashion%20photography%20studio%20neutral%20background&image_size=square_hd"
-  },
-  {
-    id: "cat-electronics",
-    name: "Electronics",
-    image: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=white%20wireless%20headphones%20product%20photography%20black%20studio%20background&image_size=square_hd"
-  },
-  {
-    id: "cat-beauty",
-    name: "Beauty",
-    image: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=luxury%20skincare%20serum%20bottle%20in%20hand%20beauty%20product%20photography%20warm%20background&image_size=square_hd"
-  },
-  {
-    id: "cat-fitness",
-    name: "Fitness",
-    image: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=fitness%20woman%20wearing%20black%20sports%20bra%20gym%20portrait%20photography&image_size=square_hd"
-  },
-  {
-    id: "cat-homedecor",
-    name: "Home Decor",
-    image: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=cozy%20modern%20living%20room%20beige%20sofa%20wooden%20furniture%20interior%20design%20photography&image_size=square_hd"
-  },
-  {
-    id: "cat-accessories",
-    name: "Accessories",
-    image: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=luxury%20black%20wrist%20watch%20on%20dark%20surface%20product%20photography&image_size=square_hd"
-  }
-];
-
 export const NEW_ARRIVALS = [
   {
     id: "na-1",

@@ -15,6 +15,24 @@ const IconArrowRight = (props) => (
   </svg>
 );
 
+export const CategoryCard = ({ category }) => (
+  <Link to={`/shop/${category.id}`} className="shop-category-card">
+    <div className={`shop-category-img ${category.image ? "" : "shop-category-img-fallback"}`}>
+      {category.image ? (
+        <img src={category.image} alt={category.name} loading="lazy" />
+      ) : (
+        <span className="shop-category-fallback-mark">{(category.name || "G").trim().slice(0, 1).toUpperCase()}</span>
+      )}
+    </div>
+    <div className="shop-category-info">
+      <h3>{category.name}</h3>
+      <span className="shop-category-cta">
+        Shop Now <IconArrowRight />
+      </span>
+    </div>
+  </Link>
+);
+
 export default function ShopCategoryRow({ categories = [] }) {
   const scrollRef = useRef(null);
   const [canScroll, setCanScroll] = useState({ left: false, right: true });
@@ -44,7 +62,7 @@ export default function ShopCategoryRow({ categories = [] }) {
     <section className="shop-section">
       <div className="shop-section-header">
         <h2 className="shop-section-title">Shop by Categories</h2>
-        <Link to="/home#categories" className="shop-view-all">View All Categories <IconArrowRight /></Link>
+        <Link to="/shop/categories" className="shop-view-all">View All Categories <IconArrowRight /></Link>
       </div>
 
       <div className="shop-category-wrap">
@@ -59,23 +77,7 @@ export default function ShopCategoryRow({ categories = [] }) {
           className="shop-category-scroll"
           onScroll={updateScrollState}
         >
-          {items.map((cat) => (
-            <Link to={`/shop/${cat.id}`} className="shop-category-card" key={cat.id}>
-              <div className={`shop-category-img ${cat.image ? "" : "shop-category-img-fallback"}`}>
-                {cat.image ? (
-                  <img src={cat.image} alt={cat.name} loading="lazy" />
-                ) : (
-                  <span className="shop-category-fallback-mark">{(cat.name || "G").trim().slice(0, 1).toUpperCase()}</span>
-                )}
-              </div>
-              <div className="shop-category-info">
-                <h3>{cat.name}</h3>
-                <span className="shop-category-cta">
-                  Shop Now <IconArrowRight />
-                </span>
-              </div>
-            </Link>
-          ))}
+          {items.map((cat) => <CategoryCard key={cat.id} category={cat} />)}
         </div>
 
         {canScroll.right ? (

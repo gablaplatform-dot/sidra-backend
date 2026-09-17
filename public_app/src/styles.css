@@ -3157,3 +3157,10 @@ button { cursor: pointer; }
   gap: 20px;
   padding: 0 5vw 40px;
 }
+.shop-all-categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px 18px;
+  padding: 0 5vw 40px;
+}
+.shop-all-categories-grid .shop-category-card { width: 100%; }

@@ -5,7 +5,7 @@ import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
 import { mapCategoryDto, mapProductDto, mapPromotionDto } from "../lib/shopMappers";
 import { findCategoryPath } from "../lib/categories";
-import { SHOP_CATEGORIES, NEW_ARRIVALS, BEST_SELLERS, FLASH_SALE, NEW_COLLECTION } from "../data/shopData";
+import { NEW_ARRIVALS, BEST_SELLERS, FLASH_SALE, NEW_COLLECTION } from "../data/shopData";
 
 import ShopTopBar from "../components/shop/ShopTopBar";
 import ShopNavbar from "../components/shop/ShopNavbar";
@@ -139,11 +139,7 @@ export default function Shop() {
       ]);
       if (cancelled) return;
 
-      if (Array.isArray(cats?.items) && cats.items.length) {
-        setCategories(cats.items.map(mapCategoryDto));
-      } else {
-        setCategories(SHOP_CATEGORIES);
-      }
+      setCategories(Array.isArray(cats?.items) ? cats.items.map(mapCategoryDto) : []);
 
       if (Array.isArray(arrivals?.items) && arrivals.items.length) {
         setNewArrivals(arrivals.items.map((p) => mapProductDto(p)));
@@ -199,7 +195,7 @@ export default function Shop() {
     return <ShopCategoryPage categoryId={categoryId} session={session} onLogout={logout} />;
   }
 
-  const displayCategories = categories ?? SHOP_CATEGORIES;
+  const displayCategories = categories ?? [];
   const displayNewArrivals = newArrivals ?? NEW_ARRIVALS;
   const displayBestSellers = bestSellers ?? BEST_SELLERS;
   const displayFlash = flashSale ?? {
@@ -229,7 +225,9 @@ export default function Shop() {
       <ShopNavbar session={session} onLogout={logout} />
       <ShopHero />
       <ShopTrustBar />
-      <ShopCategoryRow categories={displayCategories} loaded={loaded} />
+      {!loaded || displayCategories.length ? (
+        <ShopCategoryRow categories={displayCategories} loaded={loaded} />
+      ) : null}
       <ShopNewArrivals products={displayNewArrivals} loaded={loaded} />
       <ShopBestSellers products={displayBestSellers} loaded={loaded} />
       <ShopPromoBanners flashSale={displayFlash} newCollection={displayCollection} loaded={loaded} />
