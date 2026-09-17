@@ -320,6 +320,40 @@ export class AdminService {
     return { items: top, total: categories.length };
   }
 
+  // Same shape/rationale as listCategories above, for the dedicated shop/product category tree -
+  // no viewType filter here since this model only ever holds product categories, and "providers"
+  // doesn't apply (a product category isn't a provider's business type), so it counts listings only.
+  async listProductCategories() {
+    const [categories, listingCounts] = await Promise.all([
+      prisma.productCategory.findMany({ orderBy: [{ parentId: "asc" }, { sortOrder: "asc" }, { name: "asc" }] }),
+      prisma.serviceProduct.groupBy({ by: ["productCategoryId"], _count: { _all: true } })
+    ]);
+    const listingMap = new Map(listingCounts.map((c) => [String(c.productCategoryId), c._count._all]));
+    const children = new Map();
+    for (const c of categories) {
+      if (!c.parentId) continue;
+      const pid = String(c.parentId);
+      if (!children.has(pid)) children.set(pid, []);
+      children.get(pid).push(c);
+    }
+    const toDto = (c) => ({
+      id: c.id,
+      name: c.name,
+      parentId: c.parentId ? String(c.parentId) : null,
+      imageUrl: c.imageUrl ?? null,
+      products: listingMap.get(String(c.id)) ?? 0,
+      isActive: c.isActive ?? true,
+      status: c.isActive ? "active" : "paused",
+      moderationStatus: c.moderationStatus ?? "approved",
+      createdByProviderId: c.createdByProviderId ?? null,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      children: (children.get(String(c.id)) ?? []).map(toDto)
+    });
+    const top = categories.filter((c) => !c.parentId).map(toDto);
+    return { items: top, total: categories.length };
+  }
+
   async listListings({ q, type, status, providerId, categoryId, page = 1, limit = 100 }) {
     const filter = {};
     if (type) filter.type = type;

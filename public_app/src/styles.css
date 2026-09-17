@@ -1830,10 +1830,12 @@ button { cursor: pointer; }
 }
 .shop-product-media {
   position: relative;
+  display: block;
   aspect-ratio: 1 / 1;
   background: #f8fafc;
   overflow: hidden;
 }
+.shop-product-name-link { color: inherit; text-decoration: none; }
 .shop-product-img {
   width: 100%; height: 100%;
   display: flex;
@@ -1977,12 +1979,14 @@ button { cursor: pointer; }
 }
 .shop-bestseller-media {
   position: relative;
+  display: block;
   flex: 0 0 140px;
   aspect-ratio: 1 / 1;
   border-radius: 14px;
   overflow: hidden;
   background: #f8fafc;
 }
+.shop-bestseller-name-link { color: inherit; text-decoration: none; }
 .shop-bestseller-img { width: 100%; height: 100%; }
 .shop-bestseller-img img {
   width: 100%; height: 100%;
@@ -3105,3 +3109,51 @@ button { cursor: pointer; }
 @media (max-width: 1100px) { .home-provider-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 820px) { .home-provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .home-provider-grid { grid-template-columns: 1fr; gap: 14px; } }
+
+/* ---------- Product detail page ---------- */
+.product-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
+  gap: 32px;
+  padding: 24px 5vw 60px;
+}
+.product-detail-media {
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+.product-detail-media img { width: 100%; height: 100%; object-fit: cover; }
+.product-detail-body { display: flex; flex-direction: column; gap: 14px; }
+.product-detail-body h1 { margin: 0; font-size: clamp(22px, 2.4vw, 30px); color: #0b2046; }
+.product-detail-price { font-size: 20px; display: flex; align-items: baseline; gap: 10px; }
+.product-detail-description { color: #475569; line-height: 1.6; }
+.product-detail-actions { margin-top: 8px; }
+@media (max-width: 820px) {
+  .product-detail { grid-template-columns: 1fr; padding: 16px 20px 40px; }
+}
+
+/* ---------- Shop category page ---------- */
+.shop-subcategory-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 5vw 20px;
+}
+.shop-subcategory-chip {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #0b2046;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.shop-subcategory-chip:hover { background: #e2e8f0; }
+.shop-category-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+  padding: 0 5vw 40px;
+}

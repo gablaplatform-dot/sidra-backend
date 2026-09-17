@@ -21,7 +21,7 @@ export default function ListingForm() {
   const [error, setError] = useState("");
   const [categories, setCategories] = useState([]);
   const [productCategories, setProductCategories] = useState([]);
-  const [productTopCategoryId, setProductTopCategoryId] = useState("");
+  const [productCategoryPath, setProductCategoryPath] = useState([]); // selected id at each depth, root first
   const [newCategoryDraft, setNewCategoryDraft] = useState(null); // 'top' | 'sub' | null
   const [newCategoryName, setNewCategoryName] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
@@ -40,6 +40,7 @@ export default function ListingForm() {
     sku: "",
     inventory: "",
     categoryId: "",
+    productCategoryId: "",
     shopCategoryId: "",
     imageUrl: "",
     gallery: [],
@@ -59,7 +60,7 @@ export default function ListingForm() {
     let active = true;
     Promise.all([
       request("/categories"),
-      request("/categories?viewType=ecommerce"),
+      request("/product-categories"),
       request("/providers/me"),
       request("/shop-categories/mine"),
       isEditing ? request("/listings/me?limit=200") : Promise.resolve(null)
@@ -68,8 +69,8 @@ export default function ListingForm() {
         if (!active) return;
         const flatCategories = categoryResult?.items || categoryResult || [];
         setCategories(flatCategories);
-        const ecommerceCategories = productCategoryResult?.items || productCategoryResult || [];
-        setProductCategories(ecommerceCategories);
+        const shopProductCategories = productCategoryResult?.items || productCategoryResult || [];
+        setProductCategories(shopProductCategories);
         setShopCategories(shopCategoryResult?.items || []);
 
         if (isEditing) {
@@ -89,6 +90,7 @@ export default function ListingForm() {
             sku: listing.sku ?? "",
             inventory: listing.inventory ?? "",
             categoryId: listing.categoryId || "",
+            productCategoryId: listing.productCategoryId || "",
             shopCategoryId: listing.shopCategoryId || "",
             imageUrl: listing.media?.imageUrl || "",
             gallery: listing.media?.gallery || [],
@@ -96,10 +98,10 @@ export default function ListingForm() {
             featured: Boolean(listing.featured),
             onlinePaymentEnabled: listing.onlinePaymentEnabled !== false
           });
-          if (listing.type === "product" && listing.categoryId) {
-            const found = findCategoryPath(ecommerceCategories, listing.categoryId);
-            const topId = found?.ancestors?.[0]?.id || listing.categoryId;
-            setProductTopCategoryId(topId);
+          if (listing.type === "product" && listing.productCategoryId) {
+            const found = findCategoryPath(shopProductCategories, listing.productCategoryId);
+            const path = found ? [...found.ancestors.map((a) => a.id), found.node.id] : [listing.productCategoryId];
+            setProductCategoryPath(path);
           }
         } else {
           setForm((current) => ({ ...current, categoryId: providerResult?.categoryId || "" }));
@@ -120,24 +122,36 @@ export default function ListingForm() {
   const flatShopCategoryOptions = flattenCategories(shopCategories);
 
   // Products use the admin/provider-managed e-commerce category tree, and must be placed at a
-  // leaf of it - if the chosen top category has subcategories, one of them has to be picked too
-  // (mirrors the server-side rule in listing.service.js#assertProductCategory).
-  const productTopNode = productCategories.find((c) => c.id === productTopCategoryId) || null;
-  const productSubcategoryOptions = productTopNode?.children || [];
-  const productNeedsSubcategory = productSubcategoryOptions.length > 0;
-
-  const selectProductTopCategory = (id) => {
-    const node = productCategories.find((c) => c.id === id) || null;
-    setProductTopCategoryId(id);
-    setForm((current) => ({ ...current, categoryId: node?.children?.length ? "" : id, customFields: {} }));
+  // leaf of it, however deep that tree goes (mirrors listing.service.js#assertProductCategory).
+  // Each level's dropdown is derived from the previous level's selection; the walk stops once it
+  // reaches a node with no children (a leaf, i.e. a valid product category) or an unselected level.
+  const productLevels = [];
+  {
+    let options = productCategories;
+    let depth = 0;
+    while (options && options.length) {
+      const selectedId = productCategoryPath[depth] || "";
+      productLevels.push({ depth, options, selectedId });
+      const node = options.find((c) => c.id === selectedId);
+      if (!node || !node.children?.length) break;
+      options = node.children;
+      depth += 1;
+    }
+  }
+  const selectProductCategoryAtDepth = (depth, id) => {
+    const level = productLevels[depth];
+    const node = level?.options.find((c) => c.id === id) || null;
+    setProductCategoryPath((current) => {
+      const next = current.slice(0, depth);
+      next[depth] = id;
+      return next;
+    });
+    const isLeaf = id && !node?.children?.length;
+    setForm((current) => ({ ...current, productCategoryId: isLeaf ? id : "", customFields: {} }));
   };
 
-  const selectProductSubcategory = (id) => {
-    setForm((current) => ({ ...current, categoryId: id, customFields: {} }));
-  };
-
-  const startNewCategory = (scope) => {
-    setNewCategoryDraft(scope);
+  const startNewSubcategory = () => {
+    setNewCategoryDraft("sub");
     setNewCategoryName("");
   };
 
@@ -146,32 +160,34 @@ export default function ListingForm() {
     setNewCategoryName("");
   };
 
-  const createCategory = async () => {
+  const insertChildIntoTree = (nodes, parentId, child) =>
+    nodes.map((node) => {
+      if (node.id === parentId) {
+        return { ...node, children: [...(node.children || []), child] };
+      }
+      if (node.children?.length) {
+        return { ...node, children: insertChildIntoTree(node.children, parentId, child) };
+      }
+      return node;
+    });
+
+  const createSubcategory = async () => {
     const name = newCategoryName.trim();
-    if (!name) return;
+    const parentId = productCategoryPath[productCategoryPath.length - 1];
+    if (!name || !parentId) return;
     setCreatingCategory(true);
     setError("");
     try {
-      const parentId = newCategoryDraft === "sub" ? productTopCategoryId : undefined;
-      const created = await request("/categories/mine", {
+      const created = await request("/product-categories/mine", {
         method: "POST",
-        body: JSON.stringify(parentId ? { name, parentId } : { name })
+        body: JSON.stringify({ name, parentId })
       });
-      if (newCategoryDraft === "sub") {
-        setProductCategories((current) =>
-          current.map((node) =>
-            node.id === productTopCategoryId ? { ...node, children: [...(node.children || []), created] } : node
-          )
-        );
-        setForm((current) => ({ ...current, categoryId: created.id, customFields: {} }));
-      } else {
-        setProductCategories((current) => [...current, created]);
-        setProductTopCategoryId(created.id);
-        setForm((current) => ({ ...current, categoryId: created.id, customFields: {} }));
-      }
+      setProductCategories((current) => insertChildIntoTree(current, parentId, created));
+      setProductCategoryPath((current) => [...current, created.id]);
+      setForm((current) => ({ ...current, productCategoryId: created.id, customFields: {} }));
       cancelNewCategory();
     } catch (createError) {
-      setError(createError.message || "Unable to create this category.");
+      setError(createError.message || "Unable to create this subcategory.");
     } finally {
       setCreatingCategory(false);
     }
@@ -220,12 +236,12 @@ export default function ListingForm() {
       return;
     }
     if (form.type === "product") {
-      if (!productTopCategoryId) {
+      if (!productCategoryPath[0]) {
         setError("Choose a category for this product.");
         return;
       }
-      if (productNeedsSubcategory && !form.categoryId) {
-        setError("Choose a subcategory for this product.");
+      if (!form.productCategoryId) {
+        setError("Choose a more specific subcategory for this product.");
         return;
       }
     }
@@ -267,6 +283,7 @@ export default function ListingForm() {
         inventory: inventoryNum !== null && Number.isInteger(inventoryNum) && inventoryNum >= 0 ? inventoryNum : null,
         type: form.type,
         categoryId: form.categoryId || null,
+        productCategoryId: form.productCategoryId || null,
         shopCategoryId: form.shopCategoryId || null,
         media: { imageUrl: form.imageUrl || null, gallery: form.gallery },
         customFields: form.customFields,
@@ -320,24 +337,19 @@ export default function ListingForm() {
                 </Field>
                 {form.type === "product" ? (
                   <>
-                    <Field label="Category *">
-                      <select value={productTopCategoryId} onChange={(e) => selectProductTopCategory(e.target.value)}>
-                        <option value="">Choose a category</option>
-                        {productCategories.map((c) => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
-                    </Field>
-                    {productNeedsSubcategory ? (
-                      <Field label="Subcategory *">
-                        <select value={form.categoryId} onChange={(e) => selectProductSubcategory(e.target.value)}>
-                          <option value="">Choose a subcategory</option>
-                          {productSubcategoryOptions.map((c) => (
+                    {productLevels.map((level) => (
+                      <Field key={level.depth} label={level.depth === 0 ? "Category *" : "Subcategory *"}>
+                        <select
+                          value={level.selectedId}
+                          onChange={(e) => selectProductCategoryAtDepth(level.depth, e.target.value)}
+                        >
+                          <option value="">{level.depth === 0 ? "Choose a category" : "Choose a subcategory"}</option>
+                          {level.options.map((c) => (
                             <option key={c.id} value={c.id}>{c.name}</option>
                           ))}
                         </select>
                       </Field>
-                    ) : null}
+                    ))}
                   </>
                 ) : (
                   <Field label="Category">
@@ -401,20 +413,26 @@ export default function ListingForm() {
                 </Field>
               </div>
 
-              {form.type === "product" ? (
+              {form.type === "product" && !productCategories.length ? (
+                <p className="provider-meta">
+                  No shop categories exist yet — ask an admin to create one before you can add a product.
+                </p>
+              ) : null}
+
+              {form.type === "product" && productCategoryPath[0] ? (
                 <div className="new-category-panel">
                   {newCategoryDraft ? (
                     <div className="form-grid two">
-                      <Field label={newCategoryDraft === "sub" ? "New subcategory name" : "New category name"}>
+                      <Field label="New subcategory name">
                         <input
                           value={newCategoryName}
                           onChange={(e) => setNewCategoryName(e.target.value)}
-                          placeholder={newCategoryDraft === "sub" ? "e.g. Drones" : "e.g. Electronics"}
+                          placeholder="e.g. Drones"
                           autoFocus
                         />
                       </Field>
                       <div className="checkbox-row" style={{ alignItems: "center", gap: 8 }}>
-                        <button type="button" className="cta-button" disabled={creatingCategory || !newCategoryName.trim()} onClick={createCategory}>
+                        <button type="button" className="cta-button" disabled={creatingCategory || !newCategoryName.trim()} onClick={createSubcategory}>
                           {creatingCategory ? "Creating…" : "Create"}
                         </button>
                         <button type="button" className="secondary-button" onClick={cancelNewCategory}>Cancel</button>
@@ -422,14 +440,11 @@ export default function ListingForm() {
                     </div>
                   ) : (
                     <div className="checkbox-row" style={{ gap: 12 }}>
-                      <button type="button" className="secondary-button" onClick={() => startNewCategory("top")}>+ Add new category</button>
-                      {productTopCategoryId ? (
-                        <button type="button" className="secondary-button" onClick={() => startNewCategory("sub")}>+ Add new subcategory</button>
-                      ) : null}
+                      <button type="button" className="secondary-button" onClick={startNewSubcategory}>+ Add new subcategory</button>
                     </div>
                   )}
                   <p className="provider-meta" style={{ marginTop: 8 }}>
-                    Can&apos;t find the right category? Create one — it goes live immediately and is queued for admin review.
+                    Can&apos;t find the right subcategory? Add one — it goes live immediately and is queued for admin review.
                   </p>
                 </div>
               ) : null}

@@ -98,6 +98,7 @@ model Provider {
   shopCategories ShopCategory[]
   promotions     Promotion[]
   createdCategories Category[] @relation("CategoryCreatedBy")
+  createdProductCategories ProductCategory[] @relation("ProductCategoryCreatedBy")
 
   @@index([categoryId, createdAt])
   @@index([publicSlug])
@@ -145,10 +146,40 @@ model Category {
   @@map("categories")
 }
 
+// The dedicated shop/product category tree, admin-managed and separate from the directory
+// Category tree above (which is service-provider/business-type taxonomy, not product taxonomy).
+// Providers can add subcategories here (never top-level ones) when creating a product.
+model ProductCategory {
+  id                  String            @id @default(cuid())
+  name                String
+  parentId            String?
+  imageUrl            String?
+  isActive            Boolean           @default(true)
+  // "approved" for admin-created nodes; a provider-submitted subcategory starts "pending" - it's
+  // usable immediately (isActive stays true), this only flags it for admin review.
+  moderationStatus    String            @default("approved")
+  createdByProviderId String?
+  sortOrder           Int               @default(0)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  parent   ProductCategory?  @relation("ProductCategoryToProductCategory", fields: [parentId], references: [id], onDelete: SetNull)
+  children ProductCategory[] @relation("ProductCategoryToProductCategory")
+
+  createdByProvider Provider?        @relation("ProductCategoryCreatedBy", fields: [createdByProviderId], references: [id], onDelete: SetNull)
+  serviceProducts   ServiceProduct[]
+
+  @@unique([parentId, name])
+  @@index([parentId])
+  @@index([isActive, sortOrder])
+  @@map("product_categories")
+}
+
 model ServiceProduct {
   id           String              @id @default(cuid())
   providerId   String
   categoryId   String?
+  productCategoryId String?
   shopCategoryId String?
   name         String
   description  String              @default("")
@@ -172,6 +203,7 @@ model ServiceProduct {
 
   provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  productCategory ProductCategory? @relation(fields: [productCategoryId], references: [id], onDelete: SetNull)
   shopCategory ShopCategory? @relation(fields: [shopCategoryId], references: [id], onDelete: SetNull)
   orderItems OrderItem[]
   favorites  Favorite[]
@@ -181,6 +213,7 @@ model ServiceProduct {
   @@index([status, createdAt])
   @@index([featured, status])
   @@index([categoryId, status])
+  @@index([productCategoryId, status])
   @@index([shopCategoryId, status])
   @@map("service_products")
 }

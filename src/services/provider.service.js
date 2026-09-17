@@ -581,6 +581,19 @@ export class ProviderService {
     }
 
     const email = this.normalizeEmail(profile.email);
+    // The invite/onboarding link is only proof that whoever clicked it holds the link, not that
+    // they're the invited business - anyone who forwards or leaks it could otherwise link any
+    // Google account and take over auto-approved provider access. Requiring the Google account's
+    // own email to match the address the invite was actually sent to closes that gap.
+    const invitedEmail = this.normalizeEmail(user.email);
+    if (invitedEmail && email !== invitedEmail) {
+      throw new AppError({
+        message: `This invitation was sent to ${user.email}. Please sign in with the Google account for that email address.`,
+        statusCode: 409,
+        code: "GOOGLE_EMAIL_MISMATCH"
+      });
+    }
+
     let updatedUser;
     try {
       updatedUser = await prisma.user.update({

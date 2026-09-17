@@ -1,6 +1,5 @@
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
-import { CategoryBehavior, CategoryModerationStatus, CategoryViewType } from "../constants/enums.js";
 
 const uniqueError = (e) => e?.code === "P2002";
 
@@ -15,51 +14,6 @@ export class CategoryService {
     } catch (e) {
       if (uniqueError(e)) {
         throw new AppError({ message: "Category already exists", statusCode: 409, code: "CATEGORY_EXISTS" });
-      }
-      throw e;
-    }
-  }
-
-  async getProviderForUser(userId) {
-    const provider = await prisma.provider.findUnique({ where: { userId } });
-    if (!provider) {
-      throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
-    }
-    return provider;
-  }
-
-  async createFromProvider({ actorUserId, name, parentId, imageUrl }) {
-    const provider = await this.getProviderForUser(actorUserId);
-
-    let parent = null;
-    if (parentId) {
-      parent = await prisma.category.findUnique({ where: { id: parentId } });
-      if (!parent) {
-        throw new AppError({ message: "Parent category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
-      }
-    }
-
-    try {
-      const sortOrder = await this.getNextSortOrder(parentId ?? null);
-      const created = await prisma.category.create({
-        data: {
-          name,
-          parentId: parentId ?? null,
-          behavior: parent?.behavior ?? CategoryBehavior.ONLINE_SHOP,
-          viewType: parent?.viewType ?? CategoryViewType.ECOMMERCE,
-          appView: parent?.appView ?? CategoryViewType.ECOMMERCE,
-          settings: parent?.settings ?? {},
-          isActive: true,
-          moderationStatus: CategoryModerationStatus.PENDING,
-          createdByProviderId: provider.id,
-          sortOrder,
-          imageUrl: imageUrl ?? parent?.imageUrl ?? null
-        }
-      });
-      return this.toDto(created);
-    } catch (e) {
-      if (uniqueError(e)) {
-        throw new AppError({ message: "A category with this name already exists here", statusCode: 409, code: "CATEGORY_EXISTS" });
       }
       throw e;
     }
@@ -310,23 +264,5 @@ export class CategoryService {
       _max: { sortOrder: true }
     });
     return (currentMax._max.sortOrder ?? -1) + 1;
-  }
-
-  async publicListEcommerce({ limit = 6 } = {}) {
-    const normalizedLimit = Math.min(60, Math.max(1, Number(limit) || 6));
-    const rows = await prisma.category.findMany({
-      where: {
-        parentId: null,
-        viewType: CategoryViewType.ECOMMERCE,
-        isActive: true,
-        moderationStatus: CategoryModerationStatus.APPROVED
-      },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      take: normalizedLimit
-    });
-    return {
-      items: rows.map((r) => this.toDto(r)),
-      total: rows.length
-    };
   }
 }

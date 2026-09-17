@@ -8,6 +8,7 @@ import { WalletService } from "./wallet.service.js";
 import { TransactionService } from "./transaction.service.js";
 import { MobileMoneyService } from "./mobileMoney.service.js";
 import { RideDriverWalletService } from "./rideDriverWallet.service.js";
+import { OrderNotificationService } from "./orderNotification.service.js";
 import { parseMoneyToCents, centsToDecimal, feeFromPercentCents } from "../utils/money.js";
 
 const SUBSCRIPTION_PERIOD_DAYS = 30;
@@ -17,12 +18,14 @@ export class PaymentService {
     walletService = new WalletService(),
     transactionService = new TransactionService(),
     mobileMoneyService = new MobileMoneyService(),
-    rideDriverWalletService = new RideDriverWalletService()
+    rideDriverWalletService = new RideDriverWalletService(),
+    orderNotificationService = new OrderNotificationService()
   } = {}) {
     this.walletService = walletService;
     this.transactionService = transactionService;
     this.mobileMoneyService = mobileMoneyService;
     this.rideDriverWalletService = rideDriverWalletService;
+    this.orderNotificationService = orderNotificationService;
   }
 
   mobileMoneyCallbackUrls() {
@@ -590,7 +593,9 @@ export class PaymentService {
       throw new AppError({ message: "external_ref is required", statusCode: 400, code: "MISSING_EXTERNAL_REF" });
     }
 
-    return prisma.$transaction(async (tx) => {
+    const newOrderIds = [];
+
+    const result = await prisma.$transaction(async (tx) => {
       const transaction = await tx.transaction.findFirst({ where: { reference } });
       if (!transaction) {
         return { ok: false, reason: "unknown_reference" };
@@ -618,6 +623,47 @@ export class PaymentService {
         }
         if (Number(transaction.fee) > 0) {
           await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
+        }
+
+        // A "purchase" transaction only ever comes from BuyNowModal (single-listing, single-provider),
+        // so unlike cart_purchase there's nothing to split - just record the one order it paid for.
+        const listingId = transaction.metadata?.listingId;
+        const quantity = Math.max(1, Number(transaction.metadata?.quantity) || 1);
+        if (listingId && transaction.providerId) {
+          const listing = await tx.serviceProduct.findUnique({ where: { id: listingId } });
+          const unitPrice = new Prisma.Decimal(transaction.amount).div(quantity);
+
+          const order = await tx.order.create({
+            data: {
+              userId: transaction.userId,
+              providerId: transaction.providerId,
+              transactionId: transaction.id,
+              status: "pending",
+              subtotal: transaction.amount,
+              fee: transaction.fee,
+              total: transaction.amount,
+              customer: { phone: transaction.metadata?.phone ?? null },
+              fulfillment: {},
+              metadata: {},
+              items: {
+                create: [
+                  {
+                    listingId,
+                    name: listing?.name ?? "Item",
+                    quantity,
+                    unitPrice,
+                    total: transaction.amount
+                  }
+                ]
+              }
+            }
+          });
+
+          if (listing) {
+            await tx.serviceProduct.update({ where: { id: listingId }, data: { soldCount: { increment: quantity } } });
+          }
+
+          newOrderIds.push(order.id);
         }
       } else if (transaction.type === "contact_unlock") {
         const contactUnlockId = transaction.metadata?.contactUnlockId;
@@ -710,6 +756,7 @@ export class PaymentService {
           }
 
           createdOrders.push({ id: order.id, providerId, status: order.status });
+          newOrderIds.push(order.id);
         }
 
         if (createdOrders.length) {
@@ -737,6 +784,12 @@ export class PaymentService {
 
       return { ok: true, transactionId: transaction.id, type: transaction.type };
     });
+
+    for (const orderId of newOrderIds) {
+      this.orderNotificationService.notifyProviderNewOrder({ orderId }).catch(() => {});
+    }
+
+    return result;
   }
 
   async handleMobileMoneyFailed(payload) {

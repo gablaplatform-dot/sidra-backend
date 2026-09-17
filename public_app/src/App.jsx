@@ -12,6 +12,7 @@ import SearchResults from "./pages/SearchResults";
 import Cart from "./pages/Cart";
 import Ride from "./pages/Ride";
 import Shop from "./pages/Shop";
+import ProductDetail from "./pages/ProductDetail";
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
       <Route path="/cart" element={<Cart />} />
       <Route path="/ride" element={<Ride />} />
       <Route path="/shop" element={<Shop />} />
+      <Route path="/shop/product/:listingId" element={<ProductDetail />} />
       <Route path="/shop/:categoryId" element={<Shop />} />
       <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>

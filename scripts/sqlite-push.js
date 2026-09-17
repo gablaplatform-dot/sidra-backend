@@ -124,10 +124,25 @@ CREATE TABLE IF NOT EXISTS shop_categories (
   FOREIGN KEY (parentId) REFERENCES shop_categories(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS product_categories (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  parentId TEXT,
+  imageUrl TEXT,
+  isActive BOOLEAN NOT NULL DEFAULT 1,
+  moderationStatus TEXT NOT NULL DEFAULT 'approved',
+  createdByProviderId TEXT,
+  sortOrder INTEGER NOT NULL DEFAULT 0,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (parentId) REFERENCES product_categories(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS service_products (
   id TEXT PRIMARY KEY NOT NULL,
   providerId TEXT NOT NULL,
   categoryId TEXT,
+  productCategoryId TEXT,
   shopCategoryId TEXT,
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
@@ -150,6 +165,7 @@ CREATE TABLE IF NOT EXISTS service_products (
   updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (productCategoryId) REFERENCES product_categories(id) ON DELETE SET NULL ON UPDATE CASCADE,
   FOREIGN KEY (shopCategoryId) REFERENCES shop_categories(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -538,6 +554,9 @@ CREATE INDEX IF NOT EXISTS service_products_status_createdAt_idx ON service_prod
 CREATE INDEX IF NOT EXISTS service_products_featured_status_idx ON service_products(featured, status);
 CREATE UNIQUE INDEX IF NOT EXISTS shop_categories_providerId_parentId_name_key ON shop_categories(providerId, parentId, name);
 CREATE INDEX IF NOT EXISTS shop_categories_providerId_parentId_idx ON shop_categories(providerId, parentId);
+CREATE UNIQUE INDEX IF NOT EXISTS product_categories_parentId_name_key ON product_categories(parentId, name);
+CREATE INDEX IF NOT EXISTS product_categories_parentId_idx ON product_categories(parentId);
+CREATE INDEX IF NOT EXISTS product_categories_isActive_sortOrder_idx ON product_categories(isActive, sortOrder);
 CREATE INDEX IF NOT EXISTS provider_invitations_providerId_status_idx ON provider_invitations(providerId, status);
 CREATE INDEX IF NOT EXISTS provider_invitations_email_idx ON provider_invitations(email);
 CREATE INDEX IF NOT EXISTS provider_invitations_expiresAt_idx ON provider_invitations(expiresAt);
@@ -645,8 +664,13 @@ const ensureColumn = (table, column, definition) => {
   ["service_products", "soldCount", "INTEGER NOT NULL DEFAULT 0"],
   ["service_products", "viewCount", "INTEGER NOT NULL DEFAULT 0"],
   ["favorites", "listingId", "TEXT"],
-  ["reviews", "listingId", "TEXT"]
+  ["reviews", "listingId", "TEXT"],
+  ["service_products", "productCategoryId", "TEXT"]
 ].forEach(([table, column, definition]) => ensureColumn(table, column, definition));
+
+// This index has to be created after the ensureColumn pass above, since on a database created
+// before productCategoryId existed, the column (and therefore the index) can't exist yet.
+runSql("CREATE INDEX IF NOT EXISTS service_products_productCategoryId_status_idx ON service_products(productCategoryId, status);");
 
 // wallets.providerId used to be NOT NULL (one wallet per provider). A platform-owned wallet
 // (providerId = NULL) needs that relaxed. SQLite can't ALTER COLUMN, so on databases that still

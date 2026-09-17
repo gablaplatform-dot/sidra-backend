@@ -21,15 +21,6 @@ export class CategoryController {
     }
   };
 
-  createMine = async (req, res, next) => {
-    try {
-      const result = await this.categoryService.createFromProvider({ actorUserId: req.user.id, ...req.body });
-      res.status(201).json({ data: result });
-    } catch (e) {
-      next(e);
-    }
-  };
-
   updateCategory = async (req, res, next) => {
     try {
       const result = await this.categoryService.updateCategory({
@@ -69,12 +60,4 @@ export class CategoryController {
     }
   };
 
-  listEcommerce = async (req, res, next) => {
-    try {
-      const result = await this.categoryService.publicListEcommerce(req.query);
-      res.status(200).json({ data: result });
-    } catch (e) {
-      next(e);
-    }
-  };
 }

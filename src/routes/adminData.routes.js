@@ -87,6 +87,7 @@ export const buildAdminDataRoutes = ({ adminController }) => {
     ),
     adminController.listCategories
   );
+  router.get("/product-categories", adminController.listProductCategories);
   router.get(
     "/listings",
     validate(

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { addToCart } from "../../lib/cart";
 import { IconStar } from "../icons";
 
@@ -26,15 +27,17 @@ const BestSellerCard = ({ product }) => {
 
   return (
     <div className="shop-bestseller-card">
-      <div className="shop-bestseller-media">
+      <Link to={`/shop/product/${product.id}`} className="shop-bestseller-media">
         <span className="shop-badge shop-badge-bestseller">Bestseller</span>
         <div className="shop-bestseller-img">
           <img src={product.image} alt={product.name} loading="lazy" />
         </div>
-      </div>
+      </Link>
       <div className="shop-bestseller-body">
         <div>
-          <h3 className="shop-bestseller-name">{product.name}</h3>
+          <Link to={`/shop/product/${product.id}`} className="shop-bestseller-name-link">
+            <h3 className="shop-bestseller-name">{product.name}</h3>
+          </Link>
           <span className="shop-bestseller-price">{product.price}</span>
           <div className="shop-bestseller-rating">
             <div className="shop-stars">

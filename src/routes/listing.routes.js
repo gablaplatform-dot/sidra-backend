@@ -14,7 +14,7 @@ export const buildListingRoutes = ({ listingController }) => {
   const id = Joi.string().trim().min(1).max(64);
   const sortOptions = ["newest", "price_asc", "price_desc", "bestsellers", "featured"];
   const enrichmentFields = {
-    originalPrice: Joi.number().min(0).optional(),
+    originalPrice: Joi.number().min(0).allow(null).optional(),
     discountPercent: Joi.number().integer().min(1).max(100).allow(null).optional(),
     isNew: Joi.boolean().optional(),
     sku: Joi.string().trim().max(120).allow(null).optional(),
@@ -30,6 +30,7 @@ export const buildListingRoutes = ({ listingController }) => {
         type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).optional(),
         q: Joi.string().trim().max(200).optional(),
         categoryId: id.optional(),
+        productCategoryId: id.optional(),
         providerId: id.optional(),
         sort: Joi.string().valid(...sortOptions).optional(),
         discountOnly: Joi.boolean().optional(),
@@ -104,6 +105,7 @@ export const buildListingRoutes = ({ listingController }) => {
         price: Joi.number().min(0).optional(),
         type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).required(),
         categoryId: id.allow(null).optional(),
+        productCategoryId: id.allow(null).optional(),
         shopCategoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
         customFields: Joi.object().unknown(true).optional(),
@@ -125,6 +127,7 @@ export const buildListingRoutes = ({ listingController }) => {
         price: Joi.number().min(0).optional(),
         type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).optional(),
         categoryId: id.allow(null).optional(),
+        productCategoryId: id.allow(null).optional(),
         shopCategoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
         customFields: Joi.object().unknown(true).optional(),

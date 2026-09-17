@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { addToCart } from "../../lib/cart";
 import { IconCart, IconStar } from "../icons";
 
@@ -41,7 +42,7 @@ const StarRating = ({ rating, reviews }) => (
   </div>
 );
 
-const ProductCard = ({ product }) => {
+export const ProductCard = ({ product }) => {
   const [wish, setWish] = useState(false);
   const [added, setAdded] = useState(false);
   const handleAdd = () => {
@@ -52,13 +53,16 @@ const ProductCard = ({ product }) => {
 
   return (
     <div className="shop-product-card">
-      <div className="shop-product-media">
+      <Link to={`/shop/product/${product.id}`} className="shop-product-media">
         {product.isNew ? <span className="shop-badge shop-badge-new">New</span> : null}
         {product.discount ? <span className="shop-badge shop-badge-sale">{product.discount}</span> : null}
         <button
           type="button"
           className={`shop-wish-btn ${wish ? "is-active" : ""}`}
-          onClick={() => setWish((v) => !v)}
+          onClick={(e) => {
+            e.preventDefault();
+            setWish((v) => !v);
+          }}
           aria-label="Add to wishlist"
         >
           <IconHeart />
@@ -66,9 +70,11 @@ const ProductCard = ({ product }) => {
         <div className="shop-product-img">
           <img src={product.image} alt={product.name} loading="lazy" />
         </div>
-      </div>
+      </Link>
       <div className="shop-product-body">
-        <h3 className="shop-product-name">{product.name}</h3>
+        <Link to={`/shop/product/${product.id}`} className="shop-product-name-link">
+          <h3 className="shop-product-name">{product.name}</h3>
+        </Link>
         <div className="shop-product-prices">
           <span className="shop-price-current">{product.price}</span>
           {product.originalPrice ? <span className="shop-price-old">{product.originalPrice}</span> : null}

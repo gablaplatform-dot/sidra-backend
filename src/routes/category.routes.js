@@ -31,30 +31,6 @@ export const buildCategoryRoutes = ({ categoryController }) => {
     categoryController.listNested
   );
 
-  router.get(
-    "/ecommerce",
-    validate(
-      Joi.object({
-        limit: Joi.number().integer().min(1).max(60).optional()
-      }),
-      "query"
-    ),
-    categoryController.listEcommerce
-  );
-
-  router.post(
-    "/mine",
-    requireAuth([Roles.PROVIDER]),
-    validate(
-      Joi.object({
-        name: Joi.string().trim().max(120).required(),
-        parentId: id.allow(null).optional(),
-        imageUrl: imageUrlField
-      })
-    ),
-    categoryController.createMine
-  );
-
   router.post(
     "/",
     requireAuth([Roles.ADMIN]),

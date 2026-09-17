@@ -1,6 +1,5 @@
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
-import { CategoryViewType } from "../constants/enums.js";
 
 export class ListingService {
   async getProviderForUser(userId) {
@@ -21,29 +20,27 @@ export class ListingService {
     }
   }
 
-  // A product must be placed in the e-commerce category tree, and specifically at a leaf of it -
-  // if the chosen category has subcategories, the provider has to drill into one of them (or
-  // create a new one via /categories/mine) rather than leave the product sitting one level too
-  // high. Services keep using the general directory category (optional, inherited from the
-  // provider), unaffected by this rule.
-  async assertProductCategory(categoryId) {
-    if (!categoryId) {
+  // A product must be placed in the dedicated shop/product category tree (ProductCategory, not
+  // the directory Category), and specifically at a leaf of it - if the chosen category has
+  // subcategories, the provider has to drill into one of them (or add one via
+  // /product-categories/mine) rather than leave the product sitting one level too high. Services
+  // keep using the general directory category (optional, inherited from the provider), unaffected
+  // by this rule.
+  async assertProductCategory(productCategoryId) {
+    if (!productCategoryId) {
       throw new AppError({ message: "Choose a category for this product", statusCode: 400, code: "CATEGORY_REQUIRED" });
     }
-    const category = await prisma.category.findUnique({ where: { id: categoryId } });
+    const category = await prisma.productCategory.findUnique({ where: { id: productCategoryId } });
     if (!category) {
       throw new AppError({ message: "Category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
     }
-    if (category.viewType !== CategoryViewType.ECOMMERCE) {
-      throw new AppError({ message: "Choose a product category", statusCode: 400, code: "INVALID_CATEGORY_TYPE" });
-    }
-    const childCount = await prisma.category.count({ where: { parentId: categoryId } });
+    const childCount = await prisma.productCategory.count({ where: { parentId: productCategoryId } });
     if (childCount > 0) {
       throw new AppError({ message: "Choose a more specific subcategory", statusCode: 400, code: "CATEGORY_NOT_LEAF" });
     }
   }
 
-  async createListing({ actorUserId, name, description, price = 0, type, categoryId, shopCategoryId, media, customFields, featured, onlinePaymentEnabled, originalPrice, discountPercent, isNew, sku, inventory }) {
+  async createListing({ actorUserId, name, description, price = 0, type, categoryId, productCategoryId, shopCategoryId, media, customFields, featured, onlinePaymentEnabled, originalPrice, discountPercent, isNew, sku, inventory }) {
     const provider = await this.getProviderForUser(actorUserId);
 
     const normalizedType = String(type ?? "").toLowerCase();
@@ -52,7 +49,7 @@ export class ListingService {
     }
     await this.assertShopCategoryOwnership({ shopCategoryId, providerId: provider.id });
     if (normalizedType === "product") {
-      await this.assertProductCategory(categoryId);
+      await this.assertProductCategory(productCategoryId);
     }
 
     if (discountPercent !== undefined && discountPercent !== null) {
@@ -70,7 +67,8 @@ export class ListingService {
     const obj = await prisma.serviceProduct.create({
       data: {
         providerId: provider.id,
-        categoryId: categoryId !== undefined ? categoryId : provider.categoryId,
+        categoryId: normalizedType === "product" ? null : (categoryId !== undefined ? categoryId : provider.categoryId),
+        productCategoryId: normalizedType === "product" ? productCategoryId : null,
         shopCategoryId: shopCategoryId ?? null,
         name,
         description: description ?? "",
@@ -81,7 +79,7 @@ export class ListingService {
         media: media ?? {},
         customFields: customFields ?? {},
         onlinePaymentEnabled: onlinePaymentEnabled === undefined ? true : Boolean(onlinePaymentEnabled),
-        originalPrice: originalPrice !== undefined ? originalPrice : 0,
+        originalPrice: originalPrice ?? 0,
         discountPercent: discountPercent !== undefined ? (discountPercent === null ? null : Number(discountPercent)) : null,
         isNew: Boolean(isNew),
         sku: sku !== undefined ? (sku === null ? null : String(sku)) : null,
@@ -107,6 +105,7 @@ export class ListingService {
     if (updates.description !== undefined) update.description = updates.description ?? "";
     if (updates.price !== undefined) update.price = updates.price;
     if (updates.categoryId !== undefined) update.categoryId = updates.categoryId;
+    if (updates.productCategoryId !== undefined) update.productCategoryId = updates.productCategoryId;
     if (updates.shopCategoryId !== undefined) {
       await this.assertShopCategoryOwnership({ shopCategoryId: updates.shopCategoryId, providerId: provider.id });
       update.shopCategoryId = updates.shopCategoryId || null;
@@ -122,7 +121,7 @@ export class ListingService {
       }
       update.type = normalizedType;
     }
-    if (updates.originalPrice !== undefined) update.originalPrice = updates.originalPrice;
+    if (updates.originalPrice !== undefined) update.originalPrice = updates.originalPrice ?? 0;
     if (updates.isNew !== undefined) update.isNew = Boolean(updates.isNew);
     if (updates.sku !== undefined) update.sku = updates.sku === null ? null : String(updates.sku);
     if (updates.inventory !== undefined) update.inventory = updates.inventory === null ? null : Math.max(0, Number(updates.inventory) | 0);
@@ -144,11 +143,14 @@ export class ListingService {
     }
 
     const effectiveType = update.type ?? listing.type;
-    const categoryChanging = updates.categoryId !== undefined && updates.categoryId !== listing.categoryId;
+    const productCategoryChanging = updates.productCategoryId !== undefined && updates.productCategoryId !== listing.productCategoryId;
     const becomingProduct = effectiveType === "product" && listing.type !== "product";
-    if (effectiveType === "product" && (categoryChanging || becomingProduct)) {
-      await this.assertProductCategory(update.categoryId !== undefined ? update.categoryId : listing.categoryId);
+    const becomingService = effectiveType === "service" && listing.type !== "service";
+    if (effectiveType === "product" && (productCategoryChanging || becomingProduct)) {
+      await this.assertProductCategory(update.productCategoryId !== undefined ? update.productCategoryId : listing.productCategoryId);
     }
+    if (becomingProduct) update.categoryId = null;
+    if (becomingService) update.productCategoryId = null;
 
     const updated = await prisma.serviceProduct.update({ where: { id: listingId }, data: update });
 
@@ -186,6 +188,7 @@ export class ListingService {
       providerId: i.providerId,
       provider: provider ? { id: provider.id, businessName: provider.businessName, onlinePaymentsEnabled: provider.onlinePaymentsEnabled } : undefined,
       categoryId: i.categoryId,
+      productCategoryId: i.productCategoryId,
       shopCategoryId: i.shopCategoryId,
       name: i.name,
       description: i.description,
@@ -278,11 +281,36 @@ export class ListingService {
     };
   }
 
-  _buildPublicFilter({ type, q, categoryId, providerId, discountOnly, isNew }) {
+  // A product's productCategoryId is always a leaf (assertProductCategory), but a shop category
+  // page can be clicked on any ancestor of that leaf - so browsing "Electronics" has to match
+  // every product filed under any of its descendant subcategories, not just
+  // productCategoryId === "Electronics" itself.
+  async _expandProductCategoryIds(productCategoryId) {
+    const rows = await prisma.productCategory.findMany({ select: { id: true, parentId: true } });
+    const childrenByParent = new Map();
+    for (const row of rows) {
+      if (!row.parentId) continue;
+      if (!childrenByParent.has(row.parentId)) childrenByParent.set(row.parentId, []);
+      childrenByParent.get(row.parentId).push(row.id);
+    }
+    const ids = [productCategoryId];
+    const queue = [productCategoryId];
+    while (queue.length) {
+      const current = queue.shift();
+      for (const childId of childrenByParent.get(current) ?? []) {
+        ids.push(childId);
+        queue.push(childId);
+      }
+    }
+    return ids;
+  }
+
+  async _buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew }) {
     const filter = { status: "approved" };
 
+    let normalizedType = null;
     if (type) {
-      const normalizedType = String(type ?? "").toLowerCase();
+      normalizedType = String(type ?? "").toLowerCase();
       if (!["service", "product"].includes(normalizedType)) {
         throw new AppError({ message: "Invalid type", statusCode: 400, code: "INVALID_TYPE" });
       }
@@ -294,7 +322,11 @@ export class ListingService {
     if (isNew === "true" || isNew === true) filter.isNew = true;
 
     const providerFilter = { isApproved: true, moderationStatus: "approved", ...(providerId ? { id: providerId } : {}) };
-    if (categoryId) {
+    if (normalizedType === "product" && productCategoryId) {
+      const categoryIds = await this._expandProductCategoryIds(productCategoryId);
+      filter.productCategoryId = { in: categoryIds };
+      filter.provider = providerFilter;
+    } else if (categoryId) {
       filter.OR = [
         { categoryId, provider: providerFilter },
         { categoryId: null, provider: { ...providerFilter, categoryId } }
@@ -317,12 +349,12 @@ export class ListingService {
     }
   }
 
-  async publicList({ page = 1, limit = 20, type, q, categoryId, providerId, sort, discountOnly, isNew }) {
+  async publicList({ page = 1, limit = 20, type, q, categoryId, productCategoryId, providerId, sort, discountOnly, isNew }) {
     const normalizedPage = Math.max(1, Number(page) || 1);
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
     const skip = (normalizedPage - 1) * normalizedLimit;
 
-    const filter = this._buildPublicFilter({ type, q, categoryId, providerId, discountOnly, isNew });
+    const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew });
     const orderBy = this._orderByForSort(sort);
 
     const [items, total] = await Promise.all([
@@ -346,7 +378,7 @@ export class ListingService {
 
   async listNewArrivals({ limit = 6, type }) {
     const normalizedLimit = Math.min(60, Math.max(1, Number(limit) || 6));
-    const filter = this._buildPublicFilter({ type });
+    const filter = await this._buildPublicFilter({ type });
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     filter.OR = [
       { ...filter, isNew: true },
@@ -372,7 +404,7 @@ export class ListingService {
 
   async listBestSellers({ limit = 3, type }) {
     const normalizedLimit = Math.min(60, Math.max(1, Number(limit) || 3));
-    const filter = this._buildPublicFilter({ type });
+    const filter = await this._buildPublicFilter({ type });
     const rows = await prisma.serviceProduct.findMany({
       where: {
         status: "approved",
@@ -388,7 +420,7 @@ export class ListingService {
 
   async listFeatured({ limit = 4, type }) {
     const normalizedLimit = Math.min(60, Math.max(1, Number(limit) || 4));
-    const filter = this._buildPublicFilter({ type });
+    const filter = await this._buildPublicFilter({ type });
     const rows = await prisma.serviceProduct.findMany({
       where: {
         status: "approved",

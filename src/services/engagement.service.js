@@ -2,11 +2,16 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "../config/db.js";
 import { AppError } from "../utils/AppError.js";
+import { OrderNotificationService } from "./orderNotification.service.js";
 
 const moneyString = (value) => (value?.toString ? value.toString() : String(value ?? "0.00"));
 const toDecimal = (value) => new Prisma.Decimal(String(value ?? "0"));
 
 export class EngagementService {
+  constructor({ orderNotificationService = new OrderNotificationService() } = {}) {
+    this.orderNotificationService = orderNotificationService;
+  }
+
   async recordProfileVisit({ actorUserId = null, providerId, source, sessionId, ipHash, userAgent, metadata }) {
     const provider = await prisma.provider.findUnique({ where: { id: providerId } });
     if (!provider || !provider.isApproved || provider.moderationStatus !== "approved") {
@@ -277,6 +282,8 @@ export class EngagementService {
       },
       include: { items: true }
     });
+
+    this.orderNotificationService.notifyProviderNewOrder({ orderId: order.id }).catch(() => {});
 
     return {
       id: order.id,
