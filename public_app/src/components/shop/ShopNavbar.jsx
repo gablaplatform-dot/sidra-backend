@@ -20,6 +20,7 @@ const IconUser = (props) => (
 export default function ShopNavbar({ session, onLogout }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [cartCount, setCartCount] = useState(() => getCartCount());
+  const isProvider = Boolean(session?.provider);
 
   useEffect(() => {
     const sync = () => setCartCount(getCartCount());
@@ -47,6 +48,7 @@ export default function ShopNavbar({ session, onLogout }) {
                 {link.dropdown ? <span className="shop-nav-chevron"><IconChevronLeft /></span> : null}
               </Link>
             ))}
+            {isProvider ? <Link to="/profile">Profile</Link> : null}
           </nav>
 
           <div className="shop-nav-actions">
@@ -91,6 +93,7 @@ export default function ShopNavbar({ session, onLogout }) {
             <Link key={link.label} to={link.href} onClick={() => setDrawerOpen(false)}>{link.label}</Link>
           ))}
           <Link to="/cart" onClick={() => setDrawerOpen(false)}>Cart{cartCount > 0 ? ` (${cartCount})` : ""}</Link>
+          {isProvider ? <Link to="/profile" onClick={() => setDrawerOpen(false)}>Profile</Link> : null}
         </nav>
         {session ? (
           <button type="button" className="shop-cta-button shop-drawer-cta" onClick={() => { setDrawerOpen(false); onLogout?.(); }}>Log out</button>
