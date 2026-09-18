@@ -150,7 +150,7 @@ export default function Cart() {
   };
 
   return (
-    <main className="home-shell">
+    <main className="home-shell home-themed">
       <SiteHeader session={session} onLogout={logout} />
 
       <div className="cart-page">
@@ -222,7 +222,13 @@ export default function Cart() {
                 <div className="wallet-list">
                   {group.items.map((item) => (
                     <div key={item.listingId} className="wallet-list-row cart-item-row">
-                      <div>
+                      <div
+                        className="cart-item-thumb"
+                        style={item.listing.media?.imageUrl ? { backgroundImage: `url("${item.listing.media.imageUrl}")` } : undefined}
+                      >
+                        {!item.listing.media?.imageUrl ? <IconBox /> : null}
+                      </div>
+                      <div className="cart-item-info">
                         <strong>{item.listing.name}</strong>
                         <p className="provider-meta">{formatUgx(item.listing.price)} each</p>
                       </div>

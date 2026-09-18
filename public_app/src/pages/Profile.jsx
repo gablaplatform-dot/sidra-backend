@@ -177,7 +177,7 @@ export default function Profile() {
   if (!session?.provider) return null;
 
   return (
-    <main className="home-shell">
+    <main className="home-shell home-themed">
       <SiteHeader session={session} onLogout={logout} />
 
       {loading ? (
@@ -336,7 +336,11 @@ export default function Profile() {
                         <div className="listing-body">
                           <h3>{item.name}</h3>
                           {Number(item.price) > 0 ? <div className="listing-price">UGX {Number(item.price).toLocaleString()}</div> : null}
-                          <p className="provider-meta">{item.status === "approved" ? "Live" : "Pending review"}</p>
+                          <div style={{ margin: "8px 0" }}>
+                            <span className={`status-badge status-${item.status === "approved" ? "fulfilled" : "pending"}`}>
+                              {item.status === "approved" ? "Live" : "Pending review"}
+                            </span>
+                          </div>
                           <div className="listing-actions">
                             <Link to={`/profile/listings/${item.id}/edit`}>Edit</Link>
                             <button type="button" onClick={() => deleteListing(item)}>Remove</button>

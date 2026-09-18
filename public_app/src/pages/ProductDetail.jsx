@@ -54,7 +54,7 @@ export default function ProductDetail() {
   const canBuyNow = listing?.type === "product" && onlinePaymentsAllowed && listing?.onlinePaymentEnabled !== false;
 
   return (
-    <main className="home-shell">
+    <main className="home-shell home-themed">
       <SiteHeader session={session} onLogout={logout} />
 
       {loading ? (

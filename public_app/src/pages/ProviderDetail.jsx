@@ -95,7 +95,7 @@ export default function ProviderDetail() {
   const gallery = provider?.media?.gallery || [];
 
   return (
-    <main className="home-shell">
+    <main className="home-shell home-themed">
       <SiteHeader session={session} onLogout={logout} />
 
       {loading ? (

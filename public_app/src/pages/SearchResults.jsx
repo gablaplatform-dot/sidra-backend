@@ -64,7 +64,7 @@ export default function SearchResults() {
   );
 
   return (
-    <main className="home-shell">
+    <main className="home-shell home-themed">
       <SiteHeader session={session} onLogout={logout} />
 
       <section className="search-results-header">

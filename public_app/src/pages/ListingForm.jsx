@@ -311,7 +311,7 @@ export default function ListingForm() {
   if (!session?.provider) return null;
 
   return (
-    <main className="home-shell">
+    <main className="home-shell home-themed">
       <SiteHeader session={session} onLogout={logout} />
 
       {loading ? (

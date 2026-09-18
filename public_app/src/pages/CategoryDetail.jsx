@@ -56,7 +56,7 @@ export default function CategoryDetail() {
   const children = category?.children || [];
 
   return (
-    <main className="home-shell">
+    <main className="home-shell home-themed">
       <SiteHeader session={session} onLogout={logout} />
 
       {loading ? (
