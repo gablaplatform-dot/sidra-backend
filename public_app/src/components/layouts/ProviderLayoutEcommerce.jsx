@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { request } from "../../lib/api";
 import { addToCart } from "../../lib/cart";
 import ContactSidebar from "../ContactSidebar";
+import ProviderCustomFields, { hasAnsweredCustomFields } from "../ProviderCustomFields";
 import OrderModal from "../OrderModal";
 import BuyNowModal from "../BuyNowModal";
 import { IconBox, IconCart, IconChevronLeft, IconImage, IconShield, IconStar, IconStore } from "../icons";
@@ -48,7 +49,7 @@ const ListingChip = ({ item, onlinePaymentsAllowed, onOrder, onBuyNow }) => {
   );
 };
 
-export default function ProviderLayoutEcommerce({ provider, categoryId, categoryName, listings, gallery, onUnlock }) {
+export default function ProviderLayoutEcommerce({ provider, categoryId, categoryName, providerFields = [], listings, gallery, onUnlock }) {
   const onlinePaymentsAllowed = provider.onlinePaymentsEnabled !== false;
   const [orderingItem, setOrderingItem] = useState(null);
   const [buyingItem, setBuyingItem] = useState(null);
@@ -201,10 +202,11 @@ export default function ProviderLayoutEcommerce({ provider, categoryId, category
 
       <div className="provider-detail-grid" id="about">
         <div className="provider-detail-main">
-          {provider.description ? (
+          {provider.description || hasAnsweredCustomFields(providerFields, provider.customFields) ? (
             <section className="detail-block">
               <h2>About {provider.businessName}</h2>
-              <p className="provider-description">{provider.description}</p>
+              {provider.description ? <p className="provider-description">{provider.description}</p> : null}
+              <ProviderCustomFields fields={providerFields} values={provider.customFields} />
             </section>
           ) : null}
 

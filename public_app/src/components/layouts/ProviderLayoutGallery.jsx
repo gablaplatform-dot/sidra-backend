@@ -2,11 +2,12 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 import ContactSidebar from "../ContactSidebar";
+import ProviderCustomFields from "../ProviderCustomFields";
 import { IconBox, IconChevronLeft, IconImage, IconStar } from "../icons";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
-export default function ProviderLayoutGallery({ provider, categoryId, categoryName, listings, gallery, onUnlock }) {
+export default function ProviderLayoutGallery({ provider, categoryId, categoryName, providerFields = [], listings, gallery, onUnlock }) {
   return (
     <>
       <section className="provider-hero provider-hero-compact">
@@ -28,6 +29,7 @@ export default function ProviderLayoutGallery({ provider, categoryId, categoryNa
 
       <div className="detail-block gallery-layout-body">
         {provider.description ? <p className="provider-description gallery-layout-intro">{provider.description}</p> : null}
+        <ProviderCustomFields fields={providerFields} values={provider.customFields} />
 
         <h2>Gallery</h2>
         {gallery.length ? (

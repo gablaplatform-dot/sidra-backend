@@ -2,11 +2,12 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 import ContactSidebar from "../ContactSidebar";
+import ProviderCustomFields, { hasAnsweredCustomFields } from "../ProviderCustomFields";
 import { IconBox, IconChevronLeft, IconClockIcon, IconImage, IconStar } from "../icons";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
-export default function ProviderLayoutBooking({ provider, categoryId, categoryName, listings, gallery, onUnlock }) {
+export default function ProviderLayoutBooking({ provider, categoryId, categoryName, providerFields = [], listings, gallery, onUnlock }) {
   return (
     <>
       <section
@@ -42,10 +43,11 @@ export default function ProviderLayoutBooking({ provider, categoryId, categoryNa
 
       <div className="provider-detail-grid">
         <div className="provider-detail-main">
-          {provider.description ? (
+          {provider.description || hasAnsweredCustomFields(providerFields, provider.customFields) ? (
             <section className="detail-block">
               <h2>About</h2>
-              <p className="provider-description">{provider.description}</p>
+              {provider.description ? <p className="provider-description">{provider.description}</p> : null}
+              <ProviderCustomFields fields={providerFields} values={provider.customFields} />
             </section>
           ) : null}
 

@@ -93,6 +93,7 @@ export default function ProviderDetail() {
   const layoutKey = categoryMatch?.node?.settings?.layout || "default";
   const Layout = LAYOUTS[layoutKey] || ProviderLayoutDefault;
   const gallery = provider?.media?.gallery || [];
+  const providerFields = categoryMatch?.node?.effectiveProviderFields || [];
 
   return (
     <main className="home-shell home-themed">
@@ -111,6 +112,7 @@ export default function ProviderDetail() {
           categoryId={provider.categoryId}
           categoryName={categoryName}
           categories={categories}
+          providerFields={providerFields}
           listings={listings}
           gallery={gallery}
           onUnlock={() => setUnlockOpen(true)}

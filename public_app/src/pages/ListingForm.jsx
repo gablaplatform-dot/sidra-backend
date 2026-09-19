@@ -450,7 +450,7 @@ export default function ListingForm() {
               ) : null}
 
               <Field label="Description" as="div">
-                <textarea rows="4" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                <textarea rows="8" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </Field>
               <Field label="Highlight this listing" as="div">
                 <label className="checkbox-row">

@@ -9,7 +9,7 @@ export const DynamicField = ({ field, value, onChange }) => {
   };
 
   if (field.type === "textarea") {
-    return <textarea rows="3" value={value || ""} onChange={(e) => onChange(e.target.value)} {...commonProps} />;
+    return <textarea rows="6" value={value || ""} onChange={(e) => onChange(e.target.value)} {...commonProps} />;
   }
 
   if (field.type === "boolean") {

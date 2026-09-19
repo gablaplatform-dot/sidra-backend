@@ -676,6 +676,16 @@ button { cursor: pointer; }
 .detail-block h2 { margin: 0 0 16px; color: #0b2046; font-size: 19px; }
 .provider-description { margin: 0; color: #334155; line-height: 1.7; }
 
+.provider-custom-fields { margin: 18px 0 0; display: grid; gap: 12px 24px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.provider-custom-field-row {
+  padding: 12px 14px;
+  border: 1px solid var(--gabla-border-light);
+  border-radius: 10px;
+  background: #fafafa;
+}
+.provider-custom-field-row dt { margin: 0 0 4px; color: var(--gabla-text-muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.provider-custom-field-row dd { margin: 0; color: var(--gabla-text); font-size: 14px; font-weight: 600; word-break: break-word; }
+
 .sidebar-card { padding: 20px; border: 1px solid var(--gabla-border-light); border-radius: var(--gabla-radius-card); background: #fff; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
 .sidebar-card h2 { margin: 0 0 14px; color: #0b2046; font-size: 15px; }
 .contact-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -1135,13 +1145,6 @@ button { cursor: pointer; }
 @media (min-width: 640px) { .ride-promo-icons { display: block; } }
 @media (max-width: 640px) { .ride-promo { margin: 0 20px 8px; flex-direction: column; align-items: flex-start; } }
 
-/* --- Gabla Shop: home promo banner (same layout as ride-promo, distinct accent) --- */
-.shop-promo { background: linear-gradient(120deg, #7c2d12 0%, #b45309 100%); }
-.shop-promo .ride-promo-eyebrow { color: #fde68a; }
-.shop-promo .ride-promo-cta { background: #fde68a; color: #7c2d12; }
-.shop-promo .ride-promo-cta:hover { background: #fcd34d; }
-.shop-promo .ride-promo-icon { color: #fde68a; }
-.shop-promo .ride-promo-icon-b { background: rgba(253, 230, 138, 0.18); color: #fff; }
 
 /* --- Gabla Ride: booking flow --- */
 .ride-shell { min-height: 100vh; display: flex; flex-direction: column; background: #f5f7fa; }
