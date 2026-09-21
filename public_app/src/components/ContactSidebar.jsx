@@ -1,4 +1,6 @@
 import React from "react";
+import { request } from "../lib/api";
+import { getDeviceId } from "../lib/deviceId";
 import { IconGlobe, IconLock, IconPhone, IconPin } from "./icons";
 
 // Prefers the exact pin (Google Maps ranks a coordinate search far more precisely than a text
@@ -13,6 +15,8 @@ const buildMapsUrl = (location) => {
   return address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : null;
 };
 
+const waLink = (whatsapp) => `https://wa.me/${String(whatsapp).replace(/[^\d]/g, "")}`;
+
 export default function ContactSidebar({ provider, onUnlock }) {
   const locked = provider.contactLocked;
   const contact = provider.contact || {};
@@ -22,6 +26,15 @@ export default function ContactSidebar({ provider, onUnlock }) {
       .filter(Boolean)
       .join(", ") || "Location not set";
   const mapsUrl = locked ? null : buildMapsUrl(provider.location);
+
+  // Never blocks the tel:/wa.me/etc navigation the click already triggered - just a fire-and-forget
+  // ping that powers the provider's own Analytics tab.
+  const trackContact = (type, value) => {
+    request(`/engagement/providers/${encodeURIComponent(provider.id)}/contact-events`, {
+      method: "POST",
+      body: JSON.stringify({ type, value: value ?? null, sessionId: getDeviceId() })
+    }).catch(() => {});
+  };
 
   return (
     <div className="sidebar-card">
@@ -36,14 +49,32 @@ export default function ContactSidebar({ provider, onUnlock }) {
       ) : (
         <>
           <ul className="contact-list">
-            {contact.phone ? <li><IconPhone /> {contact.phone}</li> : null}
-            {contact.whatsapp ? <li><IconPhone /> {contact.whatsapp} (WhatsApp)</li> : null}
-            {contact.website ? <li><IconGlobe /> <a href={contact.website} target="_blank" rel="noreferrer">{contact.website}</a></li> : null}
+            {contact.phone ? (
+              <li>
+                <a href={`tel:${contact.phone}`} onClick={() => trackContact("call", contact.phone)}>
+                  <IconPhone /> {contact.phone}
+                </a>
+              </li>
+            ) : null}
+            {contact.whatsapp ? (
+              <li>
+                <a href={waLink(contact.whatsapp)} target="_blank" rel="noreferrer" onClick={() => trackContact("whatsapp", contact.whatsapp)}>
+                  <IconPhone /> {contact.whatsapp} (WhatsApp)
+                </a>
+              </li>
+            ) : null}
+            {contact.website ? (
+              <li>
+                <a href={contact.website} target="_blank" rel="noreferrer" onClick={() => trackContact("website", contact.website)}>
+                  <IconGlobe /> {contact.website}
+                </a>
+              </li>
+            ) : null}
             {!hasContact ? <li className="provider-meta">No contact details provided.</li> : null}
           </ul>
           <div className="sidebar-divider" />
           {mapsUrl ? (
-            <a className="sidebar-location-link" href={mapsUrl} target="_blank" rel="noreferrer">
+            <a className="sidebar-location-link" href={mapsUrl} target="_blank" rel="noreferrer" onClick={() => trackContact("directions")}>
               <IconPin /> <span>{addressText}</span>
             </a>
           ) : (

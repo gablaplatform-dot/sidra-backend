@@ -170,6 +170,12 @@ export const buildEngagementRoutes = ({ engagementController }) => {
     ),
     engagementController.listProviderOrders
   );
+  router.get(
+    "/provider/analytics",
+    requireAuth([Roles.PROVIDER]),
+    validate(Joi.object({ days: Joi.number().integer().min(7).max(90).optional() }), "query"),
+    engagementController.getProviderAnalytics
+  );
   router.patch(
     "/provider/orders/:orderId",
     requireAuth([Roles.PROVIDER]),

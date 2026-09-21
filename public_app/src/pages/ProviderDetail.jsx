@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
 import { getUnlockedContactId } from "../lib/unlockedContacts";
+import { getDeviceId } from "../lib/deviceId";
 import { findCategoryPath } from "../lib/categories";
 import SiteHeader from "../components/SiteHeader";
 import UnlockModal from "../components/UnlockModal";
@@ -71,6 +72,13 @@ export default function ProviderDetail() {
         if (providerResult?.contactLocked && (session || getUnlockedContactId(providerId))) {
           revealContact();
         }
+
+        // Fire-and-forget: powers the provider's own Analytics tab. Never blocks or affects this
+        // page if it fails (network hiccup, ad blocker, etc).
+        request(`/engagement/providers/${encodeURIComponent(providerId)}/visit`, {
+          method: "POST",
+          body: JSON.stringify({ source: "provider_detail", sessionId: getDeviceId() })
+        }).catch(() => {});
       })
       .catch((loadError) => {
         if (active) setError(loadError.message || "This provider could not be found.");

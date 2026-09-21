@@ -349,4 +349,113 @@ export class EngagementService {
 
     return prisma.order.update({ where: { id: order.id }, data: { status } });
   }
+
+  // Lifetime totals reuse the running counters already maintained on Provider (profileViews,
+  // contactClicks) rather than re-counting ProfileVisit/ContactEvent rows - cheaper, and those
+  // counters ARE the lifetime total by construction (see recordProfileVisit/recordContactEvent).
+  // Only the chart + week-over-week trend look at a bounded recent window.
+  async getProviderAnalytics({ actorUserId, days = 30 }) {
+    const provider = await prisma.provider.findUnique({ where: { userId: actorUserId } });
+    if (!provider) throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+
+    const normalizedDays = Math.min(90, Math.max(7, Number(days) || 30));
+    // Built and walked entirely in UTC calendar days, to match dayKey()'s UTC-based
+    // toISOString().slice(0,10) below - mixing local-time date math (setDate/setHours) with a
+    // UTC-formatted key silently drops or duplicates boundary days whenever the server's local
+    // timezone isn't UTC.
+    const now = new Date();
+    const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    since.setUTCDate(since.getUTCDate() - (normalizedDays - 1));
+
+    const [
+      visitsInRange,
+      contactUnlockCount,
+      unlockRevenue,
+      contactEventsByType,
+      listingTotals,
+      topListings,
+      orderTotals,
+      favoriteCount
+    ] = await Promise.all([
+      prisma.profileVisit.findMany({
+        where: { providerId: provider.id, createdAt: { gte: since } },
+        select: { createdAt: true }
+      }),
+      prisma.contactUnlock.count({ where: { providerId: provider.id, paid: true } }),
+      prisma.transaction.aggregate({
+        where: { providerId: provider.id, type: "contact_unlock", status: "succeeded" },
+        _sum: { netAmount: true }
+      }),
+      prisma.contactEvent.groupBy({ by: ["type"], where: { providerId: provider.id }, _count: { _all: true } }),
+      prisma.serviceProduct.aggregate({
+        where: { providerId: provider.id },
+        _sum: { viewCount: true, soldCount: true }
+      }),
+      prisma.serviceProduct.findMany({
+        where: { providerId: provider.id },
+        orderBy: { viewCount: "desc" },
+        take: 5,
+        select: { id: true, name: true, type: true, viewCount: true, soldCount: true }
+      }),
+      prisma.order.aggregate({
+        where: { providerId: provider.id },
+        _count: { _all: true }
+      }),
+      prisma.favorite.count({ where: { providerId: provider.id } })
+    ]);
+
+    const fulfilledRevenue = await prisma.order.aggregate({
+      where: { providerId: provider.id, status: "fulfilled" },
+      _sum: { total: true }
+    });
+
+    // Zero-fill every day in the window - a chart with gaps for quiet days looks broken, not quiet.
+    const dayKey = (date) => date.toISOString().slice(0, 10);
+    const countsByDay = new Map();
+    for (const visit of visitsInRange) {
+      const key = dayKey(visit.createdAt);
+      countsByDay.set(key, (countsByDay.get(key) ?? 0) + 1);
+    }
+    const dailyVisits = [];
+    for (let i = 0; i < normalizedDays; i += 1) {
+      const date = new Date(since);
+      date.setUTCDate(date.getUTCDate() + i);
+      const key = dayKey(date);
+      dailyVisits.push({ date: key, count: countsByDay.get(key) ?? 0 });
+    }
+
+    let trend = null;
+    if (dailyVisits.length >= 14) {
+      const last7 = dailyVisits.slice(-7).reduce((sum, d) => sum + d.count, 0);
+      const prev7 = dailyVisits.slice(-14, -7).reduce((sum, d) => sum + d.count, 0);
+      const changePercent = prev7 > 0 ? Math.round(((last7 - prev7) / prev7) * 100) : (last7 > 0 ? 100 : 0);
+      trend = { last7, prev7, changePercent };
+    }
+
+    return {
+      totals: {
+        profileViews: provider.profileViews,
+        contactClicks: provider.contactClicks,
+        contactUnlocks: contactUnlockCount,
+        contactUnlockRevenue: moneyString(unlockRevenue._sum.netAmount ?? 0),
+        listingViews: listingTotals._sum.viewCount ?? 0,
+        listingsSold: listingTotals._sum.soldCount ?? 0,
+        orders: orderTotals._count._all,
+        orderRevenue: moneyString(fulfilledRevenue._sum.total ?? 0),
+        favorites: favoriteCount,
+        ratingAvg: provider.ratingAvg,
+        ratingCount: provider.ratingCount
+      },
+      trend,
+      dailyVisits,
+      contactEventsByType: contactEventsByType.map((row) => ({ type: row.type, count: row._count._all })),
+      topListings: topListings.map((listing) => ({
+        id: listing.id,
+        name: listing.name,
+        type: listing.type,
+        viewCount: listing.viewCount,
+        soldCount: listing.soldCount
+      }))
+    };
+  }
 }

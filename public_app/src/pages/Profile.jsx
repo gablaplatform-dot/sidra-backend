@@ -9,12 +9,14 @@ import Field from "../components/Field";
 import ProfileOrdersTab from "../components/profile/ProfileOrdersTab";
 import ProfileWalletTab from "../components/profile/ProfileWalletTab";
 import ProfileShopCategoriesTab from "../components/profile/ProfileShopCategoriesTab";
+import ProfileAnalyticsTab from "../components/profile/ProfileAnalyticsTab";
 import { IconBox, IconCamera, IconClose, IconImage } from "../components/icons";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
 const TABS = [
   { key: "info", label: "Profile info" },
+  { key: "analytics", label: "Analytics" },
   { key: "listings", label: "Products & services" },
   { key: "shopCategories", label: "Shop categories" },
   { key: "orders", label: "Orders" },
@@ -316,6 +318,8 @@ export default function Profile() {
                 </form>
               </section>
             ) : null}
+
+            {activeTab === "analytics" ? <ProfileAnalyticsTab /> : null}
 
             {activeTab === "listings" ? (
               <section className="detail-block">

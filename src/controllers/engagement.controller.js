@@ -147,6 +147,16 @@ export class EngagementController {
     }
   };
 
+  getProviderAnalytics = async (req, res, next) => {
+    try {
+      res.status(200).json({
+        data: await this.engagementService.getProviderAnalytics({ actorUserId: req.user.id, days: req.query.days })
+      });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   updateProviderOrder = async (req, res, next) => {
     try {
       res.status(200).json({
