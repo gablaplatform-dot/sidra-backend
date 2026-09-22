@@ -2,6 +2,8 @@ import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 import { PaymentService } from "./payment.service.js";
 import { TransactionService } from "./transaction.service.js";
+import { AdminRoleService } from "./adminRole.service.js";
+import { PERMISSIONS } from "../constants/permissions.js";
 
 const decimalToNumber = (value) => Number(value?.toString?.() ?? value ?? 0) || 0;
 const moneyString = (value) => (value?.toString ? value.toString() : String(value ?? "0.00"));
@@ -24,28 +26,17 @@ const objectId = (id, code) => {
   }
   return id;
 };
-const adminPermissions = [
-  "users",
-  "providers",
-  "categories",
-  "listings",
-  "transactions",
-  "wallets",
-  "subscriptions",
-  "reports",
-  "settings",
-  "adminroles",
-  "reviews",
-  "inquiries",
-  "orders",
-  "media"
-];
-
 export class AdminService {
-  constructor({ hashPassword, paymentService = new PaymentService(), transactionService = new TransactionService() }) {
+  constructor({
+    hashPassword,
+    paymentService = new PaymentService(),
+    transactionService = new TransactionService(),
+    adminRoleService = new AdminRoleService()
+  }) {
     this.hashPassword = hashPassword;
     this.paymentService = paymentService;
     this.transactionService = transactionService;
+    this.adminRoleService = adminRoleService;
   }
 
   async dashboard() {
@@ -87,9 +78,7 @@ export class AdminService {
   }
 
   permissions() {
-    return {
-      items: adminPermissions.map((id) => ({ id, label: titleCase(id) }))
-    };
+    return { items: PERMISSIONS };
   }
 
   async reports({ from, to } = {}) {
@@ -741,36 +730,54 @@ export class AdminService {
   }
 
   async listAdmins() {
-    const users = await prisma.user.findMany({ where: { role: "admin" }, orderBy: { createdAt: "desc" } });
+    const users = await prisma.user.findMany({ where: { role: "admin" }, orderBy: { createdAt: "desc" }, include: { adminRole: true } });
     return { items: users.map((u) => this.adminDto(u)) };
   }
 
-  async createAdmin({ name, email, phone, password, permissions = [] }) {
-    const existing = await prisma.user.findFirst({ where: { email: String(email).trim().toLowerCase() }, select: { id: true } });
-    if (existing) throw new AppError({ message: "Email already in use", statusCode: 409, code: "EMAIL_IN_USE" });
-    const created = await prisma.user.create({
-      data: {
-        name,
-        email: String(email).trim().toLowerCase(),
-        phone: phone ?? null,
-        passwordHash: await this.hashPassword(password),
-        role: "admin",
-        isActive: true,
-        adminPermissions: Array.isArray(permissions) ? permissions : []
-      }
-    });
-    return this.adminDto(created);
-  }
+  // Admin accounts are created only via the email-invite flow (AdminInviteService.createInvite /
+  // acceptInvite) - there is no direct create-with-password path anymore.
+  async updateAdmin({ adminId, patch, actorId }) {
+    const user = await prisma.user.findFirst({ where: { id: objectId(adminId, "INVALID_ADMIN_ID"), role: "admin" }, include: { adminRole: true } });
+    if (!user) throw new AppError({ message: "Admin not found", statusCode: 404, code: "ADMIN_NOT_FOUND" });
 
-  async updateAdmin({ adminId, patch }) {
+    const willDeactivate = patch.isActive === false && user.isActive !== false;
+    const willChangeRole = patch.roleId !== undefined && patch.roleId !== user.adminRoleId;
+    const actingOnSelf = actorId && actorId === user.id;
+
+    if (actingOnSelf && (willDeactivate || willChangeRole)) {
+      throw new AppError({ message: "You cannot change your own access level", statusCode: 403, code: "CANNOT_MODIFY_SELF_ACCESS" });
+    }
+
+    if ((willDeactivate || willChangeRole) && user.adminRoleId) {
+      const currentRole = user.adminRole;
+      if (currentRole?.key === "super_admin") {
+        await this.adminRoleService.ensureAtLeastOneSuperAdmin({ excludingUserId: user.id });
+      }
+    }
+
     const update = {};
     if (patch.name !== undefined) update.name = patch.name;
     if (patch.phone !== undefined) update.phone = patch.phone ?? null;
     if (patch.isActive !== undefined) update.isActive = Boolean(patch.isActive);
-    if (patch.permissions !== undefined) update.adminPermissions = Array.isArray(patch.permissions) ? patch.permissions : [];
-    const user = await prisma.user.findFirst({ where: { id: objectId(adminId, "INVALID_ADMIN_ID"), role: "admin" } });
-    if (!user) throw new AppError({ message: "Admin not found", statusCode: 404, code: "ADMIN_NOT_FOUND" });
-    const updated = await prisma.user.update({ where: { id: user.id }, data: update });
+    if (patch.roleId !== undefined) {
+      const role = await prisma.adminRole.findUnique({ where: { id: patch.roleId } });
+      if (!role) throw new AppError({ message: "Role not found", statusCode: 404, code: "ROLE_NOT_FOUND" });
+      update.adminRoleId = role.id;
+    }
+
+    const updated = await prisma.user.update({ where: { id: user.id }, data: update, include: { adminRole: true } });
+
+    if (willDeactivate || patch.isActive === true) {
+      await prisma.auditLog.create({
+        data: { actorId: actorId ?? null, action: patch.isActive === false ? "admin.deactivate" : "admin.reactivate", entity: "User", entityId: user.id, metadata: {} }
+      });
+    }
+    if (willChangeRole) {
+      await prisma.auditLog.create({
+        data: { actorId: actorId ?? null, action: "admin.role_change", entity: "User", entityId: user.id, metadata: { from: user.adminRoleId, to: patch.roleId } }
+      });
+    }
+
     return this.adminDto(updated);
   }
 
@@ -790,7 +797,12 @@ export class AdminService {
   }
 
   adminDto(u) {
-    return { ...this.userDto(u), permissions: Array.isArray(u.adminPermissions) ? u.adminPermissions : [] };
+    return {
+      ...this.userDto(u),
+      roleId: u.adminRoleId ?? null,
+      role: u.adminRole ? { id: u.adminRole.id, key: u.adminRole.key, name: u.adminRole.name, isProtected: Boolean(u.adminRole.isProtected) } : null,
+      permissions: Array.isArray(u.adminRole?.permissions) ? u.adminRole.permissions : []
+    };
   }
 
   async hydrateProviders(providers) {

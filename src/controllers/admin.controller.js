@@ -311,17 +311,9 @@ export class AdminController {
     }
   };
 
-  createAdmin = async (req, res, next) => {
-    try {
-      res.status(201).json({ data: await this.adminService.createAdmin(req.body) });
-    } catch (e) {
-      next(e);
-    }
-  };
-
   updateAdmin = async (req, res, next) => {
     try {
-      res.status(200).json({ data: await this.adminService.updateAdmin({ adminId: req.params.adminId, patch: req.body }) });
+      res.status(200).json({ data: await this.adminService.updateAdmin({ adminId: req.params.adminId, patch: req.body, actorId: req.user.id }) });
     } catch (e) {
       next(e);
     }

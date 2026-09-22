@@ -2,6 +2,7 @@ import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 import { env } from "../config/env.js";
 import { verifyGoogleIdToken } from "../utils/googleAuth.js";
+import { SYSTEM_ROLES } from "../constants/permissions.js";
 
 const uniqueError = (e, field) => e?.code === "P2002" && Array.isArray(e?.meta?.target) && e.meta.target.includes(field);
 
@@ -194,7 +195,7 @@ export class AuthService {
     }
 
     const accessToken = this.signAccessToken({
-      payload: { sub: user.id, role: user.role },
+      payload: { sub: user.id, role: user.role, roleId: user.role === "admin" ? user.adminRoleId : undefined },
       secret: this.jwt.secret,
       issuer: this.jwt.issuer,
       ttlSeconds: this.jwt.accessTtlSeconds
@@ -253,7 +254,7 @@ export class AuthService {
         });
 
     const accessToken = this.signAccessToken({
-      payload: { sub: user.id, role: user.role },
+      payload: { sub: user.id, role: user.role, roleId: user.role === "admin" ? user.adminRoleId : undefined },
       secret: this.jwt.secret,
       issuer: this.jwt.issuer,
       ttlSeconds: this.jwt.accessTtlSeconds
@@ -295,6 +296,8 @@ export class AuthService {
       throw new AppError({ message: "Email is required", statusCode: 400, code: "EMAIL_REQUIRED" });
     }
 
+    const superAdminRole = await this.ensureSuperAdminRole();
+
     const passwordHash = await this.hashPassword(password);
     const created = await prisma.user.create({
       data: {
@@ -304,12 +307,12 @@ export class AuthService {
         passwordHash,
         role: "admin",
         isActive: true,
-        adminPermissions: ["*"]
+        adminRoleId: superAdminRole.id
       }
     });
 
     const accessToken = this.signAccessToken({
-      payload: { sub: created.id, role: "admin" },
+      payload: { sub: created.id, role: "admin", roleId: superAdminRole.id },
       secret: this.jwt.secret,
       issuer: this.jwt.issuer,
       ttlSeconds: this.jwt.accessTtlSeconds
@@ -320,6 +323,11 @@ export class AuthService {
       accessToken,
       user: this.userDto(obj)
     };
+  }
+
+  async ensureSuperAdminRole() {
+    const superAdmin = SYSTEM_ROLES.find((r) => r.key === "super_admin");
+    return prisma.adminRole.upsert({ where: { key: superAdmin.key }, create: superAdmin, update: {} });
   }
 
   userDto(user) {

@@ -17,6 +17,7 @@ export const env = {
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   appBaseUrl: process.env.APP_BASE_URL ?? "http://localhost:5173",
   providerOnboardingBaseUrl: process.env.PROVIDER_ONBOARDING_BASE_URL ?? "",
+  adminInviteBaseUrl: process.env.ADMIN_INVITE_BASE_URL ?? "",
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   resendFromEmail: process.env.RESEND_FROM_EMAIL ?? "",
   emailAssetBaseUrl: process.env.EMAIL_ASSET_BASE_URL ?? "https://gabla-admin.pages.dev/email",

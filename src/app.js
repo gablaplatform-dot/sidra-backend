@@ -32,6 +32,10 @@ import { StorageService } from "./services/storage.service.js";
 import { StorageController } from "./controllers/storage.controller.js";
 import { AdminService } from "./services/admin.service.js";
 import { AdminController } from "./controllers/admin.controller.js";
+import { AdminRoleService } from "./services/adminRole.service.js";
+import { AdminRoleController } from "./controllers/adminRole.controller.js";
+import { AdminInviteService } from "./services/adminInvite.service.js";
+import { AdminInviteController } from "./controllers/adminInvite.controller.js";
 import { EngagementService } from "./services/engagement.service.js";
 import { EngagementController } from "./controllers/engagement.controller.js";
 import { SearchService } from "./services/search.service.js";
@@ -106,7 +110,17 @@ export const buildApp = () => {
   const storageService = new StorageService();
   const storageController = new StorageController({ storageService });
 
-  const adminService = new AdminService({ hashPassword, paymentService, transactionService });
+  const adminRoleService = new AdminRoleService();
+  const adminRoleController = new AdminRoleController({ adminRoleService });
+
+  const adminInviteService = new AdminInviteService({
+    hashPassword,
+    signAccessToken,
+    jwt: { secret: env.jwtSecret, issuer: env.jwtIssuer, accessTtlSeconds: env.jwtAccessTtlSeconds }
+  });
+  const adminInviteController = new AdminInviteController({ adminInviteService });
+
+  const adminService = new AdminService({ hashPassword, paymentService, transactionService, adminRoleService });
   const adminController = new AdminController({ adminService });
 
   const engagementService = new EngagementService();
@@ -135,6 +149,8 @@ export const buildApp = () => {
       paymentController,
       storageController,
       adminController,
+      adminRoleController,
+      adminInviteController,
       engagementController,
       searchController,
       rideController,

@@ -2,7 +2,7 @@ import { Router } from "express";
 import Joi from "joi";
 
 import { validate } from "../middlewares/validate.middleware.js";
-import { requireAuth } from "../middlewares/auth.middleware.js";
+import { requireAuth, requirePermission } from "../middlewares/auth.middleware.js";
 import { Roles } from "../constants/enums.js";
 
 export const buildAdminTransactionsRoutes = ({ transactionController }) => {
@@ -12,6 +12,7 @@ export const buildAdminTransactionsRoutes = ({ transactionController }) => {
   router.get(
     "/transactions",
     requireAuth([Roles.ADMIN]),
+    requirePermission("transactions"),
     validate(
       Joi.object({
         page: Joi.number().integer().min(1).optional(),

@@ -10,6 +10,8 @@ import { buildAdminTransactionsRoutes } from "./adminTransactions.routes.js";
 import { buildPaymentRoutes } from "./payment.routes.js";
 import { buildStorageRoutes } from "./storage.routes.js";
 import { buildAdminDataRoutes } from "./adminData.routes.js";
+import { buildAdminRoleRoutes } from "./adminRole.routes.js";
+import { buildAdminInviteRoutes } from "./adminInvite.routes.js";
 import { buildEngagementRoutes } from "./engagement.routes.js";
 import { buildSearchRoutes } from "./search.routes.js";
 import { buildRideRoutes } from "./ride.routes.js";
@@ -27,6 +29,8 @@ export const buildRoutes = ({
   paymentController,
   storageController,
   adminController,
+  adminRoleController,
+  adminInviteController,
   engagementController,
   searchController,
   rideController,
@@ -50,6 +54,8 @@ export const buildRoutes = ({
   router.use("/admin", buildAdminDataRoutes({ adminController }));
   router.use("/admin", buildAdminSettingsRoutes({ adminSettingsController }));
   router.use("/admin", buildAdminTransactionsRoutes({ transactionController }));
+  router.use("/admin/roles", buildAdminRoleRoutes({ adminRoleController }));
+  router.use("/admin-invites", buildAdminInviteRoutes({ adminInviteController }));
 
   return router;
 };

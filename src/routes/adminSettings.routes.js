@@ -2,7 +2,7 @@ import { Router } from "express";
 import Joi from "joi";
 
 import { validate } from "../middlewares/validate.middleware.js";
-import { requireAuth } from "../middlewares/auth.middleware.js";
+import { requireAuth, requirePermission } from "../middlewares/auth.middleware.js";
 import { Roles } from "../constants/enums.js";
 
 export const buildAdminSettingsRoutes = ({ adminSettingsController }) => {
@@ -14,11 +14,12 @@ export const buildAdminSettingsRoutes = ({ adminSettingsController }) => {
   const boolOrNull = Joi.alternatives().try(Joi.boolean(), Joi.valid(null));
   const percentOrNull = Joi.alternatives().try(Joi.number().min(0).max(100), Joi.valid(null));
 
-  router.get("/settings", requireAuth([Roles.ADMIN]), adminSettingsController.getGlobal);
+  router.get("/settings", requireAuth([Roles.ADMIN]), requirePermission("settings"), adminSettingsController.getGlobal);
 
   router.put(
     "/settings",
     requireAuth([Roles.ADMIN]),
+    requirePermission("settings"),
     validate(
       Joi.object({
         enableSubscription: Joi.boolean().optional(),
@@ -41,6 +42,7 @@ export const buildAdminSettingsRoutes = ({ adminSettingsController }) => {
   router.get(
     "/providers/:providerId/settings",
     requireAuth([Roles.ADMIN]),
+    requirePermission("settings"),
     validate(Joi.object({ providerId: id.required() }), "params"),
     adminSettingsController.getProviderSettings
   );
@@ -48,6 +50,7 @@ export const buildAdminSettingsRoutes = ({ adminSettingsController }) => {
   router.put(
     "/providers/:providerId/settings",
     requireAuth([Roles.ADMIN]),
+    requirePermission("settings"),
     validate(Joi.object({ providerId: id.required() }), "params"),
     validate(
       Joi.object({

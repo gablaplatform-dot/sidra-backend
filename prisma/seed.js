@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import { PrismaClient, Prisma } from "@prisma/client";
+import { SYSTEM_ROLES } from "../src/constants/permissions.js";
 
 dotenv.config();
 
@@ -31,6 +32,11 @@ const main = async () => {
     });
   }
 
+  const roleByKey = {};
+  for (const role of SYSTEM_ROLES) {
+    roleByKey[role.key] = await prisma.adminRole.upsert({ where: { key: role.key }, create: role, update: {} });
+  }
+
   const existingAdmin = await prisma.user.findFirst({ where: { role: "admin" }, select: { id: true } });
   if (existingAdmin) return;
 
@@ -51,7 +57,7 @@ const main = async () => {
       passwordHash,
       role: "admin",
       isActive: true,
-      adminPermissions: ["*"]
+      adminRoleId: roleByKey.super_admin.id
     }
   });
 };
