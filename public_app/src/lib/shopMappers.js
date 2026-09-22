@@ -33,7 +33,9 @@ export const mapProductDto = (p, opts = {}) => {
     rating: 4.5 + Math.min(0.5, (Number(p?.soldCount ?? 0) % 10) / 20),
     reviews: syntheticReviews + Math.round(((String(p?.id ?? "0").charCodeAt(0) || 0) % 7) * 123),
     image: listingCover(p),
-    description: p?.description?.slice(0, 90) ?? "Premium product crafted for quality and comfort."
+    description: p?.description?.slice(0, 90) ?? "Premium product crafted for quality and comfort.",
+    distanceKm: Number.isFinite(p?.distanceKm) ? p.distanceKm : null,
+    providerName: p?.provider?.businessName ?? null
   };
   if (p?.soldCount && base.reviews < p.soldCount) base.reviews = p.soldCount;
   return base;

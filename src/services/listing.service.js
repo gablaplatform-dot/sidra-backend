@@ -1,5 +1,9 @@
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
+import { geohashSearchCells, haversineDistanceKm } from "../utils/geohash.js";
+
+const GEOHASH_PRECISION_FINE = 6; // ~1.2km x 0.6km cells - used for tight radii
+const GEOHASH_PRECISION_COARSE = 5; // ~4.9km x 4.9km cells - used for wider radii
 
 export class ListingService {
   async getProviderForUser(userId) {
@@ -182,11 +186,12 @@ export class ListingService {
     }
   }
 
-  _toDto(i, provider) {
+  _toDto(i, provider, distanceKm) {
     return {
       id: i.id,
       providerId: i.providerId,
       provider: provider ? { id: provider.id, businessName: provider.businessName, onlinePaymentsEnabled: provider.onlinePaymentsEnabled } : undefined,
+      ...(distanceKm !== undefined ? { distanceKm: Math.round(distanceKm * 10) / 10 } : {}),
       categoryId: i.categoryId,
       productCategoryId: i.productCategoryId,
       shopCategoryId: i.shopCategoryId,
@@ -349,27 +354,89 @@ export class ListingService {
     }
   }
 
-  async publicList({ page = 1, limit = 20, type, q, categoryId, productCategoryId, providerId, sort, discountOnly, isNew }) {
+  // A product has no location of its own - it inherits its provider's. So "nearby products"
+  // means: find providers near this point (an indexed geohash-cell lookup, mirroring
+  // RideService#findNearestDriver), then list products from just that small provider set.
+  async _findNearbyProviderIds({ lat, lng, radiusKm }) {
+    const precision = radiusKm <= 2 ? GEOHASH_PRECISION_FINE : GEOHASH_PRECISION_COARSE;
+    const geohashField = precision === GEOHASH_PRECISION_FINE ? "geohash6" : "geohash5";
+    const cells = geohashSearchCells(lat, lng, precision);
+
+    const candidates = await prisma.provider.findMany({
+      where: {
+        isApproved: true,
+        moderationStatus: "approved",
+        [geohashField]: { in: cells },
+        lat: { not: null },
+        lng: { not: null }
+      },
+      select: { id: true, lat: true, lng: true }
+    });
+
+    const distanceById = new Map();
+    for (const candidate of candidates) {
+      const distanceKm = haversineDistanceKm(lat, lng, candidate.lat, candidate.lng);
+      if (distanceKm <= radiusKm) distanceById.set(candidate.id, distanceKm);
+    }
+
+    return distanceById;
+  }
+
+  async publicList({ page = 1, limit = 20, type, q, categoryId, productCategoryId, providerId, sort, discountOnly, isNew, lat, lng, radiusKm }) {
     const normalizedPage = Math.max(1, Number(page) || 1);
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
     const skip = (normalizedPage - 1) * normalizedLimit;
 
-    const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew });
-    const orderBy = this._orderByForSort(sort);
+    const hasGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Number.isFinite(Number(radiusKm));
 
-    const [items, total] = await Promise.all([
-      prisma.serviceProduct.findMany({
-        where: filter,
-        orderBy,
-        skip,
-        take: normalizedLimit,
-        include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
-      }),
-      prisma.serviceProduct.count({ where: filter })
-    ]);
+    if (!hasGeo) {
+      const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew });
+      const orderBy = this._orderByForSort(sort);
+
+      const [items, total] = await Promise.all([
+        prisma.serviceProduct.findMany({
+          where: filter,
+          orderBy,
+          skip,
+          take: normalizedLimit,
+          include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
+        }),
+        prisma.serviceProduct.count({ where: filter })
+      ]);
+
+      return {
+        items: items.map((i) => this._toDto(i, i.provider)),
+        page: normalizedPage,
+        limit: normalizedLimit,
+        total
+      };
+    }
+
+    const distanceById = await this._findNearbyProviderIds({ lat: Number(lat), lng: Number(lng), radiusKm: Number(radiusKm) });
+    const nearbyProviderIds = providerId
+      ? Array.from(distanceById.keys()).filter((id) => id === providerId)
+      : Array.from(distanceById.keys());
+    if (!nearbyProviderIds.length) {
+      return { items: [], page: normalizedPage, limit: normalizedLimit, total: 0 };
+    }
+
+    const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, discountOnly, isNew });
+    filter.provider = { id: { in: nearbyProviderIds } };
+
+    const candidates = await prisma.serviceProduct.findMany({
+      where: filter,
+      include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
+    });
+
+    const ranked = candidates
+      .map((i) => ({ item: i, distanceKm: distanceById.get(i.providerId) }))
+      .sort((a, b) => a.distanceKm - b.distanceKm || new Date(b.item.createdAt) - new Date(a.item.createdAt));
+
+    const total = ranked.length;
+    const pageItems = ranked.slice(skip, skip + normalizedLimit);
 
     return {
-      items: items.map((i) => this._toDto(i, i.provider)),
+      items: pageItems.map(({ item, distanceKm }) => this._toDto(item, item.provider, distanceKm)),
       page: normalizedPage,
       limit: normalizedLimit,
       total

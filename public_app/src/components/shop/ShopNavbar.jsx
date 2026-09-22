@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { NAV_LINKS } from "../../data/shopData";
 import { getCartCount } from "../../lib/cart";
 import { IconSearch, IconCart, IconMenu, IconClose, IconChevronLeft } from "../icons";
+import NearbySearchModal from "./NearbySearchModal";
 
 const IconHeart = (props) => (
   <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -19,6 +20,7 @@ const IconUser = (props) => (
 
 export default function ShopNavbar({ session, onLogout }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [cartCount, setCartCount] = useState(() => getCartCount());
   const isProvider = Boolean(session?.provider);
 
@@ -52,7 +54,7 @@ export default function ShopNavbar({ session, onLogout }) {
           </nav>
 
           <div className="shop-nav-actions">
-            <button type="button" className="shop-icon-button" aria-label="Search">
+            <button type="button" className="shop-icon-button" aria-label="Search nearby" onClick={() => setSearchOpen(true)}>
               <IconSearch />
             </button>
             <button type="button" className="shop-icon-button" aria-label="Wishlist">
@@ -101,6 +103,8 @@ export default function ShopNavbar({ session, onLogout }) {
           <Link className="shop-cta-button shop-drawer-cta" to="/login" onClick={() => setDrawerOpen(false)}>Sign in</Link>
         )}
       </aside>
+
+      {searchOpen ? <NearbySearchModal onClose={() => setSearchOpen(false)} /> : null}
     </>
   );
 }

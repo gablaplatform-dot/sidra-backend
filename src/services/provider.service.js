@@ -6,6 +6,26 @@ import { prisma } from "../config/db.js";
 import { PaymentService } from "./payment.service.js";
 import { env } from "../config/env.js";
 import { verifyGoogleIdToken } from "../utils/googleAuth.js";
+import { geohashEncode } from "../utils/geohash.js";
+
+const GEOHASH_PRECISION_FINE = 6; // ~1.2km x 0.6km cells - the primary search
+const GEOHASH_PRECISION_COARSE = 5; // ~4.9km x 4.9km cells - fallback for wider radii
+
+// Keeps the indexed lat/lng/geohash columns in sync with location.geo.coordinates (GeoJSON
+// [lng, lat]) so nearby search can query an index instead of scanning the location JSON blob.
+const buildGeoColumns = (location) => {
+  const coords = location?.geo?.coordinates;
+  if (Array.isArray(coords) && coords.length === 2 && Number.isFinite(coords[0]) && Number.isFinite(coords[1])) {
+    const [lng, lat] = coords;
+    return {
+      lat,
+      lng,
+      geohash5: geohashEncode(lat, lng, GEOHASH_PRECISION_COARSE),
+      geohash6: geohashEncode(lat, lng, GEOHASH_PRECISION_FINE)
+    };
+  }
+  return { lat: null, lng: null, geohash5: null, geohash6: null };
+};
 
 const uniqueError = (e, field) => e?.code === "P2002" && Array.isArray(e?.meta?.target) && e.meta.target.includes(field);
 const safeSlug = (value) =>
@@ -242,6 +262,7 @@ export class ProviderService {
             description: description ?? "",
             categoryId: categoryId ?? null,
             location: location ?? {},
+            ...buildGeoColumns(location ?? {}),
             contact: contact ?? {},
             media: media ?? {},
             customFields: customFields ?? {},
@@ -529,7 +550,10 @@ export class ProviderService {
     if (profile?.businessName !== undefined) data.businessName = profile.businessName;
     if (profile?.description !== undefined) data.description = profile.description ?? "";
     if (profile?.categoryId !== undefined) data.categoryId = profile.categoryId ?? null;
-    if (profile?.location !== undefined) data.location = profile.location ?? {};
+    if (profile?.location !== undefined) {
+      data.location = profile.location ?? {};
+      Object.assign(data, buildGeoColumns(data.location));
+    }
     if (profile?.contact !== undefined) data.contact = profile.contact ?? {};
     if (profile?.media !== undefined) data.media = profile.media ?? {};
     if (profile?.customFields !== undefined) data.customFields = profile.customFields ?? {};
@@ -652,7 +676,10 @@ export class ProviderService {
     if (updates.businessName !== undefined) data.businessName = updates.businessName;
     if (updates.description !== undefined) data.description = updates.description ?? "";
     if (updates.categoryId !== undefined) data.categoryId = updates.categoryId ?? null;
-    if (updates.location !== undefined) data.location = updates.location ?? {};
+    if (updates.location !== undefined) {
+      data.location = updates.location ?? {};
+      Object.assign(data, buildGeoColumns(data.location));
+    }
     if (updates.contact !== undefined) data.contact = updates.contact ?? {};
     if (updates.media !== undefined) data.media = updates.media ?? {};
     if (updates.customFields !== undefined) data.customFields = updates.customFields ?? {};

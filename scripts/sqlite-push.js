@@ -54,8 +54,44 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL,
   isActive BOOLEAN NOT NULL DEFAULT 1,
   adminPermissions JSONB NOT NULL DEFAULT '[]',
+  adminRoleId TEXT,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (adminRoleId) REFERENCES admin_roles(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS admin_roles (
+  id TEXT PRIMARY KEY NOT NULL,
+  key TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  permissions JSONB NOT NULL DEFAULT '[]',
+  isSystem BOOLEAN NOT NULL DEFAULT 0,
+  isProtected BOOLEAN NOT NULL DEFAULT 0,
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS admin_invites (
+  id TEXT PRIMARY KEY NOT NULL,
+  email TEXT NOT NULL,
+  name TEXT NOT NULL,
+  roleId TEXT,
+  roleName TEXT NOT NULL DEFAULT '',
+  tokenHash TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'sent',
+  invitedById TEXT,
+  sentAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  resentCount INTEGER NOT NULL DEFAULT 0,
+  lastSentAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  acceptedAt DATETIME,
+  revokedAt DATETIME,
+  expiresAt DATETIME NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (roleId) REFERENCES admin_roles(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (invitedById) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS categories (
@@ -89,6 +125,10 @@ CREATE TABLE IF NOT EXISTS providers (
   media JSONB NOT NULL DEFAULT '{}',
   customFields JSONB NOT NULL DEFAULT '{}',
   location JSONB NOT NULL DEFAULT '{}',
+  lat REAL,
+  lng REAL,
+  geohash5 TEXT,
+  geohash6 TEXT,
   isApproved BOOLEAN NOT NULL DEFAULT 0,
   moderationStatus TEXT NOT NULL DEFAULT 'pending',
   onboardingStatus TEXT NOT NULL DEFAULT 'draft',
@@ -665,12 +705,19 @@ const ensureColumn = (table, column, definition) => {
   ["service_products", "viewCount", "INTEGER NOT NULL DEFAULT 0"],
   ["favorites", "listingId", "TEXT"],
   ["reviews", "listingId", "TEXT"],
-  ["service_products", "productCategoryId", "TEXT"]
+  ["service_products", "productCategoryId", "TEXT"],
+  ["providers", "lat", "REAL"],
+  ["providers", "lng", "REAL"],
+  ["providers", "geohash5", "TEXT"],
+  ["providers", "geohash6", "TEXT"],
+  ["users", "adminRoleId", "TEXT"]
 ].forEach(([table, column, definition]) => ensureColumn(table, column, definition));
 
-// This index has to be created after the ensureColumn pass above, since on a database created
-// before productCategoryId existed, the column (and therefore the index) can't exist yet.
+// These indexes have to be created after the ensureColumn pass above, since on a database
+// created before these columns existed, the column (and therefore the index) can't exist yet.
 runSql("CREATE INDEX IF NOT EXISTS service_products_productCategoryId_status_idx ON service_products(productCategoryId, status);");
+runSql("CREATE INDEX IF NOT EXISTS providers_moderationStatus_geohash6_idx ON providers(moderationStatus, geohash6);");
+runSql("CREATE INDEX IF NOT EXISTS providers_moderationStatus_geohash5_idx ON providers(moderationStatus, geohash5);");
 
 // wallets.providerId used to be NOT NULL (one wallet per provider). A platform-owned wallet
 // (providerId = NULL) needs that relaxed. SQLite can't ALTER COLUMN, so on databases that still
@@ -780,6 +827,51 @@ if (promotionsStartsAtColumn && promotionsStartsAtColumn[3] === "1") {
   `);
 }
 
+// admin_invites.roleId used to be NOT NULL with no roleName snapshot column - a deleted role
+// should still leave its past invites readable, so roleId is now nullable (SET NULL on delete)
+// and roleName is a denormalized snapshot. Recreate-and-copy, same approach as the other
+// column-nullability migrations above.
+const adminInvitesColumnInfo = runSql("PRAGMA table_info(admin_invites);")
+  .split("\n")
+  .filter(Boolean)
+  .map((line) => line.split("|"));
+if (adminInvitesColumnInfo.length) {
+  const roleIdColumn = adminInvitesColumnInfo.find((cols) => cols[1] === "roleId");
+  const hasRoleName = adminInvitesColumnInfo.some((cols) => cols[1] === "roleName");
+  if ((roleIdColumn && roleIdColumn[3] === "1") || !hasRoleName) {
+    runSql(`
+      PRAGMA foreign_keys = OFF;
+      CREATE TABLE admin_invites_new (
+        id TEXT PRIMARY KEY NOT NULL,
+        email TEXT NOT NULL,
+        name TEXT NOT NULL,
+        roleId TEXT,
+        roleName TEXT NOT NULL DEFAULT '',
+        tokenHash TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL DEFAULT 'sent',
+        invitedById TEXT,
+        sentAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        resentCount INTEGER NOT NULL DEFAULT 0,
+        lastSentAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        acceptedAt DATETIME,
+        revokedAt DATETIME,
+        expiresAt DATETIME NOT NULL,
+        metadata JSONB NOT NULL DEFAULT '{}',
+        createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (roleId) REFERENCES admin_roles(id) ON DELETE SET NULL ON UPDATE CASCADE,
+        FOREIGN KEY (invitedById) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
+      );
+      INSERT INTO admin_invites_new (id, email, name, roleId, roleName, tokenHash, status, invitedById, sentAt, resentCount, lastSentAt, acceptedAt, revokedAt, expiresAt, metadata, createdAt, updatedAt)
+        SELECT ai.id, ai.email, ai.name, ai.roleId, COALESCE(ar.name, ''), ai.tokenHash, ai.status, ai.invitedById, ai.sentAt, ai.resentCount, ai.lastSentAt, ai.acceptedAt, ai.revokedAt, ai.expiresAt, ai.metadata, ai.createdAt, ai.updatedAt
+        FROM admin_invites ai LEFT JOIN admin_roles ar ON ar.id = ai.roleId;
+      DROP TABLE admin_invites;
+      ALTER TABLE admin_invites_new RENAME TO admin_invites;
+      PRAGMA foreign_keys = ON;
+    `);
+  }
+}
+
 [
   "CREATE UNIQUE INDEX IF NOT EXISTS users_googleSub_key ON users(googleSub);",
   "CREATE INDEX IF NOT EXISTS users_authProvider_idx ON users(authProvider);",
@@ -797,7 +889,11 @@ if (promotionsStartsAtColumn && promotionsStartsAtColumn[3] === "1") {
   "CREATE INDEX IF NOT EXISTS promotions_startsAt_endsAt_idx ON promotions(startsAt, endsAt);",
   "CREATE INDEX IF NOT EXISTS promotions_featured_isActive_sortOrder_idx ON promotions(isFeatured, isActive, sortOrder);",
   "CREATE INDEX IF NOT EXISTS promotions_categoryId_idx ON promotions(categoryId);",
-  "CREATE INDEX IF NOT EXISTS promotions_providerId_idx ON promotions(providerId);"
+  "CREATE INDEX IF NOT EXISTS promotions_providerId_idx ON promotions(providerId);",
+  "CREATE INDEX IF NOT EXISTS users_adminRoleId_idx ON users(adminRoleId);",
+  "CREATE INDEX IF NOT EXISTS admin_invites_email_status_idx ON admin_invites(email, status);",
+  "CREATE INDEX IF NOT EXISTS admin_invites_tokenHash_idx ON admin_invites(tokenHash);",
+  "CREATE INDEX IF NOT EXISTS admin_invites_expiresAt_idx ON admin_invites(expiresAt);"
 ].forEach(runSql);
 
 process.stdout.write(`SQLite schema is ready at ${databasePath}\n`);

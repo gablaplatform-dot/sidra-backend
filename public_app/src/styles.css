@@ -732,6 +732,25 @@ button { cursor: pointer; }
 .payment-option { padding: 13px; border: 1px solid #dbe2ea; border-radius: 8px; background: #f8fafc; color: #0b2046; font-weight: 700; font-size: 14px; }
 .payment-option:hover { border-color: #0b2046; }
 .modal-hint { margin-top: 16px !important; font-size: 12px !important; color: #94a3b8 !important; }
+
+/* Modal (search nearby) */
+.modal-card.is-wide { width: min(100%, 960px); max-height: 85vh; overflow-y: auto; }
+.nearby-search-form { display: flex; gap: 10px; margin-bottom: 8px; }
+.nearby-search-input { flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid var(--gabla-border); border-radius: 10px; background: #f8fafc; }
+.nearby-search-input svg { color: var(--gabla-text-faint); flex-shrink: 0; }
+.nearby-search-input input { flex: 1; border: 0; background: transparent; font-size: 14px; color: #0b2046; outline: none; }
+.nearby-search-form .primary-button { width: auto; padding: 0 22px; white-space: nowrap; }
+.shop-nearby-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; margin-top: 20px; }
+.shop-nearby-grid-item { display: flex; flex-direction: column; gap: 6px; }
+.shop-nearby-distance { margin: 0; font-size: 12px; font-weight: 600; color: var(--gabla-accent-dark); }
+
+/* Pagination */
+.pagination { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 24px; }
+.pagination-nav, .pagination-page { min-width: 34px; height: 34px; padding: 0 8px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--gabla-border); border-radius: 8px; background: #fff; color: #0b2046; font-size: 13px; font-weight: 600; }
+.pagination-nav:disabled { opacity: 0.35; }
+.pagination-nav-right svg { transform: rotate(180deg); }
+.pagination-page.is-active { background: var(--gabla-accent); border-color: var(--gabla-accent); color: #fff; }
+.pagination-ellipsis { color: var(--gabla-text-faint); padding: 0 2px; }
 .unlock-summary { display: grid; gap: 10px; padding: 16px; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 20px; }
 .unlock-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: #64748b; }
 .unlock-summary-row strong { color: #0f172a; font-size: 14px; text-align: right; }

@@ -19,12 +19,16 @@ model User {
   profile          Json     @default("{}")
   role             String
   isActive         Boolean  @default(true)
+  // DEPRECATED - superseded by adminRoleId/AdminRole. Kept for rollback safety; unread by
+  // current code paths (see scripts/backfill-admin-roles.js for the one-time migration).
   adminPermissions Json     @default("[]")
+  adminRoleId      String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   provider Provider?
   rideDriver RideDriver?
+  adminRole AdminRole? @relation(fields: [adminRoleId], references: [id], onDelete: SetNull)
 
   transactions   Transaction[]
   rideTrips      RideTrip[]
@@ -41,11 +45,70 @@ model User {
   approvedWithdrawals  WithdrawalRequest[] @relation("WithdrawalApprovedBy")
   rejectedWithdrawals  WithdrawalRequest[] @relation("WithdrawalRejectedBy")
   paidWithdrawals      WithdrawalRequest[] @relation("WithdrawalPaidBy")
+  sentAdminInvites     AdminInvite[] @relation("AdminInviteInvitedBy")
 
   @@index([role])
   @@index([isActive])
   @@index([authProvider])
+  @@index([adminRoleId])
   @@map("users")
+}
+
+// Admin RBAC role - a named, DB-backed bundle of permission keys (from
+// src/constants/permissions.js) assigned to admin-role users. "*" in permissions is a reserved
+// sentinel meaning "every current and future permission key", used only by the protected Super
+// Admin role. isSystem roles are seeded defaults (rename/permission edits allowed, delete
+// blocked); isProtected is Super Admin alone (delete blocked, "*" cannot be removed).
+model AdminRole {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String   @default("")
+  permissions Json     @default("[]")
+  isSystem    Boolean  @default(false)
+  isProtected Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  admins  User[]
+  invites AdminInvite[]
+
+  @@map("admin_roles")
+}
+
+// Email-invite based admin account creation - same shape/lifecycle as ProviderInvitation, but
+// for admin-role users: the invitee sets their own password when accepting, rather than an
+// existing admin typing a temporary one.
+model AdminInvite {
+  id          String    @id @default(cuid())
+  email       String
+  name        String
+  roleId      String?
+  // Snapshot of the role's name at invite time, so a historical (accepted/revoked) invite still
+  // displays sensibly if the role is later deleted (roleId goes null via onDelete: SetNull below
+  // - a role can be deleted once no pending invite or active admin references it, but its past
+  // invites are kept for the audit trail rather than cascading away).
+  roleName    String    @default("")
+  tokenHash   String    @unique
+  status      String    @default("sent")
+  invitedById String?
+  sentAt      DateTime  @default(now())
+  resentCount Int       @default(0)
+  lastSentAt  DateTime  @default(now())
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  expiresAt   DateTime
+  metadata    Json      @default("{}")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  role      AdminRole? @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  invitedBy User?      @relation("AdminInviteInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([email, status])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("admin_invites")
 }
 
 model Provider {
@@ -59,6 +122,13 @@ model Provider {
   media              Json                     @default("{}")
   customFields       Json                     @default("{}")
   location           Json                     @default("{}")
+  // lat/lng/geohash5/geohash6 mirror location.geo.coordinates in indexed columns so nearby
+  // search can do a cheap geohash-cell lookup instead of scanning the JSON location blob.
+  // Kept in sync by ProviderService._syncGeoColumns whenever location is written.
+  lat                Float?
+  lng                Float?
+  geohash5           String?
+  geohash6           String?
   isApproved         Boolean                  @default(false)
   moderationStatus   String                   @default("pending")
   onboardingStatus   String                   @default("draft")
@@ -105,6 +175,8 @@ model Provider {
   @@index([isApproved, moderationStatus, createdAt])
   @@index([onboardingStatus, createdAt])
   @@index([isApproved, moderationStatus, ratingAvg, ratingCount, createdAt])
+  @@index([moderationStatus, geohash6])
+  @@index([moderationStatus, geohash5])
   @@map("providers")
 }
 

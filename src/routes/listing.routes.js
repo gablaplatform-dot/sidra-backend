@@ -34,8 +34,11 @@ export const buildListingRoutes = ({ listingController }) => {
         providerId: id.optional(),
         sort: Joi.string().valid(...sortOptions).optional(),
         discountOnly: Joi.boolean().optional(),
-        isNew: Joi.boolean().optional()
-      }),
+        isNew: Joi.boolean().optional(),
+        lat: Joi.number().min(-90).max(90).optional(),
+        lng: Joi.number().min(-180).max(180).optional(),
+        radiusKm: Joi.number().min(0).max(50).optional()
+      }).and("lat", "lng", "radiusKm"),
       "query"
     ),
     listingController.publicList
