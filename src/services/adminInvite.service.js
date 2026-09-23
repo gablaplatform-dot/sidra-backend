@@ -234,7 +234,17 @@ export class AdminInviteService {
 
     return {
       accessToken,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt, updatedAt: user.updatedAt }
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        roleId: invite.roleId,
+        roleName: invite.role.name,
+        permissions: Array.isArray(invite.role.permissions) ? invite.role.permissions : []
+      }
     };
   }
 

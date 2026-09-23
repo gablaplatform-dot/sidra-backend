@@ -208,15 +208,7 @@ export class AuthService {
 
     return {
       accessToken,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      },
+      user: await this.userDto(user),
       provider: provider ? { id: provider.id, userId: provider.userId } : null
     };
   }
@@ -264,7 +256,7 @@ export class AuthService {
 
     return {
       accessToken,
-      user: this.userDto(user),
+      user: await this.userDto(user),
       provider: provider ? { id: provider.id, userId: provider.userId } : null
     };
   }
@@ -273,7 +265,7 @@ export class AuthService {
     const user = await prisma.user.findUnique({ where: { id: actorUserId } });
     if (!user) throw new AppError({ message: "User not found", statusCode: 404, code: "USER_NOT_FOUND" });
     const provider = user.role === "provider" ? await prisma.provider.findUnique({ where: { userId: user.id } }) : null;
-    return { user: this.userDto(user), provider: provider ? { id: provider.id, userId: provider.userId } : null };
+    return { user: await this.userDto(user), provider: provider ? { id: provider.id, userId: provider.userId } : null };
   }
 
   async updateMe({ actorUserId, patch }) {
@@ -282,7 +274,7 @@ export class AuthService {
     if (patch.phone !== undefined) update.phone = this.normalizePhone(patch.phone);
     if (patch.profile !== undefined) update.profile = patch.profile ?? {};
     const user = await prisma.user.update({ where: { id: actorUserId }, data: update });
-    return { user: this.userDto(user) };
+    return { user: await this.userDto(user) };
   }
 
   async bootstrapAdmin({ name, email, phone, password }) {
@@ -321,7 +313,7 @@ export class AuthService {
     const obj = created;
     return {
       accessToken,
-      user: this.userDto(obj)
+      user: await this.userDto(obj)
     };
   }
 
@@ -330,8 +322,10 @@ export class AuthService {
     return prisma.adminRole.upsert({ where: { key: superAdmin.key }, create: superAdmin, update: {} });
   }
 
-  userDto(user) {
-    return {
+  // Admin-only fields (roleId/roleName/permissions) let the admin_ui restrict its own nav and
+  // views to what this admin can actually do - "*" (Super Admin) means every permission.
+  async userDto(user) {
+    const base = {
       id: user.id,
       name: user.name,
       email: user.email,
@@ -342,6 +336,15 @@ export class AuthService {
       profile: user.profile ?? {},
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
+    };
+    if (user.role !== "admin") return base;
+
+    const adminRole = user.adminRoleId ? await prisma.adminRole.findUnique({ where: { id: user.adminRoleId } }) : null;
+    return {
+      ...base,
+      roleId: adminRole?.id ?? null,
+      roleName: adminRole?.name ?? null,
+      permissions: Array.isArray(adminRole?.permissions) ? adminRole.permissions : []
     };
   }
 }
