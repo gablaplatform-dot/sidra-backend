@@ -1,7 +1,13 @@
+import { UGANDA_DISTRICTS } from "../constants/ugandaDistricts.js";
+
 export class ProviderController {
   constructor({ providerService }) {
     this.providerService = providerService;
   }
+
+  listDistricts = (_req, res) => {
+    res.status(200).json({ data: { items: UGANDA_DISTRICTS } });
+  };
 
   adminCreateProvider = async (req, res, next) => {
     try {

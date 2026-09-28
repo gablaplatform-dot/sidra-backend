@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { request } from "../../lib/api";
 import { getCurrentPosition } from "../../lib/geolocation";
@@ -11,46 +11,65 @@ const RADIUS_KM = 15;
 const PAGE_LIMIT = 12;
 
 const LOCATION_NOTICES = {
-  denied: "Location access was declined — showing all results instead of nearest first.",
-  unsupported: "This browser can't share your location — showing all results instead of nearest first.",
-  timeout: "Couldn't get your location in time — showing all results instead of nearest first.",
-  unavailable: "Couldn't determine your location — showing all results instead of nearest first."
+  denied: "Location access was declined — pick a district below, or we'll show all results.",
+  unsupported: "This browser can't share your location — pick a district below, or we'll show all results.",
+  timeout: "Couldn't get your location in time — pick a district below, or we'll show all results.",
+  unavailable: "Couldn't determine your location — pick a district below, or we'll show all results."
 };
 
 export default function NearbySearchModal({ onClose }) {
   const [query, setQuery] = useState("");
+  const [district, setDistrict] = useState("");
+  const [districts, setDistricts] = useState([]);
+  const [showDistrictPicker, setShowDistrictPicker] = useState(false);
   const [page, setPage] = useState(1);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [locationNotice, setLocationNotice] = useState("");
   const [searched, setSearched] = useState(false);
+  // The geo/district scope actually behind the current result set - not necessarily what the
+  // shopper asked for, since the backend widens (bigger radius, then nationwide) when a narrow
+  // scope comes up empty. Pagination has to keep resending THIS, not the original ask, or page 2
+  // could silently re-narrow to a scope already known to have nothing in it.
+  const [activeScope, setActiveScope] = useState(null);
 
-  const runSearch = async (nextPage) => {
+  useEffect(() => {
+    let active = true;
+    request("/providers/districts")
+      .then((data) => {
+        if (active) setDistricts(data?.items || []);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const runQuery = async (nextPage, scope) => {
     setLoading(true);
     setError("");
     try {
-      let coords = null;
-      try {
-        coords = await getCurrentPosition();
-        setLocationNotice("");
-      } catch (geoError) {
-        coords = null;
-        setLocationNotice(LOCATION_NOTICES[geoError.message] || LOCATION_NOTICES.unavailable);
-      }
-
       const params = new URLSearchParams({ page: String(nextPage), limit: String(PAGE_LIMIT) });
       if (query.trim()) params.set("q", query.trim());
-      if (coords) {
-        params.set("lat", String(coords.lat));
-        params.set("lng", String(coords.lng));
-        params.set("radiusKm", String(RADIUS_KM));
+      if (scope.lat != null) {
+        params.set("lat", String(scope.lat));
+        params.set("lng", String(scope.lng));
+        params.set("radiusKm", String(scope.radiusKm));
+      } else if (scope.district) {
+        params.set("district", scope.district);
       }
 
       const data = await request(`/listings?${params.toString()}`);
       setResult(data);
       setPage(nextPage);
       setSearched(true);
+      setActiveScope({
+        lat: scope.lat ?? null,
+        lng: scope.lng ?? null,
+        radiusKm: scope.lat != null ? (data.effectiveRadiusKm ?? scope.radiusKm) : null,
+        district: scope.lat == null ? (data.effectiveDistrict !== undefined ? data.effectiveDistrict : scope.district) : null
+      });
     } catch (submitError) {
       setError(submitError.message || "Unable to search right now.");
     } finally {
@@ -58,9 +77,30 @@ export default function NearbySearchModal({ onClose }) {
     }
   };
 
-  const submit = (event) => {
+  const searchWithScope = (scope) => runQuery(1, scope);
+
+  const submit = async (event) => {
     event.preventDefault();
-    runSearch(1);
+    try {
+      const coords = await getCurrentPosition();
+      setLocationNotice("");
+      setShowDistrictPicker(false);
+      await searchWithScope({ lat: coords.lat, lng: coords.lng, radiusKm: RADIUS_KM });
+    } catch (geoError) {
+      setLocationNotice(LOCATION_NOTICES[geoError.message] || LOCATION_NOTICES.unavailable);
+      setShowDistrictPicker(true);
+      await searchWithScope({ district: district || undefined });
+    }
+  };
+
+  const changeDistrict = (nextDistrict) => {
+    setDistrict(nextDistrict);
+    searchWithScope({ district: nextDistrict || undefined });
+  };
+
+  const changePage = (nextPage) => {
+    if (!activeScope) return;
+    runQuery(nextPage, activeScope);
   };
 
   const items = (result?.items || []).map((p) => mapProductDto(p));
@@ -90,12 +130,32 @@ export default function NearbySearchModal({ onClose }) {
         </form>
 
         {locationNotice ? <p className="modal-hint">{locationNotice}</p> : null}
+        {showDistrictPicker ? (
+          <select
+            className="nearby-district-select"
+            value={district}
+            onChange={(e) => changeDistrict(e.target.value)}
+            disabled={loading}
+          >
+            <option value="">All of Uganda</option>
+            {districts.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+        ) : null}
+        {result?.widened ? (
+          <p className="modal-hint">
+            {activeScope?.lat == null
+              ? `No results in ${district || "that district"} — showing results from across Uganda instead.`
+              : "No results nearby — showing results from farther away instead."}
+          </p>
+        ) : null}
         {error ? <div className="error-message">{error}</div> : null}
 
         {loading && !result ? (
           <p className="home-empty page-loading">Searching…</p>
         ) : searched && items.length === 0 ? (
-          <p className="home-empty">No results nearby. Try a different search.</p>
+          <p className="home-empty">No results anywhere for that search. Try a different query.</p>
         ) : items.length ? (
           <>
             <div className="shop-nearby-grid">
@@ -111,7 +171,7 @@ export default function NearbySearchModal({ onClose }) {
                 </div>
               ))}
             </div>
-            <Pagination page={page} limit={PAGE_LIMIT} total={result.total} onPageChange={(p) => runSearch(p)} />
+            <Pagination page={page} limit={PAGE_LIMIT} total={result.total} onPageChange={changePage} />
           </>
         ) : null}
       </div>

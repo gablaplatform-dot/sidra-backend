@@ -11,20 +11,23 @@ import { geohashEncode } from "../utils/geohash.js";
 const GEOHASH_PRECISION_FINE = 6; // ~1.2km x 0.6km cells - the primary search
 const GEOHASH_PRECISION_COARSE = 5; // ~4.9km x 4.9km cells - fallback for wider radii
 
-// Keeps the indexed lat/lng/geohash columns in sync with location.geo.coordinates (GeoJSON
-// [lng, lat]) so nearby search can query an index instead of scanning the location JSON blob.
+// Keeps the indexed lat/lng/geohash/district columns in sync with the location JSON blob
+// (geo.coordinates, GeoJSON [lng, lat]; district is a direct passthrough, admin-picked from a
+// fixed list) so nearby search can query indexed columns instead of scanning JSON.
 const buildGeoColumns = (location) => {
   const coords = location?.geo?.coordinates;
+  const district = location?.district ?? null;
   if (Array.isArray(coords) && coords.length === 2 && Number.isFinite(coords[0]) && Number.isFinite(coords[1])) {
     const [lng, lat] = coords;
     return {
       lat,
       lng,
       geohash5: geohashEncode(lat, lng, GEOHASH_PRECISION_COARSE),
-      geohash6: geohashEncode(lat, lng, GEOHASH_PRECISION_FINE)
+      geohash6: geohashEncode(lat, lng, GEOHASH_PRECISION_FINE),
+      district
     };
   }
-  return { lat: null, lng: null, geohash5: null, geohash6: null };
+  return { lat: null, lng: null, geohash5: null, geohash6: null, district };
 };
 
 const uniqueError = (e, field) => e?.code === "P2002" && Array.isArray(e?.meta?.target) && e.meta.target.includes(field);

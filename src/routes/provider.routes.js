@@ -4,6 +4,7 @@ import Joi from "joi";
 import { validate } from "../middlewares/validate.middleware.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { Roles } from "../constants/enums.js";
+import { UGANDA_DISTRICTS } from "../constants/ugandaDistricts.js";
 
 export const buildProviderRoutes = ({ providerController }) => {
   const router = Router();
@@ -19,6 +20,7 @@ export const buildProviderRoutes = ({ providerController }) => {
     city: Joi.string().trim().max(120).optional(),
     region: Joi.string().trim().max(120).optional(),
     country: Joi.string().trim().max(120).optional(),
+    district: Joi.string().valid(...UGANDA_DISTRICTS).optional(),
     geo: Joi.object({
       type: Joi.string().valid("Point").optional(),
       coordinates: Joi.array().items(Joi.number()).length(2).optional()
@@ -145,6 +147,11 @@ export const buildProviderRoutes = ({ providerController }) => {
     providerController.updateMyProfile
   );
   router.get("/me", requireAuth([Roles.PROVIDER]), providerController.getMyProfile);
+
+  // Static reference list (backend is the single source of truth so admin_ui and public_app
+  // don't each keep their own copy of a ~136-entry list that can drift) - registered ahead of the
+  // "/:providerId" catch-all below so "districts" is never swallowed as a provider id.
+  router.get("/districts", providerController.listDistricts);
 
   router.get(
     "/:providerId/contact",

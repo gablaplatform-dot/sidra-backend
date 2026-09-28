@@ -4,6 +4,7 @@ import Joi from "joi";
 import { validate } from "../middlewares/validate.middleware.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { Roles, ServiceProductType } from "../constants/enums.js";
+import { UGANDA_DISTRICTS } from "../constants/ugandaDistricts.js";
 
 export const buildListingRoutes = ({ listingController }) => {
   const router = Router();
@@ -37,7 +38,11 @@ export const buildListingRoutes = ({ listingController }) => {
         isNew: Joi.boolean().optional(),
         lat: Joi.number().min(-90).max(90).optional(),
         lng: Joi.number().min(-180).max(180).optional(),
-        radiusKm: Joi.number().min(0).max(50).optional()
+        // Max raised from 50 to 1000: the nearby-search widening ladder (see
+        // ListingService#publicList) can echo back an effective radius up to the
+        // nationwide sentinel (~900km) on later pages of an already-widened search.
+        radiusKm: Joi.number().min(0).max(1000).optional(),
+        district: Joi.string().valid(...UGANDA_DISTRICTS).optional()
       }).and("lat", "lng", "radiusKm"),
       "query"
     ),

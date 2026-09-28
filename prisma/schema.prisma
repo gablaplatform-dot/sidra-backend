@@ -129,6 +129,10 @@ model Provider {
   lng                Float?
   geohash5           String?
   geohash6           String?
+  // Admin-picked from a fixed Uganda district list (src/constants/ugandaDistricts.js) - a
+  // controlled fallback scope for shoppers who deny/lack geolocation, separate from the
+  // free-text city/region inside `location`.
+  district           String?
   isApproved         Boolean                  @default(false)
   moderationStatus   String                   @default("pending")
   onboardingStatus   String                   @default("draft")
@@ -177,6 +181,7 @@ model Provider {
   @@index([isApproved, moderationStatus, ratingAvg, ratingCount, createdAt])
   @@index([moderationStatus, geohash6])
   @@index([moderationStatus, geohash5])
+  @@index([moderationStatus, district])
   @@map("providers")
 }
 

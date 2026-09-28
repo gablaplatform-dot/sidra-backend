@@ -129,6 +129,7 @@ CREATE TABLE IF NOT EXISTS providers (
   lng REAL,
   geohash5 TEXT,
   geohash6 TEXT,
+  district TEXT,
   isApproved BOOLEAN NOT NULL DEFAULT 0,
   moderationStatus TEXT NOT NULL DEFAULT 'pending',
   onboardingStatus TEXT NOT NULL DEFAULT 'draft',
@@ -710,7 +711,8 @@ const ensureColumn = (table, column, definition) => {
   ["providers", "lng", "REAL"],
   ["providers", "geohash5", "TEXT"],
   ["providers", "geohash6", "TEXT"],
-  ["users", "adminRoleId", "TEXT"]
+  ["users", "adminRoleId", "TEXT"],
+  ["providers", "district", "TEXT"]
 ].forEach(([table, column, definition]) => ensureColumn(table, column, definition));
 
 // These indexes have to be created after the ensureColumn pass above, since on a database
@@ -718,6 +720,7 @@ const ensureColumn = (table, column, definition) => {
 runSql("CREATE INDEX IF NOT EXISTS service_products_productCategoryId_status_idx ON service_products(productCategoryId, status);");
 runSql("CREATE INDEX IF NOT EXISTS providers_moderationStatus_geohash6_idx ON providers(moderationStatus, geohash6);");
 runSql("CREATE INDEX IF NOT EXISTS providers_moderationStatus_geohash5_idx ON providers(moderationStatus, geohash5);");
+runSql("CREATE INDEX IF NOT EXISTS providers_moderationStatus_district_idx ON providers(moderationStatus, district);");
 
 // wallets.providerId used to be NOT NULL (one wallet per provider). A platform-owned wallet
 // (providerId = NULL) needs that relaxed. SQLite can't ALTER COLUMN, so on databases that still

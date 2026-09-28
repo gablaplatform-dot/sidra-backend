@@ -4,6 +4,14 @@ import { geohashSearchCells, haversineDistanceKm } from "../utils/geohash.js";
 
 const GEOHASH_PRECISION_FINE = 6; // ~1.2km x 0.6km cells - used for tight radii
 const GEOHASH_PRECISION_COARSE = 5; // ~4.9km x 4.9km cells - used for wider radii
+const GEOHASH_SAFE_RADIUS_KM = 20; // a 3x3 geohash5 cell grid covers ~15km across - beyond this,
+// cell lookup would silently miss real matches, so wider radii fall back to a full provider scan
+const MAX_RAW_PROVIDER_CANDIDATES = 1000; // hygiene cap on the raw candidate query, geohash or not
+const MAX_NEARBY_PROVIDERS = 200; // the real cost bound: only this many CLOSEST providers ever
+// get their products queried, however many candidates the raw query returned
+const MAX_GEO_PRODUCTS = 500; // secondary safety cap on the product fetch itself
+const RADIUS_WIDEN_MULTIPLIER = 3;
+const NATIONWIDE_RADIUS_KM = 900; // covers all of Uganda (~800km across) while still ranking by distance
 
 export class ListingService {
   async getProviderForUser(userId) {
@@ -310,7 +318,7 @@ export class ListingService {
     return ids;
   }
 
-  async _buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew }) {
+  async _buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew, district }) {
     const filter = { status: "approved" };
 
     let normalizedType = null;
@@ -326,7 +334,12 @@ export class ListingService {
     if (discountOnly === "true" || discountOnly === true) filter.discountPercent = { not: null };
     if (isNew === "true" || isNew === true) filter.isNew = true;
 
-    const providerFilter = { isApproved: true, moderationStatus: "approved", ...(providerId ? { id: providerId } : {}) };
+    const providerFilter = {
+      isApproved: true,
+      moderationStatus: "approved",
+      ...(providerId ? { id: providerId } : {}),
+      ...(district ? { district } : {})
+    };
     if (normalizedType === "product" && productCategoryId) {
       const categoryIds = await this._expandProductCategoryIds(productCategoryId);
       filter.productCategoryId = { in: categoryIds };
@@ -357,89 +370,159 @@ export class ListingService {
   // A product has no location of its own - it inherits its provider's. So "nearby products"
   // means: find providers near this point (an indexed geohash-cell lookup, mirroring
   // RideService#findNearestDriver), then list products from just that small provider set.
-  async _findNearbyProviderIds({ lat, lng, radiusKm }) {
-    const precision = radiusKm <= 2 ? GEOHASH_PRECISION_FINE : GEOHASH_PRECISION_COARSE;
-    const geohashField = precision === GEOHASH_PRECISION_FINE ? "geohash6" : "geohash5";
-    const cells = geohashSearchCells(lat, lng, precision);
-
-    const candidates = await prisma.provider.findMany({
-      where: {
-        isApproved: true,
-        moderationStatus: "approved",
-        [geohashField]: { in: cells },
-        lat: { not: null },
-        lng: { not: null }
-      },
-      select: { id: true, lat: true, lng: true }
-    });
-
-    const distanceById = new Map();
-    for (const candidate of candidates) {
-      const distanceKm = haversineDistanceKm(lat, lng, candidate.lat, candidate.lng);
-      if (distanceKm <= radiusKm) distanceById.set(candidate.id, distanceKm);
+  // Returns providers sorted nearest-first and capped to MAX_NEARBY_PROVIDERS - sorting before
+  // capping matters: capping by raw DB order (or any other tiebreak) would silently let a
+  // farther provider crowd out a closer one once a dense area exceeds the cap.
+  async _findNearbyProviderIds({ lat, lng, radiusKm, useGeohash }) {
+    const where = { isApproved: true, moderationStatus: "approved", lat: { not: null }, lng: { not: null } };
+    if (useGeohash) {
+      const precision = radiusKm <= 2 ? GEOHASH_PRECISION_FINE : GEOHASH_PRECISION_COARSE;
+      where[precision === GEOHASH_PRECISION_FINE ? "geohash6" : "geohash5"] = {
+        in: geohashSearchCells(lat, lng, precision)
+      };
     }
 
-    return distanceById;
+    const candidates = await prisma.provider.findMany({
+      where,
+      select: { id: true, lat: true, lng: true },
+      take: MAX_RAW_PROVIDER_CANDIDATES
+    });
+
+    const withinRadius = [];
+    for (const candidate of candidates) {
+      const distanceKm = haversineDistanceKm(lat, lng, candidate.lat, candidate.lng);
+      if (distanceKm <= radiusKm) withinRadius.push({ id: candidate.id, distanceKm });
+    }
+    withinRadius.sort((a, b) => a.distanceKm - b.distanceKm);
+    const nearest = withinRadius.slice(0, MAX_NEARBY_PROVIDERS);
+
+    return {
+      orderedIds: nearest.map((p) => p.id),
+      distanceById: new Map(nearest.map((p) => [p.id, p.distanceKm]))
+    };
   }
 
-  async publicList({ page = 1, limit = 20, type, q, categoryId, productCategoryId, providerId, sort, discountOnly, isNew, lat, lng, radiusKm }) {
+  // One radius attempt: nearby providers -> their products (capped, distance-ranked). Returns []
+  // if nothing matches at this radius, so the caller can widen and retry.
+  async _rankedProductsWithinRadius({ lat, lng, radiusKm, useGeohash, filterBase, providerId }) {
+    const { orderedIds, distanceById } = await this._findNearbyProviderIds({ lat, lng, radiusKm, useGeohash });
+    const nearbyProviderIds = providerId ? orderedIds.filter((id) => id === providerId) : orderedIds;
+    if (!nearbyProviderIds.length) return [];
+
+    const filter = { ...filterBase, provider: { id: { in: nearbyProviderIds } } };
+    const candidates = await prisma.serviceProduct.findMany({
+      where: filter,
+      orderBy: [{ createdAt: "desc" }], // tiebreak only - real ranking is the distance sort below
+      take: MAX_GEO_PRODUCTS,
+      include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
+    });
+
+    return candidates
+      .map((item) => ({ item, distanceKm: distanceById.get(item.providerId) }))
+      .sort((a, b) => a.distanceKm - b.distanceKm || new Date(b.item.createdAt) - new Date(a.item.createdAt));
+  }
+
+  async publicList({ page = 1, limit = 20, type, q, categoryId, productCategoryId, providerId, sort, discountOnly, isNew, lat, lng, radiusKm, district }) {
     const normalizedPage = Math.max(1, Number(page) || 1);
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
     const skip = (normalizedPage - 1) * normalizedLimit;
 
     const hasGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Number.isFinite(Number(radiusKm));
 
-    if (!hasGeo) {
-      const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew });
-      const orderBy = this._orderByForSort(sort);
+    // Geo takes precedence over district when both are somehow present - redundant, not
+    // conflicting, so no validation error; just ignore district in that case.
+    if (hasGeo) {
+      const filterBase = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, discountOnly, isNew });
+      const requestedRadiusKm = Number(radiusKm);
+      const tierRadii = [requestedRadiusKm, requestedRadiusKm * RADIUS_WIDEN_MULTIPLIER, NATIONWIDE_RADIUS_KM];
 
-      const [items, total] = await Promise.all([
-        prisma.serviceProduct.findMany({
-          where: filter,
-          orderBy,
-          skip,
-          take: normalizedLimit,
-          include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
-        }),
-        prisma.serviceProduct.count({ where: filter })
-      ]);
+      let ranked = [];
+      let effectiveRadiusKm = requestedRadiusKm;
+      let widened = false;
+      for (let i = 0; i < tierRadii.length; i += 1) {
+        const tierRadiusKm = tierRadii[i];
+        ranked = await this._rankedProductsWithinRadius({
+          lat: Number(lat),
+          lng: Number(lng),
+          radiusKm: tierRadiusKm,
+          useGeohash: tierRadiusKm <= GEOHASH_SAFE_RADIUS_KM,
+          filterBase,
+          providerId
+        });
+        effectiveRadiusKm = tierRadiusKm;
+        widened = i > 0;
+        if (ranked.length > 0 || i === tierRadii.length - 1) break;
+      }
+
+      const total = ranked.length;
+      const pageItems = ranked.slice(skip, skip + normalizedLimit);
+
+      return {
+        items: pageItems.map(({ item, distanceKm }) => this._toDto(item, item.provider, distanceKm)),
+        page: normalizedPage,
+        limit: normalizedLimit,
+        total,
+        effectiveRadiusKm,
+        effectiveDistrict: null,
+        widened
+      };
+    }
+
+    if (district) {
+      const orderBy = this._orderByForSort(sort);
+      let filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew, district });
+      let total = await prisma.serviceProduct.count({ where: filter });
+      let effectiveDistrict = district;
+      let widened = false;
+
+      if (total === 0) {
+        filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew });
+        total = await prisma.serviceProduct.count({ where: filter });
+        effectiveDistrict = null;
+        widened = true;
+      }
+
+      const items = await prisma.serviceProduct.findMany({
+        where: filter,
+        orderBy,
+        skip,
+        take: normalizedLimit,
+        include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
+      });
 
       return {
         items: items.map((i) => this._toDto(i, i.provider)),
         page: normalizedPage,
         limit: normalizedLimit,
-        total
+        total,
+        effectiveRadiusKm: null,
+        effectiveDistrict,
+        widened
       };
     }
 
-    const distanceById = await this._findNearbyProviderIds({ lat: Number(lat), lng: Number(lng), radiusKm: Number(radiusKm) });
-    const nearbyProviderIds = providerId
-      ? Array.from(distanceById.keys()).filter((id) => id === providerId)
-      : Array.from(distanceById.keys());
-    if (!nearbyProviderIds.length) {
-      return { items: [], page: normalizedPage, limit: normalizedLimit, total: 0 };
-    }
+    const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew });
+    const orderBy = this._orderByForSort(sort);
 
-    const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, discountOnly, isNew });
-    filter.provider = { id: { in: nearbyProviderIds } };
-
-    const candidates = await prisma.serviceProduct.findMany({
-      where: filter,
-      include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
-    });
-
-    const ranked = candidates
-      .map((i) => ({ item: i, distanceKm: distanceById.get(i.providerId) }))
-      .sort((a, b) => a.distanceKm - b.distanceKm || new Date(b.item.createdAt) - new Date(a.item.createdAt));
-
-    const total = ranked.length;
-    const pageItems = ranked.slice(skip, skip + normalizedLimit);
+    const [items, total] = await Promise.all([
+      prisma.serviceProduct.findMany({
+        where: filter,
+        orderBy,
+        skip,
+        take: normalizedLimit,
+        include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
+      }),
+      prisma.serviceProduct.count({ where: filter })
+    ]);
 
     return {
-      items: pageItems.map(({ item, distanceKm }) => this._toDto(item, item.provider, distanceKm)),
+      items: items.map((i) => this._toDto(i, i.provider)),
       page: normalizedPage,
       limit: normalizedLimit,
-      total
+      total,
+      effectiveRadiusKm: null,
+      effectiveDistrict: null,
+      widened: false
     };
   }
 
