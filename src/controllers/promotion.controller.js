@@ -59,4 +59,53 @@ export class PromotionController {
       next(e);
     }
   };
+
+  listNearbyAds = async (req, res, next) => {
+    try {
+      const result = await this.promotionService.listNearbyAds(req.query);
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  listMine = async (req, res, next) => {
+    try {
+      const result = await this.promotionService.listMine({ actorUserId: req.user.id });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  createMine = async (req, res, next) => {
+    try {
+      const result = await this.promotionService.createFromProvider({ actorUserId: req.user.id, ...req.body });
+      res.status(201).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  updateMine = async (req, res, next) => {
+    try {
+      const result = await this.promotionService.updateMine({
+        actorUserId: req.user.id,
+        id: req.params.promotionId,
+        updates: req.body
+      });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  deleteMine = async (req, res, next) => {
+    try {
+      const result = await this.promotionService.deleteMine({ actorUserId: req.user.id, id: req.params.promotionId });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
 }

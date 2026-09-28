@@ -693,6 +693,7 @@ model Promotion {
   endsAt          DateTime?
   discountPercent Int?
   imageUrl        String?
+  videoUrl        String?
   ctaLabel        String?
   ctaHref         String?
   listingIds      Json?
@@ -701,6 +702,10 @@ model Promotion {
   isFeatured      Boolean  @default(false)
   sortOrder       Int      @default(0)
   isActive        Boolean  @default(true)
+  // "approved" for admin-created promotions; a provider-created ad (type "provider_ad") starts
+  // "pending" - it's live immediately (isActive stays true), this only flags it for admin review,
+  // same convention as Category/ProductCategory's provider-submitted subcategories.
+  moderationStatus String  @default("approved")
   metadata        Json     @default("{}")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -713,6 +718,7 @@ model Promotion {
   @@index([isFeatured, isActive, sortOrder])
   @@index([categoryId])
   @@index([providerId])
+  @@index([type, isActive, moderationStatus])
   @@map("promotions")
 }
 

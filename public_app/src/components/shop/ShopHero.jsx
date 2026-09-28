@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { HERO_FLOATING_PRODUCTS, HERO_MODEL_IMAGE } from "../../data/shopData";
+import { HERO_MODEL_IMAGE } from "../../data/shopData";
 
 const IconArrowRight = (props) => (
   <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -21,7 +21,9 @@ const FloatingProductCard = ({ product, positionClass }) => (
   </div>
 );
 
-export default function ShopHero() {
+// Empty-state fallback for when no provider ads exist anywhere (not even nationwide) - shown by
+// Shop.jsx in place of ShopAdsHero. `products` are real listings (New Arrivals), never invented.
+export default function ShopHero({ products = [] }) {
   return (
     <section className="shop-hero">
       <div className="shop-hero-blob shop-hero-blob-1" />
@@ -56,10 +58,10 @@ export default function ShopHero() {
         </div>
 
         <div className="shop-hero-visual">
-          <FloatingProductCard product={HERO_FLOATING_PRODUCTS[0]} positionClass="float-tl" />
-          <FloatingProductCard product={HERO_FLOATING_PRODUCTS[1]} positionClass="float-tr" />
-          <FloatingProductCard product={HERO_FLOATING_PRODUCTS[2]} positionClass="float-ml" />
-          <FloatingProductCard product={HERO_FLOATING_PRODUCTS[3]} positionClass="float-br" />
+          {products[0] ? <FloatingProductCard product={products[0]} positionClass="float-tl" /> : null}
+          {products[1] ? <FloatingProductCard product={products[1]} positionClass="float-tr" /> : null}
+          {products[2] ? <FloatingProductCard product={products[2]} positionClass="float-ml" /> : null}
+          {products[3] ? <FloatingProductCard product={products[3]} positionClass="float-br" /> : null}
           <div className="shop-hero-image-wrap">
             <div className="shop-hero-oval" />
             <img src={HERO_MODEL_IMAGE} alt="Featured model" className="shop-hero-model" loading="lazy" />

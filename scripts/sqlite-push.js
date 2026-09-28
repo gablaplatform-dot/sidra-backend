@@ -471,12 +471,14 @@ CREATE TABLE IF NOT EXISTS promotions (
   endsAt DATETIME,
   discountPercent INTEGER,
   imageUrl TEXT,
+  videoUrl TEXT,
   ctaLabel TEXT,
   ctaHref TEXT,
   listingIds JSONB,
   categoryId TEXT,
   providerId TEXT,
   isFeatured BOOLEAN NOT NULL DEFAULT 0,
+  moderationStatus TEXT NOT NULL DEFAULT 'approved',
   sortOrder INTEGER NOT NULL DEFAULT 0,
   isActive BOOLEAN NOT NULL DEFAULT 1,
   metadata JSONB NOT NULL DEFAULT '{}',
@@ -714,7 +716,9 @@ const ensureColumn = (table, column, definition) => {
   ["providers", "geohash6", "TEXT"],
   ["users", "adminRoleId", "TEXT"],
   ["providers", "district", "TEXT"],
-  ["product_categories", "listingFields", "JSONB NOT NULL DEFAULT '[]'"]
+  ["product_categories", "listingFields", "JSONB NOT NULL DEFAULT '[]'"],
+  ["promotions", "videoUrl", "TEXT"],
+  ["promotions", "moderationStatus", "TEXT NOT NULL DEFAULT 'approved'"]
 ].forEach(([table, column, definition]) => ensureColumn(table, column, definition));
 
 // These indexes have to be created after the ensureColumn pass above, since on a database
@@ -722,6 +726,7 @@ const ensureColumn = (table, column, definition) => {
 runSql("CREATE INDEX IF NOT EXISTS service_products_productCategoryId_status_idx ON service_products(productCategoryId, status);");
 runSql("CREATE INDEX IF NOT EXISTS providers_moderationStatus_geohash6_idx ON providers(moderationStatus, geohash6);");
 runSql("CREATE INDEX IF NOT EXISTS providers_moderationStatus_geohash5_idx ON providers(moderationStatus, geohash5);");
+runSql("CREATE INDEX IF NOT EXISTS promotions_type_isActive_moderationStatus_idx ON promotions(type, isActive, moderationStatus);");
 runSql("CREATE INDEX IF NOT EXISTS providers_moderationStatus_district_idx ON providers(moderationStatus, district);");
 
 // wallets.providerId used to be NOT NULL (one wallet per provider). A platform-owned wallet

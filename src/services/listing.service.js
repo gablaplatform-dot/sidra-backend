@@ -1,14 +1,9 @@
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
-import { geohashSearchCells, haversineDistanceKm } from "../utils/geohash.js";
+import { findNearbyProviderIds } from "./geoProviderSearch.js";
 
-const GEOHASH_PRECISION_FINE = 6; // ~1.2km x 0.6km cells - used for tight radii
-const GEOHASH_PRECISION_COARSE = 5; // ~4.9km x 4.9km cells - used for wider radii
 const GEOHASH_SAFE_RADIUS_KM = 20; // a 3x3 geohash5 cell grid covers ~15km across - beyond this,
 // cell lookup would silently miss real matches, so wider radii fall back to a full provider scan
-const MAX_RAW_PROVIDER_CANDIDATES = 1000; // hygiene cap on the raw candidate query, geohash or not
-const MAX_NEARBY_PROVIDERS = 200; // the real cost bound: only this many CLOSEST providers ever
-// get their products queried, however many candidates the raw query returned
 const MAX_GEO_PRODUCTS = 500; // secondary safety cap on the product fetch itself
 const RADIUS_WIDEN_MULTIPLIER = 3;
 const NATIONWIDE_RADIUS_KM = 900; // covers all of Uganda (~800km across) while still ranking by distance
@@ -367,45 +362,10 @@ export class ListingService {
     }
   }
 
-  // A product has no location of its own - it inherits its provider's. So "nearby products"
-  // means: find providers near this point (an indexed geohash-cell lookup, mirroring
-  // RideService#findNearestDriver), then list products from just that small provider set.
-  // Returns providers sorted nearest-first and capped to MAX_NEARBY_PROVIDERS - sorting before
-  // capping matters: capping by raw DB order (or any other tiebreak) would silently let a
-  // farther provider crowd out a closer one once a dense area exceeds the cap.
-  async _findNearbyProviderIds({ lat, lng, radiusKm, useGeohash }) {
-    const where = { isApproved: true, moderationStatus: "approved", lat: { not: null }, lng: { not: null } };
-    if (useGeohash) {
-      const precision = radiusKm <= 2 ? GEOHASH_PRECISION_FINE : GEOHASH_PRECISION_COARSE;
-      where[precision === GEOHASH_PRECISION_FINE ? "geohash6" : "geohash5"] = {
-        in: geohashSearchCells(lat, lng, precision)
-      };
-    }
-
-    const candidates = await prisma.provider.findMany({
-      where,
-      select: { id: true, lat: true, lng: true },
-      take: MAX_RAW_PROVIDER_CANDIDATES
-    });
-
-    const withinRadius = [];
-    for (const candidate of candidates) {
-      const distanceKm = haversineDistanceKm(lat, lng, candidate.lat, candidate.lng);
-      if (distanceKm <= radiusKm) withinRadius.push({ id: candidate.id, distanceKm });
-    }
-    withinRadius.sort((a, b) => a.distanceKm - b.distanceKm);
-    const nearest = withinRadius.slice(0, MAX_NEARBY_PROVIDERS);
-
-    return {
-      orderedIds: nearest.map((p) => p.id),
-      distanceById: new Map(nearest.map((p) => [p.id, p.distanceKm]))
-    };
-  }
-
   // One radius attempt: nearby providers -> their products (capped, distance-ranked). Returns []
   // if nothing matches at this radius, so the caller can widen and retry.
   async _rankedProductsWithinRadius({ lat, lng, radiusKm, useGeohash, filterBase, providerId }) {
-    const { orderedIds, distanceById } = await this._findNearbyProviderIds({ lat, lng, radiusKm, useGeohash });
+    const { orderedIds, distanceById } = await findNearbyProviderIds({ lat, lng, radiusKm, useGeohash });
     const nearbyProviderIds = providerId ? orderedIds.filter((id) => id === providerId) : orderedIds;
     if (!nearbyProviderIds.length) return [];
 

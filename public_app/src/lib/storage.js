@@ -23,7 +23,7 @@ export const uploadFile = async (file, folder = "provider-media") => {
       url: upload.publicUrl,
       mimeType: file.type,
       size: file.size,
-      kind: "image",
+      kind: file.type?.startsWith("video/") ? "video" : "image",
       metadata: { scope: folder }
     })
   });

@@ -105,7 +105,10 @@ export const RidePaymentMethod = Object.freeze({
 export const PromotionType = Object.freeze({
   FLASH_SALE: "flash_sale",
   NEW_COLLECTION: "new_collection",
-  BANNER: "banner"
+  BANNER: "banner",
+  // Provider-self-serve ad slide (Shop hero carousel) - distinct from the site-wide types above
+  // so a provider can never create one of those via their own-scoped CRUD.
+  PROVIDER_AD: "provider_ad"
 });
 
 export const OrderStatus = Object.freeze({

@@ -10,6 +10,7 @@ import ProfileOrdersTab from "../components/profile/ProfileOrdersTab";
 import ProfileWalletTab from "../components/profile/ProfileWalletTab";
 import ProfileShopCategoriesTab from "../components/profile/ProfileShopCategoriesTab";
 import ProfileAnalyticsTab from "../components/profile/ProfileAnalyticsTab";
+import ProfileAdsTab from "../components/profile/ProfileAdsTab";
 import { IconBox, IconCamera, IconClose, IconImage } from "../components/icons";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
@@ -19,6 +20,7 @@ const TABS = [
   { key: "analytics", label: "Analytics" },
   { key: "listings", label: "Products & services" },
   { key: "shopCategories", label: "Shop categories" },
+  { key: "ads", label: "Ads" },
   { key: "orders", label: "Orders" },
   { key: "wallet", label: "Wallet" },
   { key: "gallery", label: "Gallery" }
@@ -364,6 +366,8 @@ export default function Profile() {
             ) : null}
 
             {activeTab === "shopCategories" ? <ProfileShopCategoriesTab /> : null}
+
+            {activeTab === "ads" ? <ProfileAdsTab /> : null}
 
             {activeTab === "orders" ? <ProfileOrdersTab /> : null}
 

@@ -5,11 +5,13 @@ import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
 import { mapCategoryDto, mapProductDto, mapPromotionDto } from "../lib/shopMappers";
 import { findCategoryPath } from "../lib/categories";
+import { getCurrentPosition } from "../lib/geolocation";
 import { NEW_ARRIVALS, BEST_SELLERS, FLASH_SALE, NEW_COLLECTION } from "../data/shopData";
 
 import ShopTopBar from "../components/shop/ShopTopBar";
 import ShopNavbar from "../components/shop/ShopNavbar";
 import ShopHero from "../components/shop/ShopHero";
+import ShopAdsHero from "../components/shop/ShopAdsHero";
 import ShopTrustBar from "../components/shop/ShopTrustBar";
 import ShopCategoryRow from "../components/shop/ShopCategoryRow";
 import ShopNewArrivals, { ProductCard } from "../components/shop/ShopNewArrivals";
@@ -122,10 +124,32 @@ export default function Shop() {
   const [flashSale, setFlashSale] = useState(null);
   const [newCollection, setNewCollection] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  const [ads, setAds] = useState(null);
 
   useEffect(() => {
     document.title = "Gabla Shop — Trendy Fashion, Electronics & Lifestyle";
   }, []);
+
+  const ADS_RADIUS_KM = 15;
+
+  useEffect(() => {
+    if (categoryId) return;
+    let cancelled = false;
+
+    const fetchAds = async (params) => {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : "";
+      const data = await safeFetch(`/promotions/ads/nearby${query}`);
+      if (!cancelled) setAds(Array.isArray(data?.items) ? data.items : []);
+    };
+
+    getCurrentPosition()
+      .then((coords) => fetchAds({ lat: coords.lat, lng: coords.lng, radiusKm: ADS_RADIUS_KM }))
+      .catch(() => fetchAds(null));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryId]);
 
   useEffect(() => {
     if (categoryId) return;
@@ -223,7 +247,7 @@ export default function Shop() {
     <main className="shop-shell">
       <ShopTopBar />
       <ShopNavbar session={session} onLogout={logout} />
-      <ShopHero />
+      {ads?.length ? <ShopAdsHero ads={ads} /> : <ShopHero products={displayNewArrivals.slice(0, 4)} />}
       <ShopTrustBar />
       {!loaded || displayCategories.length ? (
         <ShopCategoryRow categories={displayCategories} loaded={loaded} />

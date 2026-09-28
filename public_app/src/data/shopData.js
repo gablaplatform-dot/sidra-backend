@@ -15,33 +15,6 @@ export const NAV_LINKS = [
   { label: "Contact", href: "/home#contact" }
 ];
 
-export const HERO_FLOATING_PRODUCTS = [
-  {
-    id: "hero-1",
-    name: "Air Max 270",
-    price: "UGX 480,000",
-    image: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=white%20nike%20air%20max%20sneaker%20product%20photo%20white%20background&image_size=square"
-  },
-  {
-    id: "hero-2",
-    name: "Smart Watch",
-    price: "UGX 740,000",
-    image: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=black%20smart%20watch%20series%20product%20photo%20white%20background&image_size=square"
-  },
-  {
-    id: "hero-3",
-    name: "Wireless Headphones",
-    price: "UGX 330,000",
-    image: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=black%20wireless%20over%20ear%20headphones%20product%20photo%20white%20background&image_size=square"
-  },
-  {
-    id: "hero-4",
-    name: "Water Bottle",
-    price: "UGX 130,000",
-    image: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=black%20stainless%20steel%20water%20bottle%20product%20photo%20white%20background&image_size=square"
-  }
-];
-
 export const TRUST_BADGES = [
   { icon: "truck", title: "Free Delivery", subtitle: "On orders over UGX 200,000" },
   { icon: "shield", title: "Secure Payments", subtitle: "Mobile Money & card checkout" },
