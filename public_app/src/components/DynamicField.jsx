@@ -4,12 +4,15 @@ const toggleInArray = (arr = [], value) =>
   arr.includes(value) ? arr.filter((item) => item !== value) : [...arr, value];
 
 export const DynamicField = ({ field, value, onChange }) => {
-  const commonProps = {
-    required: Boolean(field.required)
-  };
+  // Deliberately no native `required` attribute anywhere in this component: the caller (e.g.
+  // ListingForm's submit()) already does its own required-field check with a friendly, specific
+  // "Please fill in X" message. A native `required` on a select/number/text input makes the
+  // browser silently block the submit event via its own constraint validation before that
+  // check - or React's onSubmit - ever runs, with no visible error and no obvious way to tell
+  // (confirmed: form.checkValidity() was false and no submit event fired at all).
 
   if (field.type === "textarea") {
-    return <textarea rows="6" value={value || ""} onChange={(e) => onChange(e.target.value)} {...commonProps} />;
+    return <textarea rows="6" value={value || ""} onChange={(e) => onChange(e.target.value)} />;
   }
 
   if (field.type === "boolean") {
@@ -23,7 +26,7 @@ export const DynamicField = ({ field, value, onChange }) => {
 
   if (field.type === "select") {
     return (
-      <select value={value || ""} onChange={(e) => onChange(e.target.value)} {...commonProps}>
+      <select value={value || ""} onChange={(e) => onChange(e.target.value)}>
         <option value="">Select an option</option>
         {(field.options || []).map((option) => (
           <option key={option} value={option}>{option}</option>
@@ -62,7 +65,6 @@ export const DynamicField = ({ field, value, onChange }) => {
       type={inputType}
       value={value ?? ""}
       onChange={(e) => onChange(field.type === "number" ? (e.target.value === "" ? "" : Number(e.target.value)) : e.target.value)}
-      {...commonProps}
     />
   );
 };

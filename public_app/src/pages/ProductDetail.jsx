@@ -5,15 +5,21 @@ import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
 import { addToCart } from "../lib/cart";
 import { listingCover } from "../lib/shopMappers";
+import { findCategoryPath } from "../lib/categories";
 import SiteHeader from "../components/SiteHeader";
 import OrderModal from "../components/OrderModal";
 import BuyNowModal from "../components/BuyNowModal";
+// Purely presentational {label, value} list - already generic over any field/value set (built
+// for a provider's onboarding answers), reused as-is here for a product's category attributes
+// (Make, Color, Mileage, ...) rather than writing a second copy of the same rendering logic.
+import ProviderCustomFields from "../components/ProviderCustomFields";
 import { IconCart } from "../components/icons";
 
 export default function ProductDetail() {
   const { listingId } = useParams();
   const [session] = useState(() => getSession());
   const [listing, setListing] = useState(null);
+  const [specFields, setSpecFields] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [added, setAdded] = useState(false);
@@ -27,6 +33,15 @@ export default function ProductDetail() {
     request(`/listings/${encodeURIComponent(listingId)}`)
       .then((result) => {
         if (active) setListing(result);
+        if (result?.type === "product" && result?.productCategoryId) {
+          request("/product-categories")
+            .then((tree) => {
+              if (!active) return;
+              const found = findCategoryPath(tree?.items || [], result.productCategoryId);
+              setSpecFields(found?.node?.effectiveListingFields || []);
+            })
+            .catch(() => {});
+        }
       })
       .catch((loadError) => {
         if (active) setError(loadError.message || "This product could not be found.");
@@ -93,6 +108,13 @@ export default function ProductDetail() {
               </div>
 
               {listing.description ? <p className="product-detail-description">{listing.description}</p> : null}
+
+              {specFields.length ? (
+                <div className="product-detail-specs">
+                  <h2>Specifications</h2>
+                  <ProviderCustomFields fields={specFields} values={listing.customFields} />
+                </div>
+              ) : null}
 
               <div className="listing-actions-row product-detail-actions">
                 {canBuyNow ? (

@@ -63,7 +63,12 @@ export default function ListingForm() {
       request("/product-categories"),
       request("/providers/me"),
       request("/shop-categories/mine"),
-      isEditing ? request("/listings/me?limit=200") : Promise.resolve(null)
+      // GET /listings/me caps `limit` at 100 (see src/routes/listing.routes.js) - asking for 200
+      // always failed with a 400, breaking every edit page load regardless of how many listings
+      // the provider has. There's no dedicated "fetch my one listing by id" endpoint yet, so this
+      // still can't find a listing outside the newest 100 - a real but much narrower gap than the
+      // 400 it replaces.
+      isEditing ? request("/listings/me?limit=100") : Promise.resolve(null)
     ])
       .then(([categoryResult, productCategoryResult, providerResult, shopCategoryResult, listingResult]) => {
         if (!active) return;
