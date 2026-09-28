@@ -170,6 +170,7 @@ CREATE TABLE IF NOT EXISTS product_categories (
   name TEXT NOT NULL,
   parentId TEXT,
   imageUrl TEXT,
+  listingFields JSONB NOT NULL DEFAULT '[]',
   isActive BOOLEAN NOT NULL DEFAULT 1,
   moderationStatus TEXT NOT NULL DEFAULT 'approved',
   createdByProviderId TEXT,
@@ -712,7 +713,8 @@ const ensureColumn = (table, column, definition) => {
   ["providers", "geohash5", "TEXT"],
   ["providers", "geohash6", "TEXT"],
   ["users", "adminRoleId", "TEXT"],
-  ["providers", "district", "TEXT"]
+  ["providers", "district", "TEXT"],
+  ["product_categories", "listingFields", "JSONB NOT NULL DEFAULT '[]'"]
 ].forEach(([table, column, definition]) => ensureColumn(table, column, definition));
 
 // These indexes have to be created after the ensureColumn pass above, since on a database

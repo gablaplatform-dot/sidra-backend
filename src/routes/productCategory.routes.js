@@ -4,11 +4,13 @@ import Joi from "joi";
 import { validate } from "../middlewares/validate.middleware.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { Roles } from "../constants/enums.js";
+import { buildFieldSchema } from "../constants/dynamicFieldSchema.js";
 
 export const buildProductCategoryRoutes = ({ productCategoryController }) => {
   const router = Router();
   const id = Joi.string().trim().min(1).max(64);
   const imageUrlField = Joi.string().uri().max(1000).allow(null).optional();
+  const listingFieldsField = Joi.array().items(buildFieldSchema()).optional();
 
   router.get("/", productCategoryController.listNested);
 
@@ -38,7 +40,8 @@ export const buildProductCategoryRoutes = ({ productCategoryController }) => {
       Joi.object({
         name: Joi.string().trim().max(120).required(),
         imageUrl: imageUrlField,
-        isActive: Joi.boolean().optional()
+        isActive: Joi.boolean().optional(),
+        listingFields: listingFieldsField
       })
     ),
     productCategoryController.createCategory
@@ -52,7 +55,8 @@ export const buildProductCategoryRoutes = ({ productCategoryController }) => {
         name: Joi.string().trim().max(120).required(),
         parentId: id.required(),
         imageUrl: imageUrlField,
-        isActive: Joi.boolean().optional()
+        isActive: Joi.boolean().optional(),
+        listingFields: listingFieldsField
       })
     ),
     productCategoryController.createSubcategory
@@ -79,7 +83,8 @@ export const buildProductCategoryRoutes = ({ productCategoryController }) => {
         parentId: id.allow(null).optional(),
         imageUrl: imageUrlField,
         isActive: Joi.boolean().optional(),
-        moderationStatus: Joi.string().valid("pending", "approved").optional()
+        moderationStatus: Joi.string().valid("pending", "approved").optional(),
+        listingFields: listingFieldsField
       }).min(1)
     ),
     productCategoryController.updateCategory

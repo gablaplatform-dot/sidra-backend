@@ -8,11 +8,18 @@ const uniqueError = (e) => e?.code === "P2002";
 // storefront folders). Admin manages the whole tree; a provider can only add subcategories to it,
 // never new top-level categories, when creating a product.
 export class ProductCategoryService {
-  async createCategory({ name, imageUrl, isActive }) {
+  async createCategory({ name, imageUrl, isActive, listingFields }) {
     try {
       const sortOrder = await this.getNextSortOrder(null);
       const created = await prisma.productCategory.create({
-        data: { name, parentId: null, imageUrl: imageUrl ?? null, isActive: isActive ?? true, sortOrder }
+        data: {
+          name,
+          parentId: null,
+          imageUrl: imageUrl ?? null,
+          isActive: isActive ?? true,
+          listingFields: listingFields ?? [],
+          sortOrder
+        }
       });
       return this.toDto(created);
     } catch (e) {
@@ -23,7 +30,7 @@ export class ProductCategoryService {
     }
   }
 
-  async createSubcategory({ name, parentId, imageUrl, isActive }) {
+  async createSubcategory({ name, parentId, imageUrl, isActive, listingFields }) {
     if (!parentId) {
       throw new AppError({ message: "Invalid parentId", statusCode: 400, code: "INVALID_PARENT_ID" });
     }
@@ -35,7 +42,14 @@ export class ProductCategoryService {
     try {
       const sortOrder = await this.getNextSortOrder(parentId);
       const created = await prisma.productCategory.create({
-        data: { name, parentId, imageUrl: imageUrl ?? parent.imageUrl ?? null, isActive: isActive ?? true, sortOrder }
+        data: {
+          name,
+          parentId,
+          imageUrl: imageUrl ?? parent.imageUrl ?? null,
+          isActive: isActive ?? true,
+          listingFields: listingFields ?? [],
+          sortOrder
+        }
       });
       return this.toDto(created);
     } catch (e) {
@@ -88,7 +102,7 @@ export class ProductCategoryService {
     }
   }
 
-  async updateCategory({ id, name, parentId, imageUrl, isActive, moderationStatus }) {
+  async updateCategory({ id, name, parentId, imageUrl, isActive, moderationStatus, listingFields }) {
     if (!id) {
       throw new AppError({ message: "Invalid id", statusCode: 400, code: "INVALID_CATEGORY_ID" });
     }
@@ -98,6 +112,7 @@ export class ProductCategoryService {
     if (imageUrl !== undefined) update.imageUrl = imageUrl === null ? null : imageUrl;
     if (isActive !== undefined) update.isActive = isActive;
     if (moderationStatus !== undefined) update.moderationStatus = moderationStatus;
+    if (listingFields !== undefined) update.listingFields = listingFields;
     if (parentId !== undefined) {
       if (parentId !== null && parentId !== "" && typeof parentId !== "string") {
         throw new AppError({ message: "Invalid parentId", statusCode: 400, code: "INVALID_PARENT_ID" });
@@ -207,10 +222,25 @@ export class ProductCategoryService {
       if (!c.parentId) top.push(c);
     }
 
-    const toDto = (c) => ({
-      ...this.toDto(c),
-      children: (childrenByParent.get(c.id) ?? []).map((child) => toDto(child))
-    });
+    // A field a subcategory defines with the same key as an ancestor's overrides that ancestor's
+    // definition rather than showing twice - mirrors category.service.js#getNestedCategories'
+    // identical mergeFields/effectiveListingFields tree-walk for the directory Category model.
+    const mergeFields = (inherited, own) => {
+      const merged = new Map();
+      for (const field of inherited) merged.set(field.key, field);
+      for (const field of own) merged.set(field.key, field);
+      return Array.from(merged.values());
+    };
+
+    const toDto = (c, inheritedListingFields = []) => {
+      const ownListingFields = Array.isArray(c.listingFields) ? c.listingFields : [];
+      const effectiveListingFields = mergeFields(inheritedListingFields, ownListingFields);
+      return {
+        ...this.toDto(c),
+        effectiveListingFields,
+        children: (childrenByParent.get(c.id) ?? []).map((child) => toDto(child, effectiveListingFields))
+      };
+    };
 
     return { items: top.map((c) => toDto(c)), total: categories.length };
   }
@@ -231,6 +261,7 @@ export class ProductCategoryService {
       name: category.name,
       parentId: category.parentId ?? null,
       imageUrl: category.imageUrl ?? null,
+      listingFields: Array.isArray(category.listingFields) ? category.listingFields : [],
       isActive: category.isActive ?? true,
       moderationStatus: category.moderationStatus ?? "approved",
       createdByProviderId: category.createdByProviderId ?? null,

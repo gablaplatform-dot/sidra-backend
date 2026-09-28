@@ -118,7 +118,11 @@ export default function ListingForm() {
 
   const flatCategoryOptions = flattenCategories(categories);
   const selectedCategory = flatCategoryOptions.find((c) => c.id === form.categoryId) || null;
-  const listingFields = selectedCategory?.effectiveListingFields || selectedCategory?.listingFields || [];
+  const selectedProductCategory = form.type === "product" && form.productCategoryId
+    ? findCategoryPath(productCategories, form.productCategoryId)?.node || null
+    : null;
+  const activeFieldsCategory = form.type === "product" ? selectedProductCategory : selectedCategory;
+  const listingFields = activeFieldsCategory?.effectiveListingFields || activeFieldsCategory?.listingFields || [];
   const flatShopCategoryOptions = flattenCategories(shopCategories);
 
   // Products use the admin/provider-managed e-commerce category tree, and must be placed at a
@@ -490,7 +494,7 @@ export default function ListingForm() {
 
             {listingFields.length ? (
               <section>
-                <h3>More about this {selectedCategory?.name?.toLowerCase() || "listing"}</h3>
+                <h3>More about this {activeFieldsCategory?.name?.toLowerCase() || "listing"}</h3>
                 <div className="form-grid two">
                   {listingFields.map((field) => (
                     <Field

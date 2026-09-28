@@ -325,21 +325,36 @@ export class AdminService {
       if (!children.has(pid)) children.set(pid, []);
       children.get(pid).push(c);
     }
-    const toDto = (c) => ({
-      id: c.id,
-      name: c.name,
-      parentId: c.parentId ? String(c.parentId) : null,
-      imageUrl: c.imageUrl ?? null,
-      products: listingMap.get(String(c.id)) ?? 0,
-      isActive: c.isActive ?? true,
-      status: c.isActive ? "active" : "paused",
-      moderationStatus: c.moderationStatus ?? "approved",
-      createdByProviderId: c.createdByProviderId ?? null,
-      createdAt: c.createdAt,
-      updatedAt: c.updatedAt,
-      children: (children.get(String(c.id)) ?? []).map(toDto)
-    });
-    const top = categories.filter((c) => !c.parentId).map(toDto);
+    // Same inherited-field merge as ProductCategoryService#getNestedCategories - a child's own
+    // listingFields override an ancestor's by key rather than hiding it, so the admin editor here
+    // (and the storefront's product-creation form) both see the fully-resolved field set.
+    const mergeFields = (inherited, own) => {
+      const merged = new Map();
+      for (const field of inherited) merged.set(field.key, field);
+      for (const field of own) merged.set(field.key, field);
+      return Array.from(merged.values());
+    };
+    const toDto = (c, inheritedListingFields = []) => {
+      const ownListingFields = Array.isArray(c.listingFields) ? c.listingFields : [];
+      const effectiveListingFields = mergeFields(inheritedListingFields, ownListingFields);
+      return {
+        id: c.id,
+        name: c.name,
+        parentId: c.parentId ? String(c.parentId) : null,
+        imageUrl: c.imageUrl ?? null,
+        products: listingMap.get(String(c.id)) ?? 0,
+        isActive: c.isActive ?? true,
+        status: c.isActive ? "active" : "paused",
+        moderationStatus: c.moderationStatus ?? "approved",
+        createdByProviderId: c.createdByProviderId ?? null,
+        listingFields: ownListingFields,
+        effectiveListingFields,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        children: (children.get(String(c.id)) ?? []).map((child) => toDto(child, effectiveListingFields))
+      };
+    };
+    const top = categories.filter((c) => !c.parentId).map((c) => toDto(c));
     return { items: top, total: categories.length };
   }
 

@@ -4,20 +4,12 @@ import Joi from "joi";
 import { validate } from "../middlewares/validate.middleware.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { CategoryBehavior, CategoryModerationStatus, CategoryViewType, Roles } from "../constants/enums.js";
+import { buildFieldSchema } from "../constants/dynamicFieldSchema.js";
 
 export const buildCategoryRoutes = ({ categoryController }) => {
   const router = Router();
   const id = Joi.string().trim().min(1).max(64);
-  const fieldSchema = Joi.object({
-    key: Joi.string().trim().max(80).required(),
-    label: Joi.string().trim().max(120).required(),
-    type: Joi.string()
-      .valid("text", "textarea", "number", "boolean", "select", "multi_select", "date", "time", "url", "phone")
-      .default("text"),
-    required: Joi.boolean().optional(),
-    options: Joi.array().items(Joi.string().trim().max(120)).default([]),
-    unit: Joi.string().trim().max(40).allow(null).optional()
-  });
+  const fieldSchema = buildFieldSchema();
   const imageUrlField = Joi.string().uri().max(1000).allow(null).optional();
 
   router.get(

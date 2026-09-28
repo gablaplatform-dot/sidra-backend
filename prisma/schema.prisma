@@ -231,6 +231,11 @@ model ProductCategory {
   name                String
   parentId            String?
   imageUrl            String?
+  // Extra questions shown on the product-creation form for listings in this category (e.g. Make,
+  // Mileage, Color) - same {key,label,type,required,options,unit} shape as Category.listingFields,
+  // validated via src/constants/dynamicFieldSchema.js. A leaf's *effective* set (computed by
+  // ProductCategoryService) merges its own fields over its ancestors' by key.
+  listingFields       Json              @default("[]")
   isActive            Boolean           @default(true)
   // "approved" for admin-created nodes; a provider-submitted subcategory starts "pending" - it's
   // usable immediately (isActive stays true), this only flags it for admin review.
