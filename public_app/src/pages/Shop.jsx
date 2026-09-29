@@ -6,7 +6,6 @@ import { getSession, clearSession } from "../lib/session";
 import { mapCategoryDto, mapProductDto, mapPromotionDto } from "../lib/shopMappers";
 import { findCategoryPath } from "../lib/categories";
 import { getCurrentPosition } from "../lib/geolocation";
-import { NEW_ARRIVALS, BEST_SELLERS, FLASH_SALE, NEW_COLLECTION } from "../data/shopData";
 
 import ShopTopBar from "../components/shop/ShopTopBar";
 import ShopNavbar from "../components/shop/ShopNavbar";
@@ -165,45 +164,18 @@ export default function Shop() {
 
       setCategories(Array.isArray(cats?.items) ? cats.items.map(mapCategoryDto) : []);
 
-      if (Array.isArray(arrivals?.items) && arrivals.items.length) {
-        setNewArrivals(arrivals.items.map((p) => mapProductDto(p)));
-      } else {
-        setNewArrivals(NEW_ARRIVALS);
-      }
+      setNewArrivals(Array.isArray(arrivals?.items) ? arrivals.items.map((p) => mapProductDto(p)) : []);
 
-      if (Array.isArray(sellers?.items) && sellers.items.length) {
-        setBestSellers(sellers.items.map((p) => mapProductDto(p, { reviewOffset: 1800 })));
-      } else {
-        setBestSellers(BEST_SELLERS);
-      }
+      setBestSellers(
+        Array.isArray(sellers?.items) ? sellers.items.map((p) => mapProductDto(p, { reviewOffset: 1800 })) : []
+      );
 
       const mappedPromos = Array.isArray(promos?.items) && promos.items.length
         ? promos.items.map(mapPromotionDto)
         : [];
 
-      const flash = pickFlashSale(mappedPromos) ?? {
-        type: "flash_sale",
-        title: FLASH_SALE.title,
-        subtitle: FLASH_SALE.subtitle,
-        cta: FLASH_SALE.cta,
-        ctaHref: "/shop",
-        image: FLASH_SALE.image,
-        remainingSecs: 2 * 86400 + 15 * 3600 + 45 * 60 + 30,
-        isActiveNow: true
-      };
-      setFlashSale(flash);
-
-      const collection = pickCollectionBanner(mappedPromos) ?? {
-        type: "new_collection",
-        tag: NEW_COLLECTION.tag,
-        title: NEW_COLLECTION.title,
-        subtitle: NEW_COLLECTION.subtitle,
-        cta: NEW_COLLECTION.cta,
-        ctaHref: "/shop",
-        image: NEW_COLLECTION.image,
-        isActiveNow: true
-      };
-      setNewCollection(collection);
+      setFlashSale(pickFlashSale(mappedPromos));
+      setNewCollection(pickCollectionBanner(mappedPromos));
       setLoaded(true);
     };
     load();
@@ -220,28 +192,8 @@ export default function Shop() {
   }
 
   const displayCategories = categories ?? [];
-  const displayNewArrivals = newArrivals ?? NEW_ARRIVALS;
-  const displayBestSellers = bestSellers ?? BEST_SELLERS;
-  const displayFlash = flashSale ?? {
-    type: "flash_sale",
-    title: FLASH_SALE.title,
-    subtitle: FLASH_SALE.subtitle,
-    cta: FLASH_SALE.cta,
-    ctaHref: "/shop",
-    image: FLASH_SALE.image,
-    remainingSecs: 2 * 86400 + 15 * 3600 + 45 * 60 + 30,
-    isActiveNow: true
-  };
-  const displayCollection = newCollection ?? {
-    type: "new_collection",
-    tag: NEW_COLLECTION.tag,
-    title: NEW_COLLECTION.title,
-    subtitle: NEW_COLLECTION.subtitle,
-    cta: NEW_COLLECTION.cta,
-    ctaHref: "/shop",
-    image: NEW_COLLECTION.image,
-    isActiveNow: true
-  };
+  const displayNewArrivals = newArrivals ?? [];
+  const displayBestSellers = bestSellers ?? [];
 
   return (
     <main className="shop-shell">
@@ -252,9 +204,15 @@ export default function Shop() {
       {!loaded || displayCategories.length ? (
         <ShopCategoryRow categories={displayCategories} loaded={loaded} />
       ) : null}
-      <ShopNewArrivals products={displayNewArrivals} loaded={loaded} />
-      <ShopBestSellers products={displayBestSellers} loaded={loaded} />
-      <ShopPromoBanners flashSale={displayFlash} newCollection={displayCollection} loaded={loaded} />
+      {!loaded || displayNewArrivals.length ? (
+        <ShopNewArrivals products={displayNewArrivals} loaded={loaded} />
+      ) : null}
+      {!loaded || displayBestSellers.length ? (
+        <ShopBestSellers products={displayBestSellers} loaded={loaded} />
+      ) : null}
+      {!loaded || flashSale || newCollection ? (
+        <ShopPromoBanners flashSale={flashSale} newCollection={newCollection} loaded={loaded} />
+      ) : null}
       <ShopFooterTrust />
     </main>
   );
