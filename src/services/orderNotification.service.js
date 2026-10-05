@@ -32,6 +32,16 @@ export class OrderNotificationService {
     const itemsHtml = order.items
       .map((item) => `<li>${escapeHtml(item.name)} &times; ${item.quantity} — ${ugx(item.total)}</li>`)
       .join("");
+    const isCash = !order.transactionId;
+    const customer = order.customer ?? {};
+    const fulfillment = order.fulfillment ?? {};
+    const details = [
+      customer.name ? `Customer: ${customer.name}` : null,
+      customer.phone ? `Phone: ${customer.phone}` : null,
+      fulfillment.method === "delivery" ? `Deliver to: ${fulfillment.address}` : fulfillment.method === "pickup" ? "Customer will pick up" : null,
+      customer.notes ? `Note: ${customer.notes}` : null,
+      isCash ? "Payment: CASH on delivery/pickup - nothing has been paid online" : "Payment: paid online (mobile money)"
+    ].filter(Boolean);
     const itemsText = order.items.map((item) => `${item.name} x${item.quantity} — ${ugx(item.total)}`).join("\n");
     const subject = `New order on Gabla — ${ugx(order.total)}`;
 
@@ -46,11 +56,12 @@ export class OrderNotificationService {
           from: env.resendFromEmail,
           to,
           subject,
-          text: `You have a new order on Gabla.\n\n${itemsText}\n\nTotal: ${ugx(order.total)}\n\nOpen your Gabla provider profile, then the Orders tab, to accept it.`,
+          text: `You have a new order on Gabla.\n\n${itemsText}\n\nTotal: ${ugx(order.total)}\n${details.join("\n")}\n\nOpen your Gabla provider profile, then the Orders tab, to accept it.`,
           html: `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#0F172A;">
             <p>You have a new order on Gabla.</p>
             <ul>${itemsHtml}</ul>
             <p><strong>Total: ${ugx(order.total)}</strong></p>
+            <p>${details.map(escapeHtml).join("<br>")}</p>
             <p>Open your Gabla provider profile, then the Orders tab, to accept it.</p>
           </body></html>`
         })

@@ -80,9 +80,26 @@ export default function ProfileOrdersTab() {
               </ul>
               <div className="order-total">Total <strong>{formatUgx(order.total)}</strong></div>
 
+              {order.paymentMethod === "mobile_money" ? (
+                <span className="od-order-pay is-paid">Paid online &middot; mobile money</span>
+              ) : order.paymentStatus === "paid_cash" ? (
+                <span className="od-order-pay is-paid">Cash collected</span>
+              ) : (
+                <span className="od-order-pay is-cash">Cash on {order.fulfillment?.method === "pickup" ? "pickup" : "delivery"} &middot; collect {formatUgx(order.total)}</span>
+              )}
+
+              {order.fulfillment?.method === "delivery" && order.fulfillment?.address ? (
+                <p className="provider-meta">Deliver to: {order.fulfillment.address}</p>
+              ) : order.fulfillment?.method === "pickup" ? (
+                <p className="provider-meta">Customer will pick up</p>
+              ) : null}
+
               {order.customer?.phone || order.customer?.email ? (
                 <p className="provider-meta">
-                  Contact: {[order.customer?.phone, order.customer?.email].filter(Boolean).join(" · ")}
+                  Contact:{" "}
+                  {order.customer?.phone ? <a href={`tel:${order.customer.phone}`}>{order.customer.phone}</a> : null}
+                  {order.customer?.phone && order.customer?.email ? " · " : null}
+                  {order.customer?.email}
                 </p>
               ) : null}
               {order.customer?.notes ? <p className="provider-meta">Note: {order.customer.notes}</p> : null}

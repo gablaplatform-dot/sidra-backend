@@ -186,13 +186,16 @@ export default function ProductDetail() {
   const hasSpecs = hasAnsweredCustomFields(specFields, listing?.customFields);
   const categoryId = found?.node?.id;
 
+  const isService = listing?.type === "service";
+  // Online payment (mobile money) and cash on delivery are both offered when the seller allows
+  // online payment; otherwise cash ordering is the only way to buy.
   const primaryAction = canBuyNow ? (
     <button type="button" className="cta-button ecommerce-order-button" onClick={() => setBuying(true)}>
       Buy now
     </button>
   ) : (
     <button type="button" className="cta-button ecommerce-order-button" onClick={() => setOrdering(true)}>
-      {listing?.type === "service" ? "Request this service" : "Order now"}
+      {isService ? "Request this service" : "Order now · pay on delivery"}
     </button>
   );
 
@@ -286,10 +289,16 @@ export default function ProductDetail() {
                 <div className="pd-actions">
                   {primaryAction}
                   {canBuyNow ? (
-                    <button type="button" className="secondary-button ecommerce-cart-button" onClick={handleAddToCart}>
-                      {added ? "Added" : <><IconCart /> Add to cart</>}
-                    </button>
+                    <div className="pd-actions-row">
+                      <button type="button" className="secondary-button" onClick={() => setOrdering(true)}>
+                        Pay on delivery
+                      </button>
+                      <button type="button" className="secondary-button ecommerce-cart-button" onClick={handleAddToCart}>
+                        {added ? "Added" : <><IconCart /> Add to cart</>}
+                      </button>
+                    </div>
                   ) : null}
+                  {canBuyNow ? <p className="pd-pay-note">Pay now with mobile money, or order and pay cash when you receive it.</p> : null}
                 </div>
 
                 <button type="button" className="pd-share" onClick={share}>

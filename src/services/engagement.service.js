@@ -7,6 +7,13 @@ import { OrderNotificationService } from "./orderNotification.service.js";
 const moneyString = (value) => (value?.toString ? value.toString() : String(value ?? "0.00"));
 const toDecimal = (value) => new Prisma.Decimal(String(value ?? "0"));
 
+// How an order is paid, derived so older orders need no migration: anything tied to a mobile-money
+// transaction was paid online; everything else is a cash order (pay on delivery / pickup).
+const orderPayment = (order) =>
+  order.transactionId
+    ? { paymentMethod: "mobile_money", paymentStatus: "paid" }
+    : { paymentMethod: "cash", paymentStatus: order.metadata?.paymentStatus ?? "unpaid" };
+
 export class EngagementService {
   constructor({ orderNotificationService = new OrderNotificationService() } = {}) {
     this.orderNotificationService = orderNotificationService;
@@ -235,10 +242,32 @@ export class EngagementService {
     return prisma.inquiry.update({ where: { id: inquiry.id }, data: { status } });
   }
 
+  // An order placed through here is always a "cash" order: nothing is charged online and the buyer
+  // pays the seller directly on delivery or pickup. (Orders paid by mobile money are created by the
+  // payment service when the transaction succeeds, and carry a transactionId instead.)
   async createOrder({ actorUserId, providerId, items, customer, fulfillment, metadata }) {
     if (!Array.isArray(items) || !items.length) {
       throw new AppError({ message: "Order items are required", statusCode: 400, code: "ORDER_ITEMS_REQUIRED" });
     }
+
+    const cleanCustomer = {
+      name: String(customer?.name ?? "").trim().slice(0, 120),
+      phone: String(customer?.phone ?? "").trim().slice(0, 32),
+      ...(customer?.email ? { email: String(customer.email).trim().slice(0, 254) } : {}),
+      ...(customer?.notes ? { notes: String(customer.notes).trim().slice(0, 1000) } : {})
+    };
+    if (!cleanCustomer.name) {
+      throw new AppError({ message: "Your name is required", statusCode: 400, code: "ORDER_NAME_REQUIRED" });
+    }
+    if (cleanCustomer.phone.replace(/\D/g, "").length < 7) {
+      throw new AppError({ message: "A valid phone number is required so the seller can reach you", statusCode: 400, code: "ORDER_PHONE_REQUIRED" });
+    }
+    const method = ["delivery", "pickup"].includes(fulfillment?.method) ? fulfillment.method : null;
+    const address = String(fulfillment?.address ?? "").trim().slice(0, 500);
+    if (method === "delivery" && !address) {
+      throw new AppError({ message: "Enter a delivery address", statusCode: 400, code: "ORDER_ADDRESS_REQUIRED" });
+    }
+    const cleanFulfillment = method ? { method, ...(method === "delivery" ? { address } : {}) } : {};
 
     const provider = await prisma.provider.findUnique({ where: { id: providerId } });
     if (!provider || !provider.isApproved || provider.moderationStatus !== "approved") {
@@ -255,11 +284,13 @@ export class EngagementService {
         throw new AppError({ message: "Listing not found", statusCode: 404, code: "LISTING_NOT_FOUND" });
       }
       const quantity = Math.max(1, Math.min(99, Number(item.quantity) || 1));
-      const unitPrice = toDecimal(item.unitPrice ?? listing?.price ?? 0);
+      // For a real listing the price is always the listing's own: the client's unitPrice is only
+      // trusted for free-form lines that have no listing behind them.
+      const unitPrice = toDecimal(listing ? listing.price : item.unitPrice ?? 0);
       const total = unitPrice.mul(quantity);
       return {
         listingId: listing?.id ?? null,
-        name: item.name ?? listing?.name ?? "Item",
+        name: listing?.name ?? item.name ?? "Item",
         quantity,
         unitPrice,
         total,
@@ -275,9 +306,9 @@ export class EngagementService {
         providerId,
         subtotal,
         total: subtotal,
-        customer: customer ?? {},
-        fulfillment: fulfillment ?? {},
-        metadata: metadata ?? {},
+        customer: cleanCustomer,
+        fulfillment: cleanFulfillment,
+        metadata: { ...(metadata ?? {}), paymentMethod: "cash", paymentStatus: "unpaid" },
         items: { create: normalizedItems }
       },
       include: { items: true }
@@ -288,9 +319,12 @@ export class EngagementService {
     return {
       id: order.id,
       providerId: order.providerId,
+      providerName: provider.businessName,
       status: order.status,
+      paymentMethod: "cash",
       subtotal: moneyString(order.subtotal),
       total: moneyString(order.total),
+      fulfillment: order.fulfillment,
       items: order.items.map((item) => ({
         id: item.id,
         listingId: item.listingId,
@@ -330,6 +364,7 @@ export class EngagementService {
         total: moneyString(order.total),
         customer: order.customer,
         fulfillment: order.fulfillment,
+        ...orderPayment(order),
         items: order.items,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt
@@ -347,7 +382,11 @@ export class EngagementService {
     const order = await prisma.order.findFirst({ where: { id: orderId, providerId: provider.id } });
     if (!order) throw new AppError({ message: "Order not found", statusCode: 404, code: "ORDER_NOT_FOUND" });
 
-    return prisma.order.update({ where: { id: order.id }, data: { status } });
+    const data = { status };
+    if (status === "fulfilled" && orderPayment(order).paymentMethod === "cash") {
+      data.metadata = { ...(order.metadata ?? {}), paymentStatus: "paid_cash" };
+    }
+    return prisma.order.update({ where: { id: order.id }, data });
   }
 
   // Lifetime totals reuse the running counters already maintained on Provider (profileViews,

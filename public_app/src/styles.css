@@ -3802,3 +3802,31 @@ button { cursor: pointer; }
 @media (max-width: 420px) {
   .pd-row-grid { grid-template-columns: 1fr; }
 }
+
+/* ---------- Cash orders (order without paying online) ---------- */
+.od-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.od-choice button {
+  padding: 11px 12px; border: 1.5px solid #dbe2ea; border-radius: 10px; background: #f8fafc; color: #0b2046;
+  font: inherit; font-weight: 700; font-size: 14px; cursor: pointer;
+}
+.od-choice button.is-active { border-color: #ea580c; background: #fff7ed; color: #c2410c; }
+.od-payline {
+  display: grid; gap: 4px; padding: 12px 14px; border: 1px dashed #86efac; border-radius: 10px;
+  background: #f0fdf4; color: #166534; font-size: 13px; line-height: 1.45;
+}
+.od-payline-title { font-weight: 800; font-size: 14px; }
+.od-done h2 { margin-top: 0; }
+.od-pay { padding: 12px 14px; border-radius: 10px; background: #f0fdf4; color: #166534; }
+.od-order-pay { display: inline-block; margin: 4px 0 0; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+.od-order-pay.is-cash { background: #fef3c7; color: #92400e; }
+.od-order-pay.is-paid { background: #dcfce7; color: #166534; }
+.cart-paymethod { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.cart-paymethod button {
+  padding: 12px; border: 1.5px solid #dbe2ea; border-radius: 10px; background: #f8fafc; color: #0b2046;
+  font: inherit; font-weight: 800; font-size: 14px; cursor: pointer; text-align: left;
+}
+.cart-paymethod button small { display: block; margin-top: 2px; color: #64748b; font-weight: 600; font-size: 12px; }
+.cart-paymethod button.is-active { border-color: #ea580c; background: #fff7ed; }
+.pd-actions-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pd-actions-row .secondary-button { width: 100%; justify-content: center; }
+.pd-pay-note { margin: 0; color: #64748b; font-size: 12.5px; line-height: 1.4; text-align: center; }

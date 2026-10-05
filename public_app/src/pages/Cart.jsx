@@ -6,7 +6,9 @@ import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
 import { getCartItems, setCartQuantity, removeFromCart, clearCart } from "../lib/cart";
 import { formatUgx } from "../lib/format";
+import { initialOrderDetails, placeCashOrder, validateOrderDetails } from "../lib/orders";
 import SiteHeader from "../components/SiteHeader";
+import OrderDetailsFields from "../components/OrderDetailsFields";
 import { IconBox, IconClose } from "../components/icons";
 
 const POLL_INTERVAL_MS = 3000;
@@ -20,7 +22,10 @@ export default function Cart() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [phone, setPhone] = useState("");
-  const [stage, setStage] = useState("cart"); // cart | waiting | succeeded | failed | timeout
+  const [stage, setStage] = useState("cart"); // cart | waiting | succeeded | failed | timeout | ordered
+  const [payMethod, setPayMethod] = useState("mobile_money"); // mobile_money | cash
+  const [details, setDetails] = useState(() => initialOrderDetails(getSession()));
+  const [cashOrders, setCashOrders] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [cartVersion, setCartVersion] = useState(0);
@@ -140,6 +145,45 @@ export default function Cart() {
     }
   };
 
+  // Cash on delivery: nothing is charged. One order per seller goes straight to each of them; a
+  // seller whose order succeeds is dropped from the cart, so a retry only resends what failed.
+  const placeCashOrders = async (event) => {
+    event.preventDefault();
+    if (!session) {
+      navigate(loginPath(location), { state: { message: "Sign in to place an order." } });
+      return;
+    }
+    const problem = validateOrderDetails(details, { delivery: true });
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    const placed = [];
+    const failed = [];
+    for (const [providerId, group] of byProvider.entries()) {
+      try {
+        const order = await placeCashOrder({
+          providerId,
+          items: group.items.map((i) => ({ listingId: i.listingId, name: i.listing.name, quantity: i.quantity, unitPrice: Number(i.listing.price) || 0 })),
+          details
+        });
+        placed.push({ ...order, providerName: order.providerName || group.provider?.businessName });
+        for (const i of group.items) removeFromCart(i.listingId);
+      } catch (orderError) {
+        failed.push(`${group.provider?.businessName || "a seller"}: ${orderError.message || "couldn't be sent"}`);
+      }
+    }
+    setSubmitting(false);
+    setCashOrders((prev) => [...prev, ...placed]);
+    if (failed.length) {
+      setError(`Some orders weren't sent - ${failed.join("; ")}. Your other orders went through; try again for the rest.`);
+      setCartVersion((v) => v + 1);
+    }
+    if (placed.length && !failed.length) setStage("ordered");
+  };
+
   const checkAgain = () => {
     pollCountRef.current = 0;
     setStage("waiting");
@@ -163,7 +207,21 @@ export default function Cart() {
 
         {error ? <div className="error-message">{error}</div> : null}
 
-        {stage === "succeeded" ? (
+        {stage === "ordered" ? (
+          <div className="detail-block cart-receipt">
+            <h3>Orders sent</h3>
+            <p>Each seller has your order and will call you on <strong>{details.phone}</strong> to confirm. Nothing has been charged &mdash; pay in cash {details.method === "pickup" ? "when you pick up" : "on delivery"}.</p>
+            <ul className="contact-list" style={{ marginTop: 8 }}>
+              {cashOrders.map((order) => (
+                <li key={order.id}>
+                  <strong>{order.providerName || "Seller"}</strong> &mdash; pay {formatUgx(order.total)} in cash
+                  <span className="provider-meta"> (ref #{String(order.id).slice(-6).toUpperCase()})</span>
+                </li>
+              ))}
+            </ul>
+            <Link to="/home" className="cta-button" style={{ display: "inline-block", marginTop: 16 }}>Continue shopping</Link>
+          </div>
+        ) : stage === "succeeded" ? (
           <div className="detail-block cart-receipt">
             <h3>Payment confirmed</h3>
             <p>Your order has gone through. Each seller has been notified.</p>
@@ -264,15 +322,41 @@ export default function Cart() {
                   <Link to={loginPath(location)} className="cta-button">Sign in</Link>
                 </>
               ) : (
-                <form onSubmit={checkout} className="form-grid">
-                  <label className="field">
-                    <span>Mobile money number</span>
-                    <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. +256 700 000000" required />
-                  </label>
-                  <button type="submit" className="primary-button" disabled={submitting}>
-                    {submitting ? "Starting payment…" : `Pay ${formatUgx(grandTotal)} with Mobile Money`}
-                  </button>
-                </form>
+                <>
+                  <div className="cart-paymethod" role="radiogroup" aria-label="How do you want to pay?">
+                    <button type="button" role="radio" aria-checked={payMethod === "mobile_money"} className={payMethod === "mobile_money" ? "is-active" : ""} onClick={() => setPayMethod("mobile_money")}>
+                      Pay now
+                      <small>Mobile money</small>
+                    </button>
+                    <button type="button" role="radio" aria-checked={payMethod === "cash"} className={payMethod === "cash" ? "is-active" : ""} onClick={() => setPayMethod("cash")}>
+                      Pay on delivery
+                      <small>Cash, nothing charged now</small>
+                    </button>
+                  </div>
+
+                  {payMethod === "mobile_money" ? (
+                    <form onSubmit={checkout} className="form-grid">
+                      <label className="field">
+                        <span>Mobile money number</span>
+                        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. +256 700 000000" required />
+                      </label>
+                      <button type="submit" className="primary-button" disabled={submitting}>
+                        {submitting ? "Starting payment…" : `Pay ${formatUgx(grandTotal)} with Mobile Money`}
+                      </button>
+                    </form>
+                  ) : (
+                    <form onSubmit={placeCashOrders} className="form-grid">
+                      <OrderDetailsFields value={details} onChange={setDetails} delivery />
+                      <div className="od-payline">
+                        <span className="od-payline-title">Pay cash on delivery</span>
+                        <span>Your {byProvider.size > 1 ? `${byProvider.size} orders go` : "order goes"} straight to the seller{byProvider.size > 1 ? "s" : ""}. You pay {formatUgx(grandTotal)} in cash when you {details.method === "pickup" ? "pick up" : "receive"} your order.</span>
+                      </div>
+                      <button type="submit" className="primary-button" disabled={submitting}>
+                        {submitting ? "Sending orders…" : `Place order · ${formatUgx(grandTotal)}`}
+                      </button>
+                    </form>
+                  )}
+                </>
               )}
             </section>
           </>
