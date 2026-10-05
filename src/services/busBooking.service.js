@@ -449,15 +449,16 @@ export class BusBookingService {
         departureAt: b.trip.departureAt,
         delayMinutes: b.trip.delayMinutes,
         status: b.trip.status,
-        route: b.trip.route && { name: b.trip.route.name, originName: b.trip.route.originName, destinationName: b.trip.route.destinationName, boardingPoint: b.trip.route.boardingPoint, durationMinutes: b.trip.route.durationMinutes }
+        route: b.trip.route && { name: b.trip.route.name, originName: b.trip.route.originName, destinationName: b.trip.route.destinationName, boardingPoint: b.trip.route.boardingPoint, dropoffPoint: b.trip.route.dropoffPoint, stops: b.trip.route.stops, durationMinutes: b.trip.route.durationMinutes },
+        busType: b.trip.busType && { name: b.trip.busType.name, imageUrl: b.trip.busType.imageUrl, amenities: b.trip.busType.amenities }
       },
-      operator: b.operator && { companyName: b.operator.companyName, slug: b.operator.slug, logoUrl: b.operator.logoUrl, parkName: b.operator.parkName, contactPhone: b.operator.contactPhone, whatsapp: b.operator.whatsapp },
+      operator: b.operator && { companyName: b.operator.companyName, slug: b.operator.slug, logoUrl: b.operator.logoUrl, coverUrl: b.operator.coverUrl, parkName: b.operator.parkName, contactPhone: b.operator.contactPhone, whatsapp: b.operator.whatsapp },
       tickets: (b.tickets ?? []).map((t) => this._ticketDto(t))
     };
   }
 
   get _bookingInclude() {
-    return { tickets: { orderBy: { seatNumber: "asc" } }, trip: { include: { route: true } }, operator: true };
+    return { tickets: { orderBy: { seatNumber: "asc" } }, trip: { include: { route: true, busType: true } }, operator: true };
   }
 
   async getBooking({ userId, bookingId }) {
