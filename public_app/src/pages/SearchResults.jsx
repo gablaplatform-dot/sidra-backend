@@ -5,6 +5,7 @@ import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
 import SiteHeader from "../components/SiteHeader";
 import { IconBox, IconSearch, IconStar } from "../components/icons";
+import { ListSkeleton } from "../components/Skeleton";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
@@ -84,7 +85,9 @@ export default function SearchResults() {
       {!query ? (
         <p className="home-empty">Search for a category, service or business — e.g. &ldquo;wash my car&rdquo; or &ldquo;wedding cake&rdquo;.</p>
       ) : loading ? (
-        <p className="home-empty page-loading">Searching…</p>
+        <div className="skel-page">
+          <ListSkeleton rows={5} label="Searching" />
+        </div>
       ) : error ? (
         <div className="error-message home-error">{error}</div>
       ) : !hasResults ? (

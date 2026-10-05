@@ -7,6 +7,7 @@ import { GOOGLE_CLIENT_ID, loadGoogleIdentity } from "../lib/google";
 import SiteHeader from "../components/SiteHeader";
 import ProviderCard from "../components/ProviderCard";
 import { IconArrowRight, IconBike, IconBox, IconCar, IconCart, IconChat, IconClockIcon, IconPin, IconSearch, IconShield, IconSparkles, IconStar, IconStore, IconTruck, IconWrench } from "../components/icons";
+import { ProviderCardsSkeleton, Skel } from "../components/Skeleton";
 import { mapCategoryDto } from "../lib/shopMappers";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
@@ -303,6 +304,14 @@ export default function Home() {
         </div>
 
         {!loading && !categories.length ? <p className="home-empty">No categories yet.</p> : null}
+        {loading ? (
+          <div className="home-category-grid" role="status" aria-busy="true">
+            <span className="sr-only">Loading categories…</span>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skel key={i} h={230} w="100%" r={18} />
+            ))}
+          </div>
+        ) : null}
         <div className="home-category-grid">
           {categories.map((c, idx) => (
             <Link
@@ -345,7 +354,7 @@ export default function Home() {
         </div>
 
         {loading ? (
-          <p className="home-empty">Loading providers…</p>
+          <ProviderCardsSkeleton count={4} />
         ) : providers.length ? (
           <div className="home-provider-grid">
             {providers.map((p) => (

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 
 import { request } from "../../lib/api";
 import { IconBox, IconClose } from "../icons";
+import { SectionSkeleton } from "../Skeleton";
 
 // Flattens the category tree into rows with a depth for indentation, and a separate flat option
 // list (root option first) for the parent picker.
@@ -82,7 +83,7 @@ export default function ProfileShopCategoriesTab() {
     }
   };
 
-  if (loading) return <p className="home-empty page-loading">Loading your shop categories…</p>;
+  if (loading) return <SectionSkeleton rows={4} label="Loading your shop categories" />;
 
   return (
     <section className="detail-block">

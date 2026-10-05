@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { ShopCategoriesSkeleton } from "../Skeleton";
+import LazyImg from "../LazyImg";
 
 const IconArrowLeft = (props) => (
   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -19,7 +21,7 @@ export const CategoryCard = ({ category }) => (
   <Link to={`/shop/${category.id}`} className="shop-category-card">
     <div className={`shop-category-img ${category.image ? "" : "shop-category-img-fallback"}`}>
       {category.image ? (
-        <img src={category.image} alt={category.name} loading="lazy" />
+        <LazyImg src={category.image} alt={category.name} loading="lazy" />
       ) : (
         <span className="shop-category-fallback-mark">{(category.name || "G").trim().slice(0, 1).toUpperCase()}</span>
       )}
@@ -33,7 +35,7 @@ export const CategoryCard = ({ category }) => (
   </Link>
 );
 
-export default function ShopCategoryRow({ categories = [] }) {
+export default function ShopCategoryRow({ categories = [], loaded = true }) {
   const scrollRef = useRef(null);
   const [canScroll, setCanScroll] = useState({ left: false, right: true });
 
@@ -65,6 +67,9 @@ export default function ShopCategoryRow({ categories = [] }) {
         <Link to="/shop/categories" className="shop-view-all">View All Categories <IconArrowRight /></Link>
       </div>
 
+      {!loaded ? (
+        <ShopCategoriesSkeleton count={6} />
+      ) : (
       <div className="shop-category-wrap">
         {canScroll.left ? (
           <button type="button" className="shop-scroll-btn shop-scroll-left" onClick={() => scroll(-1)} aria-label="Scroll left">
@@ -86,6 +91,7 @@ export default function ShopCategoryRow({ categories = [] }) {
           </button>
         ) : null}
       </div>
+      )}
     </section>
   );
 }

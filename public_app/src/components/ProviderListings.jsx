@@ -8,6 +8,7 @@ import BrowseSidebar from "./shop/browse/BrowseSidebar";
 import BrowseCard from "./shop/browse/BrowseCard";
 import Pagination from "./Pagination";
 import { IconBox, IconClose } from "./icons";
+import { ProductGridSkeleton, SidebarSkeleton, Skel } from "./Skeleton";
 
 const PRODUCT_PAGE_SIZE = 12;
 
@@ -163,7 +164,9 @@ function ProviderProducts({ provider }) {
   if (filters.discount) chips.push({ id: "discount", text: "With discount", remove: () => apply({ discount: false }) });
   const clearAll = () => setSearchParams(patchParams(searchParams, { cat: null, min: null, max: null, discount: false, attrs: {} }));
 
-  const sidebar = (
+  const sidebar = shopTree === null || (loading && !facets) ? (
+    <SidebarSkeleton blocks={3} />
+  ) : (
     <BrowseSidebar
       fieldDefs={fieldDefs}
       facets={facets}
@@ -195,7 +198,7 @@ function ProviderProducts({ provider }) {
 
       <div className="sb-results">
         <header className="sb-results-head">
-          <p className="sb-count">{loading && !result ? "Loading…" : `${total.toLocaleString()} product${total === 1 ? "" : "s"}`}</p>
+          {loading && !result ? <Skel h={14} w={90} /> : <p className="sb-count">{`${total.toLocaleString()} product${total === 1 ? "" : "s"}`}</p>}
           <div className="sb-head-actions">
             <button type="button" className="sb-filter-btn" onClick={() => setDrawerOpen(true)}>
               Filters{filterCount ? ` (${filterCount})` : ""}
@@ -232,11 +235,7 @@ function ProviderProducts({ provider }) {
         {error ? <div className="error-message home-error">{error}</div> : null}
 
         {loading && !result ? (
-          <div className="sb-grid pl-grid">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="sb-card sb-skel" />
-            ))}
-          </div>
+          <ProductGridSkeleton count={6} className="sb-grid pl-grid" />
         ) : result?.items?.length ? (
           <div className={`sb-grid pl-grid ${loading ? "is-loading" : ""}`}>
             {result.items.map((listing) => (

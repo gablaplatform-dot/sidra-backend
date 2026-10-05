@@ -13,6 +13,7 @@ import ProfileShopCategoriesTab from "../components/profile/ProfileShopCategorie
 import ProfileAnalyticsTab from "../components/profile/ProfileAnalyticsTab";
 import ProfileAdsTab from "../components/profile/ProfileAdsTab";
 import { IconBox, IconCamera, IconClose, IconImage } from "../components/icons";
+import { Skel, SectionSkeleton } from "../components/Skeleton";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
@@ -188,7 +189,12 @@ export default function Profile() {
       <SiteHeader session={session} onLogout={logout} />
 
       {loading ? (
-        <p className="home-empty page-loading">Loading your profile…</p>
+        <div className="skel-page" role="status" aria-busy="true">
+          <span className="sr-only">Loading your profile…</span>
+          <Skel h={190} w="100%" r={20} />
+          <Skel h={44} w="70%" r={999} style={{ margin: "20px 0" }} />
+          <SectionSkeleton rows={3} label="Loading your profile" />
+        </div>
       ) : !provider ? (
         <div className="page-empty-state">
           <p>{error || "We couldn't load your profile."}</p>

@@ -10,6 +10,7 @@ import { initialOrderDetails, placeCashOrder, validateOrderDetails } from "../li
 import SiteHeader from "../components/SiteHeader";
 import OrderDetailsFields from "../components/OrderDetailsFields";
 import { IconBox, IconClose } from "../components/icons";
+import { ListSkeleton, Skel } from "../components/Skeleton";
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLLS = 20;
@@ -267,7 +268,12 @@ export default function Cart() {
             </div>
           </div>
         ) : loading ? (
-          <p className="home-empty page-loading">Loading your cart…</p>
+          <div className="detail-block">
+            <Skel h={22} w={180} />
+            <div style={{ marginTop: 16 }}>
+              <ListSkeleton rows={3} label="Loading your cart" />
+            </div>
+          </div>
         ) : !validItems.length ? (
           <div className="empty-state">
             <IconBox />

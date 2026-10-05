@@ -9,6 +9,7 @@ import ShopTopBar from "../components/shop/ShopTopBar";
 import ShopNavbar from "../components/shop/ShopNavbar";
 import { CategoryCard } from "../components/shop/ShopCategoryRow";
 import ShopFooterTrust from "../components/shop/ShopFooterTrust";
+import { CategoryTilesSkeleton } from "../components/Skeleton";
 
 export default function ShopAllCategories() {
   const [session] = useState(() => getSession());
@@ -54,7 +55,7 @@ export default function ShopAllCategories() {
         </div>
 
         {categories === null ? (
-          <p className="home-empty page-loading">Loading…</p>
+          <CategoryTilesSkeleton count={10} />
         ) : categories.length ? (
           <div className="shop-all-categories-grid">
             {categories.map((cat) => <CategoryCard key={cat.id} category={cat} />)}

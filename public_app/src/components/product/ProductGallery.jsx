@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 
 import { IconClose, IconChevronLeft } from "../icons";
+import LazyImg from "../LazyImg";
 
 // Main image + thumbnails, with a full-screen lightbox (arrow keys / Esc / swipe-free buttons).
 export default function ProductGallery({ images, alt }) {
@@ -34,7 +35,7 @@ export default function ProductGallery({ images, alt }) {
     <div className="pd-gallery">
       <div className="pd-stage">
         <button type="button" className="pd-stage-img" onClick={() => setLightbox(true)} aria-label="Open full-size image">
-          <img src={images[index]} alt={alt} />
+          <LazyImg key={images[index]} src={images[index]} alt={alt} />
         </button>
         {count > 1 ? (
           <>
@@ -55,7 +56,7 @@ export default function ProductGallery({ images, alt }) {
         <div className="pd-thumbs">
           {images.map((src, i) => (
             <button key={src} type="button" className={i === index ? "is-active" : ""} onClick={() => setIndex(i)} aria-label={`Show image ${i + 1}`}>
-              <img src={src} alt="" loading="lazy" />
+              <LazyImg src={src} alt="" loading="lazy" />
             </button>
           ))}
         </div>

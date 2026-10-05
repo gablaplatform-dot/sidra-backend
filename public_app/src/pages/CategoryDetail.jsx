@@ -7,6 +7,7 @@ import { findCategoryPath } from "../lib/categories";
 import SiteHeader from "../components/SiteHeader";
 import ProviderCard from "../components/ProviderCard";
 import { IconBox, IconChevronLeft } from "../components/icons";
+import { ProviderCardsSkeleton, Skel } from "../components/Skeleton";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
@@ -60,7 +61,11 @@ export default function CategoryDetail() {
       <SiteHeader session={session} onLogout={logout} />
 
       {loading ? (
-        <p className="home-empty page-loading">Loading…</p>
+        <div className="skel-page">
+          <Skel h={30} w={260} />
+          <Skel h={14} w={340} style={{ margin: "12px 0 24px" }} />
+          <ProviderCardsSkeleton count={6} />
+        </div>
       ) : !category ? (
         <div className="page-empty-state">
           <p>This category could not be found.</p>

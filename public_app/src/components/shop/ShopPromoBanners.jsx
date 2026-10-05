@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { BannerSkeleton } from "../Skeleton";
 
 const IconArrowRight = (props) => (
   <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -90,10 +91,14 @@ function NewCollectionBanner({ collection }) {
 export default function ShopPromoBanners({ flashSale, newCollection, loaded }) {
   return (
     <section className="shop-section">
-      <div className="shop-promo-grid">
-        {flashSale ? <FlashSaleBanner flash={flashSale} /> : null}
-        {newCollection ? <NewCollectionBanner collection={newCollection} /> : null}
-      </div>
+      {!loaded ? (
+        <BannerSkeleton />
+      ) : (
+        <div className="shop-promo-grid">
+          {flashSale ? <FlashSaleBanner flash={flashSale} /> : null}
+          {newCollection ? <NewCollectionBanner collection={newCollection} /> : null}
+        </div>
+      )}
     </section>
   );
 }

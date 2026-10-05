@@ -5,6 +5,7 @@ import { listingCover } from "../../../lib/shopMappers";
 import { cardTags } from "../../../lib/browseFilters";
 import { formatUgx } from "../../../lib/format";
 import { IconPin } from "../../icons";
+import LazyImg from "../../LazyImg";
 
 export default function BrowseCard({ listing }) {
   const price = Number(listing.price) || 0;
@@ -16,7 +17,7 @@ export default function BrowseCard({ listing }) {
   return (
     <Link to={`/shop/product/${listing.id}`} className="sb-card">
       <div className="sb-card-media">
-        <img src={listingCover(listing)} alt={listing.name} loading="lazy" />
+        <LazyImg src={listingCover(listing)} alt={listing.name} loading="lazy" />
         {listing.discountPercent ? <span className="sb-card-badge">-{listing.discountPercent}%</span> : null}
         {listing.isNew ? <span className="sb-card-new">New</span> : null}
       </div>

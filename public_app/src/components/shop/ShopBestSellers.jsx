@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { addToCart } from "../../lib/cart";
 import { IconStar } from "../icons";
+import { Skel } from "../Skeleton";
+import LazyImg from "../LazyImg";
 
 const IconHeart = (props) => (
   <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -30,7 +32,7 @@ const BestSellerCard = ({ product }) => {
       <Link to={`/shop/product/${product.id}`} className="shop-bestseller-media">
         <span className="shop-badge shop-badge-bestseller">Bestseller</span>
         <div className="shop-bestseller-img">
-          <img src={product.image} alt={product.name} loading="lazy" />
+          <LazyImg src={product.image} alt={product.name} loading="lazy" />
         </div>
       </Link>
       <div className="shop-bestseller-body">
@@ -79,7 +81,7 @@ const BestSellerCard = ({ product }) => {
   );
 };
 
-export default function ShopBestSellers({ products = [] }) {
+export default function ShopBestSellers({ products = [], loaded = true }) {
   const items = Array.isArray(products) && products.length ? products : [];
   return (
     <section className="shop-section">
@@ -88,10 +90,10 @@ export default function ShopBestSellers({ products = [] }) {
         <a href="#" className="shop-view-all">View All Best Sellers <IconArrowRight /></a>
       </div>
 
-      <div className="shop-bestseller-grid">
-        {items.map((p) => (
-          <BestSellerCard key={p.id} product={p} />
-        ))}
+      <div className="shop-bestseller-grid" {...(!loaded ? { role: "status", "aria-busy": "true" } : {})}>
+        {!loaded
+          ? Array.from({ length: 3 }).map((_, i) => <Skel key={i} h={200} w="100%" r={16} />)
+          : items.map((p) => <BestSellerCard key={p.id} product={p} />)}
       </div>
     </section>
   );

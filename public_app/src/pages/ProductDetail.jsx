@@ -16,6 +16,7 @@ import BuyNowModal from "../components/BuyNowModal";
 import UnlockModal from "../components/UnlockModal";
 import ProductGallery from "../components/product/ProductGallery";
 import ProductRow from "../components/product/ProductRow";
+import { ProductDetailSkeleton, ProductRowSkeleton } from "../components/Skeleton";
 import SellerCard from "../components/product/SellerCard";
 // Purely presentational {label, value} list - already generic over any field/value set (built
 // for a provider's onboarding answers), reused as-is here for a product's category attributes
@@ -50,8 +51,9 @@ export default function ProductDetail() {
   const [tree, setTree] = useState([]);
   const [providerRecord, setProviderRecord] = useState(null);
   const [contact, setContact] = useState(null);
-  const [similar, setSimilar] = useState([]);
-  const [moreFromSeller, setMoreFromSeller] = useState([]);
+  // null = still loading (shows a skeleton row), [] = loaded and empty (row is hidden).
+  const [similar, setSimilar] = useState(null);
+  const [moreFromSeller, setMoreFromSeller] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [added, setAdded] = useState(false);
@@ -65,8 +67,8 @@ export default function ProductDetail() {
     setLoading(true);
     setError("");
     setListing(null);
-    setSimilar([]);
-    setMoreFromSeller([]);
+    setSimilar(null);
+    setMoreFromSeller(null);
     setProviderRecord(null);
     setContact(null);
     window.scrollTo({ top: 0 });
@@ -84,10 +86,10 @@ export default function ProductDetail() {
         }
         request(`/listings/${encodeURIComponent(listingId)}/similar?limit=8`)
           .then((data) => active && setSimilar(data?.items || []))
-          .catch(() => {});
+          .catch(() => active && setSimilar([]));
         request(`/listings?providerId=${encodeURIComponent(result.providerId)}&type=${result.type}&limit=7`)
           .then((data) => active && setMoreFromSeller((data?.items || []).filter((i) => i.id !== result.id).slice(0, 6)))
-          .catch(() => {});
+          .catch(() => active && setMoreFromSeller([]));
         request(`/providers/${encodeURIComponent(result.providerId)}`)
           .then((record) => {
             if (!active) return;
@@ -204,7 +206,7 @@ export default function ProductDetail() {
       <SiteHeader session={session} onLogout={logout} />
 
       {loading ? (
-        <p className="home-empty page-loading">Loading…</p>
+        <ProductDetailSkeleton />
       ) : !listing ? (
         <div className="page-empty-state">
           <p>{error || "This product could not be found."}</p>
@@ -310,6 +312,7 @@ export default function ProductDetail() {
                 <SellerCard
                   seller={{ ...seller, ...(providerRecord ? { ratingAvg: providerRecord.ratingAvg ?? seller.ratingAvg } : {}) }}
                   contact={contact}
+                  pending={providerRecord === null}
                   locked={Boolean(providerRecord?.contactLocked) && !contact}
                   listingName={listing.name}
                   onUnlock={() => setUnlockOpen(true)}
@@ -318,18 +321,26 @@ export default function ProductDetail() {
             </aside>
           </div>
 
-          <ProductRow
-            title="Similar products"
-            items={similar}
-            seeAllTo={categoryId ? `/shop/${categoryId}` : "/shop"}
-            seeAllLabel="Browse more"
-          />
-          <ProductRow
-            title={`More from ${listing.provider?.businessName || "this seller"}`}
-            items={moreFromSeller}
-            seeAllTo={`/provider/${listing.providerId}`}
-            seeAllLabel="Visit shop"
-          />
+          {similar === null ? (
+            <ProductRowSkeleton count={4} />
+          ) : (
+            <ProductRow
+              title="Similar products"
+              items={similar}
+              seeAllTo={categoryId ? `/shop/${categoryId}` : "/shop"}
+              seeAllLabel="Browse more"
+            />
+          )}
+          {moreFromSeller === null ? (
+            <ProductRowSkeleton count={4} />
+          ) : (
+            <ProductRow
+              title={`More from ${listing.provider?.businessName || "this seller"}`}
+              items={moreFromSeller}
+              seeAllTo={`/provider/${listing.providerId}`}
+              seeAllLabel="Visit shop"
+            />
+          )}
 
           <div className="pd-mobilebar">
             <div>

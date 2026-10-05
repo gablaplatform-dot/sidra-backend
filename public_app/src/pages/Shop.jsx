@@ -10,6 +10,7 @@ import ShopTopBar from "../components/shop/ShopTopBar";
 import ShopNavbar from "../components/shop/ShopNavbar";
 import ShopHero from "../components/shop/ShopHero";
 import ShopAdsHero from "../components/shop/ShopAdsHero";
+import { ShopHeroSkeleton } from "../components/Skeleton";
 import ShopTrustBar from "../components/shop/ShopTrustBar";
 import ShopCategoryRow from "../components/shop/ShopCategoryRow";
 import ShopNewArrivals from "../components/shop/ShopNewArrivals";
@@ -68,12 +69,27 @@ export default function Shop() {
       if (!cancelled) setAds(Array.isArray(data?.items) ? data.items : []);
     };
 
+    // Don't leave the hero loading behind a location permission prompt: after a moment show
+    // nationwide ads, and swap in the nearby ones if the position arrives later.
+    let settled = false;
+    const fallbackTimer = setTimeout(() => {
+      if (!settled) fetchAds(null);
+    }, 1500);
     getCurrentPosition()
-      .then((coords) => fetchAds({ lat: coords.lat, lng: coords.lng, radiusKm: ADS_RADIUS_KM }))
-      .catch(() => fetchAds(null));
+      .then((coords) => {
+        settled = true;
+        clearTimeout(fallbackTimer);
+        return fetchAds({ lat: coords.lat, lng: coords.lng, radiusKm: ADS_RADIUS_KM });
+      })
+      .catch(() => {
+        settled = true;
+        clearTimeout(fallbackTimer);
+        fetchAds(null);
+      });
 
     return () => {
       cancelled = true;
+      clearTimeout(fallbackTimer);
     };
   }, [categoryId]);
 
@@ -126,7 +142,7 @@ export default function Shop() {
     <main className="shop-shell">
       <ShopTopBar />
       <ShopNavbar session={session} onLogout={logout} />
-      {ads?.length ? <ShopAdsHero ads={ads} /> : <ShopHero products={displayNewArrivals.slice(0, 4)} />}
+      {ads === null ? <ShopHeroSkeleton /> : ads.length ? <ShopAdsHero ads={ads} /> : <ShopHero products={displayNewArrivals.slice(0, 4)} />}
       <ShopTrustBar />
       {!loaded || displayCategories.length ? (
         <ShopCategoryRow categories={displayCategories} loaded={loaded} />

@@ -4,12 +4,13 @@ import { Link } from "react-router-dom";
 import { monthYear } from "../../lib/format";
 import { trackContactEvent } from "../../lib/providerContact";
 import { IconLock, IconPhone, IconPin, IconStar } from "../icons";
+import { Skel } from "../Skeleton";
 
 const waLink = (whatsapp, text) => `https://wa.me/${String(whatsapp).replace(/[^\d]/g, "")}?text=${encodeURIComponent(text)}`;
 
 // Seller summary + the contact actions. Contact details sit behind the same paid unlock as the
 // provider page, so until unlocked the button opens that flow; afterwards call / WhatsApp appear.
-export default function SellerCard({ seller, contact, locked, listingName, onUnlock }) {
+export default function SellerCard({ seller, contact, locked, pending, listingName, onUnlock }) {
   const name = seller.businessName || "Seller";
   const hasContact = Boolean(contact?.phone || contact?.whatsapp);
 
@@ -44,7 +45,9 @@ export default function SellerCard({ seller, contact, locked, listingName, onUnl
         ) : null}
       </ul>
 
-      {locked ? (
+      {pending ? (
+        <Skel h={46} w="100%" r={12} />
+      ) : locked ? (
         <button type="button" className="pd-contact-btn pd-contact-unlock" onClick={onUnlock}>
           <IconLock width={16} height={16} /> Show contact
         </button>

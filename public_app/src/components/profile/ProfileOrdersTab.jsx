@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 
 import { request } from "../../lib/api";
 import { IconBox } from "../icons";
+import { SectionSkeleton } from "../Skeleton";
 
 const STATUS_LABELS = {
   pending: "New",
@@ -51,7 +52,7 @@ export default function ProfileOrdersTab() {
     }
   };
 
-  if (loading) return <p className="home-empty page-loading">Loading your orders…</p>;
+  if (loading) return <SectionSkeleton rows={4} label="Loading your orders" />;
 
   return (
     <section className="detail-block">

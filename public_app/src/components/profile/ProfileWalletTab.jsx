@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { request } from "../../lib/api";
 import { IconReceipt, IconWallet } from "../icons";
 import SubscriptionModal from "../SubscriptionModal";
+import { SectionSkeleton } from "../Skeleton";
 
 const TYPE_LABELS = {
   purchase: "Product purchase",
@@ -86,7 +87,7 @@ export default function ProfileWalletTab() {
     }
   };
 
-  if (loading) return <p className="home-empty page-loading">Loading your wallet…</p>;
+  if (loading) return <SectionSkeleton rows={4} label="Loading your wallet" />;
 
   return (
     <section className="detail-block">

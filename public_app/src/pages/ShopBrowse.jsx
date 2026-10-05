@@ -23,6 +23,7 @@ import BrowseCard from "../components/shop/browse/BrowseCard";
 import LocationPicker from "../components/shop/browse/LocationPicker";
 import Pagination from "../components/Pagination";
 import { IconClose } from "../components/icons";
+import { ProductGridSkeleton, SidebarSkeleton, Skel } from "../components/Skeleton";
 
 const GEO_NOTICES = {
   denied: "Location access was declined, so we're showing all of Uganda.",
@@ -154,7 +155,10 @@ export default function ShopBrowse({ categoryId, session, onLogout }) {
   }
   if (filters.discount) chips.push({ id: "discount", text: "With discount", remove: () => apply({ discount: false }) });
 
-  const sidebar = (
+  // Until the category tree and first facets arrive, show the sidebar's shape rather than a half-empty one.
+  const sidebar = tree === null || (loading && !facets) ? (
+    <SidebarSkeleton blocks={4} />
+  ) : (
     <BrowseSidebar
       node={node}
       ancestors={ancestors}
@@ -210,10 +214,18 @@ export default function ShopBrowse({ categoryId, session, onLogout }) {
         <section className="sb-results">
           <header className="sb-results-head">
             <div>
-              <h1>
-                {node ? node.name : "Products"} in {where}
-              </h1>
-              <p className="sb-count">{loading && !result ? "Loading…" : `${total.toLocaleString()} result${total === 1 ? "" : "s"}`}</p>
+              {tree === null ? (
+                <Skel h={28} w={280} />
+              ) : (
+                <h1>
+                  {node ? node.name : "Products"} in {where}
+                </h1>
+              )}
+              {loading && !result ? (
+                <Skel h={14} w={90} style={{ marginTop: 10 }} />
+              ) : (
+                <p className="sb-count">{`${total.toLocaleString()} result${total === 1 ? "" : "s"}`}</p>
+              )}
             </div>
             <div className="sb-head-actions">
               <button type="button" className="sb-filter-btn" onClick={() => setDrawerOpen(true)}>
@@ -252,11 +264,7 @@ export default function ShopBrowse({ categoryId, session, onLogout }) {
           {error ? <div className="error-message home-error">{error}</div> : null}
 
           {loading && !result ? (
-            <div className="sb-grid">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="sb-card sb-skel" />
-              ))}
-            </div>
+            <ProductGridSkeleton count={8} />
           ) : result?.items?.length ? (
             <div className={`sb-grid ${loading ? "is-loading" : ""}`}>
               {result.items.map((listing) => (

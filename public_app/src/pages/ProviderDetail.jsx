@@ -8,6 +8,7 @@ import { getUnlockedContactId } from "../lib/unlockedContacts";
 import { getDeviceId } from "../lib/deviceId";
 import { findCategoryPath } from "../lib/categories";
 import SiteHeader from "../components/SiteHeader";
+import { ProviderPageSkeleton } from "../components/Skeleton";
 import UnlockModal from "../components/UnlockModal";
 import ProviderLayoutDefault from "../components/layouts/ProviderLayoutDefault";
 import ProviderLayoutGallery from "../components/layouts/ProviderLayoutGallery";
@@ -100,7 +101,7 @@ export default function ProviderDetail() {
       <SiteHeader session={session} onLogout={logout} />
 
       {loading ? (
-        <p className="home-empty page-loading">Loading…</p>
+        <ProviderPageSkeleton />
       ) : !provider ? (
         <div className="page-empty-state">
           <p>{error || "This provider could not be found."}</p>

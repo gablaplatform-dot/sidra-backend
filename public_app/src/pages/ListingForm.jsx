@@ -11,6 +11,7 @@ import Field from "../components/Field";
 import DynamicField from "../components/DynamicField";
 import SiteHeader from "../components/SiteHeader";
 import { IconClose } from "../components/icons";
+import { FormSkeleton } from "../components/Skeleton";
 
 export default function ListingForm() {
   const location = useLocation();
@@ -326,7 +327,7 @@ export default function ListingForm() {
       <SiteHeader session={session} onLogout={logout} />
 
       {loading ? (
-        <p className="home-empty page-loading">Loading…</p>
+        <FormSkeleton fields={6} />
       ) : (
         <div className="listing-form-page">
           <div className="form-heading">

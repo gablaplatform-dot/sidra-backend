@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { request } from "../../lib/api";
 import { uploadFile } from "../../lib/storage";
 import { IconBox, IconClose } from "../icons";
+import { SectionSkeleton } from "../Skeleton";
 
 export default function ProfileAdsTab() {
   const [ads, setAds] = useState([]);
@@ -94,7 +95,7 @@ export default function ProfileAdsTab() {
     }
   };
 
-  if (loading) return <p className="home-empty page-loading">Loading your ads…</p>;
+  if (loading) return <SectionSkeleton rows={4} label="Loading your ads" />;
 
   return (
     <section className="detail-block">

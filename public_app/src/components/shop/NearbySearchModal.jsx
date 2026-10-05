@@ -6,6 +6,7 @@ import { mapProductDto } from "../../lib/shopMappers";
 import { ProductCard } from "./ShopNewArrivals";
 import Pagination from "../Pagination";
 import { IconClose, IconSearch } from "../icons";
+import { ProductGridSkeleton } from "../Skeleton";
 
 const RADIUS_KM = 15;
 const PAGE_LIMIT = 12;
@@ -153,7 +154,7 @@ export default function NearbySearchModal({ onClose }) {
         {error ? <div className="error-message">{error}</div> : null}
 
         {loading && !result ? (
-          <p className="home-empty page-loading">Searching…</p>
+          <ProductGridSkeleton count={4} className="shop-category-product-grid" label="Searching" />
         ) : searched && items.length === 0 ? (
           <p className="home-empty">No results anywhere for that search. Try a different query.</p>
         ) : items.length ? (

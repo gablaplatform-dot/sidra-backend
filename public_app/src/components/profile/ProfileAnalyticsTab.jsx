@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { request } from "../../lib/api";
 import { IconBox } from "../icons";
+import { SectionSkeleton } from "../Skeleton";
 
 const RANGE_OPTIONS = [
   { key: 7, label: "7d" },
@@ -112,7 +113,7 @@ export default function ProfileAnalyticsTab() {
     };
   }, [days]);
 
-  if (loading && !data) return <p className="home-empty page-loading">Loading your analytics…</p>;
+  if (loading && !data) return <SectionSkeleton rows={3} label="Loading your analytics" />;
 
   return (
     <section className="detail-block">
