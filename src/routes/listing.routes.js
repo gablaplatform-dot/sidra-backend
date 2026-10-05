@@ -22,31 +22,47 @@ export const buildListingRoutes = ({ listingController }) => {
     inventory: Joi.number().integer().min(0).allow(null).optional()
   };
 
+  // Shared by the result list and the sidebar facet counts so the two can never drift apart:
+  // a count is only trustworthy if it was computed from exactly the filters the list used.
+  const browseQuery = {
+    type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).optional(),
+    q: Joi.string().trim().max(200).optional(),
+    categoryId: id.optional(),
+    productCategoryId: id.optional(),
+    providerId: id.optional(),
+    discountOnly: Joi.boolean().optional(),
+    isNew: Joi.boolean().optional(),
+    lat: Joi.number().min(-90).max(90).optional(),
+    lng: Joi.number().min(-180).max(180).optional(),
+    // Max raised from 50 to 1000: the nearby-search widening ladder (see
+    // ListingService#publicList) can echo back an effective radius up to the
+    // nationwide sentinel (~900km) on later pages of an already-widened search.
+    radiusKm: Joi.number().min(0).max(1000).optional(),
+    district: Joi.string().valid(...UGANDA_DISTRICTS).optional(),
+    minPrice: Joi.number().min(0).optional(),
+    maxPrice: Joi.number().min(0).optional(),
+    // JSON string: {"brand":["Apple","Dell"],"condition":["Used"]}
+    attrs: Joi.string().max(2000).optional()
+  };
+
   router.get(
     "/",
     validate(
       Joi.object({
         page: Joi.number().integer().min(1).optional(),
         limit: Joi.number().integer().min(1).max(100).optional(),
-        type: Joi.string().valid(ServiceProductType.SERVICE, ServiceProductType.PRODUCT).optional(),
-        q: Joi.string().trim().max(200).optional(),
-        categoryId: id.optional(),
-        productCategoryId: id.optional(),
-        providerId: id.optional(),
         sort: Joi.string().valid(...sortOptions).optional(),
-        discountOnly: Joi.boolean().optional(),
-        isNew: Joi.boolean().optional(),
-        lat: Joi.number().min(-90).max(90).optional(),
-        lng: Joi.number().min(-180).max(180).optional(),
-        // Max raised from 50 to 1000: the nearby-search widening ladder (see
-        // ListingService#publicList) can echo back an effective radius up to the
-        // nationwide sentinel (~900km) on later pages of an already-widened search.
-        radiusKm: Joi.number().min(0).max(1000).optional(),
-        district: Joi.string().valid(...UGANDA_DISTRICTS).optional()
+        ...browseQuery
       }).and("lat", "lng", "radiusKm"),
       "query"
     ),
     listingController.publicList
+  );
+
+  router.get(
+    "/facets",
+    validate(Joi.object(browseQuery).and("lat", "lng", "radiusKm"), "query"),
+    listingController.facets
   );
   router.get(
     "/me",

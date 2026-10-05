@@ -70,6 +70,15 @@ export class ListingController {
     }
   };
 
+  facets = async (req, res, next) => {
+    try {
+      const result = await this.listingService.facets(req.query);
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   getPublicListing = async (req, res, next) => {
     try {
       const result = await this.listingService.getPublicListing({ listingId: req.params.listingId });

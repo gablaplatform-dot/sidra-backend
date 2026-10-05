@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
 import { mapCategoryDto, mapProductDto, mapPromotionDto } from "../lib/shopMappers";
-import { findCategoryPath } from "../lib/categories";
 import { getCurrentPosition } from "../lib/geolocation";
 
 import ShopTopBar from "../components/shop/ShopTopBar";
@@ -13,10 +12,11 @@ import ShopHero from "../components/shop/ShopHero";
 import ShopAdsHero from "../components/shop/ShopAdsHero";
 import ShopTrustBar from "../components/shop/ShopTrustBar";
 import ShopCategoryRow from "../components/shop/ShopCategoryRow";
-import ShopNewArrivals, { ProductCard } from "../components/shop/ShopNewArrivals";
+import ShopNewArrivals from "../components/shop/ShopNewArrivals";
 import ShopBestSellers from "../components/shop/ShopBestSellers";
 import ShopPromoBanners from "../components/shop/ShopPromoBanners";
 import ShopFooterTrust from "../components/shop/ShopFooterTrust";
+import ShopBrowse from "./ShopBrowse";
 
 const safeFetch = async (path, fallback) => {
   try {
@@ -26,79 +26,6 @@ const safeFetch = async (path, fallback) => {
     return null;
   }
 };
-
-// Browsing a specific shop/product category (clicked from ShopCategoryRow) - separate from the
-// generic Shop homepage below, since it needs its own breadcrumb/subcategory nav and a product
-// grid scoped to that category (and its descendants, expanded server-side).
-function ShopCategoryPage({ categoryId, session, onLogout }) {
-  const [tree, setTree] = useState(null);
-  const [products, setProducts] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    Promise.all([
-      safeFetch("/product-categories"),
-      safeFetch(`/listings?type=product&productCategoryId=${encodeURIComponent(categoryId)}&limit=48`)
-    ]).then(([categoryResult, listingResult]) => {
-      if (cancelled) return;
-      setTree(categoryResult?.items || categoryResult || []);
-      setProducts(listingResult?.items || []);
-      setLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, [categoryId]);
-
-  const found = findCategoryPath(tree || [], categoryId);
-  const category = found?.node;
-  const ancestors = found?.ancestors || [];
-  const children = category?.children || [];
-  const mappedProducts = (products || []).map((p) => mapProductDto(p));
-
-  return (
-    <main className="shop-shell">
-      <ShopTopBar />
-      <ShopNavbar session={session} onLogout={onLogout} />
-
-      <nav className="breadcrumb">
-        <Link to="/shop">Shop</Link>
-        {ancestors.map((a) => (
-          <React.Fragment key={a.id}>
-            <span>/</span>
-            <Link to={`/shop/${a.id}`}>{a.name}</Link>
-          </React.Fragment>
-        ))}
-        {category ? (
-          <>
-            <span>/</span>
-            <span className="breadcrumb-current">{category.name}</span>
-          </>
-        ) : null}
-      </nav>
-
-      {children.length ? (
-        <div className="shop-subcategory-row">
-          {children.map((c) => (
-            <Link key={c.id} to={`/shop/${c.id}`} className="shop-subcategory-chip">{c.name}</Link>
-          ))}
-        </div>
-      ) : null}
-
-      {loading ? (
-        <p className="home-empty page-loading">Loading…</p>
-      ) : mappedProducts.length ? (
-        <div className="shop-category-product-grid">
-          {mappedProducts.map((p) => <ProductCard key={p.id} product={p} />)}
-        </div>
-      ) : (
-        <p className="home-empty">No products in {category?.name || "this category"} yet.</p>
-      )}
-
-      <ShopFooterTrust />
-    </main>
-  );
-}
 
 const pickFlashSale = (promos) => {
   if (!promos?.length) return null;
@@ -188,7 +115,7 @@ export default function Shop() {
   };
 
   if (categoryId) {
-    return <ShopCategoryPage categoryId={categoryId} session={session} onLogout={logout} />;
+    return <ShopBrowse categoryId={categoryId} session={session} onLogout={logout} />;
   }
 
   const displayCategories = categories ?? [];

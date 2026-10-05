@@ -7,6 +7,53 @@ const GEOHASH_SAFE_RADIUS_KM = 20; // a 3x3 geohash5 cell grid covers ~15km acro
 const MAX_GEO_PRODUCTS = 500; // secondary safety cap on the product fetch itself
 const RADIUS_WIDEN_MULTIPLIER = 3;
 const NATIONWIDE_RADIUS_KM = 900; // covers all of Uganda (~800km across) while still ranking by distance
+const MAX_FILTER_CANDIDATES = 1500; // attribute filters match inside the customFields JSON, so they run in memory
+const MAX_FACET_CANDIDATES = 3000;
+const PROVIDER_CARD_SELECT = { id: true, businessName: true, onlinePaymentsEnabled: true, district: true };
+
+// attrs arrive as a JSON string ({"brand":["Apple","Dell"],"condition":["Used"]}): OR within a
+// key, AND across keys. Anything malformed is treated as "no attribute filter" rather than an error.
+const parseAttrs = (raw) => {
+  if (!raw) return {};
+  let parsed = raw;
+  if (typeof raw === "string") {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+  const attrs = {};
+  for (const [key, values] of Object.entries(parsed)) {
+    const list = (Array.isArray(values) ? values : [values]).map((v) => String(v)).filter(Boolean);
+    if (list.length) attrs[key] = list;
+  }
+  return attrs;
+};
+
+const answerValues = (customFields, key) => {
+  const raw = customFields?.[key];
+  if (raw === undefined || raw === null || raw === "") return [];
+  if (Array.isArray(raw)) return raw.map((v) => String(v));
+  if (typeof raw === "object") return [];
+  return [String(raw)];
+};
+
+const matchesAttrs = (customFields, attrs, skipKey) =>
+  Object.entries(attrs).every(([key, wanted]) => {
+    if (key === skipKey) return true;
+    const have = answerValues(customFields, key);
+    return wanted.some((w) => have.includes(w));
+  });
+
+// Rounds to 2 significant digits so price buckets read as 35K / 140K / 700K, not 137,482.
+const niceRound = (n) => {
+  if (!(n > 0)) return 0;
+  const magnitude = 10 ** Math.floor(Math.log10(n));
+  const step = magnitude / 10;
+  return Math.round(n / step) * step;
+};
 
 export class ListingService {
   async getProviderForUser(userId) {
@@ -193,7 +240,7 @@ export class ListingService {
     return {
       id: i.id,
       providerId: i.providerId,
-      provider: provider ? { id: provider.id, businessName: provider.businessName, onlinePaymentsEnabled: provider.onlinePaymentsEnabled } : undefined,
+      provider: provider ? { id: provider.id, businessName: provider.businessName, onlinePaymentsEnabled: provider.onlinePaymentsEnabled, district: provider.district ?? null } : undefined,
       ...(distanceKm !== undefined ? { distanceKm: Math.round(distanceKm * 10) / 10 } : {}),
       categoryId: i.categoryId,
       productCategoryId: i.productCategoryId,
@@ -313,7 +360,7 @@ export class ListingService {
     return ids;
   }
 
-  async _buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew, district }) {
+  async _buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew, district, minPrice, maxPrice }) {
     const filter = { status: "approved" };
 
     let normalizedType = null;
@@ -328,6 +375,10 @@ export class ListingService {
     if (q) filter.name = { contains: String(q).trim() };
     if (discountOnly === "true" || discountOnly === true) filter.discountPercent = { not: null };
     if (isNew === "true" || isNew === true) filter.isNew = true;
+    const priceBounds = {};
+    if (Number.isFinite(Number(minPrice)) && minPrice !== undefined && minPrice !== "") priceBounds.gte = Number(minPrice);
+    if (Number.isFinite(Number(maxPrice)) && maxPrice !== undefined && maxPrice !== "") priceBounds.lte = Number(maxPrice);
+    if (Object.keys(priceBounds).length) filter.price = priceBounds;
 
     const providerFilter = {
       isApproved: true,
@@ -364,7 +415,7 @@ export class ListingService {
 
   // One radius attempt: nearby providers -> their products (capped, distance-ranked). Returns []
   // if nothing matches at this radius, so the caller can widen and retry.
-  async _rankedProductsWithinRadius({ lat, lng, radiusKm, useGeohash, filterBase, providerId }) {
+  async _rankedProductsWithinRadius({ lat, lng, radiusKm, useGeohash, filterBase, providerId, attrs = {} }) {
     const { orderedIds, distanceById } = await findNearbyProviderIds({ lat, lng, radiusKm, useGeohash });
     const nearbyProviderIds = providerId ? orderedIds.filter((id) => id === providerId) : orderedIds;
     if (!nearbyProviderIds.length) return [];
@@ -374,25 +425,47 @@ export class ListingService {
       where: filter,
       orderBy: [{ createdAt: "desc" }], // tiebreak only - real ranking is the distance sort below
       take: MAX_GEO_PRODUCTS,
-      include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
+      include: { provider: { select: PROVIDER_CARD_SELECT } }
     });
 
+    const hasAttrs = Object.keys(attrs).length > 0;
     return candidates
+      .filter((item) => !hasAttrs || matchesAttrs(item.customFields, attrs))
       .map((item) => ({ item, distanceKm: distanceById.get(item.providerId) }))
       .sort((a, b) => a.distanceKm - b.distanceKm || new Date(b.item.createdAt) - new Date(a.item.createdAt));
   }
 
-  async publicList({ page = 1, limit = 20, type, q, categoryId, productCategoryId, providerId, sort, discountOnly, isNew, lat, lng, radiusKm, district }) {
+  // One page of products for a plain (non-geo) filter. Attribute answers live inside the
+  // customFields JSON, so when any are requested the match runs in memory over a capped candidate
+  // set (already ordered by the DB); otherwise it stays a straight indexed query.
+  async _fetchPage({ filter, attrs, sort, skip, take }) {
+    const include = { provider: { select: PROVIDER_CARD_SELECT } };
+    const orderBy = this._orderByForSort(sort);
+    if (!Object.keys(attrs).length) {
+      const [items, total] = await Promise.all([
+        prisma.serviceProduct.findMany({ where: filter, orderBy, skip, take, include }),
+        prisma.serviceProduct.count({ where: filter })
+      ]);
+      return { items, total };
+    }
+    const candidates = await prisma.serviceProduct.findMany({ where: filter, orderBy, take: MAX_FILTER_CANDIDATES, include });
+    const matched = candidates.filter((c) => matchesAttrs(c.customFields, attrs));
+    return { items: matched.slice(skip, skip + take), total: matched.length };
+  }
+
+  async publicList({ page = 1, limit = 20, type, q, categoryId, productCategoryId, providerId, sort, discountOnly, isNew, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
     const normalizedPage = Math.max(1, Number(page) || 1);
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
     const skip = (normalizedPage - 1) * normalizedLimit;
+    const attrs = parseAttrs(rawAttrs);
+    const baseArgs = { type, q, categoryId, productCategoryId, providerId, discountOnly, isNew, minPrice, maxPrice };
 
     const hasGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Number.isFinite(Number(radiusKm));
 
     // Geo takes precedence over district when both are somehow present - redundant, not
     // conflicting, so no validation error; just ignore district in that case.
     if (hasGeo) {
-      const filterBase = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, discountOnly, isNew });
+      const filterBase = await this._buildPublicFilter({ ...baseArgs, providerId: undefined });
       const requestedRadiusKm = Number(radiusKm);
       const tierRadii = [requestedRadiusKm, requestedRadiusKm * RADIUS_WIDEN_MULTIPLIER, NATIONWIDE_RADIUS_KM];
 
@@ -407,7 +480,8 @@ export class ListingService {
           radiusKm: tierRadiusKm,
           useGeohash: tierRadiusKm <= GEOHASH_SAFE_RADIUS_KM,
           filterBase,
-          providerId
+          providerId,
+          attrs
         });
         effectiveRadiusKm = tierRadiusKm;
         widened = i > 0;
@@ -429,60 +503,153 @@ export class ListingService {
     }
 
     if (district) {
-      const orderBy = this._orderByForSort(sort);
-      let filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew, district });
-      let total = await prisma.serviceProduct.count({ where: filter });
+      let filter = await this._buildPublicFilter({ ...baseArgs, district });
+      let result = await this._fetchPage({ filter, attrs, sort, skip, take: normalizedLimit });
       let effectiveDistrict = district;
       let widened = false;
 
-      if (total === 0) {
-        filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew });
-        total = await prisma.serviceProduct.count({ where: filter });
+      if (result.total === 0) {
+        filter = await this._buildPublicFilter(baseArgs);
+        result = await this._fetchPage({ filter, attrs, sort, skip, take: normalizedLimit });
         effectiveDistrict = null;
         widened = true;
       }
 
-      const items = await prisma.serviceProduct.findMany({
-        where: filter,
-        orderBy,
-        skip,
-        take: normalizedLimit,
-        include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
-      });
-
       return {
-        items: items.map((i) => this._toDto(i, i.provider)),
+        items: result.items.map((i) => this._toDto(i, i.provider)),
         page: normalizedPage,
         limit: normalizedLimit,
-        total,
+        total: result.total,
         effectiveRadiusKm: null,
         effectiveDistrict,
         widened
       };
     }
 
-    const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew });
-    const orderBy = this._orderByForSort(sort);
-
-    const [items, total] = await Promise.all([
-      prisma.serviceProduct.findMany({
-        where: filter,
-        orderBy,
-        skip,
-        take: normalizedLimit,
-        include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
-      }),
-      prisma.serviceProduct.count({ where: filter })
-    ]);
+    const filter = await this._buildPublicFilter(baseArgs);
+    const result = await this._fetchPage({ filter, attrs, sort, skip, take: normalizedLimit });
 
     return {
-      items: items.map((i) => this._toDto(i, i.provider)),
+      items: result.items.map((i) => this._toDto(i, i.provider)),
       page: normalizedPage,
       limit: normalizedLimit,
-      total,
+      total: result.total,
       effectiveRadiusKm: null,
       effectiveDistrict: null,
       widened: false
+    };
+  }
+
+  // Sidebar data for the Jiji-style browse page: how many products each filter option would
+  // return. Every group's counts ignore that group's OWN selection (so ticking "Apple" still shows
+  // what "Dell" would add) but respect every other active filter, and all of it is scoped to the
+  // chosen location, so numbers always match what the result grid would show.
+  async facets({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
+    const attrs = parseAttrs(rawAttrs);
+    const hasGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Number.isFinite(Number(radiusKm));
+    const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew });
+
+    let geo = null;
+    if (hasGeo) {
+      const requestedRadiusKm = Number(radiusKm);
+      const tierRadii = [requestedRadiusKm, requestedRadiusKm * RADIUS_WIDEN_MULTIPLIER, NATIONWIDE_RADIUS_KM];
+      for (let i = 0; i < tierRadii.length; i += 1) {
+        const found = await findNearbyProviderIds({
+          lat: Number(lat),
+          lng: Number(lng),
+          radiusKm: tierRadii[i],
+          useGeohash: tierRadii[i] <= GEOHASH_SAFE_RADIUS_KM
+        });
+        geo = { ids: new Set(found.orderedIds), effectiveRadiusKm: tierRadii[i], widened: i > 0 };
+        if (found.orderedIds.length || i === tierRadii.length - 1) break;
+      }
+    }
+
+    const rows = await prisma.serviceProduct.findMany({
+      where: filter,
+      select: {
+        id: true,
+        providerId: true,
+        price: true,
+        discountPercent: true,
+        productCategoryId: true,
+        customFields: true,
+        provider: { select: { district: true } }
+      },
+      orderBy: [{ createdAt: "desc" }],
+      take: MAX_FACET_CANDIDATES
+    });
+
+    const minP = Number.isFinite(Number(minPrice)) && minPrice !== undefined && minPrice !== "" ? Number(minPrice) : null;
+    const maxP = Number.isFinite(Number(maxPrice)) && maxPrice !== undefined && maxPrice !== "" ? Number(maxPrice) : null;
+    const wantDiscount = discountOnly === "true" || discountOnly === true;
+
+    // `skip` names the one filter group to ignore for this particular count.
+    const passes = (row, skip) => {
+      if (geo && skip !== "district" && !geo.ids.has(row.providerId)) return false;
+      if (!geo && district && skip !== "district" && row.provider?.district !== district) return false;
+      const price = Number(row.price);
+      if (skip !== "price" && ((minP !== null && price < minP) || (maxP !== null && price > maxP))) return false;
+      if (skip !== "discount" && wantDiscount && row.discountPercent == null) return false;
+      return matchesAttrs(row.customFields, attrs, skip?.startsWith("attr:") ? skip.slice(5) : undefined);
+    };
+
+    const matching = rows.filter((r) => passes(r));
+
+    const countBy = (list, valuesOf) => {
+      const counts = new Map();
+      for (const row of list) for (const v of new Set(valuesOf(row))) counts.set(v, (counts.get(v) ?? 0) + 1);
+      return counts;
+    };
+
+    const attributes = {};
+    const attrKeys = new Set();
+    for (const row of rows) for (const key of Object.keys(row.customFields ?? {})) attrKeys.add(key);
+    for (const key of attrKeys) {
+      const subset = rows.filter((r) => passes(r, `attr:${key}`));
+      const counts = countBy(subset, (r) => {
+        const raw = r.customFields?.[key];
+        if (typeof raw === "boolean") return raw ? ["true"] : [];
+        if (typeof raw === "number") return [];
+        return answerValues(r.customFields, key).filter((v) => v.length <= 40);
+      });
+      if (counts.size) {
+        attributes[key] = [...counts.entries()].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+      }
+    }
+
+    const priceSubset = rows.filter((r) => passes(r, "price")).map((r) => Number(r.price)).sort((a, b) => a - b);
+    let buckets = [];
+    if (priceSubset.length) {
+      const edges = [];
+      for (const q of [0.2, 0.4, 0.6, 0.8]) {
+        const edge = niceRound(priceSubset[Math.min(priceSubset.length - 1, Math.floor(priceSubset.length * q))]);
+        if (edge > 0 && edge > (edges[edges.length - 1] ?? 0)) edges.push(edge);
+      }
+      const bounds = [null, ...edges, null];
+      buckets = bounds.slice(0, -1).map((lo, i) => {
+        const hi = bounds[i + 1];
+        const count = priceSubset.filter((p) => (lo === null || p >= lo) && (hi === null || p < hi)).length;
+        return { min: lo, max: hi, count };
+      }).filter((b) => b.count > 0);
+    }
+
+    // The location list always offers every district, whichever location is currently applied.
+    const districtCounts = countBy(
+      rows.filter((r) => passes(r, "district")),
+      (r) => (r.provider?.district ? [r.provider.district] : [])
+    );
+    const categoryCounts = Object.fromEntries(countBy(matching, (r) => (r.productCategoryId ? [r.productCategoryId] : [])));
+
+    return {
+      total: matching.length,
+      price: { min: priceSubset[0] ?? null, max: priceSubset[priceSubset.length - 1] ?? null, buckets },
+      attributes,
+      districts: [...districtCounts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+      categoryCounts,
+      discountCount: rows.filter((r) => passes(r, "discount") && r.discountPercent != null).length,
+      truncated: rows.length >= MAX_FACET_CANDIDATES,
+      ...(geo ? { effectiveRadiusKm: geo.effectiveRadiusKm, widened: geo.widened } : {})
     };
   }
 
@@ -507,7 +674,7 @@ export class ListingService {
       },
       orderBy: [{ createdAt: "desc" }],
       take: normalizedLimit,
-      include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
+      include: { provider: { select: PROVIDER_CARD_SELECT } }
     });
     return { items: rows.map((r) => this._toDto(r, r.provider)), total: rows.length };
   }
@@ -523,7 +690,7 @@ export class ListingService {
       },
       orderBy: [{ soldCount: "desc" }, { createdAt: "desc" }],
       take: normalizedLimit,
-      include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
+      include: { provider: { select: PROVIDER_CARD_SELECT } }
     });
     return { items: rows.map((r) => this._toDto(r, r.provider)), total: rows.length };
   }
@@ -540,7 +707,7 @@ export class ListingService {
       },
       orderBy: [{ createdAt: "desc" }],
       take: normalizedLimit,
-      include: { provider: { select: { id: true, businessName: true, onlinePaymentsEnabled: true } } }
+      include: { provider: { select: PROVIDER_CARD_SELECT } }
     });
     return { items: rows.map((r) => this._toDto(r, r.provider)), total: rows.length };
   }
