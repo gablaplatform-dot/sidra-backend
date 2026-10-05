@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 
 import { request } from "../../lib/api";
 import { getCurrentPosition } from "../../lib/geolocation";
+import { getPreferredDistrict } from "../../lib/userLocation";
+import { trackInterest } from "../../lib/tracking";
 import { mapProductDto } from "../../lib/shopMappers";
 import { ProductCard } from "./ShopNewArrivals";
 import Pagination from "../Pagination";
@@ -52,7 +54,10 @@ export default function NearbySearchModal({ onClose }) {
     setError("");
     try {
       const params = new URLSearchParams({ page: String(nextPage), limit: String(PAGE_LIMIT) });
-      if (query.trim()) params.set("q", query.trim());
+      if (query.trim()) {
+        params.set("q", query.trim());
+        if (nextPage === 1) trackInterest({ type: "search", query: query.trim() });
+      }
       if (scope.lat != null) {
         params.set("lat", String(scope.lat));
         params.set("lng", String(scope.lng));
@@ -90,7 +95,8 @@ export default function NearbySearchModal({ onClose }) {
     } catch (geoError) {
       setLocationNotice(LOCATION_NOTICES[geoError.message] || LOCATION_NOTICES.unavailable);
       setShowDistrictPicker(true);
-      await searchWithScope({ district: district || undefined });
+      // No position to go on: fall back to the district they chose when they joined / last picked.
+      await searchWithScope({ district: district || getPreferredDistrict() || undefined });
     }
   };
 

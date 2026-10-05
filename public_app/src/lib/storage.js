@@ -1,6 +1,8 @@
 import { request } from "./api";
 
-export const uploadFile = async (file, folder = "provider-media") => {
+// `register: false` skips the media-library entry (only providers and admins may create those) -
+// used for a shopper's profile photo, which just needs somewhere to live.
+export const uploadFile = async (file, folder = "provider-media", { register = true } = {}) => {
   if (!file) throw new Error("No file selected");
 
   const upload = await request("/storage/upload-url", {
@@ -15,6 +17,8 @@ export const uploadFile = async (file, folder = "provider-media") => {
   });
   if (!putRes.ok) throw new Error("Unable to upload file");
   if (!upload.publicUrl) throw new Error("Storage is not configured");
+
+  if (!register) return upload.publicUrl;
 
   await request("/storage/assets", {
     method: "POST",

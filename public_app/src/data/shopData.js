@@ -7,8 +7,8 @@ export const ANNOUNCEMENTS = [
 export const NAV_LINKS = [
   { label: "Home", href: "/home" },
   { label: "Shop", href: "/shop" },
-  { label: "New Arrivals", href: "/shop?tab=new" },
-  { label: "Best Sellers", href: "/shop?tab=bestsellers" },
+  { label: "New Arrivals", href: "/shop/new-arrivals" },
+  { label: "Best Sellers", href: "/shop/best-sellers" },
   { label: "Categories", href: "/home#categories", dropdown: true },
   { label: "About", href: "/home#about" },
   { label: "Blog", href: "/home#blog" },

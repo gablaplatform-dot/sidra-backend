@@ -3,6 +3,7 @@ import Joi from "joi";
 
 import { validate } from "../middlewares/validate.middleware.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
+import { UGANDA_DISTRICTS } from "../constants/ugandaDistricts.js";
 
 export const buildAuthRoutes = ({ authController }) => {
   const router = Router();
@@ -77,7 +78,13 @@ export const buildAuthRoutes = ({ authController }) => {
       Joi.object({
         name: Joi.string().trim().max(200).optional(),
         phone: Joi.string().trim().max(32).allow(null, "").optional(),
-        profile: Joi.object().unknown(true).optional()
+        avatarUrl: Joi.string().uri().max(1000).allow(null).optional(),
+        profile: Joi.object({
+          district: Joi.string().valid(...UGANDA_DISTRICTS).allow(null, "").optional(),
+          onboarded: Joi.boolean().optional()
+        })
+          .unknown(true)
+          .optional()
       }).min(1)
     ),
     authController.updateMe

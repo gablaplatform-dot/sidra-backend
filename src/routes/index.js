@@ -16,6 +16,7 @@ import { buildEngagementRoutes } from "./engagement.routes.js";
 import { buildSearchRoutes } from "./search.routes.js";
 import { buildRideRoutes } from "./ride.routes.js";
 import { buildPromotionRoutes } from "./promotion.routes.js";
+import { buildInterestRoutes } from "./interest.routes.js";
 
 export const buildRoutes = ({
   authController,
@@ -34,7 +35,8 @@ export const buildRoutes = ({
   engagementController,
   searchController,
   rideController,
-  promotionController
+  promotionController,
+  interestController
 }) => {
   const router = Router();
 
@@ -51,6 +53,7 @@ export const buildRoutes = ({
   router.use("/search", buildSearchRoutes({ searchController }));
   router.use("/rides", buildRideRoutes({ rideController }));
   router.use("/promotions", buildPromotionRoutes({ promotionController }));
+  router.use("/interest", buildInterestRoutes({ interestController }));
   router.use("/admin", buildAdminDataRoutes({ adminController }));
   router.use("/admin", buildAdminSettingsRoutes({ adminSettingsController }));
   router.use("/admin", buildAdminTransactionsRoutes({ transactionController }));

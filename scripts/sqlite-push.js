@@ -387,6 +387,20 @@ CREATE TABLE IF NOT EXISTS search_events (
   FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS interest_events (
+  id TEXT PRIMARY KEY NOT NULL,
+  userId TEXT,
+  deviceId TEXT,
+  type TEXT NOT NULL,
+  listingId TEXT,
+  productCategoryId TEXT,
+  providerId TEXT,
+  query TEXT,
+  meta JSONB NOT NULL DEFAULT '{}',
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS media_assets (
   id TEXT PRIMARY KEY NOT NULL,
   providerId TEXT,
@@ -633,6 +647,9 @@ CREATE INDEX IF NOT EXISTS contact_events_sessionId_idx ON contact_events(sessio
 CREATE INDEX IF NOT EXISTS search_events_userId_createdAt_idx ON search_events(userId, createdAt);
 CREATE INDEX IF NOT EXISTS search_events_categoryId_createdAt_idx ON search_events(categoryId, createdAt);
 CREATE INDEX IF NOT EXISTS search_events_sessionId_idx ON search_events(sessionId);
+CREATE INDEX IF NOT EXISTS interest_events_userId_createdAt_idx ON interest_events(userId, createdAt);
+CREATE INDEX IF NOT EXISTS interest_events_deviceId_createdAt_idx ON interest_events(deviceId, createdAt);
+CREATE INDEX IF NOT EXISTS interest_events_listingId_idx ON interest_events(listingId);
 CREATE INDEX IF NOT EXISTS media_assets_providerId_createdAt_idx ON media_assets(providerId, createdAt);
 CREATE INDEX IF NOT EXISTS media_assets_ownerId_createdAt_idx ON media_assets(ownerId, createdAt);
 CREATE INDEX IF NOT EXISTS media_assets_kind_idx ON media_assets(kind);

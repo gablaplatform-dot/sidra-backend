@@ -5,7 +5,7 @@ import { IconClose, IconPin, IconSearch } from "../../icons";
 // Jiji-style location chooser: "All Uganda", a one-tap "near me" (browser geolocation, widens
 // automatically on the server when nothing is close), then districts that actually have listings,
 // each with its count for the current category and filters.
-export default function LocationPicker({ districts, current, onSelect, onClose }) {
+export default function LocationPicker({ districts, current, preferred, onSelect, onClose }) {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
@@ -19,7 +19,7 @@ export default function LocationPicker({ districts, current, onSelect, onClose }
     return q ? districts.filter((d) => d.name.toLowerCase().includes(q)) : districts;
   }, [districts, query]);
 
-  const isAll = !current.district && !current.near;
+  const isAround = !current.district && !current.near && !current.everywhere;
 
   return (
     <div className="sb-modal-backdrop" onClick={onClose}>
@@ -42,7 +42,13 @@ export default function LocationPicker({ districts, current, onSelect, onClose }
             <span>Use my current location</span>
             <em>nearest first</em>
           </button>
-          <button type="button" className={`sb-loc-row ${isAll ? "is-active" : ""}`} onClick={() => onSelect({})}>
+          {preferred ? (
+            <button type="button" className={`sb-loc-row ${isAround ? "is-active" : ""}`} onClick={() => onSelect({})}>
+              <span>Around {preferred}</span>
+              <em>your area, nearest first</em>
+            </button>
+          ) : null}
+          <button type="button" className={`sb-loc-row ${current.everywhere || (!preferred && isAround) ? "is-active" : ""}`} onClick={() => onSelect({ everywhere: true })}>
             <span>All Uganda</span>
           </button>
           {visible.map((d) => (

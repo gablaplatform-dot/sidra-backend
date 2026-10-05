@@ -1,3 +1,5 @@
+import { trackInterest } from "./tracking";
+
 // A device-local cart (localStorage), keyed by listingId -> quantity. Kept client-side until
 // checkout so browsing doesn't need an account; checkout itself still requires signing in (same
 // as Buy Now), since real money moves at that point.
@@ -30,6 +32,7 @@ export const getCartItems = () => {
 export const getCartCount = () => getCartItems().reduce((sum, item) => sum + item.quantity, 0);
 
 export const addToCart = (listingId, quantity = 1) => {
+  trackInterest({ type: "cart", listingId });
   const cart = readCart();
   cart[listingId] = Math.max(1, Math.min(99, (cart[listingId] || 0) + quantity));
   writeCart(cart);

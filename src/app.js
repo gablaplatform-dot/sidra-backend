@@ -44,6 +44,8 @@ import { RideService } from "./services/ride.service.js";
 import { RideController } from "./controllers/ride.controller.js";
 import { PromotionService } from "./services/promotion.service.js";
 import { PromotionController } from "./controllers/promotion.controller.js";
+import { InterestService } from "./services/interest.service.js";
+import { InterestController } from "./controllers/interest.controller.js";
 import { hashPassword, verifyPassword } from "./utils/password.js";
 import { signAccessToken } from "./utils/jwt.js";
 import { env } from "./config/env.js";
@@ -135,6 +137,9 @@ export const buildApp = () => {
   const promotionService = new PromotionService();
   const promotionController = new PromotionController({ promotionService });
 
+  const interestService = new InterestService({ listingService });
+  const interestController = new InterestController({ interestService });
+
   app.use(
     "/api/v1",
     buildRoutes({
@@ -154,7 +159,8 @@ export const buildApp = () => {
       engagementController,
       searchController,
       rideController,
-      promotionController
+      promotionController,
+      interestController
     })
   );
 

@@ -7,7 +7,8 @@ import { formatUgx } from "../../../lib/format";
 import { IconPin } from "../../icons";
 import LazyImg from "../../LazyImg";
 
-export default function BrowseCard({ listing }) {
+// `reason` (optional) says why a recommendation was picked, e.g. "Because you looked at Laptops".
+export default function BrowseCard({ listing, reason }) {
   const price = Number(listing.price) || 0;
   const was = Number(listing.originalPrice) || 0;
   const tags = cardTags(listing.customFields);
@@ -22,6 +23,7 @@ export default function BrowseCard({ listing }) {
         {listing.isNew ? <span className="sb-card-new">New</span> : null}
       </div>
       <div className="sb-card-body">
+        {reason ? <span className="sb-card-reason">{reason}</span> : null}
         <div className="sb-card-price">
           <strong>{price > 0 ? formatUgx(price) : "Contact for price"}</strong>
           {was > price ? <s>{formatUgx(was)}</s> : null}

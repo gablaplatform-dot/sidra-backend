@@ -14,7 +14,8 @@ function subtreeCount(node, counts) {
 function CategoryBlock({ node, ancestors, siblings, categoryCounts }) {
   const [showAll, setShowAll] = useState(false);
   const hasCounts = Boolean(categoryCounts);
-  const children = (node?.children || [])
+  // On a "view all" page there is no current category, so the top-level categories are the list.
+  const children = (node ? node.children || [] : siblings)
     .map((child) => ({ child, count: hasCounts ? subtreeCount(child, categoryCounts) : null }))
     .filter(({ count }) => count === null || count > 0);
   // A leaf has nothing below it, so offer its siblings instead - same as moving sideways on Jiji.

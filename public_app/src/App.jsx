@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import ProviderOnboarding from "./pages/ProviderOnboarding";
 import Login from "./pages/Login";
+import Welcome from "./pages/Welcome";
 import Home from "./pages/Home";
 import CategoryDetail from "./pages/CategoryDetail";
 import ProviderDetail from "./pages/ProviderDetail";
@@ -13,6 +14,7 @@ import Cart from "./pages/Cart";
 import Ride from "./pages/Ride";
 import Shop from "./pages/Shop";
 import ShopAllCategories from "./pages/ShopAllCategories";
+import ShopCollection from "./pages/ShopCollection";
 import ProductDetail from "./pages/ProductDetail";
 
 export default function App() {
@@ -20,6 +22,7 @@ export default function App() {
     <Routes>
       <Route path="/provider/onboarding" element={<ProviderOnboarding />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/welcome" element={<Welcome />} />
       <Route path="/home" element={<Home />} />
       <Route path="/category/:categoryId" element={<CategoryDetail />} />
       <Route path="/provider/:providerId" element={<ProviderDetail />} />
@@ -31,6 +34,9 @@ export default function App() {
       <Route path="/ride" element={<Ride />} />
       <Route path="/shop" element={<Shop />} />
       <Route path="/shop/categories" element={<ShopAllCategories />} />
+      <Route path="/shop/new-arrivals" element={<ShopCollection collection="new" />} />
+      <Route path="/shop/best-sellers" element={<ShopCollection collection="bestsellers" />} />
+      <Route path="/shop/all" element={<ShopCollection collection="all" />} />
       <Route path="/shop/product/:listingId" element={<ProductDetail />} />
       <Route path="/shop/:categoryId" element={<Shop />} />
       <Route path="*" element={<Navigate to="/home" replace />} />

@@ -26,8 +26,11 @@ export const readFilters = (searchParams) => {
     return raw !== null && raw !== "" && Number.isFinite(Number(raw)) ? Number(raw) : null;
   };
   return {
+    q: (searchParams.get("q") || "").trim(),
     district: searchParams.get("district") || "",
     near: searchParams.get("near") === "1",
+    // Explicitly chose "All Uganda" - so the default of arranging around their own district is off.
+    everywhere: searchParams.get("loc") === "all",
     min: num("min"),
     max: num("max"),
     discount: searchParams.get("discount") === "1",
@@ -52,8 +55,10 @@ export const patchParams = (searchParams, patch) => {
     } else if (name === "location") {
       next.delete("district");
       next.delete("near");
+      next.delete("loc");
       if (value?.district) next.set("district", value.district);
       if (value?.near) next.set("near", "1");
+      if (value?.everywhere) next.set("loc", "all");
     } else {
       set(name, value);
     }
@@ -67,6 +72,7 @@ export const patchParams = (searchParams, patch) => {
 export const toApiParams = (filters, { categoryId, coords }) => {
   const params = { type: "product" };
   if (categoryId) params.productCategoryId = categoryId;
+  if (filters.q) params.q = filters.q;
   if (filters.min !== null) params.minPrice = String(filters.min);
   if (filters.max !== null) params.maxPrice = String(filters.max);
   if (filters.discount) params.discountOnly = "true";

@@ -5,6 +5,7 @@ import { request } from "../lib/api";
 import { getSession, setSession } from "../lib/session";
 import { GOOGLE_CLIENT_ID, loadGoogleIdentity } from "../lib/google";
 import { safeNext } from "../lib/authRedirect";
+import { claimInterest } from "../lib/tracking";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -36,7 +37,9 @@ export default function Login() {
         body: JSON.stringify({ idToken: response.credential })
       });
       setSession(result);
-      navigate(destination, { replace: true });
+      claimInterest(); // what this device browsed before signing in now belongs to the account
+      // A brand-new account gets the short welcome form first, then continues to where it was going.
+      navigate(result.isNewUser ? `/welcome?next=${encodeURIComponent(destination)}` : destination, { replace: true });
     } catch (submitError) {
       setError(submitError.message || "Sign-in failed. Please try again.");
     } finally {

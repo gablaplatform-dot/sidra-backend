@@ -5,6 +5,7 @@ import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
 import { mapCategoryDto, mapProductDto, mapPromotionDto } from "../lib/shopMappers";
 import { getCurrentPosition } from "../lib/geolocation";
+import { getPreferredDistrict } from "../lib/userLocation";
 
 import ShopTopBar from "../components/shop/ShopTopBar";
 import ShopNavbar from "../components/shop/ShopNavbar";
@@ -12,6 +13,7 @@ import ShopHero from "../components/shop/ShopHero";
 import ShopAdsHero from "../components/shop/ShopAdsHero";
 import { ShopHeroSkeleton } from "../components/Skeleton";
 import ShopTrustBar from "../components/shop/ShopTrustBar";
+import ShopForYou from "../components/shop/ShopForYou";
 import ShopCategoryRow from "../components/shop/ShopCategoryRow";
 import ShopNewArrivals from "../components/shop/ShopNewArrivals";
 import ShopBestSellers from "../components/shop/ShopBestSellers";
@@ -72,8 +74,11 @@ export default function Shop() {
     // Don't leave the hero loading behind a location permission prompt: after a moment show
     // nationwide ads, and swap in the nearby ones if the position arrives later.
     let settled = false;
+    // Without a position, ads are ordered for the district the shopper chose, if they chose one.
+    const district = getPreferredDistrict();
+    const withoutPosition = () => fetchAds(district ? { district } : null);
     const fallbackTimer = setTimeout(() => {
-      if (!settled) fetchAds(null);
+      if (!settled) withoutPosition();
     }, 1500);
     getCurrentPosition()
       .then((coords) => {
@@ -84,7 +89,7 @@ export default function Shop() {
       .catch(() => {
         settled = true;
         clearTimeout(fallbackTimer);
-        fetchAds(null);
+        withoutPosition();
       });
 
     return () => {
@@ -144,6 +149,7 @@ export default function Shop() {
       <ShopNavbar session={session} onLogout={logout} />
       {ads === null ? <ShopHeroSkeleton /> : ads.length ? <ShopAdsHero ads={ads} /> : <ShopHero products={displayNewArrivals.slice(0, 4)} />}
       <ShopTrustBar />
+      <ShopForYou />
       {!loaded || displayCategories.length ? (
         <ShopCategoryRow categories={displayCategories} loaded={loaded} />
       ) : null}

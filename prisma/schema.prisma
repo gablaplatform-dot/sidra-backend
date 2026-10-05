@@ -38,6 +38,7 @@ model User {
   profileVisits  ProfileVisit[]
   contactEvents  ContactEvent[]
   searchEvents   SearchEvent[]
+  interestEvents InterestEvent[]
   inquiries      Inquiry[]
   orders         Order[]
   auditLogs      AuditLog[] @relation("AuditActor")
@@ -553,6 +554,28 @@ model ContactEvent {
   @@index([userId, createdAt])
   @@index([sessionId])
   @@map("contact_events")
+}
+
+// What a shopper looks at, used to personalise "This can work for you". Logged-in shoppers are keyed
+// by userId; anonymous ones by their device id (claimed onto the account at sign-in).
+model InterestEvent {
+  id                String   @id @default(cuid())
+  userId            String?
+  deviceId          String?
+  type              String   // view | category | search | cart | order
+  listingId         String?
+  productCategoryId String?
+  providerId        String?
+  query             String?
+  meta              Json     @default("{}")
+  createdAt         DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([deviceId, createdAt])
+  @@index([listingId])
+  @@map("interest_events")
 }
 
 model SearchEvent {

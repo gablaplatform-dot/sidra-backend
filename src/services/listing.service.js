@@ -56,7 +56,27 @@ const niceRound = (n) => {
   return Math.round(n / step) * step;
 };
 
+// District -> where its sellers are on average. Used to arrange results around a shopper's chosen
+// district when they haven't shared their exact location; cached because it is read on every browse.
+const centroidCache = new Map();
+const CENTROID_TTL_MS = 10 * 60 * 1000;
+
 export class ListingService {
+  async _districtCentroid(district) {
+    const cached = centroidCache.get(district);
+    if (cached && Date.now() - cached.at < CENTROID_TTL_MS) return cached.value;
+    const rows = await prisma.provider.findMany({
+      where: { district, isApproved: true, moderationStatus: "approved", lat: { not: null }, lng: { not: null } },
+      select: { lat: true, lng: true },
+      take: 200
+    });
+    const value = rows.length
+      ? { lat: rows.reduce((sum, r) => sum + r.lat, 0) / rows.length, lng: rows.reduce((sum, r) => sum + r.lng, 0) / rows.length }
+      : null;
+    centroidCache.set(district, { at: Date.now(), value });
+    return value;
+  }
+
   async getProviderForUser(userId) {
     const provider = await prisma.provider.findUnique({ where: { userId } });
     if (!provider) {
@@ -237,6 +257,11 @@ export class ListingService {
     }
   }
 
+  // Public so other services (recommendations) build listing DTOs the same way the listing pages do.
+  toDto(i, provider, distanceKm) {
+    return this._toDto(i, provider, distanceKm);
+  }
+
   _toDto(i, provider, distanceKm) {
     return {
       id: i.id,
@@ -392,7 +417,7 @@ export class ListingService {
     return ids;
   }
 
-  async _buildPublicFilter({ type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, district, minPrice, maxPrice }) {
+  async _buildPublicFilter({ type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, district, minPrice, maxPrice }) {
     const filter = { status: "approved" };
 
     let normalizedType = null;
@@ -408,6 +433,11 @@ export class ListingService {
     if (shopCategoryId) filter.shopCategoryId = { in: await this._expandShopCategoryIds(shopCategoryId) };
     if (discountOnly === "true" || discountOnly === true) filter.discountPercent = { not: null };
     if (isNew === "true" || isNew === true) filter.isNew = true;
+    // "New arrivals" = flagged new OR listed in the last 30 days - the same rule the Shop homepage row uses.
+    if (newArrivals === "true" || newArrivals === true) {
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      filter.AND = [...(filter.AND ?? []), { OR: [{ isNew: true }, { createdAt: { gte: since } }] }];
+    }
     const priceBounds = {};
     if (Number.isFinite(Number(minPrice)) && minPrice !== undefined && minPrice !== "") priceBounds.gte = Number(minPrice);
     if (Number.isFinite(Number(maxPrice)) && maxPrice !== undefined && maxPrice !== "") priceBounds.lte = Number(maxPrice);
@@ -486,12 +516,27 @@ export class ListingService {
     return { items: matched.slice(skip, skip + take), total: matched.length };
   }
 
-  async publicList({ page = 1, limit = 20, type, q, categoryId, productCategoryId, shopCategoryId, providerId, sort, discountOnly, isNew, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
+  async publicList({ page = 1, limit = 20, type, q, categoryId, productCategoryId, shopCategoryId, providerId, sort, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, around, minPrice, maxPrice, attrs: rawAttrs }) {
     const normalizedPage = Math.max(1, Number(page) || 1);
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
     const skip = (normalizedPage - 1) * normalizedLimit;
     const attrs = parseAttrs(rawAttrs);
-    const baseArgs = { type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, minPrice, maxPrice };
+    const baseArgs = { type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, minPrice, maxPrice };
+
+    // "Arrange around my district": no exact position and no explicit location, default ordering ->
+    // rank everything nearest-first from the middle of the shopper's district. An explicit sort
+    // (cheapest, newest, ...) always wins, since it can't be combined with a distance order.
+    let aroundApplied = false;
+    const hasExplicitGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Number.isFinite(Number(radiusKm));
+    if (around && !hasExplicitGeo && !district && (!sort || sort === "featured")) {
+      const centre = await this._districtCentroid(around);
+      if (centre) {
+        lat = centre.lat;
+        lng = centre.lng;
+        radiusKm = NATIONWIDE_RADIUS_KM;
+        aroundApplied = true;
+      }
+    }
 
     const hasGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Number.isFinite(Number(radiusKm));
 
@@ -525,13 +570,15 @@ export class ListingService {
       const pageItems = ranked.slice(skip, skip + normalizedLimit);
 
       return {
-        items: pageItems.map(({ item, distanceKm }) => this._toDto(item, item.provider, distanceKm)),
+        // Distances from a district's middle would read as "km from you", so they are left off.
+        items: pageItems.map(({ item, distanceKm }) => this._toDto(item, item.provider, aroundApplied ? undefined : distanceKm)),
         page: normalizedPage,
         limit: normalizedLimit,
         total,
-        effectiveRadiusKm,
+        effectiveRadiusKm: aroundApplied ? null : effectiveRadiusKm,
         effectiveDistrict: null,
-        widened
+        widened: aroundApplied ? false : widened,
+        arrangedAround: aroundApplied ? around : null
       };
     }
 
@@ -577,10 +624,10 @@ export class ListingService {
   // return. Every group's counts ignore that group's OWN selection (so ticking "Apple" still shows
   // what "Dell" would add) but respect every other active filter, and all of it is scoped to the
   // chosen location, so numbers always match what the result grid would show.
-  async facets({ type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
+  async facets({ type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
     const attrs = parseAttrs(rawAttrs);
     const hasGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Number.isFinite(Number(radiusKm));
-    const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew });
+    const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals });
 
     let geo = null;
     if (hasGeo) {

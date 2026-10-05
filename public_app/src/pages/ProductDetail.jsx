@@ -9,6 +9,7 @@ import { findCategoryPath } from "../lib/categories";
 import { cardTags } from "../lib/browseFilters";
 import { formatUgx, timeAgo } from "../lib/format";
 import { fetchUnlockedContact } from "../lib/providerContact";
+import { trackInterest } from "../lib/tracking";
 import { getUnlockedContactId } from "../lib/unlockedContacts";
 import SiteHeader from "../components/SiteHeader";
 import OrderModal from "../components/OrderModal";
@@ -77,6 +78,7 @@ export default function ProductDetail() {
       .then((result) => {
         if (!active) return;
         setListing(result);
+        trackInterest({ type: "view", listingId: result.id });
 
         // Everything below is progressive enrichment: none of it may block or break the page.
         if (result?.type === "product") {

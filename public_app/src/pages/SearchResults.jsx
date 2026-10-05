@@ -5,6 +5,7 @@ import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
 import SiteHeader from "../components/SiteHeader";
 import { IconBox, IconSearch, IconStar } from "../components/icons";
+import { trackInterest } from "../lib/tracking";
 import { ListSkeleton } from "../components/Skeleton";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
@@ -28,6 +29,7 @@ export default function SearchResults() {
     let active = true;
     setLoading(true);
     setError("");
+    trackInterest({ type: "search", query });
     request(`/search?q=${encodeURIComponent(query)}`)
       .then((data) => {
         if (active) setResult(data);

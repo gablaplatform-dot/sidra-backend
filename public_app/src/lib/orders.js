@@ -1,4 +1,5 @@
 import { request } from "./api";
+import { trackInterest } from "./tracking";
 
 // Cash orders: nothing is charged online, the order goes straight to the seller and the buyer pays
 // them on delivery or pickup. (Mobile-money purchases go through BuyNowModal / the cart checkout.)
@@ -19,8 +20,8 @@ export const validateOrderDetails = (details, { delivery = true } = {}) => {
   return "";
 };
 
-export const placeCashOrder = ({ providerId, items, details, delivery = true }) =>
-  request("/engagement/orders", {
+export const placeCashOrder = async ({ providerId, items, details, delivery = true }) => {
+  const order = await request("/engagement/orders", {
     method: "POST",
     body: JSON.stringify({
       providerId,
@@ -29,3 +30,6 @@ export const placeCashOrder = ({ providerId, items, details, delivery = true }) 
       fulfillment: delivery ? { method: details.method, address: details.method === "delivery" ? details.address.trim() : undefined } : undefined
     })
   });
+  for (const item of items) if (item.listingId) trackInterest({ type: "order", listingId: item.listingId });
+  return order;
+};

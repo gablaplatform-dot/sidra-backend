@@ -4,6 +4,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { request } from "../lib/api";
 import { findCategoryPath } from "../lib/categories";
 import { getCurrentPosition } from "../lib/geolocation";
+import { getPreferredDistrict, savePreferredDistrict } from "../lib/userLocation";
+import { trackInterest } from "../lib/tracking";
 import {
   NEAR_RADIUS_KM,
   PAGE_SIZE,
@@ -35,10 +37,24 @@ const GEO_NOTICES = {
 // The Jiji-style browse page behind /shop/:categoryId: category tree + location + price +
 // category-specific attribute filters (with live counts) on the left, results grid on the right.
 // All filter state lives in the URL (see lib/browseFilters.js).
-export default function ShopBrowse({ categoryId, session, onLogout }) {
+// "View all" pages reuse this browse page with no category: a fixed server filter plus a sensible
+// default sort (the shopper can still re-sort).
+const COLLECTIONS = {
+  new: { title: "New arrivals", sort: "newest", params: { newArrivals: "true" } },
+  bestsellers: { title: "Best sellers", sort: "bestsellers", params: {} },
+  all: { title: "All products", sort: "featured", params: {} }
+};
+
+export default function ShopBrowse({ categoryId, collection, session, onLogout }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => readFilters(searchParams), [searchParams]);
   const queryKey = searchParams.toString();
+  const collectionInfo = collection ? COLLECTIONS[collection] : null;
+  const sort = searchParams.get("sort") || collectionInfo?.sort || "featured";
+  // With no exact position and no explicit location, arrange products nearest-first around the
+  // district the shopper picked (welcome form / location picker). An explicit sort wins.
+  const preferred = getPreferredDistrict();
+  const arranged = Boolean(preferred) && !filters.near && !filters.district && !filters.everywhere && sort === "featured";
 
   const [tree, setTree] = useState(null);
   const [coords, setCoords] = useState(null);
@@ -84,8 +100,8 @@ export default function ShopBrowse({ categoryId, session, onLogout }) {
     let active = true;
     setLoading(true);
     setError("");
-    const base = toApiParams(filters, { categoryId, coords });
-    const listParams = new URLSearchParams({ ...base, page: String(filters.page), limit: String(PAGE_SIZE), sort: filters.sort });
+    const base = { ...toApiParams(filters, { categoryId: categoryId || null, coords }), ...(collectionInfo?.params || {}), ...(arranged ? { around: preferred } : {}) };
+    const listParams = new URLSearchParams({ ...base, page: String(filters.page), limit: String(PAGE_SIZE), sort });
     Promise.all([
       request(`/listings?${listParams.toString()}`),
       request(`/listings/facets?${new URLSearchParams(base).toString()}`).catch(() => null)
@@ -102,7 +118,11 @@ export default function ShopBrowse({ categoryId, session, onLogout }) {
     };
     // queryKey covers every filter; coords arrives asynchronously for "near me".
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryId, queryKey, coords]);
+  }, [categoryId, collection, queryKey, coords, preferred]);
+
+  useEffect(() => {
+    if (categoryId) trackInterest({ type: "category", productCategoryId: categoryId });
+  }, [categoryId]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -115,26 +135,28 @@ export default function ShopBrowse({ categoryId, session, onLogout }) {
   const siblings = parent ? parent.children || [] : tree || [];
   const fieldDefs = node?.effectiveListingFields || [];
 
-  const locationLabel = filters.near ? `Near you (${NEAR_RADIUS_KM} km)` : filters.district || "All Uganda";
+  const locationLabel = filters.near ? `Near you (${NEAR_RADIUS_KM} km)` : filters.district || (arranged ? `Around ${preferred}` : "All Uganda");
   const widenedAway = result?.widened;
   const locationNote = widenedAway
     ? filters.near
       ? `Nothing within ${NEAR_RADIUS_KM} km, showing the closest results across Uganda.`
       : `No matching ads in ${filters.district}, showing all of Uganda.`
-    : geoNotice;
+    : geoNotice || (result?.arrangedAround ? `Showing the products closest to ${result.arrangedAround} first.` : "");
   const where = widenedAway ? "Uganda" : filters.near ? "your area" : filters.district || "Uganda";
   const total = result?.total ?? 0;
   const filterCount = activeFilterCount(filters);
 
   useEffect(() => {
     if (node) document.title = `${node.name} in ${where} for sale | Gabla Shop`;
-  }, [node, where]);
+    else if (collectionInfo) document.title = `${collectionInfo.title} | Gabla Shop`;
+  }, [node, where, collectionInfo]);
 
   const clearAll = () => setSearchParams(patchParams(searchParams, { min: null, max: null, discount: false, attrs: {} }));
 
   const labelFor = (key) => fieldDefs.find((f) => f.key === key)?.label || prettyKey(key);
   const chips = [];
   if (filters.near || filters.district) chips.push({ id: "loc", text: locationLabel, remove: () => apply({ location: {} }) });
+  if (filters.q) chips.push({ id: "q", text: `Search: ${filters.q}`, remove: () => apply({ q: null }) });
   if (filters.min !== null || filters.max !== null) {
     const text = bucketLabel({ min: filters.min, max: filters.max === null ? null : filters.max + 1 });
     chips.push({ id: "price", text: `UGX ${text}`, remove: () => apply({ min: null, max: null }) });
@@ -191,6 +213,11 @@ export default function ShopBrowse({ categoryId, session, onLogout }) {
             <span>/</span>
             <span className="breadcrumb-current">{node.name}</span>
           </>
+        ) : collectionInfo ? (
+          <>
+            <span>/</span>
+            <span className="breadcrumb-current">{collectionInfo.title}</span>
+          </>
         ) : null}
       </nav>
 
@@ -214,11 +241,11 @@ export default function ShopBrowse({ categoryId, session, onLogout }) {
         <section className="sb-results">
           <header className="sb-results-head">
             <div>
-              {tree === null ? (
+              {tree === null && !collectionInfo ? (
                 <Skel h={28} w={280} />
               ) : (
                 <h1>
-                  {node ? node.name : "Products"} in {where}
+                  {filters.q ? `Results for “${filters.q}”` : `${node ? node.name : collectionInfo ? collectionInfo.title : "Products"} in ${where}`}
                 </h1>
               )}
               {loading && !result ? (
@@ -233,7 +260,7 @@ export default function ShopBrowse({ categoryId, session, onLogout }) {
               </button>
               <label className="sb-sort">
                 <span>Sort</span>
-                <select value={filters.sort} onChange={(event) => apply({ sort: event.target.value === "featured" ? null : event.target.value })}>
+                <select value={sort} onChange={(event) => apply({ sort: event.target.value === (collectionInfo?.sort || "featured") ? null : event.target.value })}>
                   {SORT_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
@@ -294,10 +321,12 @@ export default function ShopBrowse({ categoryId, session, onLogout }) {
       {pickerOpen ? (
         <LocationPicker
           districts={facets?.districts || []}
-          current={{ district: filters.district, near: filters.near }}
+          current={{ district: filters.district, near: filters.near, everywhere: filters.everywhere }}
+          preferred={preferred}
           onClose={() => setPickerOpen(false)}
           onSelect={(selection) => {
             setGeoNotice("");
+            if (selection.district) savePreferredDistrict(selection.district);
             apply({ location: selection });
             setPickerOpen(false);
           }}

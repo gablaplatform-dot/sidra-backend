@@ -33,6 +33,7 @@ export const buildListingRoutes = ({ listingController }) => {
     providerId: id.optional(),
     discountOnly: Joi.boolean().optional(),
     isNew: Joi.boolean().optional(),
+    newArrivals: Joi.boolean().optional(),
     lat: Joi.number().min(-90).max(90).optional(),
     lng: Joi.number().min(-180).max(180).optional(),
     // Max raised from 50 to 1000: the nearby-search widening ladder (see
@@ -40,6 +41,8 @@ export const buildListingRoutes = ({ listingController }) => {
     // nationwide sentinel (~900km) on later pages of an already-widened search.
     radiusKm: Joi.number().min(0).max(1000).optional(),
     district: Joi.string().valid(...UGANDA_DISTRICTS).optional(),
+    // Arrange results nearest-first around this district (used when the shopper's exact location is unknown).
+    around: Joi.string().valid(...UGANDA_DISTRICTS).optional(),
     minPrice: Joi.number().min(0).optional(),
     maxPrice: Joi.number().min(0).optional(),
     // JSON string: {"brand":["Apple","Dell"],"condition":["Used"]}

@@ -124,7 +124,7 @@ export default function ShopNewArrivals({ products = [], loaded = true }) {
     <section className="shop-section">
       <div className="shop-section-header">
         <h2 className="shop-section-title">New Arrivals</h2>
-        <a href="#" className="shop-view-all">View All New Arrivals <IconArrowRight /></a>
+        <Link to="/shop/new-arrivals" className="shop-view-all">View All New Arrivals <IconArrowRight /></Link>
       </div>
 
       {!loaded ? (

@@ -257,7 +257,9 @@ export class AuthService {
     return {
       accessToken,
       user: await this.userDto(user),
-      provider: provider ? { id: provider.id, userId: provider.userId } : null
+      provider: provider ? { id: provider.id, userId: provider.userId } : null,
+      // True only on the sign-in that created the account, so the app can show its welcome form once.
+      isNewUser: !existing
     };
   }
 
@@ -272,7 +274,14 @@ export class AuthService {
     const update = {};
     if (patch.name !== undefined) update.name = patch.name;
     if (patch.phone !== undefined) update.phone = this.normalizePhone(patch.phone);
-    if (patch.profile !== undefined) update.profile = patch.profile ?? {};
+    if (patch.avatarUrl !== undefined) update.avatarUrl = patch.avatarUrl;
+    if (patch.profile !== undefined) {
+      // Merge rather than replace: the profile also holds things the client never sees (e.g. the
+      // email-verified flag), which a partial update must not wipe.
+      const existing = await prisma.user.findUnique({ where: { id: actorUserId }, select: { profile: true } });
+      const { onboarded, ...rest } = patch.profile ?? {};
+      update.profile = { ...(existing?.profile ?? {}), ...rest, ...(onboarded ? { onboardedAt: new Date().toISOString() } : {}) };
+    }
     const user = await prisma.user.update({ where: { id: actorUserId }, data: update });
     return { user: await this.userDto(user) };
   }

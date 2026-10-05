@@ -3868,3 +3868,54 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .skel, .lazy-img.is-loading { animation: none; }
 }
+
+/* ---------- "This can work for you" ---------- */
+.fy-section { padding-top: 8px; }
+.fy-header { align-items: flex-end; }
+.fy-title { display: inline-flex; align-items: center; gap: 10px; }
+.fy-title svg { color: #ea580c; }
+.fy-sub { margin: 6px 0 0; color: #64748b; font-size: 14px; font-weight: 600; }
+.fy-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 20px; }
+.fy-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 700; text-decoration: none; border: 1px solid transparent;
+}
+.fy-chip-cat { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+.fy-chip-cat:hover { background: #ffedd5; }
+.fy-chip-search { background: #f1f5f9; color: #334155; }
+.fy-chip-search:hover { background: #e2e8f0; }
+.fy-block { margin-bottom: 22px; }
+.fy-block h3 { margin: 0 0 12px; font-size: 16px; color: #0b2046; }
+.fy-recent { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+.fy-recent-card {
+  flex: none; width: 250px; display: flex; align-items: center; gap: 12px; padding: 10px;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; text-decoration: none; color: inherit;
+}
+.fy-recent-card:hover { box-shadow: 0 10px 24px -14px rgba(11, 32, 70, 0.4); }
+.fy-recent-card img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; flex: none; background: #f1f5f9; }
+.fy-recent-card span { display: grid; gap: 3px; min-width: 0; }
+.fy-recent-card strong { font-size: 13.5px; color: #0b2046; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fy-recent-card small { color: #ea580c; font-weight: 800; font-size: 13px; }
+.sb-card-reason {
+  align-self: flex-start; padding: 3px 9px; border-radius: 999px; background: #eef2ff; color: #4338ca;
+  font-size: 11.5px; font-weight: 800; line-height: 1.3;
+}
+@media (max-width: 900px) {
+  .fy-recent-card { width: 220px; }
+}
+
+/* ---------- Welcome (new user) ---------- */
+.wel-card { width: min(100%, 480px); text-align: left; }
+.wel-card .brand, .wel-card .eyebrow, .wel-card h1, .wel-card .auth-subtitle { text-align: center; }
+.wel-avatar { display: flex; align-items: center; gap: 16px; margin: 4px 0 20px; padding: 14px; border: 1px dashed #cbd5e1; border-radius: 14px; background: #f8fafc; }
+.wel-avatar-btn { position: relative; flex: none; width: 76px; height: 76px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; background: linear-gradient(135deg, #fed7aa, #fdba74); }
+.wel-avatar-btn img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.wel-avatar-initial { display: grid; place-items: center; width: 100%; height: 100%; font-size: 30px; font-weight: 800; color: #9a3412; }
+.wel-avatar-badge { position: absolute; right: -2px; bottom: -2px; width: 28px; height: 28px; border-radius: 50%; background: #ea580c; color: #fff; display: grid; place-items: center; border: 2px solid #fff; }
+.wel-avatar-text { display: grid; gap: 2px; }
+.wel-avatar-text strong { color: #0b2046; font-size: 15px; }
+.wel-avatar-text small { color: #94a3b8; font-weight: 600; }
+.wel-fields { display: grid; gap: 16px; margin-bottom: 22px; }
+.wel-submit { width: 100%; justify-content: center; }
+.wel-skip { display: block; margin: 16px auto 0; color: #64748b; text-decoration: none; font-weight: 700; }
+.wel-skip:hover { color: #0b2046; text-decoration: underline; }

@@ -291,3 +291,20 @@ export const FormSkeleton = ({ fields = 5 }) => (
     </div>
   </Busy>
 );
+
+export const ForYouSkeleton = () => (
+  <section className="shop-section fy-section" aria-hidden="true">
+    <Skel h={26} w={260} />
+    <Skel h={13} w={340} style={{ margin: "10px 0 18px" }} />
+    <div className="skel-row" style={{ marginBottom: 20 }}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Skel key={i} h={34} w={110 + i * 12} r={999} />
+      ))}
+    </div>
+    <div className="pd-row-grid">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <ProductCardSkeleton key={i} />
+      ))}
+    </div>
+  </section>
+);
