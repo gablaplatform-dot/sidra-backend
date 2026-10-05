@@ -59,7 +59,7 @@ export default function ProviderDetail() {
     Promise.all([
       request(`/providers/${encodeURIComponent(providerId)}`),
       request("/categories"),
-      request(`/listings/provider/${encodeURIComponent(providerId)}?limit=50`).catch(() => ({ items: [] }))
+      request(`/listings/provider/${encodeURIComponent(providerId)}?limit=100`).catch(() => ({ items: [] }))
     ])
       .then(([providerResult, categoryResult, listingResult]) => {
         if (!active) return;

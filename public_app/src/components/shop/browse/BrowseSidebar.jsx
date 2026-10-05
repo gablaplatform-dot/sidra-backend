@@ -144,7 +144,9 @@ function AttributeGroup({ group, selected, open, onToggleOpen, onToggleValue }) 
   );
 }
 
-export default function BrowseSidebar({ node, ancestors, siblings, fieldDefs, facets, filters, onChange, onOpenLocation, locationLabel, onClearAll }) {
+// `categorySlot` replaces the shop's category-link block (a provider page filters in place instead of
+// navigating), and `hideLocation` drops the location block where location is meaningless.
+export default function BrowseSidebar({ node, ancestors, siblings, fieldDefs, facets, filters, onChange, onOpenLocation, locationLabel, onClearAll, categorySlot, hideLocation }) {
   const [closed, setClosed] = useState({});
 
   const defs = fieldDefs.filter((f) => FILTERABLE.has(f.type));
@@ -152,11 +154,17 @@ export default function BrowseSidebar({ node, ancestors, siblings, fieldDefs, fa
   let groups = defs
     .map((f) => ({ key: f.key, label: f.label || prettyKey(f.key), type: f.type, options: attrFacets[f.key] || [] }))
     .filter((g) => g.options.length > 0 || (filters.attrs[g.key] || []).length > 0);
-  // Top-level categories declare no fields of their own, so offer the two filters that make sense across everything.
+  // Without category-defined fields (top-level categories, a provider's mixed catalogue) offer
+  // condition and brand first, then whichever other answers actually vary across the results.
   if (!defs.length) {
-    groups = ["condition", "brand"]
-      .filter((key) => (attrFacets[key] || []).length > 0 || (filters.attrs[key] || []).length > 0)
-      .map((key) => ({ key, label: prettyKey(key), type: "multi_select", options: attrFacets[key] || [] }));
+    const keys = Object.keys(attrFacets)
+      .filter((key) => attrFacets[key].length >= 2 || ["condition", "brand"].includes(key) || (filters.attrs[key] || []).length)
+      .sort((a, b) => {
+        const rank = (k) => (k === "condition" ? 0 : k === "brand" ? 1 : 2);
+        return rank(a) - rank(b);
+      })
+      .slice(0, 6);
+    groups = keys.map((key) => ({ key, label: prettyKey(key), type: "multi_select", options: attrFacets[key] || [] }));
   }
 
   const toggleValue = (key, value) => {
@@ -169,17 +177,19 @@ export default function BrowseSidebar({ node, ancestors, siblings, fieldDefs, fa
 
   return (
     <aside className="sb-sidebar">
-      <CategoryBlock node={node} ancestors={ancestors} siblings={siblings} categoryCounts={facets?.categoryCounts} />
+      {categorySlot ?? <CategoryBlock node={node} ancestors={ancestors} siblings={siblings} categoryCounts={facets?.categoryCounts} />}
 
-      <section className="sb-block">
-        <button type="button" className="sb-location" onClick={onOpenLocation}>
-          <span>
-            <b>Location</b>
-            <small>{locationLabel}</small>
-          </span>
-          <i aria-hidden="true" />
-        </button>
-      </section>
+      {hideLocation ? null : (
+        <section className="sb-block">
+          <button type="button" className="sb-location" onClick={onOpenLocation}>
+            <span>
+              <b>Location</b>
+              <small>{locationLabel}</small>
+            </span>
+            <i aria-hidden="true" />
+          </button>
+        </section>
+      )}
 
       <PriceBlock filters={filters} facets={facets} onChange={onChange} />
 

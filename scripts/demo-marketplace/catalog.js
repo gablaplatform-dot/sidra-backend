@@ -258,6 +258,30 @@ export const PROVIDERS = [
   }
 ];
 
+// Services offered alongside products, so provider pages can show separate Products / Services tabs.
+// provider key -> [name, priceUGX, imagePool, description]
+export const SERVICES = {
+  techhub: [
+    ["Laptop screen replacement and repair", 180000, "laptop", "Cracked screen, dead keyboard or slow machine? Same-day repair with a 3-month guarantee."],
+    ["Data recovery and Windows reinstall", 90000, "laptop", "We rescue files from failing drives and set up a clean, activated Windows."],
+    ["Office network and printer setup", 250000, "printer", "Wi-Fi, cabling and shared printers configured on site across Kampala."]
+  ],
+  gadget: [
+    ["Phone screen and battery replacement", 120000, "phone", "Genuine-quality parts for iPhone and Samsung, done while you wait."]
+  ],
+  bulenga: [
+    ["Furniture assembly and delivery", 150000, "sofa", "We deliver, assemble and position your furniture anywhere in Wakiso and Kampala."],
+    ["Upholstery repair and re-covering", 300000, "armchair", "Give old sofas and armchairs a new life with fresh fabric or leather."]
+  ],
+  lakeside: [
+    ["Pre-purchase vehicle inspection", 200000, "suv", "Full mechanical and bodywork check with a written report before you buy."],
+    ["Car valuation and import advice", 150000, "sedan", "Honest market valuation and duty estimates for Japanese imports."]
+  ],
+  ankole: [
+    ["TV wall mounting and sound installation", 120000, "tv", "Professional mounting, cable hiding and home-theatre setup in Mbarara."]
+  ]
+};
+
 // Hero ads shown on the Shop page carousel (provider key, title, subtitle, image id, cta).
 export const ADS = [
   { provider: "techhub", title: "Back-to-work laptop deals", subtitle: "Refurbished HP, Dell and Lenovo from UGX 720,000 with warranty", image: "1496181133206-80ce9b88a853", cta: "Shop laptops" },

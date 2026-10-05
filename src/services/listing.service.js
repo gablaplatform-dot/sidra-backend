@@ -360,7 +360,21 @@ export class ListingService {
     return ids;
   }
 
-  async _buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew, district, minPrice, maxPrice }) {
+  // A provider's own ShopCategory subtree (browsing a parent shop category matches its children too).
+  async _expandShopCategoryIds(shopCategoryId) {
+    const rows = await prisma.shopCategory.findMany({ select: { id: true, parentId: true } });
+    const childrenByParent = new Map();
+    for (const row of rows) {
+      if (!row.parentId) continue;
+      if (!childrenByParent.has(row.parentId)) childrenByParent.set(row.parentId, []);
+      childrenByParent.get(row.parentId).push(row.id);
+    }
+    const ids = [shopCategoryId];
+    for (let i = 0; i < ids.length; i += 1) ids.push(...(childrenByParent.get(ids[i]) ?? []));
+    return ids;
+  }
+
+  async _buildPublicFilter({ type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, district, minPrice, maxPrice }) {
     const filter = { status: "approved" };
 
     let normalizedType = null;
@@ -373,6 +387,7 @@ export class ListingService {
     }
 
     if (q) filter.name = { contains: String(q).trim() };
+    if (shopCategoryId) filter.shopCategoryId = { in: await this._expandShopCategoryIds(shopCategoryId) };
     if (discountOnly === "true" || discountOnly === true) filter.discountPercent = { not: null };
     if (isNew === "true" || isNew === true) filter.isNew = true;
     const priceBounds = {};
@@ -453,12 +468,12 @@ export class ListingService {
     return { items: matched.slice(skip, skip + take), total: matched.length };
   }
 
-  async publicList({ page = 1, limit = 20, type, q, categoryId, productCategoryId, providerId, sort, discountOnly, isNew, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
+  async publicList({ page = 1, limit = 20, type, q, categoryId, productCategoryId, shopCategoryId, providerId, sort, discountOnly, isNew, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
     const normalizedPage = Math.max(1, Number(page) || 1);
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
     const skip = (normalizedPage - 1) * normalizedLimit;
     const attrs = parseAttrs(rawAttrs);
-    const baseArgs = { type, q, categoryId, productCategoryId, providerId, discountOnly, isNew, minPrice, maxPrice };
+    const baseArgs = { type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, minPrice, maxPrice };
 
     const hasGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Number.isFinite(Number(radiusKm));
 
@@ -544,10 +559,10 @@ export class ListingService {
   // return. Every group's counts ignore that group's OWN selection (so ticking "Apple" still shows
   // what "Dell" would add) but respect every other active filter, and all of it is scoped to the
   // chosen location, so numbers always match what the result grid would show.
-  async facets({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
+  async facets({ type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
     const attrs = parseAttrs(rawAttrs);
     const hasGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Number.isFinite(Number(radiusKm));
-    const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, providerId, discountOnly, isNew });
+    const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew });
 
     let geo = null;
     if (hasGeo) {
@@ -573,6 +588,7 @@ export class ListingService {
         price: true,
         discountPercent: true,
         productCategoryId: true,
+        shopCategoryId: true,
         customFields: true,
         provider: { select: { district: true } }
       },
@@ -647,6 +663,7 @@ export class ListingService {
       attributes,
       districts: [...districtCounts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
       categoryCounts,
+      shopCategoryCounts: Object.fromEntries(countBy(matching, (r) => (r.shopCategoryId ? [r.shopCategoryId] : []))),
       discountCount: rows.filter((r) => passes(r, "discount") && r.discountPercent != null).length,
       truncated: rows.length >= MAX_FACET_CANDIDATES,
       ...(geo ? { effectiveRadiusKm: geo.effectiveRadiusKm, widened: geo.widened } : {})

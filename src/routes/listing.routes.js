@@ -29,6 +29,7 @@ export const buildListingRoutes = ({ listingController }) => {
     q: Joi.string().trim().max(200).optional(),
     categoryId: id.optional(),
     productCategoryId: id.optional(),
+    shopCategoryId: id.optional(),
     providerId: id.optional(),
     discountOnly: Joi.boolean().optional(),
     isNew: Joi.boolean().optional(),

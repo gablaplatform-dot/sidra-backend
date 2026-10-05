@@ -2,8 +2,9 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 import ContactSidebar from "../ContactSidebar";
+import ProviderListings from "../ProviderListings";
 import ProviderCustomFields, { hasAnsweredCustomFields } from "../ProviderCustomFields";
-import { IconBox, IconChevronLeft, IconImage, IconStar } from "../icons";
+import { IconChevronLeft, IconImage, IconStar } from "../icons";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
@@ -31,6 +32,8 @@ export default function ProviderLayoutDefault({ provider, categoryId, categoryNa
         </div>
       </section>
 
+      <ProviderListings provider={provider} listings={listings} />
+
       <div className="provider-detail-grid">
         <div className="provider-detail-main">
           {provider.description || hasAnsweredCustomFields(providerFields, provider.customFields) ? (
@@ -40,34 +43,6 @@ export default function ProviderLayoutDefault({ provider, categoryId, categoryNa
               <ProviderCustomFields fields={providerFields} values={provider.customFields} />
             </section>
           ) : null}
-
-          <section className="detail-block">
-            <h2>Products &amp; services</h2>
-            {listings.length ? (
-              <div className="listing-grid">
-                {listings.map((item) => (
-                  <div key={item.id} className="listing-card">
-                    <div
-                      className="listing-cover"
-                      style={item.media?.imageUrl ? { backgroundImage: `url("${item.media.imageUrl}")` } : undefined}
-                    >
-                      {!item.media?.imageUrl ? <IconBox /> : null}
-                    </div>
-                    <div className="listing-body">
-                      <h3>{item.name}</h3>
-                      {item.description ? <p className="provider-meta">{item.description}</p> : null}
-                      {Number(item.price) > 0 ? <div className="listing-price">UGX {Number(item.price).toLocaleString()}</div> : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state">
-                <IconBox />
-                <p>No products or services listed yet.</p>
-              </div>
-            )}
-          </section>
 
           <section className="detail-block">
             <h2>Gallery</h2>

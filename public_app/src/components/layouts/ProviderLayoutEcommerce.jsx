@@ -1,93 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { request } from "../../lib/api";
-import { addToCart } from "../../lib/cart";
 import ContactSidebar from "../ContactSidebar";
 import ProviderCustomFields, { hasAnsweredCustomFields } from "../ProviderCustomFields";
 import OrderModal from "../OrderModal";
-import BuyNowModal from "../BuyNowModal";
-import { IconBox, IconCart, IconChevronLeft, IconImage, IconShield, IconStar, IconStore } from "../icons";
+import ProviderListings from "../ProviderListings";
+import { IconBox, IconChevronLeft, IconImage, IconShield, IconStar, IconStore } from "../icons";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
-const collectIds = (node) => [node.id, ...(node.children || []).flatMap(collectIds)];
-
-// Products are paid for instantly by mobile money; services go through the request/arrange
-// Order flow instead, since they typically need scheduling or a quote first. A product also
-// falls back to the request flow when either the provider or the listing itself has online
-// payment switched off.
-const ListingChip = ({ item, onlinePaymentsAllowed, onOrder, onBuyNow }) => {
-  const canBuyNow = item.type === "product" && onlinePaymentsAllowed && item.onlinePaymentEnabled !== false;
-  const [added, setAdded] = useState(false);
-  const handleAddToCart = () => {
-    addToCart(item.id, 1);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
-  };
-  return (
-    <div className="listing-card">
-      <div className="listing-cover" style={item.media?.imageUrl ? { backgroundImage: `url("${item.media.imageUrl}")` } : undefined}>
-        {!item.media?.imageUrl ? <IconBox /> : null}
-      </div>
-      <div className="listing-body">
-        <h3>{item.name}</h3>
-        <p className="provider-meta">{item.type === "product" ? "Product" : "Service"}</p>
-        {Number(item.price) > 0 ? <div className="listing-price">UGX {Number(item.price).toLocaleString()}</div> : null}
-        {canBuyNow ? (
-          <div className="listing-actions-row">
-            <button type="button" className="cta-button ecommerce-order-button" onClick={() => onBuyNow(item)}>Buy now</button>
-            <button type="button" className="secondary-button ecommerce-cart-button" onClick={handleAddToCart} aria-label="Add to cart">
-              {added ? "Added" : <><IconCart /> Add</>}
-            </button>
-          </div>
-        ) : (
-          <button type="button" className="cta-button ecommerce-order-button" onClick={() => onOrder(item)}>Order now</button>
-        )}
-      </div>
-    </div>
-  );
-};
-
 export default function ProviderLayoutEcommerce({ provider, categoryId, categoryName, providerFields = [], listings, gallery, onUnlock }) {
-  const onlinePaymentsAllowed = provider.onlinePaymentsEnabled !== false;
   const [orderingItem, setOrderingItem] = useState(null);
-  const [buyingItem, setBuyingItem] = useState(null);
-  const [shopCategoryTree, setShopCategoryTree] = useState([]);
-  const [selectedShopCategoryId, setSelectedShopCategoryId] = useState(null);
 
-  useEffect(() => {
-    let active = true;
-    request(`/shop-categories/provider/${encodeURIComponent(provider.id)}`)
-      .then((result) => {
-        if (active) setShopCategoryTree(result?.items || []);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [provider.id]);
-
-  const findNode = (nodes, id) => {
-    for (const node of nodes) {
-      if (node.id === id) return node;
-      const found = findNode(node.children || [], id);
-      if (found) return found;
-    }
-    return null;
-  };
-
-  const countInCategory = (node) => {
-    const ids = new Set(collectIds(node));
-    return listings.filter((l) => l.shopCategoryId && ids.has(l.shopCategoryId)).length;
-  };
-
-  const selectedNode = selectedShopCategoryId ? findNode(shopCategoryTree, selectedShopCategoryId) : null;
-  const selectedIds = selectedNode ? new Set(collectIds(selectedNode)) : null;
-  const filteredListings = selectedIds ? listings.filter((l) => l.shopCategoryId && selectedIds.has(l.shopCategoryId)) : listings;
-
-  const newArrivals = [...listings].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10);
-  const bestSellers = listings.filter((item) => item.featured);
   const previewItems = listings.slice(0, 2);
 
   return (
@@ -135,70 +59,7 @@ export default function ProviderLayoutEcommerce({ provider, categoryId, category
         </div>
       </section>
 
-      {shopCategoryTree.length ? (
-        <section className="home-section ecommerce-section" id="shop">
-          <h2>Shop by category</h2>
-          <div className="category-grid">
-            {shopCategoryTree.map((cat) => (
-              <button
-                type="button"
-                key={cat.id}
-                className={`category-card ${selectedShopCategoryId === cat.id ? "is-active" : ""}`}
-                onClick={() => setSelectedShopCategoryId((current) => (current === cat.id ? null : cat.id))}
-              >
-                <div className="category-label">
-                  <span className="category-icon">{initials(cat.name)}</span>
-                  <span className="category-name">{cat.name} &middot; {countInCategory(cat)}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {selectedNode ? (
-        <section className="home-section ecommerce-section">
-          <div className="detail-block-header">
-            <h2>{selectedNode.name}</h2>
-            <button type="button" className="secondary-button" onClick={() => setSelectedShopCategoryId(null)}>Show everything</button>
-          </div>
-          {filteredListings.length ? (
-            <div className="listing-grid">
-              {filteredListings.map((item) => <ListingChip key={item.id} item={item} onlinePaymentsAllowed={onlinePaymentsAllowed} onOrder={setOrderingItem} onBuyNow={setBuyingItem} />)}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <IconBox />
-              <p>Nothing in this category yet.</p>
-            </div>
-          )}
-        </section>
-      ) : (
-        <>
-          <section className="home-section ecommerce-section" id={shopCategoryTree.length ? undefined : "shop"}>
-            <h2>New arrivals</h2>
-            {newArrivals.length ? (
-              <div className="ecommerce-scroll-row">
-                {newArrivals.map((item) => <ListingChip key={item.id} item={item} onlinePaymentsAllowed={onlinePaymentsAllowed} onOrder={setOrderingItem} onBuyNow={setBuyingItem} />)}
-              </div>
-            ) : (
-              <div className="empty-state">
-                <IconBox />
-                <p>No products or services listed yet.</p>
-              </div>
-            )}
-          </section>
-
-          {bestSellers.length ? (
-            <section className="home-section ecommerce-section">
-              <h2>Best sellers</h2>
-              <div className="listing-grid">
-                {bestSellers.map((item) => <ListingChip key={item.id} item={item} onlinePaymentsAllowed={onlinePaymentsAllowed} onOrder={setOrderingItem} onBuyNow={setBuyingItem} />)}
-              </div>
-            </section>
-          ) : null}
-        </>
-      )}
+      <ProviderListings id="shop" provider={provider} listings={listings} onOrderService={setOrderingItem} />
 
       <div className="provider-detail-grid" id="about">
         <div className="provider-detail-main">
@@ -236,9 +97,6 @@ export default function ProviderLayoutEcommerce({ provider, categoryId, category
         <OrderModal listing={orderingItem} providerId={provider.id} onClose={() => setOrderingItem(null)} />
       ) : null}
 
-      {buyingItem ? (
-        <BuyNowModal listing={buyingItem} onClose={() => setBuyingItem(null)} />
-      ) : null}
     </>
   );
 }

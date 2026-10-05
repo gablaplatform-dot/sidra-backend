@@ -13,7 +13,7 @@ import { PrismaClient } from "@prisma/client";
 
 import { geohashEncode } from "../src/utils/geohash.js";
 import { PromotionType } from "../src/constants/enums.js";
-import { ADS, DEMO_EMAIL_DOMAIN, PROVIDERS } from "./demo-marketplace/catalog.js";
+import { ADS, DEMO_EMAIL_DOMAIN, PROVIDERS, SERVICES } from "./demo-marketplace/catalog.js";
 import { imageUrl, pickImages } from "./demo-marketplace/images.js";
 
 dotenv.config();
@@ -247,6 +247,26 @@ async function seed() {
     }
   }
 
+  let services = 0;
+  for (const [key, rows] of Object.entries(SERVICES)) {
+    for (const [index, [name, price, pool, description]] of rows.entries()) {
+      const images = pickImages(pool, key.length + index + 5, 3).map((id) => imageUrl(id));
+      await prisma.serviceProduct.create({
+        data: {
+          providerId: providerIdByKey.get(key),
+          name,
+          description,
+          price,
+          type: "service",
+          status: "approved",
+          media: { imageUrl: images[0], gallery: images },
+          customFields: {}
+        }
+      });
+      services += 1;
+    }
+  }
+
   for (const ad of ADS) {
     await prisma.promotion.create({
       data: {
@@ -263,7 +283,7 @@ async function seed() {
       }
     });
   }
-  log(`Seeded ${plan.length} providers, ${created} listings and ${ADS.length} ads. Remove with: node scripts/seed-demo-marketplace.js --clear`);
+  log(`Seeded ${plan.length} providers, ${created} products, ${services} services and ${ADS.length} ads. Remove with: node scripts/seed-demo-marketplace.js --clear`);
 }
 
 try {

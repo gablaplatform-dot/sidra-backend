@@ -65,7 +65,8 @@ export const patchParams = (searchParams, patch) => {
 // Query for /listings and /listings/facets - identical filters, which is what keeps the sidebar
 // counts honest with respect to the grid.
 export const toApiParams = (filters, { categoryId, coords }) => {
-  const params = { type: "product", productCategoryId: categoryId };
+  const params = { type: "product" };
+  if (categoryId) params.productCategoryId = categoryId;
   if (filters.min !== null) params.minPrice = String(filters.min);
   if (filters.max !== null) params.maxPrice = String(filters.max);
   if (filters.discount) params.discountOnly = "true";

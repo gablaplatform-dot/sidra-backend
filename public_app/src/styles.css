@@ -3677,3 +3677,35 @@ button { cursor: pointer; }
 @media (max-width: 420px) {
   .sb-grid { grid-template-columns: 1fr; }
 }
+
+/* ---------- Provider page: Products / Services tabs + product filters ---------- */
+.pl-section { padding: 28px 5vw 8px; }
+.pl-title { margin: 0 0 14px; font-size: 22px; color: #0b2046; }
+.pl-tabs { display: flex; gap: 6px; margin-bottom: 18px; border-bottom: 2px solid #e5e7eb; }
+.pl-tabs button {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; margin-bottom: -2px;
+  border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer;
+  font: inherit; font-size: 16px; font-weight: 800; color: #64748b;
+}
+.pl-tabs button span { padding: 1px 8px; border-radius: 999px; background: #f1f5f9; font-size: 12.5px; color: #475569; }
+.pl-tabs button.is-active { color: #0b2046; border-bottom-color: #ea580c; }
+.pl-tabs button.is-active span { background: #ffedd5; color: #c2410c; }
+.pl-layout { padding: 0; grid-template-columns: 260px minmax(0, 1fr); gap: 20px; }
+.pl-layout .sb-grid { margin-top: 14px; }
+.pl-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.pl-layout .sb-results-head { align-items: center; }
+.pl-contact { padding: 8px 5vw 60px; max-width: 420px; }
+.sb-cat-btn {
+  width: 100%; border: 0; background: none; cursor: pointer; text-align: left; font-family: inherit;
+}
+.sb-cat-btn.is-active { color: #ea580c; font-weight: 800; }
+.sb-cat-plain { list-style: none; margin: 0; padding: 0; }
+@media (max-width: 960px) {
+  .pl-section { padding: 20px 16px 4px; }
+  .pl-layout { grid-template-columns: 1fr; }
+  .pl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pl-contact { padding: 8px 16px 48px; max-width: none; }
+}
+@media (max-width: 420px) {
+  .pl-grid { grid-template-columns: 1fr; }
+}
