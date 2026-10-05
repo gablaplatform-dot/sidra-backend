@@ -39,6 +39,8 @@ model User {
   contactEvents  ContactEvent[]
   searchEvents   SearchEvent[]
   interestEvents InterestEvent[]
+  busOperator    BusOperator?
+  busBookings    BusBooking[]
   inquiries      Inquiry[]
   orders         Order[]
   auditLogs      AuditLog[] @relation("AuditActor")
@@ -423,6 +425,7 @@ model Transaction {
   withdrawal WithdrawalRequest?
   order Order?
   rideTrip RideTrip?
+  busBooking BusBooking?
 
   @@index([providerId, createdAt])
   @@index([userId, createdAt])
@@ -886,4 +889,304 @@ model RideSettings {
   updatedAt              DateTime @updatedAt
 
   @@map("ride_settings")
+}
+
+
+// ============================================================================
+// Bus ticketing module (separate from providers/listings): bus operators are invited by an admin,
+// publish routes + recurring sessions + ticket types, and customers buy numbered tickets online.
+// ============================================================================
+
+// Platform-wide bus settings (single row): the onboarding questions every invited operator answers
+// (same field shape as category provider fields), default commission and the seat-hold window.
+model BusSettings {
+  id                       String   @id @default("singleton")
+  onboardingFields         Json     @default("[]")
+  defaultCommissionPercent Decimal  @default(5)
+  holdMinutes              Int      @default(10)
+  updatedAt                DateTime @updatedAt
+
+  @@map("bus_settings")
+}
+
+// Catalog of kinds of bus ("Gagaa", baby coach, ...) that customers can browse by.
+model BusType {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String   @default("")
+  seats       Int      @default(60)
+  imageUrl    String?
+  amenities   Json     @default("[]")
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  routes BusRoute[]
+  trips  BusTrip[]
+
+  @@index([isActive, sortOrder])
+  @@map("bus_types")
+}
+
+model BusOperator {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  companyName       String
+  slug              String    @unique
+  description       String    @default("")
+  logoUrl           String?
+  coverUrl          String?
+  // The default onboarding answers: where the bus park is, what it's called, how big the fleet is.
+  parkName          String?
+  parkDistrict      String?
+  parkAddress       String?
+  parkLat           Float?
+  parkLng           Float?
+  fleetSize         Int       @default(0)
+  contactPhone      String?
+  whatsapp          String?
+  customFields      Json      @default("{}")
+  onboardingStatus  String    @default("draft") // draft | invitation_sent | registered
+  status            String    @default("active") // active | suspended
+  commissionPercent Decimal   @default(5)
+  walletBalance     Decimal   @default(0)
+  ratingAvg         Float     @default(0)
+  ratingCount       Int       @default(0)
+  invitationSentAt  DateTime?
+  registeredAt      DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitations   BusOperatorInvitation[]
+  routes        BusRoute[]
+  schedules     BusSchedule[]
+  trips         BusTrip[]
+  bookings      BusBooking[]
+  announcements BusAnnouncement[]
+  payouts       BusPayout[]
+
+  @@index([status, onboardingStatus])
+  @@index([parkDistrict])
+  @@map("bus_operators")
+}
+
+model BusOperatorInvitation {
+  id          String    @id @default(cuid())
+  operatorId  String
+  email       String
+  tokenHash   String    @unique
+  status      String    @default("sent")
+  sentAt      DateTime  @default(now())
+  resentCount Int       @default(0)
+  lastSentAt  DateTime  @default(now())
+  acceptedAt  DateTime?
+  expiresAt   DateTime
+  metadata    Json      @default("{}")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  operator BusOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+
+  @@index([operatorId, status])
+  @@index([email])
+  @@map("bus_operator_invitations")
+}
+
+model BusRoute {
+  id                  String   @id @default(cuid())
+  operatorId          String
+  name                String
+  originName          String
+  originDistrict      String?
+  destinationName     String
+  destinationDistrict String?
+  boardingPoint       String   @default("")
+  dropoffPoint        String   @default("")
+  distanceKm          Int?
+  durationMinutes     Int      @default(180)
+  stops               Json     @default("[]") // [{ name, offsetMinutes }]
+  busTypeId           String?
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  operator    BusOperator     @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  busType     BusType?        @relation(fields: [busTypeId], references: [id], onDelete: SetNull)
+  ticketTypes BusTicketType[]
+  schedules   BusSchedule[]
+  trips       BusTrip[]
+
+  @@index([operatorId, isActive])
+  @@index([originName, destinationName])
+  @@map("bus_routes")
+}
+
+model BusTicketType {
+  id          String   @id @default(cuid())
+  routeId     String
+  name        String
+  description String   @default("")
+  price       Decimal  @default(0)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  route   BusRoute    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  tickets BusTicket[]
+
+  @@index([routeId, isActive])
+  @@map("bus_ticket_types")
+}
+
+// A recurring departure ("session"): a time of day on chosen weekdays between two dates.
+model BusSchedule {
+  id            String    @id @default(cuid())
+  operatorId    String
+  routeId       String
+  name          String    @default("")
+  departureTime String // "HH:mm", East Africa Time
+  daysOfWeek    Json      @default("[0,1,2,3,4,5,6]") // 0 = Sunday
+  startDate     DateTime
+  endDate       DateTime?
+  seats         Int       @default(60)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  operator BusOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  route    BusRoute    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  trips    BusTrip[]
+
+  @@index([operatorId, isActive])
+  @@index([routeId, isActive])
+  @@map("bus_schedules")
+}
+
+// One real departure on a date. Generated from a schedule (or created as a one-off).
+model BusTrip {
+  id           String   @id @default(cuid())
+  scheduleId   String?
+  operatorId   String
+  routeId      String
+  busTypeId    String?
+  departureAt  DateTime
+  seats        Int      @default(60)
+  status       String   @default("scheduled") // scheduled | cancelled | departed | completed
+  delayMinutes Int      @default(0)
+  note         String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  schedule BusSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  operator BusOperator  @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  route    BusRoute     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  busType  BusType?     @relation(fields: [busTypeId], references: [id], onDelete: SetNull)
+  bookings BusBooking[]
+  tickets  BusTicket[]
+  announcements BusAnnouncement[]
+
+  @@unique([scheduleId, departureAt])
+  @@index([routeId, departureAt])
+  @@index([operatorId, departureAt])
+  @@index([departureAt, status])
+  @@map("bus_trips")
+}
+
+model BusBooking {
+  id             String    @id @default(cuid())
+  reference      String    @unique
+  userId         String
+  tripId         String
+  operatorId     String
+  transactionId  String?   @unique
+  status         String    @default("pending_payment") // pending_payment | confirmed | failed | expired | cancelled | refund_due
+  seatCount      Int       @default(1)
+  passengerName  String
+  passengerPhone String
+  passengerEmail String?
+  payPhone       String?
+  subtotal       Decimal   @default(0)
+  fee            Decimal   @default(0)
+  total          Decimal   @default(0)
+  lines          Json      @default("[]") // [{ ticketTypeId, name, quantity, unitPrice }]
+  expiresAt      DateTime
+  confirmedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip        BusTrip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  operator    BusOperator  @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  tickets     BusTicket[]
+
+  @@index([userId, createdAt])
+  @@index([operatorId, status, createdAt])
+  @@index([tripId, status])
+  @@map("bus_bookings")
+}
+
+model BusTicket {
+  id             String    @id @default(cuid())
+  bookingId      String
+  tripId         String
+  operatorId     String
+  ticketTypeId   String?
+  ticketTypeName String
+  ticketNumber   String    @unique
+  seatNumber     Int?
+  price          Decimal   @default(0)
+  passengerName  String
+  status         String    @default("valid") // valid | used | cancelled
+  checkedInAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  booking    BusBooking     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  trip       BusTrip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  ticketType BusTicketType? @relation(fields: [ticketTypeId], references: [id], onDelete: SetNull)
+
+  @@index([tripId, status])
+  @@index([bookingId])
+  @@index([operatorId, createdAt])
+  @@map("bus_tickets")
+}
+
+// A message an operator sends to their customers (all of them, or one trip's passengers).
+model BusAnnouncement {
+  id         String   @id @default(cuid())
+  operatorId String
+  tripId     String?
+  title      String
+  message    String
+  kind       String   @default("notice") // notice | delay | cancellation | promotion
+  recipients Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  operator BusOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  trip     BusTrip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
+  @@index([operatorId, createdAt])
+  @@map("bus_announcements")
+}
+
+// An operator asking for their earnings to be paid out to a mobile money number.
+model BusPayout {
+  id          String    @id @default(cuid())
+  operatorId  String
+  amount      Decimal   @default(0)
+  phone       String
+  status      String    @default("requested") // requested | paid | rejected
+  note        String    @default("")
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+
+  operator BusOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+
+  @@index([operatorId, createdAt])
+  @@index([status])
+  @@map("bus_payouts")
 }

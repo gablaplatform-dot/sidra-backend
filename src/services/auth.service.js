@@ -209,7 +209,8 @@ export class AuthService {
     return {
       accessToken,
       user: await this.userDto(user),
-      provider: provider ? { id: provider.id, userId: provider.userId } : null
+      provider: provider ? { id: provider.id, userId: provider.userId } : null,
+      busOperator: await this.busOperatorSummary(user)
     };
   }
 
@@ -258,6 +259,7 @@ export class AuthService {
       accessToken,
       user: await this.userDto(user),
       provider: provider ? { id: provider.id, userId: provider.userId } : null,
+      busOperator: await this.busOperatorSummary(user),
       // True only on the sign-in that created the account, so the app can show its welcome form once.
       isNewUser: !existing
     };
@@ -267,7 +269,11 @@ export class AuthService {
     const user = await prisma.user.findUnique({ where: { id: actorUserId } });
     if (!user) throw new AppError({ message: "User not found", statusCode: 404, code: "USER_NOT_FOUND" });
     const provider = user.role === "provider" ? await prisma.provider.findUnique({ where: { userId: user.id } }) : null;
-    return { user: await this.userDto(user), provider: provider ? { id: provider.id, userId: provider.userId } : null };
+    return {
+      user: await this.userDto(user),
+      provider: provider ? { id: provider.id, userId: provider.userId } : null,
+      busOperator: await this.busOperatorSummary(user)
+    };
   }
 
   async updateMe({ actorUserId, patch }) {
@@ -333,6 +339,14 @@ export class AuthService {
 
   // Admin-only fields (roleId/roleName/permissions) let the admin_ui restrict its own nav and
   // views to what this admin can actually do - "*" (Super Admin) means every permission.
+  async busOperatorSummary(user) {
+    if (user.role !== "bus_operator") return null;
+    const operator = await prisma.busOperator.findUnique({ where: { userId: user.id } });
+    return operator
+      ? { id: operator.id, userId: operator.userId, slug: operator.slug, companyName: operator.companyName, onboardingStatus: operator.onboardingStatus, status: operator.status }
+      : null;
+  }
+
   async userDto(user) {
     const base = {
       id: user.id,

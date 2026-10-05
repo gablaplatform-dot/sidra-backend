@@ -2,7 +2,8 @@ export const Roles = Object.freeze({
   USER: "user",
   PROVIDER: "provider",
   ADMIN: "admin",
-  DRIVER: "driver"
+  DRIVER: "driver",
+  BUS_OPERATOR: "bus_operator"
 });
 
 export const ProviderModerationStatus = Object.freeze({
@@ -63,7 +64,8 @@ export const TransactionType = Object.freeze({
   WITHDRAWAL: "withdrawal",
   PLATFORM_WITHDRAWAL: "platform_withdrawal",
   CART_PURCHASE: "cart_purchase",
-  RIDE_TRIP: "ride_trip"
+  RIDE_TRIP: "ride_trip",
+  BUS_TICKET: "bus_ticket"
 });
 
 export const TransactionStatus = Object.freeze({

@@ -46,6 +46,11 @@ import { PromotionService } from "./services/promotion.service.js";
 import { PromotionController } from "./controllers/promotion.controller.js";
 import { InterestService } from "./services/interest.service.js";
 import { InterestController } from "./controllers/interest.controller.js";
+import { BusEmailService } from "./services/busEmail.service.js";
+import { BusCatalogService } from "./services/busCatalog.service.js";
+import { BusOperatorService } from "./services/busOperator.service.js";
+import { BusBookingService } from "./services/busBooking.service.js";
+import { BusOperationsService } from "./services/busOperations.service.js";
 import { hashPassword, verifyPassword } from "./utils/password.js";
 import { signAccessToken } from "./utils/jwt.js";
 import { env } from "./config/env.js";
@@ -140,6 +145,20 @@ export const buildApp = () => {
   const interestService = new InterestService({ listingService });
   const interestController = new InterestController({ interestService });
 
+  const busEmailService = new BusEmailService();
+  const busCatalogService = new BusCatalogService();
+  const busOperatorService = new BusOperatorService({ emailService: busEmailService, catalogService: busCatalogService, hashPassword });
+  const busBookingService = new BusBookingService({
+    mobileMoneyService: paymentService.mobileMoneyService,
+    emailService: busEmailService,
+    walletService: paymentService.walletService,
+    catalogService: busCatalogService,
+    operatorService: busOperatorService,
+    callbackUrls: () => paymentService.mobileMoneyCallbackUrls()
+  });
+  paymentService.attachBusBooking(busBookingService);
+  const busOperationsService = new BusOperationsService({ emailService: busEmailService, catalogService: busCatalogService, bookingService: busBookingService });
+
   app.use(
     "/api/v1",
     buildRoutes({
@@ -160,7 +179,8 @@ export const buildApp = () => {
       searchController,
       rideController,
       promotionController,
-      interestController
+      interestController,
+      bus: { busBookingService, busOperatorService, busCatalogService, busOperationsService }
     })
   );
 

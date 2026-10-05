@@ -401,6 +401,216 @@ CREATE TABLE IF NOT EXISTS interest_events (
   FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS bus_settings (
+  id TEXT PRIMARY KEY NOT NULL DEFAULT 'singleton',
+  onboardingFields JSONB NOT NULL DEFAULT '[]',
+  defaultCommissionPercent DECIMAL NOT NULL DEFAULT 5,
+  holdMinutes INTEGER NOT NULL DEFAULT 10,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS bus_types (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  seats INTEGER NOT NULL DEFAULT 60,
+  imageUrl TEXT,
+  amenities JSONB NOT NULL DEFAULT '[]',
+  sortOrder INTEGER NOT NULL DEFAULT 0,
+  isActive BOOLEAN NOT NULL DEFAULT 1,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS bus_operators (
+  id TEXT PRIMARY KEY NOT NULL,
+  userId TEXT NOT NULL,
+  companyName TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  logoUrl TEXT,
+  coverUrl TEXT,
+  parkName TEXT,
+  parkDistrict TEXT,
+  parkAddress TEXT,
+  parkLat REAL,
+  parkLng REAL,
+  fleetSize INTEGER NOT NULL DEFAULT 0,
+  contactPhone TEXT,
+  whatsapp TEXT,
+  customFields JSONB NOT NULL DEFAULT '{}',
+  onboardingStatus TEXT NOT NULL DEFAULT 'draft',
+  status TEXT NOT NULL DEFAULT 'active',
+  commissionPercent DECIMAL NOT NULL DEFAULT 5,
+  walletBalance DECIMAL NOT NULL DEFAULT 0,
+  ratingAvg REAL NOT NULL DEFAULT 0,
+  ratingCount INTEGER NOT NULL DEFAULT 0,
+  invitationSentAt DATETIME,
+  registeredAt DATETIME,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS bus_operator_invitations (
+  id TEXT PRIMARY KEY NOT NULL,
+  operatorId TEXT NOT NULL,
+  email TEXT NOT NULL,
+  tokenHash TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'sent',
+  sentAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  resentCount INTEGER NOT NULL DEFAULT 0,
+  lastSentAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  acceptedAt DATETIME,
+  expiresAt DATETIME NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (operatorId) REFERENCES bus_operators(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS bus_routes (
+  id TEXT PRIMARY KEY NOT NULL,
+  operatorId TEXT NOT NULL,
+  name TEXT NOT NULL,
+  originName TEXT NOT NULL,
+  originDistrict TEXT,
+  destinationName TEXT NOT NULL,
+  destinationDistrict TEXT,
+  boardingPoint TEXT NOT NULL DEFAULT '',
+  dropoffPoint TEXT NOT NULL DEFAULT '',
+  distanceKm INTEGER,
+  durationMinutes INTEGER NOT NULL DEFAULT 180,
+  stops JSONB NOT NULL DEFAULT '[]',
+  busTypeId TEXT,
+  isActive BOOLEAN NOT NULL DEFAULT 1,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (operatorId) REFERENCES bus_operators(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (busTypeId) REFERENCES bus_types(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS bus_ticket_types (
+  id TEXT PRIMARY KEY NOT NULL,
+  routeId TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  price DECIMAL NOT NULL DEFAULT 0,
+  sortOrder INTEGER NOT NULL DEFAULT 0,
+  isActive BOOLEAN NOT NULL DEFAULT 1,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (routeId) REFERENCES bus_routes(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS bus_schedules (
+  id TEXT PRIMARY KEY NOT NULL,
+  operatorId TEXT NOT NULL,
+  routeId TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
+  departureTime TEXT NOT NULL,
+  daysOfWeek JSONB NOT NULL DEFAULT '[0,1,2,3,4,5,6]',
+  startDate DATETIME NOT NULL,
+  endDate DATETIME,
+  seats INTEGER NOT NULL DEFAULT 60,
+  isActive BOOLEAN NOT NULL DEFAULT 1,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (operatorId) REFERENCES bus_operators(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (routeId) REFERENCES bus_routes(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS bus_trips (
+  id TEXT PRIMARY KEY NOT NULL,
+  scheduleId TEXT,
+  operatorId TEXT NOT NULL,
+  routeId TEXT NOT NULL,
+  busTypeId TEXT,
+  departureAt DATETIME NOT NULL,
+  seats INTEGER NOT NULL DEFAULT 60,
+  status TEXT NOT NULL DEFAULT 'scheduled',
+  delayMinutes INTEGER NOT NULL DEFAULT 0,
+  note TEXT NOT NULL DEFAULT '',
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (scheduleId) REFERENCES bus_schedules(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (operatorId) REFERENCES bus_operators(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (routeId) REFERENCES bus_routes(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (busTypeId) REFERENCES bus_types(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS bus_bookings (
+  id TEXT PRIMARY KEY NOT NULL,
+  reference TEXT NOT NULL,
+  userId TEXT NOT NULL,
+  tripId TEXT NOT NULL,
+  operatorId TEXT NOT NULL,
+  transactionId TEXT,
+  status TEXT NOT NULL DEFAULT 'pending_payment',
+  seatCount INTEGER NOT NULL DEFAULT 1,
+  passengerName TEXT NOT NULL,
+  passengerPhone TEXT NOT NULL,
+  passengerEmail TEXT,
+  payPhone TEXT,
+  subtotal DECIMAL NOT NULL DEFAULT 0,
+  fee DECIMAL NOT NULL DEFAULT 0,
+  total DECIMAL NOT NULL DEFAULT 0,
+  lines JSONB NOT NULL DEFAULT '[]',
+  expiresAt DATETIME NOT NULL,
+  confirmedAt DATETIME,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (tripId) REFERENCES bus_trips(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (operatorId) REFERENCES bus_operators(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (transactionId) REFERENCES transactions(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS bus_tickets (
+  id TEXT PRIMARY KEY NOT NULL,
+  bookingId TEXT NOT NULL,
+  tripId TEXT NOT NULL,
+  operatorId TEXT NOT NULL,
+  ticketTypeId TEXT,
+  ticketTypeName TEXT NOT NULL,
+  ticketNumber TEXT NOT NULL,
+  seatNumber INTEGER,
+  price DECIMAL NOT NULL DEFAULT 0,
+  passengerName TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'valid',
+  checkedInAt DATETIME,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (bookingId) REFERENCES bus_bookings(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (tripId) REFERENCES bus_trips(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (ticketTypeId) REFERENCES bus_ticket_types(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS bus_announcements (
+  id TEXT PRIMARY KEY NOT NULL,
+  operatorId TEXT NOT NULL,
+  tripId TEXT,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'notice',
+  recipients INTEGER NOT NULL DEFAULT 0,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (operatorId) REFERENCES bus_operators(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (tripId) REFERENCES bus_trips(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS bus_payouts (
+  id TEXT PRIMARY KEY NOT NULL,
+  operatorId TEXT NOT NULL,
+  amount DECIMAL NOT NULL DEFAULT 0,
+  phone TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'requested',
+  note TEXT NOT NULL DEFAULT '',
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  processedAt DATETIME,
+  FOREIGN KEY (operatorId) REFERENCES bus_operators(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS media_assets (
   id TEXT PRIMARY KEY NOT NULL,
   providerId TEXT,
@@ -650,6 +860,36 @@ CREATE INDEX IF NOT EXISTS search_events_sessionId_idx ON search_events(sessionI
 CREATE INDEX IF NOT EXISTS interest_events_userId_createdAt_idx ON interest_events(userId, createdAt);
 CREATE INDEX IF NOT EXISTS interest_events_deviceId_createdAt_idx ON interest_events(deviceId, createdAt);
 CREATE INDEX IF NOT EXISTS interest_events_listingId_idx ON interest_events(listingId);
+CREATE UNIQUE INDEX IF NOT EXISTS bus_types_slug_key ON bus_types(slug);
+CREATE INDEX IF NOT EXISTS bus_types_isActive_sortOrder_idx ON bus_types(isActive, sortOrder);
+CREATE UNIQUE INDEX IF NOT EXISTS bus_operators_userId_key ON bus_operators(userId);
+CREATE UNIQUE INDEX IF NOT EXISTS bus_operators_slug_key ON bus_operators(slug);
+CREATE INDEX IF NOT EXISTS bus_operators_status_onboardingStatus_idx ON bus_operators(status, onboardingStatus);
+CREATE INDEX IF NOT EXISTS bus_operators_parkDistrict_idx ON bus_operators(parkDistrict);
+CREATE UNIQUE INDEX IF NOT EXISTS bus_operator_invitations_tokenHash_key ON bus_operator_invitations(tokenHash);
+CREATE INDEX IF NOT EXISTS bus_operator_invitations_operatorId_status_idx ON bus_operator_invitations(operatorId, status);
+CREATE INDEX IF NOT EXISTS bus_operator_invitations_email_idx ON bus_operator_invitations(email);
+CREATE INDEX IF NOT EXISTS bus_routes_operatorId_isActive_idx ON bus_routes(operatorId, isActive);
+CREATE INDEX IF NOT EXISTS bus_routes_origin_destination_idx ON bus_routes(originName, destinationName);
+CREATE INDEX IF NOT EXISTS bus_ticket_types_routeId_isActive_idx ON bus_ticket_types(routeId, isActive);
+CREATE INDEX IF NOT EXISTS bus_schedules_operatorId_isActive_idx ON bus_schedules(operatorId, isActive);
+CREATE INDEX IF NOT EXISTS bus_schedules_routeId_isActive_idx ON bus_schedules(routeId, isActive);
+CREATE UNIQUE INDEX IF NOT EXISTS bus_trips_scheduleId_departureAt_key ON bus_trips(scheduleId, departureAt);
+CREATE INDEX IF NOT EXISTS bus_trips_routeId_departureAt_idx ON bus_trips(routeId, departureAt);
+CREATE INDEX IF NOT EXISTS bus_trips_operatorId_departureAt_idx ON bus_trips(operatorId, departureAt);
+CREATE INDEX IF NOT EXISTS bus_trips_departureAt_status_idx ON bus_trips(departureAt, status);
+CREATE UNIQUE INDEX IF NOT EXISTS bus_bookings_reference_key ON bus_bookings(reference);
+CREATE UNIQUE INDEX IF NOT EXISTS bus_bookings_transactionId_key ON bus_bookings(transactionId);
+CREATE INDEX IF NOT EXISTS bus_bookings_userId_createdAt_idx ON bus_bookings(userId, createdAt);
+CREATE INDEX IF NOT EXISTS bus_bookings_operatorId_status_createdAt_idx ON bus_bookings(operatorId, status, createdAt);
+CREATE INDEX IF NOT EXISTS bus_bookings_tripId_status_idx ON bus_bookings(tripId, status);
+CREATE UNIQUE INDEX IF NOT EXISTS bus_tickets_ticketNumber_key ON bus_tickets(ticketNumber);
+CREATE INDEX IF NOT EXISTS bus_tickets_tripId_status_idx ON bus_tickets(tripId, status);
+CREATE INDEX IF NOT EXISTS bus_tickets_bookingId_idx ON bus_tickets(bookingId);
+CREATE INDEX IF NOT EXISTS bus_tickets_operatorId_createdAt_idx ON bus_tickets(operatorId, createdAt);
+CREATE INDEX IF NOT EXISTS bus_announcements_operatorId_createdAt_idx ON bus_announcements(operatorId, createdAt);
+CREATE INDEX IF NOT EXISTS bus_payouts_operatorId_createdAt_idx ON bus_payouts(operatorId, createdAt);
+CREATE INDEX IF NOT EXISTS bus_payouts_status_idx ON bus_payouts(status);
 CREATE INDEX IF NOT EXISTS media_assets_providerId_createdAt_idx ON media_assets(providerId, createdAt);
 CREATE INDEX IF NOT EXISTS media_assets_ownerId_createdAt_idx ON media_assets(ownerId, createdAt);
 CREATE INDEX IF NOT EXISTS media_assets_kind_idx ON media_assets(kind);

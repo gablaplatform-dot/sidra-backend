@@ -9,6 +9,7 @@ export const PERMISSIONS = Object.freeze([
   { key: "reviews", label: "Reviews", group: "Core", description: "Moderate provider reviews." },
   { key: "inquiries", label: "Inquiries", group: "Core", description: "View and resolve customer inquiries." },
   { key: "orders", label: "Orders", group: "Core", description: "View and update marketplace orders." },
+  { key: "busticketing", label: "Bus ticketing", group: "Core", description: "Invite and manage bus companies, bus types, bookings and payouts." },
   { key: "media", label: "Media", group: "Core", description: "Manage uploaded media assets." },
   { key: "transactions", label: "Transactions", group: "Finance", description: "View platform transactions." },
   { key: "wallets", label: "Wallets", group: "Finance", description: "View provider and platform wallets and withdrawals." },

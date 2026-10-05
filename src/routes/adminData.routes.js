@@ -200,7 +200,7 @@ export const buildAdminDataRoutes = ({ adminController }) => {
       Joi.object({
         amount: Joi.alternatives().try(Joi.number().min(0), Joi.string().pattern(/^\d+(\.\d{1,2})?$/)).required(),
         phone: Joi.string().trim().min(6).max(20).required(),
-        type: Joi.string().valid("contact_unlock", "subscription", "purchase").optional(),
+        type: Joi.string().valid("contact_unlock", "subscription", "purchase", "bus_ticket").optional(),
         note: Joi.string().trim().max(2000).allow(null).optional()
       })
     ),

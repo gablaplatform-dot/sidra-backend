@@ -26,6 +26,12 @@ export class PaymentService {
     this.mobileMoneyService = mobileMoneyService;
     this.rideDriverWalletService = rideDriverWalletService;
     this.orderNotificationService = orderNotificationService;
+    this.busBookingService = null;
+  }
+
+  // Bus ticketing is wired in after construction (it needs this service's callback URLs).
+  attachBusBooking(busBookingService) {
+    this.busBookingService = busBookingService;
   }
 
   mobileMoneyCallbackUrls() {
@@ -594,6 +600,7 @@ export class PaymentService {
     }
 
     const newOrderIds = [];
+    let busBookingToEmail = null;
 
     const result = await prisma.$transaction(async (tx) => {
       const transaction = await tx.transaction.findFirst({ where: { reference } });
@@ -780,10 +787,17 @@ export class PaymentService {
         if (Number(transaction.fee) > 0) {
           await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
         }
+      } else if (transaction.type === "bus_ticket" && this.busBookingService) {
+        const outcome = await this.busBookingService.confirmPayment({ tx, transaction, walletService: this.walletService });
+        if (outcome?.confirmed) busBookingToEmail = outcome.bookingId;
       }
 
       return { ok: true, transactionId: transaction.id, type: transaction.type };
     });
+
+    if (busBookingToEmail) {
+      this.busBookingService.sendTicketEmail(busBookingToEmail).catch(() => {});
+    }
 
     for (const orderId of newOrderIds) {
       this.orderNotificationService.notifyProviderNewOrder({ orderId }).catch(() => {});
@@ -807,6 +821,9 @@ export class PaymentService {
     }
 
     await prisma.transaction.update({ where: { id: transaction.id }, data: { status: "failed" } });
+    if (transaction.type === "bus_ticket" && this.busBookingService) {
+      await this.busBookingService.failPayment(transaction);
+    }
     return { ok: true, transactionId: transaction.id };
   }
 
@@ -1017,7 +1034,8 @@ export class PaymentService {
     const REVENUE_TYPES = [
       { type: "contact_unlock", field: "netAmount" },
       { type: "subscription", field: "netAmount" },
-      { type: "purchase", field: "fee" }
+      { type: "purchase", field: "fee" },
+      { type: "bus_ticket", field: "fee" }
     ];
 
     const [aggregates, platformWithdrawals, wallet] = await Promise.all([
