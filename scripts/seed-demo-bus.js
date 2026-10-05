@@ -142,11 +142,10 @@ const COMPANIES = [
   }
 ];
 
-const CUSTOMERS = [
-  "Aisha Namukasa", "Brian Okello", "Grace Atim", "Moses Byaruhanga", "Sarah Nakato", "David Mugisha", "Patience Auma", "Joseph Ssemakula",
-  "Esther Nabirye", "Isaac Tumusiime", "Racheal Akello", "Samuel Kato", "Doreen Nalubega", "Peter Opio", "Florence Namatovu", "Ivan Mwesigwa",
-  "Lydia Nakirya", "Charles Odongo", "Mercy Kyomuhendo", "Hassan Kigozi", "Juliet Achieng", "Emmanuel Wasswa", "Winnie Birungi", "Denis Lubega"
-];
+const FIRST = ["Aisha", "Brian", "Grace", "Moses", "Sarah", "David", "Patience", "Joseph", "Esther", "Isaac", "Racheal", "Samuel", "Doreen", "Peter", "Florence", "Ivan", "Lydia", "Charles", "Mercy", "Hassan", "Juliet", "Emmanuel", "Winnie", "Denis", "Agnes", "Robert", "Norah", "Francis", "Betty", "Ronald", "Sylvia", "Andrew", "Prossy", "Timothy", "Immaculate", "Geoffrey", "Harriet", "Paul", "Joan", "Kenneth"];
+const LAST = ["Namukasa", "Okello", "Atim", "Byaruhanga", "Nakato", "Mugisha", "Auma", "Ssemakula", "Nabirye", "Tumusiime", "Akello", "Kato", "Nalubega", "Opio", "Namatovu", "Mwesigwa", "Nakirya", "Odongo", "Kyomuhendo", "Kigozi", "Achieng", "Wasswa", "Birungi", "Lubega", "Nantongo", "Kiiza", "Apio", "Ochieng", "Nambi", "Muhumuza"];
+// 300 customers, so a company's customer list has a few regulars and many one-time travellers.
+const CUSTOMERS = Array.from({ length: 300 }, (_, i) => `${FIRST[i % FIRST.length]} ${LAST[(i * 7 + Math.floor(i / FIRST.length)) % LAST.length]}`);
 
 // Small deterministic generator so re-seeding yields comparable data.
 const rng = (seed) => {
@@ -250,11 +249,11 @@ async function main() {
   // ------------------------------------------------------------------ customers
   const customers = [];
   for (const [i, name] of CUSTOMERS.entries()) {
-    const phone = `07${["01", "02", "72", "75", "78", "77"][i % 6]}${String(100000 + i * 7919).slice(0, 6)}`.slice(0, 10);
+    const phone = `07${["01", "02", "72", "75", "78", "77"][i % 6]}${String(100000 + ((i * 7919) % 899999)).slice(0, 6)}`.slice(0, 10);
     customers.push(await prisma.user.create({ data: { name, email: `demo-bus-customer-${i + 1}@${DEMO_DOMAIN}`, phone, passwordHash, role: "user" } }));
   }
-  const loyal = customers.slice(0, 6); // book more often than the rest
-  const pickCustomer = () => (rand() < 0.38 ? pick(loyal) : pick(customers));
+  const loyal = customers.slice(0, 12); // regulars who book far more often than the rest
+  const pickCustomer = () => (rand() < 0.22 ? pick(loyal) : pick(customers));
 
   // ------------------------------------------------------------------ history: past trips from the sessions
   const today = todayEat();
@@ -295,7 +294,8 @@ async function main() {
     }
     const subtotal = lines.reduce((sum, l) => sum + Number(l.unitPrice) * l.quantity, 0);
     const fee = Math.round((subtotal * Number(operator.commissionPercent)) / 100);
-    const confirmedAt = new Date(Math.max(trip.departureAt.getTime() - between(2, 96) * 3600 * 1000, Date.now() - HISTORY_DAYS * 86400000));
+    // Bought some hours to days before departure, but never in the future.
+    const confirmedAt = new Date(Math.min(Math.max(trip.departureAt.getTime() - between(2, 96) * 3600 * 1000, Date.now() - HISTORY_DAYS * 86400000), Date.now() - (30 + Math.floor(rand() * rand() * 8 * 24 * 60)) * 60000));
     const txn = await prisma.transaction.create({
       data: { type: "bus_ticket", userId: customer.id, amount: new Prisma.Decimal(subtotal), fee: new Prisma.Decimal(fee), netAmount: new Prisma.Decimal(subtotal - fee), status: "succeeded", reference: `bus-demo-${trip.id}-${stats.bookings}`, metadata: { demo: true }, createdAt: confirmedAt }
     });
@@ -343,7 +343,7 @@ async function main() {
   }
   for (const trip of upcoming) {
     const dayAhead = (trip.departureAt.getTime() - Date.now()) / 86400000;
-    if (rand() < (dayAhead < 2 ? 0.2 : 0.5)) continue;
+    if (rand() < (dayAhead < 2 ? 0.3 : 0.45)) continue;
     const popular = rand() < 0.18;
     await fill(trip, { target: Math.max(2, Math.round(trip.seats * (popular ? 0.7 + rand() * 0.25 : 0.08 + rand() * 0.3))), past: false });
   }

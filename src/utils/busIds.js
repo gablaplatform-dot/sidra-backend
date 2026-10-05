@@ -11,7 +11,7 @@ const randomChars = (n) => {
 };
 
 export const makeTicketNumber = () => `GBT-${randomChars(4)}-${randomChars(4)}`;
-export const makeBookingReference = () => `GB${randomChars(6)}`;
+export const makeBookingReference = () => `GB${randomChars(7)}`;
 
 export const slugify = (text) =>
   String(text ?? "")
