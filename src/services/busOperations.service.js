@@ -362,7 +362,7 @@ export class BusOperationsService {
 
   // ------------------------------------------------------------------ admin side
   async adminListPayouts({ status } = {}) {
-    const rows = await prisma.busPayout.findMany({ where: status ? { status } : {}, orderBy: { createdAt: "desc" }, take: 200, include: { operator: { select: { companyName: true, contactPhone: true } } } });
+    const rows = await prisma.busPayout.findMany({ where: status ? { status } : {}, orderBy: { createdAt: "desc" }, take: 200, include: { operator: { select: { id: true, companyName: true, contactPhone: true, logoUrl: true } } } });
     return { items: rows.map((p) => ({ ...p, amount: money(p.amount) })) };
   }
 
@@ -390,12 +390,12 @@ export class BusOperationsService {
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
-        include: { operator: { select: { companyName: true } }, trip: { include: { route: { select: { name: true } } } } }
+        include: { operator: { select: { id: true, companyName: true, logoUrl: true } }, trip: { include: { route: { select: { name: true } } } } }
       })
     ]);
     return {
       total,
-      items: rows.map((b) => ({ id: b.id, reference: b.reference, status: b.status, company: b.operator.companyName, route: b.trip.route.name, departureAt: b.trip.departureAt, passengerName: b.passengerName, passengerPhone: b.passengerPhone, payPhone: b.payPhone, seatCount: b.seatCount, total: money(b.total), fee: money(b.fee), createdAt: b.createdAt }))
+      items: rows.map((b) => ({ id: b.id, reference: b.reference, status: b.status, operatorId: b.operator.id, company: b.operator.companyName, companyLogoUrl: b.operator.logoUrl, route: b.trip.route.name, departureAt: b.trip.departureAt, passengerName: b.passengerName, passengerPhone: b.passengerPhone, payPhone: b.payPhone, seatCount: b.seatCount, total: money(b.total), fee: money(b.fee), createdAt: b.createdAt }))
     };
   }
 
