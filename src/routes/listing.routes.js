@@ -115,6 +115,12 @@ export const buildListingRoutes = ({ listingController }) => {
     listingController.listFeatured
   );
   router.get(
+    "/:listingId/similar",
+    validate(Joi.object({ listingId: id.required() }), "params"),
+    validate(Joi.object({ limit: Joi.number().integer().min(1).max(24).optional() }), "query"),
+    listingController.similar
+  );
+  router.get(
     "/:listingId",
     validate(Joi.object({ listingId: id.required() }), "params"),
     listingController.getPublicListing

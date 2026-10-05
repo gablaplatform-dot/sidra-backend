@@ -1,6 +1,5 @@
 import React from "react";
-import { request } from "../lib/api";
-import { getDeviceId } from "../lib/deviceId";
+import { trackContactEvent } from "../lib/providerContact";
 import { IconGlobe, IconLock, IconPhone, IconPin } from "./icons";
 
 // Prefers the exact pin (Google Maps ranks a coordinate search far more precisely than a text
@@ -27,14 +26,7 @@ export default function ContactSidebar({ provider, onUnlock }) {
       .join(", ") || "Location not set";
   const mapsUrl = locked ? null : buildMapsUrl(provider.location);
 
-  // Never blocks the tel:/wa.me/etc navigation the click already triggered - just a fire-and-forget
-  // ping that powers the provider's own Analytics tab.
-  const trackContact = (type, value) => {
-    request(`/engagement/providers/${encodeURIComponent(provider.id)}/contact-events`, {
-      method: "POST",
-      body: JSON.stringify({ type, value: value ?? null, sessionId: getDeviceId() })
-    }).catch(() => {});
-  };
+  const trackContact = (type, value) => trackContactEvent(provider.id, type, value);
 
   return (
     <div className="sidebar-card">

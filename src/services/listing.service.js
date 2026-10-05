@@ -1,6 +1,7 @@
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 import { findNearbyProviderIds } from "./geoProviderSearch.js";
+import { haversineDistanceKm } from "../utils/geohash.js";
 
 const GEOHASH_SAFE_RADIUS_KM = 20; // a 3x3 geohash5 cell grid covers ~15km across - beyond this,
 // cell lookup would silently miss real matches, so wider radii fall back to a full provider scan
@@ -240,7 +241,24 @@ export class ListingService {
     return {
       id: i.id,
       providerId: i.providerId,
-      provider: provider ? { id: provider.id, businessName: provider.businessName, onlinePaymentsEnabled: provider.onlinePaymentsEnabled, district: provider.district ?? null } : undefined,
+      provider: provider
+        ? {
+            id: provider.id,
+            businessName: provider.businessName,
+            onlinePaymentsEnabled: provider.onlinePaymentsEnabled,
+            district: provider.district ?? null,
+            // Only present on the single-listing page, which selects the extra seller fields.
+            ...(provider.ratingAvg !== undefined
+              ? {
+                  ratingAvg: provider.ratingAvg,
+                  ratingCount: provider.ratingCount,
+                  memberSince: provider.createdAt,
+                  avatarUrl: provider.media?.avatarUrl ?? null,
+                  productCount: provider.productCount
+                }
+              : {})
+          }
+        : undefined,
       ...(distanceKm !== undefined ? { distanceKm: Math.round(distanceKm * 10) / 10 } : {}),
       categoryId: i.categoryId,
       productCategoryId: i.productCategoryId,
@@ -735,7 +753,22 @@ export class ListingService {
     }
     const listing = await prisma.serviceProduct.findUnique({
       where: { id: listingId },
-      include: { provider: { select: { id: true, businessName: true, isApproved: true, moderationStatus: true, onlinePaymentsEnabled: true } } }
+      include: {
+        provider: {
+          select: {
+            id: true,
+            businessName: true,
+            isApproved: true,
+            moderationStatus: true,
+            onlinePaymentsEnabled: true,
+            district: true,
+            ratingAvg: true,
+            ratingCount: true,
+            createdAt: true,
+            media: true
+          }
+        }
+      }
     });
     if (
       !listing ||
@@ -747,6 +780,90 @@ export class ListingService {
     }
     prisma.serviceProduct.update({ where: { id: listingId }, data: { viewCount: { increment: 1 } } })
       .catch(() => {});
-    return this._toDto(listing, listing.provider);
+    const productCount = await prisma.serviceProduct.count({
+      where: { providerId: listing.providerId, status: "approved", type: listing.type }
+    });
+    return this._toDto(listing, { ...listing.provider, productCount });
+  }
+
+  // "Similar products": same leaf category first, widening to its siblings, ranked so the first few
+  // really are alternatives a buyer would compare - same brand and matching specs, a comparable
+  // price, and nearby sellers ahead of far ones. Everything else is a tiebreak on recency.
+  async similar({ listingId, limit = 8 }) {
+    if (!listingId) {
+      throw new AppError({ message: "Invalid listingId", statusCode: 400, code: "INVALID_LISTING_ID" });
+    }
+    const take = Math.min(24, Math.max(1, Number(limit) || 8));
+    const base = await prisma.serviceProduct.findUnique({
+      where: { id: listingId },
+      include: { provider: { select: { id: true, district: true, lat: true, lng: true } } }
+    });
+    if (!base || base.status !== "approved") {
+      throw new AppError({ message: "Listing not found", statusCode: 404, code: "LISTING_NOT_FOUND" });
+    }
+
+    const where = {
+      status: "approved",
+      id: { not: base.id },
+      type: base.type,
+      provider: { isApproved: true, moderationStatus: "approved" }
+    };
+    if (base.productCategoryId) {
+      const category = await prisma.productCategory.findUnique({ where: { id: base.productCategoryId }, select: { parentId: true } });
+      where.productCategoryId = { in: await this._expandProductCategoryIds(category?.parentId ?? base.productCategoryId) };
+    } else if (base.categoryId) {
+      where.categoryId = base.categoryId;
+    } else {
+      where.providerId = base.providerId;
+    }
+
+    const candidates = await prisma.serviceProduct.findMany({
+      where,
+      orderBy: [{ createdAt: "desc" }],
+      take: 150,
+      include: { provider: { select: { ...PROVIDER_CARD_SELECT, lat: true, lng: true } } }
+    });
+
+    const basePrice = Number(base.price) || 0;
+    const baseBrand = new Set([...answerValues(base.customFields, "brand"), ...answerValues(base.customFields, "make")]);
+    const scored = candidates.map((item) => {
+      let score = item.productCategoryId === base.productCategoryId ? 40 : 20;
+
+      const brands = [...answerValues(item.customFields, "brand"), ...answerValues(item.customFields, "make")];
+      if (brands.some((b) => baseBrand.has(b))) score += 15;
+
+      let shared = 0;
+      for (const key of Object.keys(base.customFields ?? {})) {
+        if (key === "brand" || key === "make") continue;
+        const mine = answerValues(base.customFields, key);
+        if (mine.length && answerValues(item.customFields, key).some((v) => mine.includes(v))) shared += 1;
+      }
+      score += Math.min(shared, 5) * 2;
+
+      const price = Number(item.price) || 0;
+      if (basePrice > 0 && price > 0) {
+        const ratio = Math.min(basePrice, price) / Math.max(basePrice, price);
+        if (ratio >= 0.4) score += 20 * ratio;
+      }
+
+      let distanceKm;
+      if (base.provider?.lat != null && item.provider?.lat != null) {
+        distanceKm = haversineDistanceKm(base.provider.lat, base.provider.lng, item.provider.lat, item.provider.lng);
+        score += distanceKm <= 5 ? 12 : distanceKm <= 25 ? 8 : distanceKm <= 100 ? 4 : 0;
+      } else if (base.provider?.district && item.provider?.district === base.provider.district) {
+        score += 8;
+      }
+
+      if (item.featured) score += 3;
+      score += Math.min(Number(item.soldCount) || 0, 10) * 0.2;
+      return { item, score, distanceKm };
+    });
+
+    scored.sort((a, b) => b.score - a.score || new Date(b.item.createdAt) - new Date(a.item.createdAt));
+    const picked = scored.slice(0, take);
+    return {
+      items: picked.map(({ item, distanceKm }) => this._toDto(item, item.provider, distanceKm)),
+      total: picked.length
+    };
   }
 }

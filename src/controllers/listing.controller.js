@@ -79,6 +79,15 @@ export class ListingController {
     }
   };
 
+  similar = async (req, res, next) => {
+    try {
+      const result = await this.listingService.similar({ listingId: req.params.listingId, limit: req.query.limit });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   getPublicListing = async (req, res, next) => {
     try {
       const result = await this.listingService.getPublicListing({ listingId: req.params.listingId });

@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
+import { fetchUnlockedContact } from "../lib/providerContact";
 import { getUnlockedContactId } from "../lib/unlockedContacts";
 import { getDeviceId } from "../lib/deviceId";
 import { findCategoryPath } from "../lib/categories";
@@ -34,17 +35,8 @@ export default function ProviderDetail() {
   const [error, setError] = useState("");
   const [unlockOpen, setUnlockOpen] = useState(false);
 
-  // Logged-in visitors are recognized by their account (checked via the authenticated /contact
-  // endpoint); anonymous ones by a device-local unlock id saved after a successful payment (see
-  // lib/unlockedContacts) — there's no account to check them against otherwise.
   const revealContact = () => {
-    const request_ = session
-      ? request(`/providers/${encodeURIComponent(providerId)}/contact`)
-      : (() => {
-          const unlockId = getUnlockedContactId(providerId);
-          if (!unlockId) return Promise.reject(new Error("not unlocked"));
-          return request(`/providers/${encodeURIComponent(providerId)}/contact/unlocked?unlockId=${encodeURIComponent(unlockId)}`);
-        })();
+    const request_ = fetchUnlockedContact(providerId, session);
     return request_
       .then((result) => {
         setProvider((prev) => (prev ? { ...prev, contactLocked: false, contact: result.contact, location: result.location } : prev));
