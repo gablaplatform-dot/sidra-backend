@@ -1,13 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { request } from "../lib/api";
 import { getSession, setSession } from "../lib/session";
 import { GOOGLE_CLIENT_ID, loadGoogleIdentity } from "../lib/google";
+import { safeNext } from "../lib/authRedirect";
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  // Where to go once signed in: the page the visitor came from, else home.
+  const destination = safeNext(searchParams.get("next")) || "/home";
   const buttonRef = useRef(null);
   const [error, setError] = useState("");
   const [signingIn, setSigningIn] = useState(false);
@@ -19,9 +23,9 @@ export default function Login() {
 
   useEffect(() => {
     if (getSession()) {
-      navigate("/home", { replace: true });
+      navigate(destination, { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, destination]);
 
   const handleCredential = async (response) => {
     setSigningIn(true);
@@ -32,7 +36,7 @@ export default function Login() {
         body: JSON.stringify({ idToken: response.credential })
       });
       setSession(result);
-      navigate("/home", { replace: true });
+      navigate(destination, { replace: true });
     } catch (submitError) {
       setError(submitError.message || "Sign-in failed. Please try again.");
     } finally {

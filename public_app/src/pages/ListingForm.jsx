@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { loginPath } from "../lib/authRedirect";
 
 import { request } from "../lib/api";
 import { uploadFile } from "../lib/storage";
@@ -12,6 +13,7 @@ import SiteHeader from "../components/SiteHeader";
 import { IconClose } from "../components/icons";
 
 export default function ListingForm() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { listingId } = useParams();
   const isEditing = Boolean(listingId);
@@ -51,7 +53,7 @@ export default function ListingForm() {
 
   useEffect(() => {
     if (!session?.provider) {
-      navigate("/login", { replace: true });
+      navigate(session ? "/login" : loginPath(location), { replace: true });
     }
   }, [session, navigate]);
 

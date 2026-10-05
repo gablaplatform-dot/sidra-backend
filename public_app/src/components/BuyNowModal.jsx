@@ -1,14 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { request } from "../lib/api";
 import { getSession } from "../lib/session";
+import { loginPath } from "../lib/authRedirect";
 import { IconClose } from "./icons";
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLLS = 20;
 
 export default function BuyNowModal({ listing, onClose }) {
+  const location = useLocation();
   const [session] = useState(() => getSession());
   const [phone, setPhone] = useState("");
   const [quantity, setQuantity] = useState(1);
@@ -87,7 +89,7 @@ export default function BuyNowModal({ listing, onClose }) {
           <>
             <h2>Sign in to buy</h2>
             <p>You&apos;ll need a Gabla account to pay for &ldquo;{listing.name}&rdquo;.</p>
-            <Link to="/login" className="primary-button" style={{ display: "block", textAlign: "center" }}>Sign in</Link>
+            <Link to={loginPath(location, { resume: "buy" })} className="primary-button" style={{ display: "block", textAlign: "center" }}>Sign in</Link>
           </>
         ) : stage === "form" ? (
           <>

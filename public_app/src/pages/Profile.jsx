@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { loginPath } from "../lib/authRedirect";
 
 import { request } from "../lib/api";
 import { uploadFile } from "../lib/storage";
@@ -27,6 +28,7 @@ const TABS = [
 ];
 
 export default function Profile() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [session] = useState(() => getSession());
   const [provider, setProvider] = useState(null);
@@ -48,7 +50,8 @@ export default function Profile() {
 
   useEffect(() => {
     if (!session || !session.provider) {
-      navigate("/login", { replace: true });
+      // Only remember where to return to when nobody is signed in: a signed-in non-provider would loop.
+      navigate(session ? "/login" : loginPath(location), { replace: true });
     }
   }, [session, navigate]);
 

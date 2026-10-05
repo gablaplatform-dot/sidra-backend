@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { loginPath } from "../../lib/authRedirect";
 import { NAV_LINKS } from "../../data/shopData";
 import { getCartCount } from "../../lib/cart";
 import { IconSearch, IconCart, IconMenu, IconClose, IconChevronLeft } from "../icons";
@@ -19,6 +20,7 @@ const IconUser = (props) => (
 );
 
 export default function ShopNavbar({ session, onLogout }) {
+  const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [cartCount, setCartCount] = useState(() => getCartCount());
@@ -100,7 +102,7 @@ export default function ShopNavbar({ session, onLogout }) {
         {session ? (
           <button type="button" className="shop-cta-button shop-drawer-cta" onClick={() => { setDrawerOpen(false); onLogout?.(); }}>Log out</button>
         ) : (
-          <Link className="shop-cta-button shop-drawer-cta" to="/login" onClick={() => setDrawerOpen(false)}>Sign in</Link>
+          <Link className="shop-cta-button shop-drawer-cta" to={loginPath(location)} onClick={() => setDrawerOpen(false)}>Sign in</Link>
         )}
       </aside>
 

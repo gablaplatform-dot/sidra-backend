@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { loginPath } from "../lib/authRedirect";
 
 import { getCartCount } from "../lib/cart";
 import { IconBookmark, IconCart, IconClose, IconMenu, IconSearch } from "./icons";
@@ -14,6 +15,7 @@ const NAV_LINKS = [
 ];
 
 export default function SiteHeader({ session, onLogout }) {
+  const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [cartCount, setCartCount] = useState(() => getCartCount());
 
@@ -59,7 +61,7 @@ export default function SiteHeader({ session, onLogout }) {
           {session ? (
             <button type="button" className="cta-button shop-themed-cta" onClick={onLogout}>Log out</button>
           ) : (
-            <Link className="cta-button shop-themed-cta" to="/login">Sign in</Link>
+            <Link className="cta-button shop-themed-cta" to={loginPath(location)}>Sign in</Link>
           )}
           <button
             type="button"
@@ -93,7 +95,7 @@ export default function SiteHeader({ session, onLogout }) {
         {session ? (
           <button type="button" className="cta-button drawer-cta shop-themed-cta" onClick={() => { closeDrawer(); onLogout(); }}>Log out</button>
         ) : (
-          <Link className="cta-button drawer-cta shop-themed-cta" to="/login" onClick={closeDrawer}>Sign in</Link>
+          <Link className="cta-button drawer-cta shop-themed-cta" to={loginPath(location)} onClick={closeDrawer}>Sign in</Link>
         )}
       </aside>
     </>

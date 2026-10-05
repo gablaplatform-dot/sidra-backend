@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { loginPath } from "../lib/authRedirect";
 
 import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
@@ -12,6 +13,7 @@ const POLL_INTERVAL_MS = 3000;
 const MAX_POLLS = 20;
 
 export default function Cart() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [session] = useState(() => getSession());
   const [listings, setListings] = useState({}); // listingId -> listing detail, or null if unavailable
@@ -110,7 +112,7 @@ export default function Cart() {
   const checkout = async (event) => {
     event.preventDefault();
     if (!session) {
-      navigate("/login", { state: { message: "Sign in to check out." } });
+      navigate(loginPath(location), { state: { message: "Sign in to check out." } });
       return;
     }
     if (!phone.trim()) {
@@ -259,7 +261,7 @@ export default function Cart() {
               {!session ? (
                 <>
                   <p className="provider-meta">Sign in to check out.</p>
-                  <Link to="/login" className="cta-button">Sign in</Link>
+                  <Link to={loginPath(location)} className="cta-button">Sign in</Link>
                 </>
               ) : (
                 <form onSubmit={checkout} className="form-grid">

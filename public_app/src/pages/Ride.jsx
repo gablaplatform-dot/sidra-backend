@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { loginPath } from "../lib/authRedirect";
 
 import { request } from "../lib/api";
 import { getSession } from "../lib/session";
@@ -29,6 +30,7 @@ const STATUS_COPY = {
 };
 
 export default function Ride() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [session] = useState(() => getSession());
 
@@ -362,7 +364,7 @@ export default function Ride() {
 
   const requestRide = async () => {
     if (!session) {
-      navigate("/login");
+      navigate(loginPath(location));
       return;
     }
     if (paymentMethod === "mobile_money" && !phone.trim()) {
@@ -566,7 +568,7 @@ export default function Ride() {
             ) : null}
 
             {!session ? (
-              <Link to="/login" className="primary-button" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
+              <Link to={loginPath(location)} className="primary-button" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
                 Sign in to request a ride
               </Link>
             ) : (

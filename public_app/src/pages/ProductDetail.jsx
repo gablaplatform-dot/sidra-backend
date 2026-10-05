@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
@@ -45,6 +45,7 @@ const uniqueImages = (listing) => {
 export default function ProductDetail() {
   const { listingId } = useParams();
   const [session] = useState(() => getSession());
+  const [searchParams, setSearchParams] = useSearchParams();
   const [listing, setListing] = useState(null);
   const [tree, setTree] = useState([]);
   const [providerRecord, setProviderRecord] = useState(null);
@@ -123,6 +124,21 @@ export default function ProductDetail() {
   useEffect(() => {
     if (listing) document.title = `${listing.name} - ${formatUgx(listing.price)} | Gabla Shop`;
   }, [listing]);
+
+  // Back from signing in via the buy / order dialog: reopen it instead of making the shopper find
+  // the button again. The marker is consumed straight away so a refresh doesn't keep reopening it.
+  const resume = searchParams.get("resume");
+  useEffect(() => {
+    if (!resume || !listing) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("resume");
+    setSearchParams(next, { replace: true });
+    if (!getSession()) return;
+    const online = listing.provider?.onlinePaymentsEnabled !== false && listing.onlinePaymentEnabled !== false;
+    if (resume === "buy" && listing.type === "product" && online) setBuying(true);
+    else if (resume === "order" || resume === "buy") setOrdering(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume, listing]);
 
   const logout = () => {
     clearSession();

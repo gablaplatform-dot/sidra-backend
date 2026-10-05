@@ -1,11 +1,13 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { request } from "../lib/api";
 import { getSession } from "../lib/session";
+import { loginPath } from "../lib/authRedirect";
 import { IconClose } from "./icons";
 
 export default function OrderModal({ listing, providerId, onClose }) {
+  const location = useLocation();
   const [session] = useState(() => getSession());
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -58,7 +60,7 @@ export default function OrderModal({ listing, providerId, onClose }) {
           <>
             <h2>Sign in to order</h2>
             <p>You&apos;ll need a Gabla account to place an order with {listing.name}.</p>
-            <Link to="/login" className="primary-button" style={{ display: "block", textAlign: "center" }}>Sign in</Link>
+            <Link to={loginPath(location, { resume: "order" })} className="primary-button" style={{ display: "block", textAlign: "center" }}>Sign in</Link>
           </>
         ) : placed ? (
           <>
