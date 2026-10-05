@@ -39,7 +39,9 @@ export default function Login() {
       setSession(result);
       claimInterest(); // what this device browsed before signing in now belongs to the account
       // A brand-new account gets the short welcome form first, then continues to where it was going.
-      navigate(result.isNewUser ? `/welcome?next=${encodeURIComponent(destination)}` : destination, { replace: true });
+      // Bus companies go straight to their portal unless they were sent somewhere specific.
+      const target = result.busOperator && !searchParams.get("next") ? "/bus/operator" : destination;
+      navigate(result.isNewUser ? `/welcome?next=${encodeURIComponent(destination)}` : target, { replace: true });
     } catch (submitError) {
       setError(submitError.message || "Sign-in failed. Please try again.");
     } finally {

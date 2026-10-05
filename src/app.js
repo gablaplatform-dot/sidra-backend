@@ -180,7 +180,7 @@ export const buildApp = () => {
       rideController,
       promotionController,
       interestController,
-      bus: { busBookingService, busOperatorService, busCatalogService, busOperationsService }
+      bus: { busBookingService, busOperatorService, busCatalogService, busOperationsService, storageService }
     })
   );
 

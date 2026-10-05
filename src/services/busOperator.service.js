@@ -104,7 +104,7 @@ export class BusOperatorService {
   }
 
   onboardingUrl(token) {
-    return `${env.appBaseUrl.replace(/\/$/, "")}/bus/onboarding?token=${encodeURIComponent(token)}`;
+    return `${env.publicSiteUrl}/bus/onboarding?token=${encodeURIComponent(token)}`;
   }
 
   async _uniqueSlug(companyName) {

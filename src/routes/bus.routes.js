@@ -66,7 +66,7 @@ const h = (fn) => async (req, res, next) => {
   }
 };
 
-export const buildBusRoutes = ({ busBookingService, busOperatorService, busCatalogService, busOperationsService }) => {
+export const buildBusRoutes = ({ busBookingService, busOperatorService, busCatalogService, busOperationsService, storageService }) => {
   const router = Router();
 
   // ============================================================ public discovery
@@ -147,6 +147,22 @@ export const buildBusRoutes = ({ busBookingService, busOperatorService, busCatal
     "/onboarding/google",
     validate(Joi.object({ token: Joi.string().required(), idToken: Joi.string().required() })),
     h((req) => busOperatorService.linkGoogleAccount({ onboardingToken: req.body.token, idToken: req.body.idToken }))
+  );
+  // Logo / cover uploads during onboarding: the invitation link is the credential, so a company that
+  // chose a password (and has no session yet) can still upload.
+  router.post(
+    "/onboarding/upload-url",
+    validate(
+      Joi.object({
+        token: Joi.string().required(),
+        contentType: Joi.string().valid("image/jpeg", "image/png", "image/webp").required(),
+        filename: Joi.string().trim().max(200).optional()
+      })
+    ),
+    h((req) => {
+      const payload = busOperatorService.verifyOnboardingToken(req.body.token);
+      return storageService.createUploadUrl({ actorUserId: String(payload.sub), role: "bus_operator", contentType: req.body.contentType, folder: "bus-operators", filename: req.body.filename });
+    })
   );
   router.post(
     "/onboarding/complete",

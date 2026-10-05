@@ -16,6 +16,16 @@ import Shop from "./pages/Shop";
 import ShopAllCategories from "./pages/ShopAllCategories";
 import ShopCollection from "./pages/ShopCollection";
 import ProductDetail from "./pages/ProductDetail";
+import BusHome from "./pages/bus/BusHome";
+import BusSearch from "./pages/bus/BusSearch";
+import BusParks from "./pages/bus/BusParks";
+import BusPark from "./pages/bus/BusPark";
+import BusTrip from "./pages/bus/BusTrip";
+import BusTickets from "./pages/bus/BusTickets";
+import BusTicket from "./pages/bus/BusTicket";
+import BusOnboarding from "./pages/bus/BusOnboarding";
+import BusOperatorLogin from "./pages/bus/BusOperatorLogin";
+import BusOperatorPortal from "./pages/bus/BusOperatorPortal";
 
 export default function App() {
   return (
@@ -39,6 +49,16 @@ export default function App() {
       <Route path="/shop/all" element={<ShopCollection collection="all" />} />
       <Route path="/shop/product/:listingId" element={<ProductDetail />} />
       <Route path="/shop/:categoryId" element={<Shop />} />
+      <Route path="/bus" element={<BusHome />} />
+      <Route path="/bus/search" element={<BusSearch />} />
+      <Route path="/bus/parks" element={<BusParks />} />
+      <Route path="/bus/parks/:slug" element={<BusPark />} />
+      <Route path="/bus/trip/:tripId" element={<BusTrip />} />
+      <Route path="/bus/tickets" element={<BusTickets />} />
+      <Route path="/bus/tickets/:ticketNumber" element={<BusTicket />} />
+      <Route path="/bus/onboarding" element={<BusOnboarding />} />
+      <Route path="/bus/operator/login" element={<BusOperatorLogin />} />
+      <Route path="/bus/operator/*" element={<BusOperatorPortal />} />
       <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   );

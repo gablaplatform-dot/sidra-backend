@@ -16,6 +16,9 @@ export const env = {
   allowProviderSelfRegister: String(process.env.ALLOW_PROVIDER_SELF_REGISTER ?? "").toLowerCase() === "true",
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   appBaseUrl: process.env.APP_BASE_URL ?? "http://localhost:5173",
+  // Where the public storefront lives. Bus links use this; it falls back to the origin of the provider
+  // onboarding URL (already set in production and pointing at the storefront), then APP_BASE_URL.
+  publicSiteUrl: (process.env.PUBLIC_SITE_URL || (process.env.PROVIDER_ONBOARDING_BASE_URL ? new URL(process.env.PROVIDER_ONBOARDING_BASE_URL).origin : "") || process.env.APP_BASE_URL || "http://localhost:5174").replace(/\/$/, ""),
   providerOnboardingBaseUrl: process.env.PROVIDER_ONBOARDING_BASE_URL ?? "",
   adminInviteBaseUrl: process.env.ADMIN_INVITE_BASE_URL ?? "",
   resendApiKey: process.env.RESEND_API_KEY ?? "",

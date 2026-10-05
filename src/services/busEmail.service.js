@@ -20,7 +20,7 @@ const escapeHtml = (value) =>
 
 export const ugx = (value) => `UGX ${Number(value ?? 0).toLocaleString("en-US")}`;
 
-const appUrl = (path) => `${env.appBaseUrl.replace(/\/$/, "")}${path}`;
+const appUrl = (path) => `${env.publicSiteUrl}${path}`;
 export const qrUrl = (ticketNumber) => `${env.apiBaseUrl.replace(/\/$/, "")}/api/v1/bus/tickets/${encodeURIComponent(ticketNumber)}/qr.png`;
 
 const shell = ({ title, preheader, body }) => `<!doctype html>

@@ -6,9 +6,10 @@ import { clearSession, getSession, setSession } from "../lib/session";
 import { GOOGLE_CLIENT_ID, loadGoogleIdentity } from "../lib/google";
 import SiteHeader from "../components/SiteHeader";
 import ProviderCard from "../components/ProviderCard";
-import { IconArrowRight, IconBike, IconBox, IconCar, IconCart, IconChat, IconClockIcon, IconPin, IconSearch, IconShield, IconSparkles, IconStar, IconStore, IconTruck, IconWrench } from "../components/icons";
+import { IconArrowRight, IconBike, IconBus, IconTicket, IconBox, IconCar, IconCart, IconChat, IconClockIcon, IconPin, IconSearch, IconShield, IconSparkles, IconStar, IconStore, IconTruck, IconWrench } from "../components/icons";
 import { ProviderCardsSkeleton, Skel } from "../components/Skeleton";
 import { mapCategoryDto } from "../lib/shopMappers";
+import { busApi, todayEat, ugx } from "../lib/bus";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
@@ -24,6 +25,35 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchValue, setSearchValue] = useState("");
+  const [busPlaces, setBusPlaces] = useState({ origins: [], destinations: [] });
+  const [busRoutes, setBusRoutes] = useState([]);
+  const [busFrom, setBusFrom] = useState("");
+  const [busTo, setBusTo] = useState("");
+  const [busDate, setBusDate] = useState(() => todayEat());
+
+  // The bus promo is a bonus section: if the bus API is unavailable the rest of Home is unaffected.
+  useEffect(() => {
+    let active = true;
+    Promise.all([busApi.places(), busApi.popularRoutes(6)])
+      .then(([places, popular]) => {
+        if (!active) return;
+        setBusPlaces(places || { origins: [], destinations: [] });
+        setBusRoutes(popular?.items || []);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const searchBuses = (event) => {
+    event.preventDefault();
+    const params = new URLSearchParams();
+    if (busFrom) params.set("from", busFrom);
+    if (busTo) params.set("to", busTo);
+    params.set("date", busDate || todayEat());
+    navigate(`/bus/search?${params.toString()}`);
+  };
 
   useEffect(() => {
     let active = true;
@@ -289,6 +319,41 @@ export default function Home() {
               <span className="home-promo-icon home-promo-icon-b"><IconBox /></span>
             </div>
           </Link>
+        </div>
+      </section>
+
+      {/* ============ BUS TICKETS ============ */}
+      <section className="home-section">
+        <div className="bus-promo">
+          <div>
+            <span className="bus-promo-eyebrow"><IconBus width={16} height={16} /> Gabla Bus</span>
+            <h2>Book your bus ticket in a minute.</h2>
+            <p>Pick your route, choose a day on the calendar and pay with MTN MoMo or Airtel Money. Your e-ticket arrives instantly &mdash; no queues at the park.</p>
+            {busRoutes.length ? (
+              <div className="bus-promo-routes">
+                {busRoutes.map((r) => (
+                  <Link key={`${r.from}-${r.to}`} to={`/bus/search?from=${encodeURIComponent(r.from)}&to=${encodeURIComponent(r.to)}&date=${todayEat()}`}>
+                    {r.from} &rarr; {r.to}{r.minPrice ? ` · ${ugx(r.minPrice)}` : ""}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <form className="bus-promo-form" onSubmit={searchBuses}>
+            <div className="bus-promo-form-row">
+              <select value={busFrom} onChange={(e) => setBusFrom(e.target.value)} aria-label="Travelling from">
+                <option value="">From (anywhere)</option>
+                {busPlaces.origins.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <select value={busTo} onChange={(e) => setBusTo(e.target.value)} aria-label="Travelling to">
+                <option value="">To (anywhere)</option>
+                {busPlaces.destinations.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <input type="date" value={busDate} min={todayEat()} onChange={(e) => setBusDate(e.target.value)} aria-label="Travel date" />
+            <button type="submit" className="bus-promo-btn"><IconBus width={18} height={18} /> Find buses</button>
+            <Link to="/bus/tickets" className="bus-link" style={{ textAlign: "center" }}><IconTicket width={14} height={14} /> My tickets</Link>
+          </form>
         </div>
       </section>
 

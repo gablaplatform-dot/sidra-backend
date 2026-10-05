@@ -219,3 +219,51 @@ export const IconTruck = (props) => (
     <circle cx="17" cy="18" r="2" />
   </svg>
 );
+
+export const IconBus = (props) => (
+  <svg {...base} {...props}>
+    <rect x="4" y="3.5" width="16" height="14" rx="3" />
+    <path d="M4 11h16" />
+    <path d="M4 7.5h16" />
+    <circle cx="8" cy="14.5" r="1" />
+    <circle cx="16" cy="14.5" r="1" />
+    <path d="M6.5 17.5V20M17.5 17.5V20" />
+  </svg>
+);
+
+export const IconTicket = (props) => (
+  <svg {...base} {...props}>
+    <path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4v1a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-1a2 2 0 0 1 0-4v0a2 2 0 0 0 0-4V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1Z" />
+    <path d="M14 6v12" strokeDasharray="2 2.5" />
+  </svg>
+);
+
+export const IconCalendar = (props) => (
+  <svg {...base} {...props}>
+    <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+    <path d="M3.5 10h17M8 3v4M16 3v4" />
+  </svg>
+);
+
+export const IconCheck = (props) => (
+  <svg {...base} {...props}>
+    <polyline points="4 12.5 9.5 18 20 6.5" />
+  </svg>
+);
+
+export const IconUsers = (props) => (
+  <svg {...base} {...props}>
+    <circle cx="9" cy="8" r="3.5" />
+    <path d="M2.5 20c0-3.5 2.9-6 6.5-6s6.5 2.5 6.5 6" />
+    <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2 .8 3.5 2.7 3.5 5.7" />
+  </svg>
+);
+
+export const IconQr = (props) => (
+  <svg {...base} {...props}>
+    <rect x="3.5" y="3.5" width="7" height="7" rx="1" />
+    <rect x="13.5" y="3.5" width="7" height="7" rx="1" />
+    <rect x="3.5" y="13.5" width="7" height="7" rx="1" />
+    <path d="M14 14h2.5v2.5H14zM19 14v2M14 19h2M18 18.5h2.5V21" />
+  </svg>
+);
