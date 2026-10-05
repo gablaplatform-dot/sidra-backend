@@ -7,17 +7,18 @@ import { GOOGLE_CLIENT_ID, loadGoogleIdentity } from "../../lib/google";
 import { isUgPhone, normalizeUgPhone, ugx, durationLabel } from "../../lib/bus";
 import { Skel } from "../../components/Skeleton";
 import DynamicField from "../../components/DynamicField";
-import { IconBus, IconCheck, IconPin, IconStore, IconTicket, IconUsers } from "../../components/icons";
 import { UGANDA_DISTRICTS } from "../../components/bus/operator/districts";
 import RouteForm, { emptyRoute, routePayload, routeTitle, validateRoute } from "../../components/bus/operator/RouteForm";
-import { Field, IconGoogle, IconPlus, IconTrash, ImageField, daysLabel, errMsg, timeLabel, uploadOnboardingImage } from "../../components/bus/operator/ui";
+import { Field, ImageField, Segmented, daysLabel, errMsg, timeLabel, uploadOnboardingImage } from "../../components/bus/operator/ui";
+import BrandPanel, { Logo } from "../../components/bus/operator/BrandPanel";
+import { IcAlert, IcArrowLeft, IcArrowRight, IcBuilding, IcBus, IcCheck, IcInfo, IcPin, IcPlus, IcRoute, IcShield, IcTicket, IcTrash, IcUsers } from "../../components/bus/operator/icons";
 
 const STEPS = [
-  { key: "account", label: "Sign in", Icon: IconCheck },
-  { key: "company", label: "Company", Icon: IconStore },
-  { key: "fleet", label: "Fleet", Icon: IconUsers },
-  { key: "routes", label: "Routes", Icon: IconPin },
-  { key: "review", label: "Finish", Icon: IconTicket }
+  { key: "account", label: "Secure your account", short: "Sign in", hint: "Google or a password", Icon: IcShield },
+  { key: "company", label: "Company and bus park", short: "Company", hint: "What passengers see", Icon: IcBuilding },
+  { key: "fleet", label: "Your fleet", short: "Fleet", hint: "A few quick questions", Icon: IcUsers },
+  { key: "routes", label: "Routes and prices", short: "Routes", hint: "Where you go, what it costs", Icon: IcRoute },
+  { key: "review", label: "Review and finish", short: "Finish", hint: "Open your portal", Icon: IcTicket }
 ];
 
 const EMPTY_PROFILE = {
@@ -38,27 +39,22 @@ const clearDraft = (token) => {
 
 const isEmptyAnswer = (v) => v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0);
 
-function Shell({ children, wide = false }) {
+function Shell({ children }) {
   return (
     <div className="bus-app bop-ob">
       <header className="bop-ob-top">
-        <div className="bop-ob-top-in">
-          <span className="bus-brand">
-            <span className="bus-brand-mark"><IconBus /></span>
-            <span className="bus-brand-text"><strong>Gabla Bus</strong><small>For bus companies</small></span>
-          </span>
-          <Link to="/bus/operator/login" className="bop-ob-top-link">Sign in</Link>
-        </div>
+        <Logo light={false} />
+        <Link to="/bus/operator/login" className="bop-ob-top-link">Sign in</Link>
       </header>
-      <main className={`bop-ob-main ${wide ? "is-wide" : ""}`}>{children}</main>
+      <main className="bop-ob-center">{children}</main>
     </div>
   );
 }
 
 function Notice({ tone = "info", title, children, action }) {
   return (
-    <div className="bus-card bop-ob-notice">
-      <span className={`bop-ob-notice-icon is-${tone}`}>{tone === "error" ? "!" : <IconCheck />}</span>
+    <div className="bop-card bop-notice">
+      <span className={`bop-notice-icon is-${tone}`}>{tone === "error" ? "!" : <IcCheck size={26} strokeWidth={2.6} />}</span>
       <h1>{title}</h1>
       <p>{children}</p>
       {action}
@@ -249,9 +245,10 @@ export default function BusOnboarding() {
   if (info.loading) {
     return (
       <Shell>
-        <div className="bus-card bop-ob-card" role="status" aria-busy="true" aria-label="Loading your invitation">
-          <Skel w="40%" h={14} /><Skel w="75%" h={30} style={{ marginTop: 14 }} /><Skel w="90%" h={14} style={{ marginTop: 12 }} />
-          <div style={{ display: "grid", gap: 12, marginTop: 28 }}><Skel h={48} r={12} /><Skel h={48} r={12} /><Skel h={48} r={12} /></div>
+        <div className="bop-card bop-notice is-wide" role="status" aria-busy="true" aria-label="Loading your invitation">
+          <Skel w={64} h={64} r={20} />
+          <Skel w="70%" h={26} style={{ marginTop: 18 }} /><Skel w="90%" h={14} style={{ marginTop: 12 }} />
+          <div style={{ display: "grid", gap: 12, marginTop: 24, width: "100%" }}><Skel h={48} r={12} /><Skel h={48} r={12} /></div>
         </div>
       </Shell>
     );
@@ -263,7 +260,7 @@ export default function BusOnboarding() {
         <Notice
           tone="error"
           title={invalid ? "This invitation link isn’t valid" : "We couldn’t load your invitation"}
-          action={invalid ? <Link to="/bus/operator/login" className="bus-btn bus-btn-light">I already have an account</Link> : <button className="bus-btn bus-btn-primary" onClick={load}>Try again</button>}
+          action={invalid ? <Link to="/bus/operator/login" className="bop-btn bop-btn-light">I already have an account</Link> : <button className="bop-btn bop-btn-primary" onClick={load}>Try again</button>}
         >
           {invalid
             ? "The link may have expired (invitations last 7 days) or been replaced by a newer one. Please ask Gabla to send you a new invitation email, then open the link in that email."
@@ -276,203 +273,226 @@ export default function BusOnboarding() {
   if (operator?.onboardingStatus === "registered") {
     return (
       <Shell>
-        <Notice title="You’re already registered" action={<Link to="/bus/operator/login" className="bus-btn bus-btn-primary">Sign in to your portal</Link>}>
+        <Notice title="You’re already registered" action={<Link to="/bus/operator/login" className="bop-btn bop-btn-primary">Sign in to your portal</Link>}>
           {operator.companyName} has already finished setting up. Sign in with your email or Google account to manage your buses.
         </Notice>
       </Shell>
     );
   }
 
-  const pct = Math.round((step / (STEPS.length - 1)) * 100);
+  const pct = Math.round(((step + 1) / STEPS.length) * 100);
   const route = routes[Math.min(activeRoute, routes.length - 1)];
   const setRoute = (value) => setRoutes((list) => list.map((r, i) => (i === activeRoute ? value : r)));
   const canGoNext = step === 0 ? (mode === "google" ? Boolean(google) : password.length >= 8 && password === password2) : true;
+  const current = STEPS[step];
 
   return (
-    <Shell wide={step === 3}>
-      <div ref={topRef} className="bop-ob-scroll" />
-      <ol className="bop-steps" aria-label="Progress">
-        {STEPS.map((s, i) => (
-          <li key={s.key} className={`${i === step ? "is-current" : ""} ${i < step ? "is-done" : ""}`}>
-            <button type="button" disabled={i > step} onClick={() => goStep(i)} aria-current={i === step ? "step" : undefined}>
-              <span className="bop-step-dot">{i < step ? <IconCheck width={14} height={14} /> : i + 1}</span>
-              <span className="bop-step-label">{s.label}</span>
-            </button>
-          </li>
-        ))}
-      </ol>
-      <div className="bop-progress" aria-hidden="true"><span style={{ width: `${Math.max(6, pct)}%` }} /></div>
-
-      <div className="bus-card bop-ob-card">
-        {step === 0 ? (
-          <>
-            <span className="bop-eyebrow">Welcome</span>
-            <h1>Let’s get {operator.companyName} selling tickets</h1>
-            <p className="bop-lead">It takes about 5 minutes: tell us about your company and bus park, then add your first route and prices. Passengers can start booking right after.</p>
-            <Field label="Invited email" hint="Your invitation was sent to this address, so it can’t be changed.">
-              <input className="bus-input" value={email} readOnly aria-readonly="true" />
-            </Field>
-
-            <div className="bop-modes" role="tablist">
-              <button type="button" role="tab" aria-selected={mode === "google"} className={mode === "google" ? "is-on" : ""} onClick={() => { setMode("google"); setError(""); }}>Continue with Google</button>
-              <button type="button" role="tab" aria-selected={mode === "password"} className={mode === "password" ? "is-on" : ""} onClick={() => { setMode("password"); setError(""); }}>Set a password</button>
-            </div>
-
-            {mode === "google" ? (
-              <div className="bop-mode-body">
-                {google ? (
-                  <div className="bus-alert bus-alert-success">Signed in as <strong>{google.email}</strong>. You’re all set to continue.</div>
-                ) : GOOGLE_CLIENT_ID ? (
-                  <>
-                    <p className="bus-hint" style={{ marginBottom: 12 }}>Sign in with the Google account for <strong>{email}</strong>. Other Google accounts won’t work.</p>
-                    <div ref={googleRef} className="bop-google-slot" />
-                    {googleBusy ? <p className="bus-hint">Checking your Google account…</p> : null}
-                  </>
-                ) : (
-                  <div className="bus-alert bus-alert-warn">Google sign-in isn’t available here right now. Please choose “Set a password” instead.</div>
-                )}
-                {googleError ? <div className="bus-alert bus-alert-error" role="alert" style={{ marginTop: 12 }}>{googleError}</div> : null}
-              </div>
-            ) : (
-              <div className="bop-mode-body bop-grid2">
-                <Field label="Password" hint="At least 8 characters">
-                  <input className="bus-input" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                </Field>
-                <Field label="Confirm password">
-                  <input className="bus-input" type="password" autoComplete="new-password" value={password2} onChange={(e) => setPassword2(e.target.value)} />
-                </Field>
-              </div>
-            )}
-          </>
-        ) : null}
-
-        {step === 1 ? (
-          <>
-            <span className="bop-eyebrow">Step 2 of 5</span>
-            <h1>Your company and bus park</h1>
-            <p className="bop-lead">This is what passengers see when they find your buses.</p>
-            <div className="bop-form">
-              <Field label="Company name"><input className="bus-input" value={profile.companyName} onChange={(e) => setP({ companyName: e.target.value })} maxLength={120} /></Field>
-              <Field label="About your company (optional)"><textarea className="bus-textarea" rows={3} value={profile.description} onChange={(e) => setP({ description: e.target.value })} maxLength={2000} placeholder="Years on the road, comfort, safety, where you travel…" /></Field>
-              <div className="bop-grid2">
-                <ImageField label="Logo" kind="logo" value={profile.logoUrl} onChange={(v) => setP({ logoUrl: v })} uploader={(f) => uploadOnboardingImage(f, token)} hint="Square image works best (optional)" />
-                <ImageField label="Cover photo" kind="cover" value={profile.coverUrl} onChange={(v) => setP({ coverUrl: v })} uploader={(f) => uploadOnboardingImage(f, token)} hint="A wide photo of your buses (optional)" />
-              </div>
-              <div className="bop-grid2">
-                <Field label="Contact phone" hint="Passengers and Gabla call this number"><input className="bus-input" type="tel" inputMode="tel" placeholder="0772 123 456" value={profile.contactPhone} onChange={(e) => setP({ contactPhone: e.target.value })} /></Field>
-                <Field label="WhatsApp (optional)"><input className="bus-input" type="tel" inputMode="tel" placeholder="0772 123 456" value={profile.whatsapp} onChange={(e) => setP({ whatsapp: e.target.value })} /></Field>
-              </div>
-
-              <div className="bop-park">
-                <h3>Where is your bus park?</h3>
-                <Field label="Bus park name"><input className="bus-input" placeholder="e.g. Namirembe Road Bus Park" value={profile.parkName} onChange={(e) => setP({ parkName: e.target.value })} maxLength={120} /></Field>
-                <div className="bop-grid2">
-                  <Field label="District">
-                    <select className="bus-select" value={profile.parkDistrict} onChange={(e) => setP({ parkDistrict: e.target.value })}>
-                      <option value="">Choose a district</option>
-                      {UGANDA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </Field>
-                  <Field label="Address / landmark (optional)"><input className="bus-input" placeholder="Opposite the taxi park, Gate 3" value={profile.parkAddress} onChange={(e) => setP({ parkAddress: e.target.value })} maxLength={240} /></Field>
-                </div>
-                <div className="bop-loc">
-                  <button type="button" className="bus-btn bus-btn-light bus-btn-sm" onClick={useMyLocation} disabled={locating}><IconPin width={16} height={16} /> {locating ? "Locating…" : "Pin my current location"}</button>
-                  {profile.parkLat != null ? <span className="bus-chip bus-chip-green">Location saved ({profile.parkLat}, {profile.parkLng})</span> : <small className="bus-hint">Optional. Helps passengers find the park.</small>}
-                </div>
-              </div>
-            </div>
-          </>
-        ) : null}
-
-        {step === 2 ? (
-          <>
-            <span className="bop-eyebrow">Step 3 of 5</span>
-            <h1>Your fleet</h1>
-            <p className="bop-lead">A few quick questions so Gabla knows who it’s working with.</p>
-            <div className="bop-form">
-              <Field label="How many buses do you operate?"><input className="bus-input bop-narrow" type="number" min="1" max="5000" inputMode="numeric" value={profile.fleetSize} onChange={(e) => setP({ fleetSize: e.target.value })} /></Field>
-              {questions.map((q) => (
-                <div className="bus-field bop-dyn" key={q.key}>
-                  <span>{q.label}{q.required ? <b className="bop-req"> *</b> : <i> (optional)</i>}</span>
-                  <DynamicField field={q} value={profile.customFields[q.key]} onChange={(v) => setP({ customFields: { ...profile.customFields, [q.key]: v } })} />
-                  {q.unit ? <small className="bus-hint">Unit: {q.unit}</small> : null}
-                </div>
-              ))}
-            </div>
-          </>
-        ) : null}
-
-        {step === 3 ? (
-          <>
-            <span className="bop-eyebrow">Step 4 of 5</span>
-            <h1>Add your first route</h1>
-            <p className="bop-lead">Set where you travel, what tickets cost, and when buses leave. You can add more routes now or later.</p>
-            <div className="bop-routetabs">
-              {routes.map((r, i) => (
-                <button key={i} type="button" className={`bus-chip ${i === activeRoute ? "is-active" : ""}`} onClick={() => setActiveRoute(i)}>{routeTitle(r)}</button>
-              ))}
-              <button type="button" className="bus-chip bus-chip-orange" disabled={routes.length >= 10} onClick={() => { setRoutes([...routes, emptyRoute()]); setActiveRoute(routes.length); }}><IconPlus width={14} height={14} /> Add another route</button>
-            </div>
-            <RouteForm value={route} onChange={setRoute} busTypes={info.data.busTypes} />
-            {routes.length > 1 ? (
-              <button type="button" className="bus-btn bus-btn-light bus-btn-sm" style={{ marginTop: 16 }} onClick={() => { setRoutes(routes.filter((_, i) => i !== activeRoute)); setActiveRoute(0); }}>
-                <IconTrash width={16} height={16} /> Remove this route
+    <div className="bus-app bop-ob bop-ob-split">
+      <BrandPanel className="bop-ob-art">
+        <span className="bop-eyebrow is-light">Set up {operator.companyName}</span>
+        <h1>Let’s get your buses selling tickets.</h1>
+        <ol className="bop-vsteps" aria-label="Progress">
+          {STEPS.map((s, i) => (
+            <li key={s.key} className={`${i === step ? "is-current" : ""} ${i < step ? "is-done" : ""}`}>
+              <button type="button" disabled={i > step} onClick={() => goStep(i)} aria-current={i === step ? "step" : undefined}>
+                <span className="bop-vstep-dot">{i < step ? <IcCheck size={15} strokeWidth={3} /> : i + 1}</span>
+                <span><strong>{s.label}</strong><small>{s.hint}</small></span>
               </button>
-            ) : null}
-          </>
-        ) : null}
+            </li>
+          ))}
+        </ol>
+      </BrandPanel>
 
-        {step === 4 ? (
-          <>
-            <span className="bop-eyebrow">Last step</span>
-            <h1>Review and finish</h1>
-            <p className="bop-lead">Check everything looks right. You can change all of this later from your portal.</p>
-            <div className="bop-review">
-              <section>
-                <header><h3>Company</h3><button type="button" className="bop-linkbtn" onClick={() => goStep(1)}>Edit</button></header>
-                <div className="bop-review-company">
-                  <span className="bop-review-logo">{profile.logoUrl ? <img src={profile.logoUrl} alt="" /> : profile.companyName.slice(0, 1)}</span>
-                  <div><strong>{profile.companyName}</strong><p>{email}</p><p>{profile.contactPhone}{profile.whatsapp ? ` · WhatsApp ${profile.whatsapp}` : ""}</p></div>
+      <div className="bop-ob-pane">
+        <header className="bop-ob-mobilebar">
+          <div className="bop-ob-mobilebar-row">
+            <Logo light={false} />
+            <Link to="/bus/operator/login" className="bop-ob-top-link">Sign in</Link>
+          </div>
+          <div className="bop-ob-mobilebar-step"><strong>Step {step + 1} of {STEPS.length}</strong><span>{current.short}</span></div>
+          <div className="bop-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label="Setup progress"><span style={{ width: `${pct}%` }} /></div>
+        </header>
+
+        <div className="bop-ob-scroll" ref={topRef} />
+        <div className="bop-ob-pane-in">
+          <div className="bop-ob-desktopprogress">
+            <span>Step {step + 1} of {STEPS.length}</span>
+            <div className="bop-progress" aria-hidden="true"><span style={{ width: `${pct}%` }} /></div>
+          </div>
+
+          <div key={step} className={`bop-ob-card ${step === 3 ? "is-wide" : ""}`}>
+            {step === 0 ? (
+              <>
+                <span className="bop-eyebrow">Welcome</span>
+                <h1>Secure your account</h1>
+                <p className="bop-lead">It takes about 5 minutes: tell us about your company and bus park, then add your first route and prices. Passengers can start booking right after.</p>
+                <div className="bop-form">
+                  <Field label="Invited email" hint="Your invitation was sent to this address, so it can’t be changed.">
+                    <input className="bop-input" value={email} readOnly aria-readonly="true" />
+                  </Field>
+
+                  <Segmented className="bop-seg-wide" label="How do you want to sign in?" value={mode} onChange={(v) => { setMode(v); setError(""); }} options={[["google", "Continue with Google"], ["password", "Set a password"]]} />
+
+                  {mode === "google" ? (
+                    <div className="bop-mode-body">
+                      {google ? (
+                        <div className="bop-alert is-success"><IcCheck size={18} strokeWidth={2.6} /><span>Signed in as <strong>{google.email}</strong>. You’re all set to continue.</span></div>
+                      ) : GOOGLE_CLIENT_ID ? (
+                        <>
+                          <p className="bop-hint" style={{ marginBottom: 12 }}>Sign in with the Google account for <strong>{email}</strong>. Other Google accounts won’t work.</p>
+                          <div ref={googleRef} className="bop-google-slot" />
+                          {googleBusy ? <p className="bop-hint">Checking your Google account…</p> : null}
+                        </>
+                      ) : (
+                        <div className="bop-alert is-warn"><IcInfo size={18} /><span>Google sign-in isn’t available here right now. Please choose “Set a password” instead.</span></div>
+                      )}
+                      {googleError ? <div className="bop-alert is-error" role="alert" style={{ marginTop: 12 }}><IcAlert size={18} /><span>{googleError}</span></div> : null}
+                    </div>
+                  ) : (
+                    <div className="bop-mode-body bop-grid2">
+                      <Field label="Password" hint="At least 8 characters">
+                        <input className="bop-input" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                      </Field>
+                      <Field label="Confirm password" error={password2 && password !== password2 ? "The passwords don’t match yet." : ""}>
+                        <input className="bop-input" type="password" autoComplete="new-password" value={password2} onChange={(e) => setPassword2(e.target.value)} />
+                      </Field>
+                    </div>
+                  )}
                 </div>
-                <p><IconPin width={14} height={14} /> {profile.parkName}, {profile.parkDistrict}{profile.parkAddress ? ` (${profile.parkAddress})` : ""}</p>
-              </section>
-              <section>
-                <header><h3>Fleet</h3><button type="button" className="bop-linkbtn" onClick={() => goStep(2)}>Edit</button></header>
-                <p><strong>{profile.fleetSize}</strong> bus{Number(profile.fleetSize) === 1 ? "" : "es"}</p>
-                {questions.filter((q) => !isEmptyAnswer(profile.customFields[q.key])).map((q) => (
-                  <p key={q.key} className="bus-hint">{q.label}: <strong>{Array.isArray(profile.customFields[q.key]) ? profile.customFields[q.key].join(", ") : typeof profile.customFields[q.key] === "boolean" ? "Yes" : String(profile.customFields[q.key])}</strong></p>
-                ))}
-              </section>
-              <section>
-                <header><h3>Routes ({routes.length})</h3><button type="button" className="bop-linkbtn" onClick={() => goStep(3)}>Edit</button></header>
-                {routes.map((r, i) => (
-                  <div className="bop-review-route" key={i}>
-                    <strong>{routeTitle(r)}</strong>
-                    <p className="bus-hint">{durationLabel((Number(r.hours) || 0) * 60 + (Number(r.minutes) || 0))}{r.busTypeId ? ` · ${info.data.busTypes.find((t) => t.id === r.busTypeId)?.name || ""}` : ""}</p>
-                    <div className="bop-chips">{r.ticketTypes.filter((t) => t.name.trim()).map((t, k) => <span key={k} className="bus-chip bus-chip-orange">{t.name}: {ugx(t.price)}</span>)}</div>
-                    <div className="bop-chips">{r.departures.map((d, k) => <span key={k} className="bus-chip">{timeLabel(d.departureTime)} · {daysLabel(d.daysOfWeek)}</span>)}</div>
-                  </div>
-                ))}
-              </section>
-              <section>
-                <header><h3>Sign-in</h3><button type="button" className="bop-linkbtn" onClick={() => goStep(0)}>Edit</button></header>
-                <p>{mode === "google" ? <>Google account <strong>{google?.email}</strong></> : <>Email <strong>{email}</strong> with your new password</>}</p>
-              </section>
-            </div>
-          </>
-        ) : null}
+              </>
+            ) : null}
 
-        {error ? <div className="bus-alert bus-alert-error bop-ob-error" role="alert">{error}</div> : null}
+            {step === 1 ? (
+              <>
+                <span className="bop-eyebrow">Step 2 of 5</span>
+                <h1>Your company and bus park</h1>
+                <p className="bop-lead">This is what passengers see when they find your buses.</p>
+                <div className="bop-form">
+                  <Field label="Company name"><input className="bop-input" value={profile.companyName} onChange={(e) => setP({ companyName: e.target.value })} maxLength={120} /></Field>
+                  <Field label="About your company (optional)"><textarea className="bop-textarea" rows={3} value={profile.description} onChange={(e) => setP({ description: e.target.value })} maxLength={2000} placeholder="Years on the road, comfort, safety, where you travel…" /></Field>
+                  <div className="bop-grid2 bop-imgrow">
+                    <ImageField label="Logo" kind="logo" value={profile.logoUrl} onChange={(v) => setP({ logoUrl: v })} uploader={(f) => uploadOnboardingImage(f, token)} hint="Square image works best (optional)" />
+                    <ImageField label="Cover photo" kind="cover" value={profile.coverUrl} onChange={(v) => setP({ coverUrl: v })} uploader={(f) => uploadOnboardingImage(f, token)} hint="A wide photo of your buses (optional)" />
+                  </div>
+                  <div className="bop-grid2">
+                    <Field label="Contact phone" hint="Passengers and Gabla call this number"><input className="bop-input" type="tel" inputMode="tel" placeholder="0772 123 456" value={profile.contactPhone} onChange={(e) => setP({ contactPhone: e.target.value })} /></Field>
+                    <Field label="WhatsApp (optional)"><input className="bop-input" type="tel" inputMode="tel" placeholder="0772 123 456" value={profile.whatsapp} onChange={(e) => setP({ whatsapp: e.target.value })} /></Field>
+                  </div>
+
+                  <div className="bop-subsection">
+                    <div className="bop-subhead"><div><h3>Where is your bus park?</h3><p>Passengers use this to find where to board.</p></div></div>
+                    <Field label="Bus park name"><input className="bop-input" placeholder="e.g. Namirembe Road Bus Park" value={profile.parkName} onChange={(e) => setP({ parkName: e.target.value })} maxLength={120} /></Field>
+                    <div className="bop-grid2">
+                      <Field label="District">
+                        <select className="bop-select" value={profile.parkDistrict} onChange={(e) => setP({ parkDistrict: e.target.value })}>
+                          <option value="">Choose a district</option>
+                          {UGANDA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="Address / landmark (optional)"><input className="bop-input" placeholder="Opposite the taxi park, Gate 3" value={profile.parkAddress} onChange={(e) => setP({ parkAddress: e.target.value })} maxLength={240} /></Field>
+                    </div>
+                    <div className="bop-loc">
+                      <button type="button" className="bop-btn bop-btn-light bop-btn-sm" onClick={useMyLocation} disabled={locating}><IcPin size={16} /> {locating ? "Locating…" : "Pin my current location"}</button>
+                      {profile.parkLat != null ? <span className="bop-chip is-green">Location saved ({profile.parkLat}, {profile.parkLng})</span> : <small className="bop-hint">Optional. Helps passengers find the park.</small>}
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : null}
+
+            {step === 2 ? (
+              <>
+                <span className="bop-eyebrow">Step 3 of 5</span>
+                <h1>Your fleet</h1>
+                <p className="bop-lead">A few quick questions so Gabla knows who it’s working with.</p>
+                <div className="bop-form">
+                  <Field label="How many buses do you operate?"><input className="bop-input bop-narrow" type="number" min="1" max="5000" inputMode="numeric" value={profile.fleetSize} onChange={(e) => setP({ fleetSize: e.target.value })} /></Field>
+                  {questions.map((q) => (
+                    <div className="bop-dyn" key={q.key}>
+                      <span>{q.label}{q.required ? <b className="bop-req"> *</b> : <i> (optional)</i>}</span>
+                      <DynamicField field={q} value={profile.customFields[q.key]} onChange={(v) => setP({ customFields: { ...profile.customFields, [q.key]: v } })} />
+                      {q.unit ? <small className="bop-hint">Unit: {q.unit}</small> : null}
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {step === 3 ? (
+              <>
+                <span className="bop-eyebrow">Step 4 of 5</span>
+                <h1>Add your first route</h1>
+                <p className="bop-lead">Set where you travel, what tickets cost, and when buses leave. You can add more routes now or later.</p>
+                <div className="bop-routetabs">
+                  {routes.map((r, i) => (
+                    <button key={i} type="button" className={`bop-chip ${i === activeRoute ? "is-on" : ""}`} onClick={() => setActiveRoute(i)}>{routeTitle(r)}</button>
+                  ))}
+                  <button type="button" className="bop-chip is-orange" disabled={routes.length >= 10} onClick={() => { setRoutes([...routes, emptyRoute()]); setActiveRoute(routes.length); }}><IcPlus size={14} /> Add another route</button>
+                </div>
+                <RouteForm value={route} onChange={setRoute} busTypes={info.data.busTypes} />
+                {routes.length > 1 ? (
+                  <button type="button" className="bop-btn bop-btn-light bop-btn-sm" style={{ marginTop: 16 }} onClick={() => { setRoutes(routes.filter((_, i) => i !== activeRoute)); setActiveRoute(0); }}>
+                    <IcTrash size={16} /> Remove this route
+                  </button>
+                ) : null}
+              </>
+            ) : null}
+
+            {step === 4 ? (
+              <>
+                <span className="bop-eyebrow">Last step</span>
+                <h1>Review and finish</h1>
+                <p className="bop-lead">Check everything looks right. You can change all of this later from your portal.</p>
+                <div className="bop-review">
+                  <section>
+                    <header><h3>Company</h3><button type="button" className="bop-linkbtn" onClick={() => goStep(1)}>Edit</button></header>
+                    <div className="bop-review-company">
+                      <span className="bop-review-logo">{profile.logoUrl ? <img src={profile.logoUrl} alt="" /> : profile.companyName.slice(0, 1)}</span>
+                      <div><strong>{profile.companyName}</strong><p>{email}</p><p>{profile.contactPhone}{profile.whatsapp ? ` · WhatsApp ${profile.whatsapp}` : ""}</p></div>
+                    </div>
+                    <p className="bop-review-line"><IcPin size={15} /> {profile.parkName}, {profile.parkDistrict}{profile.parkAddress ? ` (${profile.parkAddress})` : ""}</p>
+                  </section>
+                  <section>
+                    <header><h3>Fleet</h3><button type="button" className="bop-linkbtn" onClick={() => goStep(2)}>Edit</button></header>
+                    <p className="bop-review-line"><IcBus size={15} /> <strong>{profile.fleetSize}</strong> bus{Number(profile.fleetSize) === 1 ? "" : "es"}</p>
+                    {questions.filter((q) => !isEmptyAnswer(profile.customFields[q.key])).map((q) => (
+                      <p key={q.key} className="bop-hint">{q.label}: <strong>{Array.isArray(profile.customFields[q.key]) ? profile.customFields[q.key].join(", ") : typeof profile.customFields[q.key] === "boolean" ? "Yes" : String(profile.customFields[q.key])}</strong></p>
+                    ))}
+                  </section>
+                  <section>
+                    <header><h3>Routes ({routes.length})</h3><button type="button" className="bop-linkbtn" onClick={() => goStep(3)}>Edit</button></header>
+                    {routes.map((r, i) => (
+                      <div className="bop-review-route" key={i}>
+                        <strong>{routeTitle(r)}</strong>
+                        <p className="bop-hint">{durationLabel((Number(r.hours) || 0) * 60 + (Number(r.minutes) || 0))}{r.busTypeId ? ` · ${info.data.busTypes.find((t) => t.id === r.busTypeId)?.name || ""}` : ""}</p>
+                        <div className="bop-chips">{r.ticketTypes.filter((t) => t.name.trim()).map((t, k) => <span key={k} className="bop-chip is-orange">{t.name}: {ugx(t.price)}</span>)}</div>
+                        <div className="bop-chips">{r.departures.map((d, k) => <span key={k} className="bop-chip">{timeLabel(d.departureTime)} · {daysLabel(d.daysOfWeek)}</span>)}</div>
+                      </div>
+                    ))}
+                  </section>
+                  <section>
+                    <header><h3>Sign-in</h3><button type="button" className="bop-linkbtn" onClick={() => goStep(0)}>Edit</button></header>
+                    <p className="bop-review-line"><IcShield size={15} /> {mode === "google" ? <>Google account <strong>{google?.email}</strong></> : <>Email <strong>{email}</strong> with your new password</>}</p>
+                  </section>
+                </div>
+              </>
+            ) : null}
+
+          </div>
+        </div>
 
         <div className="bop-ob-nav">
-          {step > 0 ? <button type="button" className="bus-btn bus-btn-light" onClick={() => goStep(step - 1)} disabled={submitting}>Back</button> : <span />}
-          {step < 4 ? (
-            <button type="button" className="bus-btn bus-btn-primary" onClick={next} disabled={!canGoNext}>Continue</button>
-          ) : (
-            <button type="button" className="bus-btn bus-btn-primary" onClick={submit} disabled={submitting}>{submitting ? "Setting up…" : "Finish and open my portal"}</button>
-          )}
+          {error ? <div className="bop-alert is-error bop-ob-error" role="alert"><IcAlert size={18} /><span>{error}</span></div> : null}
+          <div className="bop-ob-nav-in">
+            {step > 0 ? <button type="button" className="bop-btn bop-btn-light bop-btn-lg" onClick={() => goStep(step - 1)} disabled={submitting}><IcArrowLeft size={18} /> Back</button> : <span />}
+            {step < 4 ? (
+              <button type="button" className="bop-btn bop-btn-primary bop-btn-lg" onClick={next} disabled={!canGoNext}>Continue <IcArrowRight size={18} /></button>
+            ) : (
+              <button type="button" className="bop-btn bop-btn-primary bop-btn-lg" onClick={submit} disabled={submitting}>{submitting ? "Setting up…" : "Finish and open my portal"}</button>
+            )}
+          </div>
         </div>
       </div>
-    </Shell>
+    </div>
   );
 }

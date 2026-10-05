@@ -3,39 +3,46 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { Skel } from "../../Skeleton";
 import { uploadFile } from "../../../lib/storage";
 import { request } from "../../../lib/api";
+import {
+  IcAlert, IcCheck, IcClose, IcEdit, IcExternal, IcLogout, IcMinus, IcPause, IcPlay, IcPlus, IcPrint, IcSearch, IcTrash, IcChevronRight, IcChevronDown, IcGoogle, IcHome, IcInfo, IcUpload
+} from "./icons";
+import { hueOf, initials } from "./util";
 
-// Small building blocks shared by the bus-company onboarding, login and portal screens.
+export { Skel };
+
+// Building blocks shared by the bus-company onboarding, sign-in and portal screens.
 
 // ------------------------------------------------------------------ contexts
 export const OperatorContext = createContext(null);
 export const useOperator = () => useContext(OperatorContext);
 
-// ------------------------------------------------------------------ icons not in the shared set
-const ico = (children) => (props) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>{children}</svg>
-);
-export const IconPlus = ico(<path d="M12 5v14M5 12h14" />);
-export const IconMinus = ico(<path d="M5 12h14" />);
-export const IconChevronRight = ico(<polyline points="9 6 15 12 9 18" />);
-export const IconChevronDown = ico(<polyline points="6 9 12 15 18 9" />);
-export const IconLogout = ico(<><path d="M9 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H9" /><polyline points="16 8 20 12 16 16" /><path d="M20 12H9" /></>);
-export const IconEdit = ico(<><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" /><path d="M14.5 7.5l3 3" /></>);
-export const IconTrash = ico(<><path d="M4 7h16M10 11v6M14 11v6" /><path d="M6 7l1 12a1.5 1.5 0 0 0 1.5 1.4h7A1.5 1.5 0 0 0 17 19l1-12M9 7V4.5h6V7" /></>);
-export const IconPrint = ico(<><path d="M7 9V4h10v5" /><rect x="4" y="9" width="16" height="8" rx="2" /><path d="M7 14h10v6H7z" /></>);
-export const IconHome = ico(<><path d="M4 11l8-6.5 8 6.5" /><path d="M6 10v9h12v-9" /></>);
-export const IconExternal = ico(<><path d="M14 4h6v6M20 4l-9 9" /><path d="M18 14v5H5V6h5" /></>);
-export const IconPause = ico(<><path d="M8 5v14M16 5v14" /></>);
-export const IconPlay = ico(<polygon points="7 4 19 12 7 20" />);
-export const IconAlert = ico(<><path d="M12 4l9 16H3z" /><path d="M12 10v4M12 17.5v.01" /></>);
-export const IconSearchLite = ico(<><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.2-4.2" /></>);
-export const IconGoogle = (props) => (
-  <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" {...props}>
-    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
-    <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17.5z" />
-    <path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z" />
-    <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
-  </svg>
-);
+// The shell's top bar shows the page title. Pages with a dynamic title (trip detail) set it here.
+export const ShellContext = createContext({ setMeta: () => {} });
+export function useTitle(title, back) {
+  const { setMeta } = useContext(ShellContext);
+  useEffect(() => {
+    setMeta({ title, back: back || null });
+    return () => setMeta(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, back]);
+}
+
+// Legacy icon names (kept so older imports keep working).
+export const IconPlus = IcPlus;
+export const IconMinus = IcMinus;
+export const IconChevronRight = IcChevronRight;
+export const IconChevronDown = IcChevronDown;
+export const IconLogout = IcLogout;
+export const IconEdit = IcEdit;
+export const IconTrash = IcTrash;
+export const IconPrint = IcPrint;
+export const IconHome = IcHome;
+export const IconExternal = IcExternal;
+export const IconPause = IcPause;
+export const IconPlay = IcPlay;
+export const IconAlert = IcAlert;
+export const IconSearchLite = IcSearch;
+export const IconGoogle = IcGoogle;
 
 // ------------------------------------------------------------------ helpers
 export const errMsg = (e, fallback = "Something went wrong. Please try again.") => {
@@ -64,7 +71,7 @@ export const timeLabel = (hhmm) => {
 
 // Monday-first week, but values are JS weekdays (0 = Sunday) like the backend expects.
 export const WEEK = [
-  { v: 1, l: "Mon" }, { v: 2, l: "Tue" }, { v: 3, l: "Wed" }, { v: 4, l: "Thu" }, { v: 5, l: "Fri" }, { v: 6, l: "Sat" }, { v: 0, l: "Sun" }
+  { v: 1, l: "Mon", s: "M" }, { v: 2, l: "Tue", s: "T" }, { v: 3, l: "Wed", s: "W" }, { v: 4, l: "Thu", s: "T" }, { v: 5, l: "Fri", s: "F" }, { v: 6, l: "Sat", s: "S" }, { v: 0, l: "Sun", s: "S" }
 ];
 export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 export const daysLabel = (days = []) => {
@@ -75,7 +82,8 @@ export const daysLabel = (days = []) => {
   return WEEK.filter((d) => set.has(d.v)).map((d) => d.l).join(", ") || "No days";
 };
 
-export function DayChips({ value = [], onChange, readOnly = false }) {
+// Editable day picker (or read-only dots for cards).
+export function DayChips({ value = [], onChange, readOnly = false, compact = false }) {
   const set = new Set(value);
   const all = set.size === 7;
   const toggle = (v) => {
@@ -84,18 +92,23 @@ export function DayChips({ value = [], onChange, readOnly = false }) {
     else next.add(v);
     onChange([...next].sort((a, b) => a - b));
   };
+  if (readOnly) {
+    return (
+      <div className={`bop-daydots ${compact ? "is-compact" : ""}`} role="img" aria-label={daysLabel(value)}>
+        {WEEK.map((d) => <span key={d.v} className={set.has(d.v) ? "is-on" : ""} title={d.l}>{d.s}</span>)}
+      </div>
+    );
+  }
   return (
     <div className="bop-days" role="group" aria-label="Days of the week">
       {WEEK.map((d) => (
-        <button key={d.v} type="button" className={`bop-day-chip ${set.has(d.v) ? "is-on" : ""}`} aria-pressed={set.has(d.v)} disabled={readOnly} onClick={() => toggle(d.v)}>
+        <button key={d.v} type="button" className={`bop-day-chip ${set.has(d.v) ? "is-on" : ""}`} aria-pressed={set.has(d.v)} onClick={() => toggle(d.v)}>
           {d.l}
         </button>
       ))}
-      {!readOnly ? (
-        <button type="button" className={`bop-day-chip is-all ${all ? "is-on" : ""}`} onClick={() => onChange(all ? [] : ALL_DAYS)}>
-          Every day
-        </button>
-      ) : null}
+      <button type="button" className={`bop-day-chip is-all ${all ? "is-on" : ""}`} onClick={() => onChange(all ? [] : ALL_DAYS)}>
+        Every day
+      </button>
     </div>
   );
 }
@@ -132,17 +145,17 @@ export function useDebounced(value, delay = 350) {
   return v;
 }
 
-// ------------------------------------------------------------------ loading + state blocks
-export const ListSkel = ({ rows = 5, h = 70 }) => (
+// ------------------------------------------------------------------ skeletons (shapes match the final layouts)
+export const ListSkel = ({ rows = 5, h = 70, avatar = true }) => (
   <div className="bop-skel-list" role="status" aria-busy="true" aria-label="Loading">
     {Array.from({ length: rows }).map((_, i) => (
-      <div className="bus-card bop-skel-row" key={i} style={{ minHeight: h }}>
-        <Skel w={46} h={46} r={14} />
-        <div style={{ flex: 1, display: "grid", gap: 8 }}>
-          <Skel w="45%" h={14} />
-          <Skel w="75%" h={11} />
+      <div className="bop-card bop-skel-row" key={i} style={{ minHeight: h }}>
+        {avatar ? <Skel w={44} h={44} r={14} /> : null}
+        <div style={{ flex: 1, display: "grid", gap: 9 }}>
+          <Skel w="42%" h={14} />
+          <Skel w="72%" h={11} />
         </div>
-        <Skel w={70} h={26} r={999} />
+        <Skel w={74} h={26} r={999} />
       </div>
     ))}
   </div>
@@ -151,86 +164,189 @@ export const ListSkel = ({ rows = 5, h = 70 }) => (
 export const CardsSkel = ({ count = 4 }) => (
   <div className="bop-kpis" role="status" aria-busy="true" aria-label="Loading">
     {Array.from({ length: count }).map((_, i) => (
-      <div className="bus-card bop-kpi" key={i}>
-        <Skel w="50%" h={11} />
-        <Skel w="70%" h={26} style={{ marginTop: 12 }} />
-        <Skel w="40%" h={10} style={{ marginTop: 10 }} />
+      <div className="bop-card bop-kpi" key={i}>
+        <div className="bop-skel-between"><Skel w={34} h={34} r={11} /><Skel w={70} h={34} r={10} /></div>
+        <Skel w="48%" h={11} style={{ marginTop: 16 }} />
+        <Skel w="72%" h={26} style={{ marginTop: 10 }} />
+        <Skel w="55%" h={11} style={{ marginTop: 12 }} />
       </div>
     ))}
+  </div>
+);
+
+export const PanelSkel = ({ h = 240, lines = 0 }) => (
+  <div className="bop-card bop-panel" role="status" aria-busy="true" aria-label="Loading">
+    <Skel w="38%" h={16} />
+    <Skel w="24%" h={11} style={{ marginTop: 10 }} />
+    <Skel h={h} r={14} style={{ marginTop: 18 }} />
+    {lines ? <div style={{ display: "grid", gap: 10, marginTop: 14 }}>{Array.from({ length: lines }).map((_, i) => <Skel key={i} h={12} w={`${90 - i * 14}%`} />)}</div> : null}
   </div>
 );
 
 export function ErrorBox({ error, onRetry, className = "" }) {
   if (!error) return null;
   return (
-    <div className={`bus-alert bus-alert-error bop-errorbox ${className}`} role="alert">
+    <div className={`bop-alert is-error bop-errorbox ${className}`} role="alert">
+      <IcAlert size={18} />
       <span>{errMsg(error)}</span>
-      {onRetry ? <button type="button" className="bus-btn bus-btn-light bus-btn-sm" onClick={onRetry}>Try again</button> : null}
+      {onRetry ? <button type="button" className="bop-btn bop-btn-light bop-btn-sm" onClick={onRetry}>Try again</button> : null}
     </div>
   );
 }
 
-export const Empty = ({ icon, title, children, action }) => (
-  <div className="bus-card bus-empty bop-empty">
+export const Empty = ({ icon, title, children, action, compact = false }) => (
+  <div className={`bop-card bop-empty ${compact ? "is-compact" : ""}`}>
     {icon ? <span className="bop-empty-icon">{icon}</span> : null}
     <strong>{title}</strong>
     {children ? <p>{children}</p> : null}
-    {action ? <div style={{ marginTop: 14 }}>{action}</div> : null}
+    {action ? <div className="bop-empty-action">{action}</div> : null}
   </div>
 );
 
-export const PageHead = ({ title, sub, actions }) => (
-  <div className="bop-pagehead">
-    <div>
-      <h1>{title}</h1>
-      {sub ? <p>{sub}</p> : null}
+// Sub line + page actions. The page title itself lives in the shell's top bar.
+export const PageHead = ({ sub, actions, lead }) => {
+  if (!sub && !actions && !lead) return null;
+  return (
+    <div className="bop-pagehead">
+      <div className="bop-pagehead-text">
+        {lead ? <h2 className="bop-lead-title">{lead}</h2> : null}
+        {sub ? <p>{sub}</p> : null}
+      </div>
+      {actions ? <div className="bop-pagehead-actions">{actions}</div> : null}
     </div>
-    {actions ? <div className="bop-pagehead-actions">{actions}</div> : null}
-  </div>
+  );
+};
+
+export const Panel = ({ title, sub, action, children, className = "", flush = false, ...rest }) => (
+  <section className={`bop-card bop-panel ${flush ? "is-flush" : ""} ${className}`} {...rest}>
+    {title ? (
+      <header className="bop-panel-head">
+        <div><h2>{title}</h2>{sub ? <p>{sub}</p> : null}</div>
+        {action ? <div className="bop-panel-action">{action}</div> : null}
+      </header>
+    ) : null}
+    {children}
+  </section>
 );
 
 export const Field = ({ label, hint, error, children, className = "" }) => (
-  <label className={`bus-field bop-field ${className}`}>
-    {label ? <span>{label}</span> : null}
+  <label className={`bop-field ${className}`}>
+    {label ? <span className="bop-field-label">{label}</span> : null}
     {children}
-    {error ? <em className="bop-field-error">{error}</em> : hint ? <small className="bus-hint">{hint}</small> : null}
+    {error ? <em className="bop-field-error">{error}</em> : hint ? <small className="bop-hint">{hint}</small> : null}
   </label>
 );
 
-export const StatusChip = ({ status }) => {
-  const map = {
-    scheduled: ["Scheduled", "bus-chip-orange"], departed: ["Departed", "bus-chip-amber"], completed: ["Completed", ""], cancelled: ["Cancelled", "bus-chip-red"],
-    confirmed: ["Confirmed", "bus-chip-green"], refund_due: ["Refund pending", "bus-chip-amber"], valid: ["Not boarded", "bus-chip-orange"], used: ["Checked in", "bus-chip-green"],
-    requested: ["Pending", "bus-chip-amber"], paid: ["Paid", "bus-chip-green"], rejected: ["Rejected", "bus-chip-red"], active: ["Active", "bus-chip-green"], paused: ["Paused", "bus-chip-amber"],
-    pending_payment: ["Awaiting payment", "bus-chip-amber"], expired: ["Expired", ""], failed: ["Failed", "bus-chip-red"]
-  };
-  const [label, cls] = map[status] || [status, ""];
-  return <span className={`bus-chip ${cls}`}>{label}</span>;
+// ------------------------------------------------------------------ chips, status, avatar, switch, tabs
+export const Chip = ({ tone = "", dot = false, children, className = "", ...rest }) => (
+  <span className={`bop-chip ${tone ? `is-${tone}` : ""} ${className}`} {...rest}>{dot ? <i className="bop-chip-dot" /> : null}{children}</span>
+);
+
+const STATUS = {
+  scheduled: ["Scheduled", "blue"], departed: ["Departed", "amber"], completed: ["Completed", "grey"], cancelled: ["Cancelled", "red"],
+  confirmed: ["Confirmed", "green"], refund_due: ["Refund pending", "amber"], valid: ["Not boarded", "blue"], used: ["Checked in", "green"],
+  requested: ["Pending", "amber"], paid: ["Paid", "green"], rejected: ["Rejected", "red"], active: ["Active", "green"], paused: ["Paused", "amber"],
+  pending_payment: ["Awaiting payment", "amber"], expired: ["Expired", "grey"], failed: ["Failed", "red"]
+};
+export const StatusChip = ({ status, label }) => {
+  const [text, tone] = STATUS[status] || [status, "grey"];
+  return <Chip tone={tone} dot>{label || text}</Chip>;
 };
 
-// ------------------------------------------------------------------ dialogs
+export function Avatar({ name = "", src, size = 40, square = false, className = "" }) {
+  const hue = hueOf(name);
+  const style = { width: size, height: size, fontSize: Math.round(size * 0.37), borderRadius: square ? Math.round(size * 0.3) : "50%" };
+  if (src) return <span className={`bop-avatar has-img ${className}`} style={style}><img src={src} alt="" loading="lazy" /></span>;
+  return <span className={`bop-avatar ${className}`} style={{ ...style, background: `hsl(${hue} 80% 94%)`, color: `hsl(${hue} 60% 30%)` }} aria-hidden="true">{initials(name)}</span>;
+}
+
+export function Switch({ checked, onChange, label, disabled = false, busy = false }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled || busy} className={`bop-switch ${checked ? "is-on" : ""} ${busy ? "is-busy" : ""}`} onClick={() => onChange(!checked)}>
+      <span />
+    </button>
+  );
+}
+
+// options: [[value, label, count?], ...]
+export function Segmented({ options, value, onChange, label, className = "" }) {
+  return (
+    <div className={`bop-seg ${className}`} role="group" aria-label={label}>
+      {options.map(([v, l, count]) => (
+        <button key={String(v)} type="button" aria-pressed={value === v} className={value === v ? "is-on" : ""} onClick={() => onChange(v)}>
+          {l}{count !== undefined && count !== null ? <b>{count}</b> : null}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function Tabs({ tabs, value, onChange, label }) {
+  return (
+    <div className="bop-tabs" role="tablist" aria-label={label}>
+      {tabs.map((t) => (
+        <button key={t.key} type="button" role="tab" id={`tab-${t.key}`} aria-selected={value === t.key} className={value === t.key ? "is-on" : ""} onClick={() => onChange(t.key)}>
+          {t.icon}{t.label}{t.count !== undefined ? <b>{t.count}</b> : null}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export const Meter = ({ pct = 0, level = "mid", label, className = "" }) => (
+  <span className={`bop-meter is-${level} ${className}`} role="img" aria-label={label || `${pct}% full`}><i style={{ width: `${Math.max(pct ? 4 : 0, pct)}%` }} /></span>
+);
+
+export const SearchBox = ({ value, onChange, placeholder, label }) => (
+  <div className="bop-search">
+    <IcSearch size={18} />
+    <input type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={label || placeholder} />
+  </div>
+);
+
+// ------------------------------------------------------------------ dialogs (centered on desktop, bottom sheet on phones)
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
 export function Modal({ title, subtitle, onClose, children, footer, size = "md" }) {
+  const box = useRef(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
   useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
+    const prevFocus = document.activeElement;
+    const node = box.current;
+    const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const first = node?.querySelector(`.bop-modal-body ${FOCUSABLE.split(",").join(", .bop-modal-body ")}`);
+    (first || node)?.focus({ preventScroll: true });
+    const onKey = (e) => {
+      if (e.key === "Escape") { closeRef.current?.(); return; }
+      if (e.key !== "Tab" || !node) return;
+      const items = [...node.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null);
+      if (!items.length) return;
+      const a = items[0];
+      const z = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); }
+      else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); }
+    };
+    window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      document.body.style.overflow = prevOverflow;
+      if (prevFocus && prevFocus.focus) prevFocus.focus({ preventScroll: true });
     };
-  }, [onClose]);
+  }, []);
+
   return (
     <div className="bop-modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`bop-modal bop-modal-${size}`} role="dialog" aria-modal="true" aria-label={title}>
+      <div ref={box} tabIndex={-1} className={`bop-modal bop-modal-${size}`} role="dialog" aria-modal="true" aria-label={title}>
+        <span className="bop-modal-grab" aria-hidden="true" />
         <header className="bop-modal-head">
           <div>
             <h2>{title}</h2>
             {subtitle ? <p>{subtitle}</p> : null}
           </div>
-          <button type="button" className="bop-icon-btn" onClick={onClose} aria-label="Close">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-          </button>
+          <button type="button" className="bop-icon-btn" onClick={onClose} aria-label="Close"><IcClose size={20} /></button>
         </header>
         <div className="bop-modal-body">{children}</div>
         {footer ? <footer className="bop-modal-foot">{footer}</footer> : null}
@@ -247,13 +363,16 @@ export function Confirm({ title, children, confirmLabel = "Confirm", danger = fa
       onClose={busy ? () => {} : onCancel}
       footer={
         <>
-          <button type="button" className="bus-btn bus-btn-light" onClick={onCancel} disabled={busy}>{cancelLabel}</button>
-          <button type="button" className={`bus-btn ${danger ? "bus-btn-danger" : "bus-btn-primary"}`} onClick={onConfirm} disabled={busy}>{busy ? "Working…" : confirmLabel}</button>
+          <button type="button" className="bop-btn bop-btn-light" onClick={onCancel} disabled={busy}>{cancelLabel}</button>
+          <button type="button" className={`bop-btn ${danger ? "bop-btn-danger" : "bop-btn-primary"}`} onClick={onConfirm} disabled={busy}>{busy ? "Working…" : confirmLabel}</button>
         </>
       }
     >
-      <div className="bop-confirm-text">{children}</div>
-      {error ? <div className="bus-alert bus-alert-error" style={{ marginTop: 12 }} role="alert">{errMsg(error)}</div> : null}
+      <div className={`bop-confirm ${danger ? "is-danger" : ""}`}>
+        <span className="bop-confirm-icon">{danger ? <IcAlert size={22} /> : <IcInfo size={22} />}</span>
+        <div className="bop-confirm-text">{children}</div>
+      </div>
+      {error ? <div className="bop-alert is-error" style={{ marginTop: 14 }} role="alert">{errMsg(error)}</div> : null}
     </Modal>
   );
 }
@@ -261,11 +380,16 @@ export function Confirm({ title, children, confirmLabel = "Confirm", danger = fa
 export function Pager({ page, total, limit, onPage }) {
   const pages = Math.max(1, Math.ceil(total / limit));
   if (pages <= 1) return null;
+  const from = (page - 1) * limit + 1;
+  const to = Math.min(total, page * limit);
   return (
     <div className="bop-pager">
-      <button type="button" className="bus-btn bus-btn-light bus-btn-sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>Previous</button>
-      <span>Page {page} of {pages}</span>
-      <button type="button" className="bus-btn bus-btn-light bus-btn-sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>Next</button>
+      <span>{from}–{to} of {total}</span>
+      <div>
+        <button type="button" className="bop-btn bop-btn-light bop-btn-sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>Previous</button>
+        <b>{page} / {pages}</b>
+        <button type="button" className="bop-btn bop-btn-light bop-btn-sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>Next</button>
+      </div>
     </div>
   );
 }
@@ -275,12 +399,18 @@ export function useToasts() {
   const [items, setItems] = useState([]);
   const push = useCallback((message, tone = "success") => {
     const id = Math.random().toString(36).slice(2);
-    setItems((list) => [...list, { id, message, tone }]);
-    setTimeout(() => setItems((list) => list.filter((t) => t.id !== id)), 4500);
+    setItems((list) => [...list.slice(-2), { id, message, tone }]);
+    setTimeout(() => setItems((list) => list.filter((t) => t.id !== id)), 4800);
   }, []);
   const view = (
     <div className="bop-toasts" aria-live="polite">
-      {items.map((t) => <div key={t.id} className={`bop-toast is-${t.tone}`}>{t.message}</div>)}
+      {items.map((t) => (
+        <div key={t.id} className={`bop-toast is-${t.tone}`} role={t.tone === "error" ? "alert" : "status"}>
+          <span className="bop-toast-ico">{t.tone === "error" ? <IcAlert size={16} /> : <IcCheck size={16} strokeWidth={2.6} />}</span>
+          <span>{t.message}</span>
+          <button type="button" aria-label="Dismiss" onClick={() => setItems((list) => list.filter((x) => x.id !== t.id))}><IcClose size={14} /></button>
+        </div>
+      ))}
     </div>
   );
   return [push, view];
@@ -334,22 +464,22 @@ export function ImageField({ label, value, onChange, uploader, kind = "logo", hi
 
   return (
     <div className={`bop-imgfield is-${kind}`}>
-      {label ? <span className="bop-imgfield-label">{label}</span> : null}
+      {label ? <span className="bop-field-label">{label}</span> : null}
       <div className="bop-imgfield-row">
-        <div className="bop-imgfield-preview" style={value && kind === "cover" ? { backgroundImage: `url(${value})` } : undefined}>
-          {value && kind === "logo" ? <img src={value} alt="" /> : !value ? <span>{kind === "logo" ? "Logo" : "Cover"}</span> : null}
-        </div>
+        <button type="button" className="bop-imgfield-preview" onClick={() => input.current?.click()} disabled={busy} aria-label={value ? `Change ${label || "image"}` : `Upload ${label || "image"}`} style={value && kind === "cover" ? { backgroundImage: `url(${value})` } : undefined}>
+          {value && kind === "logo" ? <img src={value} alt="" /> : !value ? <span><IcUpload size={20} />{kind === "logo" ? "Logo" : "Cover"}</span> : null}
+        </button>
         <div className="bop-imgfield-actions">
           <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={pick} />
-          <button type="button" className="bus-btn bus-btn-light bus-btn-sm" onClick={() => input.current?.click()} disabled={busy}>
+          <button type="button" className="bop-btn bop-btn-light bop-btn-sm" onClick={() => input.current?.click()} disabled={busy}>
             {busy ? "Uploading…" : value ? "Change image" : "Upload image"}
           </button>
-          {value ? <button type="button" className="bus-btn bus-btn-sm bop-linkbtn" onClick={() => onChange("")}>Remove</button> : null}
+          {value ? <button type="button" className="bop-linkbtn" onClick={() => onChange("")}>Remove</button> : null}
           <button type="button" className="bop-linkbtn" onClick={() => setShowLink((s) => !s)}>{showLink ? "Hide link" : "Use a link"}</button>
         </div>
       </div>
-      {showLink ? <input className="bus-input" type="url" placeholder="https://…" value={value || ""} onChange={(e) => onChange(e.target.value.trim())} /> : null}
-      {hint && !error ? <small className="bus-hint">{hint}</small> : null}
+      {showLink ? <input className="bop-input" type="url" placeholder="https://…" value={value || ""} onChange={(e) => onChange(e.target.value.trim())} aria-label={`${label || "Image"} link`} /> : null}
+      {hint && !error ? <small className="bop-hint">{hint}</small> : null}
       {error ? <small className="bop-field-error">{error}</small> : null}
     </div>
   );

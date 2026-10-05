@@ -139,3 +139,136 @@ export const BUS_STATUS_LABEL = {
   cancelled: "Cancelled",
   refund_due: "Refund pending"
 };
+
+// ---------------------------------------------------------------------------------------------
+// Presentation helpers for the redesigned customer screens (append-only; nothing above changes).
+// ---------------------------------------------------------------------------------------------
+
+// { t: "07:30", ap: "AM" } so screens can set the AM/PM smaller than the clock.
+export const timeParts = (value) => {
+  const p = eatParts(value);
+  return { t: `${pad(p.h % 12 || 12)}:${pad(p.min)}`, ap: p.h < 12 ? "AM" : "PM" };
+};
+
+export const arrivalAt = (departureAt, minutes) => new Date(new Date(departureAt).getTime() + (Number(minutes) || 0) * 60000);
+
+// Whole calendar days between two moments as seen in Kampala (0 = same day).
+export const dayDiff = (a, b) => {
+  const toUtc = (str) => Date.UTC(...str.split("-").map((n, i) => (i === 1 ? Number(n) - 1 : Number(n))));
+  return Math.round((toUtc(eatDate(b)) - toUtc(eatDate(a))) / 86400000);
+};
+
+export const shortPrice = (n) => {
+  const v = Number(n);
+  if (!Number.isFinite(v) || v <= 0) return "";
+  return v >= 1000 ? `${Math.round(v / 1000)}K` : String(v);
+};
+
+// Airport-style three letter codes for towns (first three letters unless a clash needs an override).
+const CITY_CODES = {
+  kampala: "KLA", mbarara: "MBR", mbale: "MBL", entebbe: "EBB", jinja: "JIN", gulu: "GUL", arua: "ARU", "fort portal": "FPO",
+  kabale: "KBL", kasese: "KSE", masaka: "MSK", lira: "LIR", soroti: "SRT", hoima: "HMA", kisoro: "KSR", kitgum: "KTG",
+  rukungiri: "RKG", busia: "BSA", tororo: "TRR", iganga: "IGA", mityana: "MTY", mubende: "MBD", masindi: "MSD", moroto: "MOR"
+};
+export const cityCode = (name) => {
+  const key = String(name || "").trim().toLowerCase();
+  if (CITY_CODES[key]) return CITY_CODES[key];
+  const letters = key.replace(/[^a-z]/g, "").toUpperCase();
+  return (letters.slice(0, 3) || "---").padEnd(3, "-");
+};
+
+// Stable hue per company name so imagery-less cards still look intentional.
+export const hueOf = (name) => {
+  let h = 0;
+  for (const ch of String(name || "")) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return h;
+};
+
+export const TIME_SLOTS = [
+  { id: "morning", label: "Morning", range: "05:00 - 11:59" },
+  { id: "afternoon", label: "Afternoon", range: "12:00 - 16:59" },
+  { id: "evening", label: "Evening", range: "17:00 - 20:59" },
+  { id: "night", label: "Night", range: "21:00 - 04:59" }
+];
+export const timeOfDay = (value) => {
+  const h = eatParts(value).h;
+  if (h >= 5 && h < 12) return "morning";
+  if (h >= 12 && h < 17) return "afternoon";
+  if (h >= 17 && h < 21) return "evening";
+  return "night";
+};
+
+// When the bus really leaves (scheduled time plus any delay the company posted).
+export const effectiveDeparture = (trip) => new Date(new Date(trip.departureAt).getTime() + (Number(trip.delayMinutes) || 0) * 60000);
+export const minutesUntil = (value, now = Date.now()) => Math.round((new Date(value).getTime() - now) / 60000);
+export const untilLabel = (mins) => {
+  const m = Math.max(0, Math.round(mins));
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return m % 60 ? `${h}h ${pad(m % 60)}m` : `${h}h`;
+  const d = Math.floor(h / 24);
+  return `${d}d ${h % 24}h`;
+};
+
+// One short status for a departure: { tone: green|amber|red|muted|navy, label }.
+export const tripStatus = (trip, now = Date.now()) => {
+  const delay = Number(trip.delayMinutes) || 0;
+  const left = minutesUntil(effectiveDeparture(trip), now);
+  if (trip.status === "cancelled") return { tone: "red", label: "Cancelled" };
+  if (trip.soldOut) return { tone: "red", label: "Sold out" };
+  if (!trip.bookable) return { tone: "muted", label: left <= 0 ? "Departed" : "Sales closed" };
+  if (delay > 0) return { tone: "amber", label: `Delayed ${delay} min` };
+  if (left <= 45 && left > 0) return { tone: "amber", label: `Boarding in ${untilLabel(left)}` };
+  if (trip.seatsLeft <= 5) return { tone: "red", label: `Only ${trip.seatsLeft} left` };
+  return { tone: "green", label: left < 24 * 60 ? `Departs in ${untilLabel(left)}` : "On time" };
+};
+
+// Stops are stored as [{ name, offsetMinutes }]; older rows may use minutesFromStart.
+export const stopsOf = (route) => (Array.isArray(route?.stops) ? route.stops.filter((s) => s && s.name) : []);
+export const stopOffset = (stop) => {
+  const v = Number(stop?.offsetMinutes ?? stop?.minutesFromStart);
+  return Number.isFinite(v) ? v : null;
+};
+export const stopsLabel = (route) => {
+  const n = stopsOf(route).length;
+  return n ? `${n} ${n === 1 ? "stop" : "stops"}` : "Non-stop";
+};
+
+// Unsplash photos come at a fixed width; ask for a bigger crop where we show them large.
+export const imgSize = (url, width = 1600) => {
+  if (!url || !/images\.unsplash\.com/.test(url)) return url || "";
+  const u = url.replace(/([?&])w=\d+/, `$1w=${width}`);
+  return /[?&]w=/.test(u) ? u : `${u}${u.includes("?") ? "&" : "?"}w=${width}`;
+};
+
+const icsEscape = (s) => String(s ?? "").replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+const icsStamp = (d) => new Date(d).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+
+// A calendar entry for a ticket: leaves 'departureAt' (+ delay), runs for the route's duration.
+export const buildTripIcs = ({ ticket, booking }) => {
+  const { trip, operator } = booking;
+  const start = effectiveDeparture(trip);
+  const end = new Date(start.getTime() + (Number(trip.route.durationMinutes) || 60) * 60000);
+  const title = `Bus to ${trip.route.destinationName} - ${operator?.companyName || "Gabla Bus"}`;
+  const bp = trip.route.boardingPoint || "";
+  const where = [bp, operator?.parkName && !bp.toLowerCase().includes(operator.parkName.toLowerCase()) ? operator.parkName : ""].filter(Boolean).join(", ");
+  const lines = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Gabla Bus//Ticket//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "BEGIN:VEVENT",
+    `UID:${ticket.ticketNumber}@gabla.bus`, `DTSTAMP:${icsStamp(Date.now())}`, `DTSTART:${icsStamp(start)}`, `DTEND:${icsStamp(end)}`,
+    `SUMMARY:${icsEscape(title)}`, `LOCATION:${icsEscape(where)}`,
+    `DESCRIPTION:${icsEscape(`Ticket ${ticket.ticketNumber}, seat ${ticket.seatNumber ?? "-"}. Passenger ${ticket.passengerName}. Board 30 minutes early. Times are East Africa Time.`)}`,
+    "BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", `DESCRIPTION:${icsEscape(title)}`, "END:VALARM", "END:VEVENT", "END:VCALENDAR"
+  ];
+  return lines.join("\r\n");
+};
+
+export const downloadText = (filename, text, type = "text/plain") => {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+};

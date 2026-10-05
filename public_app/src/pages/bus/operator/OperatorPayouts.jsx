@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 
 import { eatDateTimeLabel, isUgPhone, normalizeUgPhone, operatorApi, phoneNetwork, ugx } from "../../../lib/bus";
-import { IconWallet } from "../../../components/icons";
-import { CardsSkel, Empty, ErrorBox, Field, ListSkel, PageHead, StatusChip, digitsOnly, errMsg, thousands, useLoad, useOperator } from "../../../components/bus/operator/ui";
+import { Empty, ErrorBox, Field, PageHead, Panel, Skel, StatusChip, digitsOnly, errMsg, thousands, useLoad, useOperator } from "../../../components/bus/operator/ui";
+import { IcAlert, IcCheck, IcClock, IcWallet } from "../../../components/bus/operator/icons";
 
 const MIN = 10000;
 
@@ -45,53 +45,72 @@ export default function OperatorPayouts() {
     }
   };
 
+  const items = payouts.data?.items || [];
+  const paidTotal = items.filter((p) => p.status === "paid").reduce((a, p) => a + Number(p.amount), 0);
+
   return (
     <>
-      <PageHead title="Payouts" sub="Withdraw your ticket sales to mobile money." />
+      <PageHead sub="Withdraw your ticket sales to mobile money." />
       <ErrorBox error={stats.error} onRetry={stats.refresh} className="bop-mb" />
-      {!s ? <CardsSkel count={3} /> : (
-        <div className="bop-kpis bop-kpis-3">
-          <div className="bus-card bop-kpi is-navy"><small>Available to withdraw</small><strong>{ugx(s.walletBalance)}</strong><span>Your sales after Gabla’s fee</span></div>
-          <div className="bus-card bop-kpi"><small>Payouts pending</small><strong>{ugx(s.pendingPayouts)}</strong><span>Waiting for Gabla to send</span></div>
-          <div className="bus-card bop-kpi"><small>Gabla fee</small><strong>{Number(s.commissionPercent)}%</strong><span>Taken from each ticket sold</span></div>
-        </div>
-      )}
 
-      <div className="bop-two">
-        <form className="bus-card bop-panel" onSubmit={submit} noValidate>
-          <header className="bop-panel-head"><div><h2>Request a payout</h2><p>Minimum {ugx(MIN)}</p></div></header>
-          <div className="bop-form">
-            <Field label="Amount (UGX)" error={amountError}>
-              <input className="bus-input" inputMode="numeric" placeholder="e.g. 500,000" value={thousands(amount)} onChange={(e) => setAmount(digitsOnly(e.target.value))} aria-invalid={Boolean(amountError)} />
-            </Field>
-            <div className="bop-chips">
-              {s && balance >= MIN ? <button type="button" className="bus-chip" onClick={() => setAmount(String(Math.floor(balance)))}>Withdraw everything</button> : null}
+      <div className="bop-payout-top">
+        {!s ? <div className="bop-balance" role="status" aria-busy="true" aria-label="Loading balance"><Skel w="30%" h={12} className="bop-skel-dark" /><Skel w="60%" h={44} r={12} className="bop-skel-dark" style={{ marginTop: 16 }} /><Skel w="45%" h={12} className="bop-skel-dark" style={{ marginTop: 16 }} /></div> : (
+          <section className="bop-balance">
+            <div className="bop-balance-main">
+              <small>Available to withdraw</small>
+              <strong><em>UGX</em> {Number(s.walletBalance).toLocaleString("en-US")}</strong>
+              <p>Your ticket sales after Gabla’s {Number(s.commissionPercent)}% fee.</p>
             </div>
-            <Field label="Mobile money number" error={phoneError} hint={network ? `${network} number` : "MTN Mobile Money or Airtel Money"}>
-              <input className="bus-input" type="tel" inputMode="tel" placeholder="0772 123 456" value={phone} onChange={(e) => setPhone(e.target.value)} aria-invalid={Boolean(phoneError)} />
-            </Field>
-            {error ? <div className="bus-alert bus-alert-error" role="alert">{error}</div> : null}
-            <button type="submit" className="bus-btn bus-btn-primary" disabled={busy || !s}>{busy ? "Requesting…" : "Request payout"}</button>
-            {s && balance < MIN ? <p className="bus-hint">You need at least {ugx(MIN)} available to request a payout.</p> : null}
-          </div>
-        </form>
+            <dl className="bop-balance-meta">
+              <div><dt><IcClock size={14} /> In progress</dt><dd>{ugx(s.pendingPayouts)}</dd></div>
+              <div><dt><IcCheck size={14} strokeWidth={3} /> Paid out</dt><dd>{ugx(paidTotal)}</dd></div>
+              <div><dt><IcWallet size={14} /> Gabla fee</dt><dd>{Number(s.commissionPercent)}%</dd></div>
+            </dl>
+          </section>
+        )}
+      </div>
 
-        <section className="bus-card bop-panel">
-          <header className="bop-panel-head"><div><h2>Payout history</h2></div></header>
+      <div className="bop-grid bop-grid-even">
+        <Panel title="Request a payout" sub={`Minimum ${ugx(MIN)}. Sent to your mobile money.`}>
+          <form className="bop-form" onSubmit={submit} noValidate>
+            <Field label="Amount (UGX)" error={amountError}>
+              <div className="bop-price-input is-lg"><span>UGX</span><input className="bop-input" inputMode="numeric" placeholder="500,000" value={thousands(amount)} onChange={(e) => setAmount(digitsOnly(e.target.value))} aria-invalid={Boolean(amountError)} /></div>
+            </Field>
+            {s && balance >= MIN ? (
+              <div className="bop-chips">
+                {[0.25, 0.5].map((f) => Math.floor(balance * f) >= MIN ? <button type="button" key={f} className="bop-chip" onClick={() => setAmount(String(Math.floor((balance * f) / 1000) * 1000))}>{f * 100}%</button> : null)}
+                <button type="button" className="bop-chip is-orange" onClick={() => setAmount(String(Math.floor(balance)))}>Withdraw everything</button>
+              </div>
+            ) : null}
+            <Field label="Mobile money number" error={phoneError} hint={network ? `${network} number` : "MTN Mobile Money or Airtel Money"}>
+              <input className="bop-input" type="tel" inputMode="tel" placeholder="0772 123 456" value={phone} onChange={(e) => setPhone(e.target.value)} aria-invalid={Boolean(phoneError)} />
+            </Field>
+            {error ? <div className="bop-alert is-error" role="alert"><IcAlert size={17} /><span>{error}</span></div> : null}
+            <button type="submit" className="bop-btn bop-btn-primary bop-btn-lg" disabled={busy || !s}>{busy ? "Requesting…" : "Request payout"}</button>
+            {s && balance < MIN ? <p className="bop-hint">You need at least {ugx(MIN)} available to request a payout.</p> : null}
+          </form>
+        </Panel>
+
+        <Panel title="Payout history" sub={items.length ? `${items.length} payout${items.length === 1 ? "" : "s"}` : undefined}>
           <ErrorBox error={payouts.error} onRetry={payouts.refresh} />
-          {payouts.loading ? <ListSkel rows={3} h={60} /> : payouts.data.items.length ? (
-            <ul className="bop-list">
-              {payouts.data.items.map((p) => (
-                <li key={p.id}>
-                  <div className="bop-list-row">
-                    <span className="bop-list-main"><strong>{ugx(p.amount)}</strong><small>To {p.phone} · {eatDateTimeLabel(p.createdAt)}</small>{p.note ? <small>Note: {p.note}</small> : null}</span>
-                    <StatusChip status={p.status} />
+          {payouts.loading ? (
+            <div className="bop-timeline" role="status" aria-busy="true" aria-label="Loading payouts">{[0, 1, 2].map((i) => <div className="bop-tl-item" key={i}><span className="bop-tl-dot" /><div style={{ display: "grid", gap: 8, flex: 1 }}><Skel w="40%" h={16} /><Skel w="70%" h={11} /></div></div>)}</div>
+          ) : items.length ? (
+            <ol className="bop-timeline">
+              {items.map((p) => (
+                <li key={p.id} className={`bop-tl-item is-${p.status === "paid" ? "green" : p.status === "rejected" ? "red" : "amber"}`}>
+                  <span className="bop-tl-dot" aria-hidden="true" />
+                  <div className="bop-tl-body">
+                    <div className="bop-tl-top"><strong>{ugx(p.amount)}</strong><StatusChip status={p.status} /></div>
+                    <p>To {p.phone} · requested {eatDateTimeLabel(p.createdAt)}</p>
+                    {p.processedAt ? <p>Processed {eatDateTimeLabel(p.processedAt)}</p> : null}
+                    {p.note ? <p className="bop-tl-note">{p.note}</p> : null}
                   </div>
                 </li>
               ))}
-            </ul>
-          ) : <Empty icon={<IconWallet width={26} height={26} />} title="No payouts yet">Requested payouts and their status show here.</Empty>}
-        </section>
+            </ol>
+          ) : <Empty compact icon={<IcWallet size={24} />} title="No payouts yet">Requested payouts and their status show here.</Empty>}
+        </Panel>
       </div>
     </>
   );

@@ -1,0 +1,158 @@
+/* ===================================================================================
+   Gabla Bus - the digital ticket (coloured backdrop, notched white pass, QR stub) and the
+   "My tickets" list.
+   =================================================================================== */
+
+/* ---------- backdrop ---------- */
+.bus-ticketpage { position: relative; padding: 24px 0 64px; color: #fff; min-height: calc(100vh - 68px); background: radial-gradient(720px 380px at 88% -4%, rgba(234, 88, 12, 0.42), transparent 62%), radial-gradient(600px 400px at -6% 100%, rgba(99, 102, 241, 0.3), transparent 60%), linear-gradient(165deg, #0b2046 0%, #17376f 58%, #272e75 100%); }
+.bus-ticketpage.is-used, .bus-ticketpage.is-past { background: radial-gradient(700px 360px at 90% 0%, rgba(148, 163, 184, 0.25), transparent 60%), linear-gradient(165deg, #1e293b 0%, #334155 100%); }
+.bus-ticketpage.is-cancelled, .bus-ticketpage.is-refund { background: radial-gradient(700px 360px at 90% 0%, rgba(248, 113, 113, 0.3), transparent 60%), linear-gradient(165deg, #3b0d12 0%, #7f1d1d 100%); }
+.bus-ticketpage.is-stack { min-height: 0; padding-top: 44px; }
+.bus-ticketpage.is-stack .bus-wrap { display: grid; gap: 28px; justify-items: center; }
+.bus-ticketpage .bus-breadcrumb { margin-bottom: 18px; }
+
+.bus-pager { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; }
+.bus-pager > button { width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.14); color: #fff; display: grid; place-items: center; }
+.bus-pager > button:disabled { opacity: 0.35; }
+.bus-pager-dots { display: flex; align-items: center; gap: 4px; }
+.bus-pager-dots button { width: 28px; height: 44px; border: 0; background: none; padding: 0; position: relative; }
+.bus-pager-dots button::after { content: ""; position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: rgba(255, 255, 255, 0.4); transition: width 0.2s, margin 0.2s, background 0.2s; }
+.bus-pager-dots button.is-on::after { width: 26px; margin-left: -13px; border-radius: 6px; background: #fdba74; }
+.bus-pager p { flex-basis: 100%; text-align: center; font-size: 13.5px; font-weight: 650; color: rgba(255, 255, 255, 0.8); }
+
+.bus-pass-scroller { position: relative; display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 12px max(0px, calc(50% - 220px)) 30px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.bus-pass-scroller::-webkit-scrollbar { display: none; }
+.bus-pass-slide { width: min(440px, 100%); flex: 0 0 min(440px, calc(100vw - 2 * var(--bus-gutter))); scroll-snap-align: center; scroll-snap-stop: always; transition: opacity 0.25s, transform 0.25s; }
+.bus-pass-scroller .bus-pass-slide:not(.is-active) { opacity: 0.55; transform: scale(0.96); }
+.bus-ticketpage.is-stack .bus-pass-slide { flex: none; width: min(440px, 100%); }
+
+/* ---------- the pass ---------- */
+.bus-pass { position: relative; filter: drop-shadow(0 26px 28px rgba(3, 10, 30, 0.42)); color: var(--bus-ink); --notch: 13px; --accent: var(--bus-orange); }
+.bus-pass.is-used, .bus-pass.is-past { --accent: #64748b; }
+.bus-pass.is-cancelled { --accent: var(--bus-red); }
+.bus-pass.is-refund { --accent: #d97706; }
+.bus-pass-a, .bus-pass-b, .bus-pass-c { position: relative; background: #fff; }
+.bus-pass-a { padding: 22px 24px 28px; border-radius: 26px 26px 0 0; box-shadow: inset 0 7px 0 var(--accent); padding-top: 28px; -webkit-mask: radial-gradient(circle at 0 100%, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) left / 51% 100% no-repeat, radial-gradient(circle at 100% 100%, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) right / 51% 100% no-repeat; mask: radial-gradient(circle at 0 100%, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) left / 51% 100% no-repeat, radial-gradient(circle at 100% 100%, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) right / 51% 100% no-repeat; }
+.bus-pass-b { padding: 24px; -webkit-mask: radial-gradient(circle at 0 0, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) left top / 51% 51% no-repeat, radial-gradient(circle at 100% 0, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) right top / 51% 51% no-repeat, radial-gradient(circle at 0 100%, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) left bottom / 51% 51% no-repeat, radial-gradient(circle at 100% 100%, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) right bottom / 51% 51% no-repeat; mask: radial-gradient(circle at 0 0, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) left top / 51% 51% no-repeat, radial-gradient(circle at 100% 0, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) right top / 51% 51% no-repeat, radial-gradient(circle at 0 100%, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) left bottom / 51% 51% no-repeat, radial-gradient(circle at 100% 100%, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) right bottom / 51% 51% no-repeat; }
+.bus-pass-c { padding: 24px 24px 26px; border-radius: 0 0 26px 26px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; -webkit-mask: radial-gradient(circle at 0 0, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) left / 51% 100% no-repeat, radial-gradient(circle at 100% 0, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) right / 51% 100% no-repeat; mask: radial-gradient(circle at 0 0, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) left / 51% 100% no-repeat, radial-gradient(circle at 100% 0, #0000 calc(var(--notch) - 0.8px), #000 var(--notch)) right / 51% 100% no-repeat; }
+.bus-pass-b::before, .bus-pass-c::before { content: ""; position: absolute; top: 0; left: calc(var(--notch) + 8px); right: calc(var(--notch) + 8px); border-top: 2px dashed #bcc6da; }
+
+.bus-pass-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.bus-pass-ref { font-size: 12.5px; font-weight: 650; color: var(--bus-muted); font-variant-numeric: tabular-nums; }
+.bus-pass-route { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; margin-top: 26px; }
+.bus-pass-code { display: flex; flex-direction: column; min-width: 0; }
+.bus-pass-code.is-right { text-align: right; align-items: flex-end; }
+.bus-pass-code b { font-family: var(--bus-display); font-size: 46px; font-weight: 800; letter-spacing: -0.045em; line-height: 1; color: var(--bus-navy); }
+.bus-pass-code span { margin-top: 6px; font-size: 13.5px; font-weight: 600; color: var(--bus-muted); overflow-wrap: anywhere; }
+.bus-pass-mid { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 76px; }
+.bus-pass-mid small { font-size: 11.5px; font-weight: 800; color: var(--bus-navy); letter-spacing: 0.04em; }
+.bus-pass-line { display: flex; align-items: center; gap: 4px; width: 100%; color: var(--bus-orange); }
+.bus-pass-line i { flex: 1; min-width: 8px; border-top: 2px dashed #c5cde0; }
+.bus-pass-co { margin-top: 20px; text-align: center; font-family: var(--bus-display); font-weight: 800; font-size: 14px; letter-spacing: -0.01em; color: var(--bus-navy); }
+.bus-pass-alert { margin-top: 16px; font-size: 13px; }
+
+.bus-pass-grid { margin: 0; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px 18px; }
+.bus-pass-grid dt { font-size: 11px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: var(--bus-faint); }
+.bus-pass-grid dd { margin: 4px 0 0; font-size: 14.5px; font-weight: 700; line-height: 1.45; color: var(--bus-ink); overflow-wrap: anywhere; }
+.bus-pass-grid .is-right { text-align: right; }
+.bus-seat { display: inline-block; min-width: 32px; padding: 1px 9px; margin-bottom: 3px; border-radius: 9px; background: var(--bus-navy); color: #fff; font-family: var(--bus-display); font-weight: 800; text-align: center; }
+
+.bus-pass-qr { position: relative; padding: 10px; border-radius: 18px; border: 1.5px solid var(--bus-line); background: #fff; }
+.bus-pass-qr img { display: block; width: 168px; height: 168px; image-rendering: pixelated; }
+.bus-pass.is-used .bus-pass-qr img, .bus-pass.is-past .bus-pass-qr img, .bus-pass.is-cancelled .bus-pass-qr img, .bus-pass.is-refund .bus-pass-qr img { filter: grayscale(1); opacity: 0.22; }
+.bus-pass-stamp { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-14deg); padding: 6px 14px; border: 3.5px solid var(--accent); border-radius: 12px; color: var(--accent); font-family: var(--bus-display); font-weight: 800; font-size: 19px; letter-spacing: 0.1em; white-space: nowrap; background: rgba(255, 255, 255, 0.7); }
+.bus-pass-qrmeta { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.bus-pass-qrmeta small { font-size: 12.5px; color: var(--bus-muted); max-width: 30ch; }
+.bus-ticket-number { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 800; font-size: 16px; letter-spacing: 0.08em; color: var(--bus-navy); }
+.bus-pass.is-skel .bus-pass-a, .bus-pass.is-skel .bus-pass-b, .bus-pass.is-skel .bus-pass-c { min-height: 140px; }
+.bus-pass.is-skel .bus-pass-c { align-items: center; }
+
+/* actions panel (the "Actions" pill from the inspiration, opened up so it needs no extra tap) */
+.bus-actions { margin: 6px auto 0; max-width: 520px; text-align: center; }
+.bus-actions-grid { display: flex; justify-content: center; flex-wrap: nowrap; gap: 4px; }
+.bus-actions-grid > button, .bus-actions-grid > a { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1 1 0; max-width: 92px; min-width: 0; padding: 6px 2px; background: none; border: 0; color: #fff !important; font-size: 12.5px; font-weight: 650; }
+.bus-actions-grid span { width: 54px; height: 54px; border-radius: 50%; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.28); display: grid; place-items: center; transition: background 0.15s, transform 0.15s; }
+.bus-actions-grid > button:hover span, .bus-actions-grid > a:hover span { background: var(--bus-orange); border-color: var(--bus-orange); transform: translateY(-2px); }
+.bus-actions-note { margin-top: 16px; min-height: 22px; font-size: 13px; color: rgba(255, 255, 255, 0.72); display: flex; align-items: center; justify-content: center; gap: 6px; }
+.bus-pass-foot { margin-top: 22px; text-align: center; font-size: 13px; color: rgba(255, 255, 255, 0.72); display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.bus-pass-foot a { color: #fdba74; font-weight: 700; }
+
+/* ---------- my tickets ---------- */
+.bus-segment { display: inline-flex; background: #fff; border: 1.5px solid var(--bus-sand-2); border-radius: 999px; padding: 4px; gap: 2px; }
+.bus-segment button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 22px; border: 0; border-radius: 999px; background: transparent; color: var(--bus-navy); font-weight: 750; font-size: 14.5px; transition: background 0.15s, color 0.15s; }
+.bus-segment button.is-active { background: var(--bus-navy); color: #fff; }
+.bus-segment b { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: rgba(11, 32, 70, 0.1); font-size: 12px; display: inline-grid; place-items: center; }
+.bus-segment button.is-active b { background: rgba(255, 255, 255, 0.2); }
+
+.bus-notices { display: grid; gap: 10px; margin-bottom: 24px; justify-items: start; }
+.bus-notices .bus-notice { margin-top: 0; width: 100%; }
+
+.bus-mytrips { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr)); }
+.bus-mytrip { --c: var(--bus-green); position: relative; display: flex; flex-direction: column; background: #fff; border: 1px solid var(--bus-line); border-radius: 22px; box-shadow: var(--bus-shadow-sm); overflow: hidden; transition: box-shadow 0.2s, transform 0.2s; }
+.bus-mytrip::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--c); }
+.bus-mytrip.is-past, .bus-mytrip.is-other { --c: #94a3b8; }
+.bus-mytrip.is-cancelled { --c: var(--bus-red); border-color: #f5c2c2; }
+.bus-mytrip:hover { box-shadow: var(--bus-shadow); transform: translateY(-2px); }
+.bus-mytrip.is-past .bus-logo { filter: grayscale(0.7); }
+.bus-mytrip-main { display: block; flex: 1; padding: 20px 22px 16px 28px; }
+.bus-mytrip-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.bus-mytrip .bus-trip-co { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.bus-mytrip .bus-trip-co-text b { font-family: var(--bus-display); font-size: 15.5px; font-weight: 800; letter-spacing: -0.02em; color: var(--bus-navy); }
+.bus-mytrip .bus-trip-co-text small { font-size: 12.5px; color: var(--bus-muted); font-variant-numeric: tabular-nums; }
+.bus-mytrip-route { display: grid; grid-template-columns: auto minmax(60px, 1fr) auto; align-items: center; gap: 14px; margin-top: 20px; }
+.bus-mytrip-route b { display: block; font-family: var(--bus-display); font-size: 32px; font-weight: 800; letter-spacing: -0.045em; line-height: 1; color: var(--bus-navy); }
+.bus-mytrip-route span { display: block; margin-top: 4px; font-size: 13.5px; color: var(--bus-muted); font-weight: 600; }
+.bus-mytrip-route .is-right { text-align: right; }
+.bus-mytrip-line { position: relative; display: flex !important; align-items: center; gap: 4px; margin: 0 !important; padding-bottom: 18px; color: var(--bus-orange); }
+.bus-mytrip-line i { flex: 1; border-top: 2px dashed #c5cde0; }
+.bus-mytrip-line small { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; font-size: 11.5px; font-weight: 800; color: var(--bus-navy); }
+.bus-mytrip-when { margin-top: 16px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; font-size: 14.5px; color: #334155; }
+.bus-mytrip-when b { color: var(--bus-navy); }
+.bus-mytrip-note { margin-top: 12px; padding: 10px 14px; border-radius: 12px; background: var(--bus-red-soft); color: var(--bus-red); font-size: 13.5px; font-weight: 650; }
+.bus-mytrip-open { display: inline-flex; align-items: center; margin-top: 14px; font-size: 13.5px; font-weight: 750; color: var(--bus-orange-dark); }
+.bus-mytrip-main:hover .bus-mytrip-open { text-decoration: underline; text-underline-offset: 3px; }
+.bus-mytrip-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; padding: 12px 22px 14px 28px; border-top: 2px dashed var(--bus-line); background: var(--bus-cream); }
+.bus-mytrip-seats { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 650; color: var(--bus-muted); }
+.bus-mytrip-seats svg { color: var(--bus-orange); }
+.bus-mytrip-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.bus-mytrip-pills .bus-pillbtn { min-height: 36px; padding: 0 12px; font-size: 13px; background: #fff; border-color: var(--bus-sand-2); }
+.bus-mytrip-pills .bus-pillbtn:hover { border-color: var(--bus-orange); }
+.bus-mytrip-total { font-family: var(--bus-display); font-size: 16px; font-weight: 800; color: var(--bus-navy); }
+.bus-mytrip-wait { padding: 0 22px 14px 28px; }
+
+@media (max-width: 520px) {
+  .bus-pass-scroller { margin: 0 calc(var(--bus-gutter) * -1); padding-left: var(--bus-gutter); padding-right: var(--bus-gutter); }
+}
+@media (max-width: 720px) {
+  .bus-ticketpage { padding-top: 16px; min-height: 0; }
+  .bus-ticketpage .bus-breadcrumb { display: none; }
+  .bus-pass-code b { font-size: 40px; }
+  .bus-pass-a { padding: 26px 20px 24px; }
+  .bus-pass-b { padding: 22px 20px; }
+  .bus-pass-c { padding: 22px 20px 24px; }
+  .bus-pass-grid { gap: 18px 14px; }
+  .bus-mytrip-main { padding: 18px 16px 14px 22px; }
+  .bus-mytrip-foot { padding-left: 22px; padding-right: 16px; }
+  .bus-mytrip-route b { font-size: 28px; }
+  .bus-segment { width: 100%; }
+  .bus-segment button { flex: 1; justify-content: center; padding: 0 12px; }
+}
+@media (max-width: 360px) {
+  .bus-pass-code b { font-size: 34px; }
+  .bus-pass-mid { min-width: 60px; }
+}
+
+@media print {
+  .bus-pass, .bus-badge, .bus-chip, .bus-seat, .bus-pass-stamp { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .bus-ticketpage { background: #fff !important; color: #000; padding: 0; min-height: 0; }
+  .bus-pass-scroller { display: block; overflow: visible; padding: 0; margin: 0; }
+  .bus-pass-slide { width: 440px; margin: 0 auto 24px; opacity: 1 !important; transform: none !important; break-inside: avoid; }
+  .bus-pass-scroller .bus-pass-slide:not(.is-active) { display: none; }
+  .bus-pass { filter: none; border: 1.5px solid #cbd5e1; border-radius: 26px; overflow: hidden; }
+  .bus-pass-a, .bus-pass-b, .bus-pass-c { -webkit-mask: none; mask: none; border-radius: 0; }
+  .bus-pass-foot { color: #475569; }
+}
+
+.bus-loadmore { display: flex; justify-content: center; margin-top: 26px; }
+.bus-loadmore small { font-weight: 600; color: var(--bus-muted); }
+.bus-nowrap { white-space: nowrap; }

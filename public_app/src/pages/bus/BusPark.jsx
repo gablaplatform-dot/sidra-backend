@@ -5,8 +5,8 @@ import BusLayout from "../../components/bus/BusLayout";
 import TripExplorer from "../../components/bus/TripList";
 import useLoad from "../../components/bus/useLoad";
 import useScrollTop from "../../components/bus/useScrollTop";
-import { BusLogo, Rating, coverStyle, telHref, waHref } from "../../components/bus/parts";
-import { IconArrowRight, IconPhone, IconPin } from "../../components/icons";
+import { BusLogo, EmptyState, Photo, Rating, SectionHead, telHref, waHref } from "../../components/bus/parts";
+import { ArrowRight, Building, BusIcon, Chat, Clock, Phone, Pin } from "../../components/bus/icons";
 import { Skel } from "../../components/Skeleton";
 import { busApi, durationLabel, ugx } from "../../lib/bus";
 
@@ -16,10 +16,15 @@ function ParkSkeleton() {
   return (
     <div role="status" aria-busy="true" aria-live="polite">
       <span className="sr-only">Loading company…</span>
-      <div className="bus-card bus-company" aria-hidden="true">
-        <Skel h={150} w="100%" r={0} />
-        <div className="bus-company-body"><Skel w="45%" h={26} /><Skel w="70%" h={14} style={{ marginTop: 12 }} /><Skel w="100%" h={14} style={{ marginTop: 8 }} /></div>
+      <div className="bus-parkhero is-skel" aria-hidden="true">
+        <div className="bus-wrap" style={{ paddingTop: 110 }}>
+          <div className="bus-parkhero-main">
+            <Skel w={96} h={96} r={26} className="on-dark" />
+            <div style={{ display: "grid", gap: 12, flex: 1 }}><Skel w="40%" h={32} className="on-dark" /><Skel w="60%" h={16} className="on-dark" /></div>
+          </div>
+        </div>
       </div>
+      <div className="bus-wrap bus-sec"><Skel w="100%" h={120} r={20} /></div>
     </div>
   );
 }
@@ -46,83 +51,102 @@ export default function BusPark() {
   if (park.error) {
     return (
       <BusLayout>
-        <div className="bus-card bus-empty">
-          <strong>{park.error.status === 404 ? "We couldn't find that bus company" : "Couldn't load this company"}</strong>
-          <p>{park.error.status === 404 ? "It may have been removed or is not taking bookings." : park.error.message}</p>
-          <div style={{ marginTop: 14, display: "flex", gap: 10, justifyContent: "center" }}>
-            {park.error.status !== 404 ? <button type="button" className="bus-btn bus-btn-navy" onClick={park.reload}>Try again</button> : null}
-            <Link to="/bus/parks" className="bus-btn bus-btn-light">All bus parks</Link>
-          </div>
+        <div className="bus-wrap bus-sec bus-sec-first">
+          <EmptyState
+            icon={Building}
+            title={park.error.status === 404 ? "We couldn't find that bus company" : "Couldn't load this company"}
+            action={<>
+              {park.error.status !== 404 ? <button type="button" className="bus-btn bus-btn-navy" onClick={park.reload}>Try again</button> : null}
+              <Link to="/bus/parks" className="bus-btn bus-btn-light">All bus parks</Link>
+            </>}
+          >
+            {park.error.status === 404 ? "It may have been removed or is not taking bookings." : park.error.message}
+          </EmptyState>
         </div>
       </BusLayout>
     );
   }
 
+  if (park.loading || !p) {
+    return <BusLayout><ParkSkeleton /></BusLayout>;
+  }
+
+  const routeFilter = from || to;
+  const fares = p.routes.flatMap((r) => r.ticketTypes.map((t) => Number(t.price))).filter((n) => n > 0);
+  const minFare = fares.length ? Math.min(...fares) : null;
+
   return (
     <BusLayout>
-      <nav className="bus-breadcrumb" aria-label="Breadcrumb"><Link to="/bus">Gabla Bus</Link><span>/</span><Link to="/bus/parks">Bus parks</Link><span>/</span><span>{p?.companyName || "…"}</span></nav>
-
-      {park.loading || !p ? (
-        <ParkSkeleton />
-      ) : (
-        <>
-          <section className="bus-card bus-company">
-            <div className="bus-company-cover" style={coverStyle(p.companyName, p.coverUrl)}>
-              <BusLogo name={p.companyName} src={p.logoUrl} className="bus-park-logo bus-company-logo" />
-            </div>
-            <div className="bus-company-body">
-              <div className="bus-company-title">
-                <h1>{p.companyName}</h1>
+      <section className="bus-parkhero">
+        <Photo src={p.coverUrl} name={p.companyName} width={1800} eager className="bus-parkhero-photo" />
+        <span className="bus-hero-shade is-park" aria-hidden="true" />
+        <div className="bus-wrap">
+          <nav className="bus-breadcrumb is-light" aria-label="Breadcrumb"><Link to="/bus">Gabla Bus</Link><span>/</span><Link to="/bus/parks">Bus parks</Link><span>/</span><span>{p.companyName}</span></nav>
+          <div className="bus-parkhero-main">
+            <BusLogo name={p.companyName} src={p.logoUrl} className="bus-parkhero-logo" size={96} />
+            <div className="bus-parkhero-title">
+              <h1>{p.companyName}</h1>
+              <div className="bus-parkhero-meta">
                 <Rating avg={p.ratingAvg} count={p.ratingCount} />
-              </div>
-              <p className="bus-hint bus-park-where"><IconPin width={14} height={14} /> {p.parkName}{p.parkDistrict ? `, ${p.parkDistrict}` : ""}{p.parkAddress ? ` · ${p.parkAddress}` : ""}</p>
-              {p.description ? <p className="bus-company-desc">{p.description}</p> : null}
-              <div className="bus-chips" style={{ marginTop: 10 }}>
-                {p.fleetSize ? <span className="bus-chip">{p.fleetSize} buses</span> : null}
-                <span className="bus-chip">{p.routes.length} {p.routes.length === 1 ? "route" : "routes"}</span>
-              </div>
-              <div className="bus-company-actions">
-                {p.contactPhone ? <a className="bus-btn bus-btn-navy" href={telHref(p.contactPhone)}><IconPhone width={18} height={18} /> Call {p.contactPhone}</a> : null}
-                {p.whatsapp ? <a className="bus-btn bus-btn-light" href={waHref(p.whatsapp)} target="_blank" rel="noopener noreferrer">WhatsApp</a> : null}
+                <span><Pin size={15} /> {p.parkName}{p.parkDistrict ? `, ${p.parkDistrict}` : ""}</span>
               </div>
             </div>
-          </section>
-
-          <section className="bus-section" aria-label="Routes and prices">
-            <div className="bus-section-head">
-              <div>
-                <h2 className="bus-section-title">Routes &amp; prices</h2>
-                <p className="bus-section-sub">Tap a route to filter its trips below.</p>
-              </div>
-              {from || to ? <button type="button" className="bus-linkbtn" onClick={() => update({ from: "", to: "" })}>Show all routes</button> : null}
+            <div className="bus-parkhero-actions">
+              {p.contactPhone ? <a className="bus-btn bus-btn-primary" href={telHref(p.contactPhone)}><Phone size={18} /> Call</a> : null}
+              {p.whatsapp ? <a className="bus-btn bus-btn-glass" href={waHref(p.whatsapp)} target="_blank" rel="noopener noreferrer"><Chat size={18} /> WhatsApp</a> : null}
             </div>
-            {p.routes.length ? (
-              <div className="bus-card bus-routes">
-                {p.routes.map((r) => {
-                  const active = from === r.originName && to === r.destinationName;
-                  return (
-                    <button type="button" key={r.id} className={`bus-routerow ${active ? "is-active" : ""}`} aria-pressed={active} onClick={() => update(active ? { from: "", to: "" } : { from: r.originName, to: r.destinationName })}>
-                      <div className="bus-routerow-main">
-                        <span className="bus-route-line"><span>{r.originName}</span><IconArrowRight className="bus-arrow" width={16} height={16} /><span>{r.destinationName}</span></span>
-                        <span className="bus-hint">{durationLabel(r.durationMinutes)}{r.busType ? ` · ${r.busType.name}` : ""}{r.boardingPoint ? ` · Board at ${r.boardingPoint}` : ""}</span>
-                      </div>
-                      <div className="bus-routerow-prices">
-                        {r.ticketTypes.map((t) => <span key={t.id} className="bus-chip">{t.name} {ugx(t.price)}</span>)}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="bus-card bus-empty"><strong>No routes yet</strong><p>This company hasn't published any routes.</p></div>
-            )}
-          </section>
+          </div>
+        </div>
+      </section>
 
-          <section className="bus-section" aria-label="Upcoming trips">
-            <TripExplorer filters={filters} date={date} onDate={(d) => update({ date: d })} emptyAction={from || to ? <button type="button" className="bus-btn bus-btn-navy" onClick={() => update({ from: "", to: "" })}>Show all routes</button> : null} />
-          </section>
-        </>
-      )}
+      <section className="bus-wrap bus-aboutrow" aria-label="About the company">
+        {p.description ? <p className="bus-company-desc">{p.description}</p> : null}
+        <dl className="bus-facts">
+          <div><dt><Building size={16} /> Bus park</dt><dd>{p.parkName}<small>{[p.parkAddress, p.parkDistrict].filter(Boolean).join(", ")}</small></dd></div>
+          {p.fleetSize ? <div><dt><BusIcon size={16} /> Fleet</dt><dd>{p.fleetSize} buses<small>on the road</small></dd></div> : null}
+          <div><dt><Clock size={16} /> Routes</dt><dd>{p.routes.length} {p.routes.length === 1 ? "route" : "routes"}<small>{minFare ? `from ${ugx(minFare)}` : "none yet"}</small></dd></div>
+        </dl>
+      </section>
+
+      <section className="bus-wrap bus-sec" aria-labelledby="park-routes-h">
+        <SectionHead
+          kicker="Fares"
+          title={<span id="park-routes-h">Routes &amp; prices</span>}
+          sub="Tap a route to see only its trips below."
+          action={routeFilter ? <button type="button" className="bus-linkbtn" onClick={() => update({ from: "", to: "" })}>Show all routes</button> : null}
+        />
+        {p.routes.length ? (
+          <div className="bus-routecards">
+            {p.routes.map((r) => {
+              const active = from === r.originName && to === r.destinationName;
+              return (
+                <button type="button" key={r.id} className={`bus-routecard ${active ? "is-active" : ""}`} aria-pressed={active} onClick={() => update(active ? { from: "", to: "" } : { from: r.originName, to: r.destinationName })}>
+                  <span className="bus-routecard-line"><b>{r.originName}</b><ArrowRight size={16} /><b>{r.destinationName}</b></span>
+                  <span className="bus-routecard-sub">
+                    <span><Clock size={14} /> {durationLabel(r.durationMinutes)}</span>
+                    {r.busType ? <span className="bus-trip-type">{r.busType.name}</span> : null}
+                  </span>
+                  {r.boardingPoint ? <span className="bus-routecard-sub"><span><Pin size={14} /> {r.boardingPoint}</span></span> : null}
+                  <span className="bus-routecard-prices">
+                    {r.ticketTypes.map((t) => <span key={t.id}><small>{t.name}</small><b>{ugx(t.price)}</b></span>)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyState title="No routes yet">This company hasn't published any routes.</EmptyState>
+        )}
+      </section>
+
+      <TripExplorer
+        filters={filters}
+        date={date}
+        onDate={(d) => update({ date: d })}
+        showCompanyFilter={false}
+        kicker={`${p.companyName} trips`}
+        emptyAction={routeFilter ? <button type="button" className="bus-btn bus-btn-navy" onClick={() => update({ from: "", to: "" })}>Show all routes</button> : null}
+      />
     </BusLayout>
   );
 }

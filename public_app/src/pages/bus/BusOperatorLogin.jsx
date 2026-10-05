@@ -4,15 +4,22 @@ import { Link, useNavigate } from "react-router-dom";
 import { request } from "../../lib/api";
 import { clearSession, getSession, setSession } from "../../lib/session";
 import { GOOGLE_CLIENT_ID, loadGoogleIdentity } from "../../lib/google";
-import { IconBus, IconCheck } from "../../components/icons";
 import { Field, errMsg } from "../../components/bus/operator/ui";
+import BrandPanel, { Logo } from "../../components/bus/operator/BrandPanel";
+import { IcAlert, IcCheck, IcInfo } from "../../components/bus/operator/icons";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PERKS = [
+  "Sell tickets online and get paid by mobile money",
+  "Check passengers in with a ticket scan",
+  "See sales, trips and customers every day"
+];
 
 export default function BusOperatorLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
   const [touched, setTouched] = useState({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -98,47 +105,43 @@ export default function BusOperatorLogin() {
 
   return (
     <div className="bus-app bop-login">
-      <aside className="bop-login-art">
-        <span className="bus-brand">
-          <span className="bus-brand-mark"><IconBus /></span>
-          <span className="bus-brand-text"><strong>Gabla Bus</strong><small>For bus companies</small></span>
-        </span>
-        <div className="bop-login-copy">
-          <h1>Run your buses from one place.</h1>
-          <ul>
-            {["Sell tickets online and get paid by mobile money", "Check passengers in with a ticket scan", "See sales, trips and customers every day"].map((t) => (
-              <li key={t}><span><IconCheck width={14} height={14} /></span>{t}</li>
-            ))}
-          </ul>
-        </div>
-        <div className="bop-login-road" aria-hidden="true" />
-      </aside>
+      <BrandPanel>
+        <span className="bop-eyebrow is-light">Bus company portal</span>
+        <h1>Run your buses from one place.</h1>
+        <ul className="bop-perks">
+          {PERKS.map((t) => <li key={t}><span><IcCheck size={13} strokeWidth={3.2} /></span>{t}</li>)}
+        </ul>
+      </BrandPanel>
 
-      <main className="bop-login-main">
-        <form className="bus-card bop-login-card" onSubmit={submit} noValidate>
+      <main className="bop-login-main" id="main">
+        <div className="bop-login-mobilebrand"><Logo light={false} /></div>
+        <form className="bop-login-card" onSubmit={submit} noValidate>
           <span className="bop-eyebrow">Bus company portal</span>
-          <h2>Sign in</h2>
-          <p className="bop-lead">Welcome back. Sign in to manage your routes, trips and tickets.</p>
+          <h2>Welcome back</h2>
+          <p className="bop-lead">Sign in to manage your routes, trips and tickets.</p>
 
-          {notice ? <div className="bus-alert bus-alert-warn" role="status">{notice}</div> : null}
-          {error ? <div className="bus-alert bus-alert-error" role="alert">{error}</div> : null}
+          {notice ? <div className="bop-alert is-warn" role="status"><IcInfo size={18} /><span>{notice}</span></div> : null}
+          {error ? <div className="bop-alert is-error" role="alert"><IcAlert size={18} /><span>{error}</span></div> : null}
 
           <div className="bop-google-wrap">
             {GOOGLE_CLIENT_ID ? <div ref={googleRef} className="bop-google-slot" /> : null}
-            {googleNote ? <p className="bus-hint">{googleNote}</p> : null}
+            {googleNote ? <p className="bop-hint">{googleNote}</p> : null}
           </div>
           <div className="bop-or"><span>or use your email</span></div>
 
           <Field label="Email" error={emailError}>
-            <input className="bus-input" type="email" autoComplete="username" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => setTouched((t) => ({ ...t, email: true }))} placeholder="you@company.com" aria-invalid={Boolean(emailError)} />
+            <input className="bop-input" type="email" autoComplete="username" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => setTouched((t) => ({ ...t, email: true }))} placeholder="you@company.com" aria-invalid={Boolean(emailError)} />
           </Field>
           <Field label="Password" error={passError}>
-            <input className="bus-input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} onBlur={() => setTouched((t) => ({ ...t, password: true }))} aria-invalid={Boolean(passError)} />
+            <span className="bop-pass">
+              <input className="bop-input" type={show ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} onBlur={() => setTouched((t) => ({ ...t, password: true }))} aria-invalid={Boolean(passError)} />
+              <button type="button" onClick={() => setShow((s) => !s)} aria-pressed={show}>{show ? "Hide" : "Show"}</button>
+            </span>
           </Field>
-          <button type="submit" className="bus-btn bus-btn-primary bus-btn-block" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+          <button type="submit" className="bop-btn bop-btn-primary bop-btn-lg bop-btn-block" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
 
-          <p className="bop-login-foot">New bus company? Gabla invites you by email — open the link in that email to get started.</p>
-          <p className="bop-login-foot"><Link to="/bus" className="bus-link">Looking to buy a ticket? Go to Gabla Bus</Link></p>
+          <p className="bop-login-foot">New bus company? Gabla invites you by email. Open the link in that email to get started.</p>
+          <p className="bop-login-foot"><Link to="/bus" className="bop-textlink">Looking to buy a ticket? Go to Gabla Bus</Link></p>
         </form>
       </main>
     </div>
