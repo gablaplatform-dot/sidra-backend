@@ -22,7 +22,6 @@ export default function useLoad(fn, deps, { enabled = true } = {}) {
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, tick, enabled]);
 
   const reload = useCallback(() => setTick((t) => t + 1), []);
