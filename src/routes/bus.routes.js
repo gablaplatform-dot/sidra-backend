@@ -13,7 +13,7 @@ const money = Joi.number().min(0).max(100000000);
 const phone = Joi.string().trim().min(7).max(20);
 const url = Joi.string().uri().max(1000).allow(null, "");
 
-const stop = Joi.object({ name: Joi.string().trim().max(80).required(), minutesFromStart: Joi.number().integer().min(0).max(2000).optional() });
+const stop = Joi.object({ name: Joi.string().trim().max(80).required(), offsetMinutes: Joi.number().integer().min(0).max(2000).optional() });
 const ticketTypeInput = Joi.object({ name: Joi.string().trim().max(60).required(), price: money.required(), description: Joi.string().trim().max(200).allow("").optional() });
 const departureInput = Joi.object({
   name: Joi.string().trim().max(80).allow("").optional(),
