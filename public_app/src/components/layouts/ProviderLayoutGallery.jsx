@@ -1,7 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-import ContactSidebar from "../ContactSidebar";
 import ProviderListings from "../ProviderListings";
 import ProviderCustomFields from "../ProviderCustomFields";
 import { IconChevronLeft, IconImage, IconStar } from "../icons";
@@ -48,10 +47,6 @@ export default function ProviderLayoutGallery({ provider, categoryId, categoryNa
       </div>
 
       <ProviderListings provider={provider} listings={listings} />
-
-      <div className="pl-contact">
-        <ContactSidebar provider={provider} onUnlock={onUnlock} />
-      </div>
     </>
   );
 }

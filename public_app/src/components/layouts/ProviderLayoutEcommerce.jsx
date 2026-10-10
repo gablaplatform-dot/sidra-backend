@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
-import ContactSidebar from "../ContactSidebar";
 import ProviderCustomFields, { hasAnsweredCustomFields } from "../ProviderCustomFields";
 import OrderModal from "../OrderModal";
 import ProviderListings from "../ProviderListings";
@@ -87,10 +86,6 @@ export default function ProviderLayoutEcommerce({ provider, categoryId, category
             )}
           </section>
         </div>
-
-        <aside className="provider-detail-sidebar">
-          <ContactSidebar provider={provider} onUnlock={onUnlock} />
-        </aside>
       </div>
 
       {orderingItem ? (

@@ -835,6 +835,16 @@ export class ProviderService {
     const effective = includeUnapproved ? null : await this.getEffectiveSettingsForProvider(provider);
     const contactLocked = Boolean(effective?.enableContactFee);
 
+    // What the buyer gets by unlocking, without revealing it: which channels exist, and how many people
+    // have already paid to unlock this provider.
+    const rawContact = provider.contact ?? {};
+    const rawLocation = provider.location ?? {};
+    const hasPin = Array.isArray(rawLocation.geo?.coordinates) && rawLocation.geo.coordinates.length === 2;
+    const [unlockCount, listingCount] = await Promise.all([
+      prisma.contactUnlock.count({ where: { providerId: provider.id, paid: true } }),
+      prisma.serviceProduct.count({ where: { providerId: provider.id, status: "approved" } })
+    ]);
+
     return {
       id: provider.id,
       userId: provider.userId,
@@ -845,6 +855,15 @@ export class ProviderService {
       contact: contactLocked ? this.redactContact(provider.contact) : provider.contact,
       contactLocked,
       contactFee: effective ? (effective.contactFee?.toString?.() ?? "0.00") : null,
+      contactAvailable: {
+        phone: Boolean(rawContact.phone),
+        whatsapp: Boolean(rawContact.whatsapp),
+        email: Boolean(rawContact.email),
+        website: Boolean(rawContact.website),
+        address: Boolean(rawLocation.address),
+        pin: hasPin
+      },
+      stats: { unlockCount, listingCount },
       media: provider.media,
       customFields: provider.customFields,
       isApproved: provider.isApproved,

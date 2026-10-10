@@ -10,6 +10,7 @@ import { findCategoryPath } from "../lib/categories";
 import SiteHeader from "../components/SiteHeader";
 import { ProviderPageSkeleton } from "../components/Skeleton";
 import UnlockModal from "../components/UnlockModal";
+import ProviderContactCard from "../components/ProviderContactCard";
 import ProviderLayoutDefault from "../components/layouts/ProviderLayoutDefault";
 import ProviderLayoutGallery from "../components/layouts/ProviderLayoutGallery";
 import ProviderLayoutMenu from "../components/layouts/ProviderLayoutMenu";
@@ -108,16 +109,21 @@ export default function ProviderDetail() {
           <Link to="/home" className="secondary-button">Back to home</Link>
         </div>
       ) : (
-        <Layout
-          provider={provider}
-          categoryId={provider.categoryId}
-          categoryName={categoryName}
-          categories={categories}
-          providerFields={providerFields}
-          listings={listings}
-          gallery={gallery}
-          onUnlock={() => setUnlockOpen(true)}
-        />
+        <div className="pcc-page">
+          <div className="pcc-page-main">
+            <Layout
+              provider={provider}
+              categoryId={provider.categoryId}
+              categoryName={categoryName}
+              categories={categories}
+              providerFields={providerFields}
+              listings={listings}
+              gallery={gallery}
+              onUnlock={() => setUnlockOpen(true)}
+            />
+          </div>
+          <ProviderContactCard provider={provider} categoryName={categoryName} onUnlock={() => setUnlockOpen(true)} />
+        </div>
       )}
 
       {unlockOpen ? (

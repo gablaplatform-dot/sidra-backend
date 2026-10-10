@@ -2,7 +2,7 @@ import React from "react";
 
 // Renders whatever a provider answered for their category's custom questions during onboarding
 // (Category.providerFields definitions + Provider.customFields values) - shown publicly on their
-// "About" section, unlike contact/location which stay behind the unlock gate (see ContactSidebar).
+// "About" section, unlike contact/location which stay behind the unlock gate (see ProviderContactCard).
 //
 // This needs a stricter "was this actually answered" check than lib/customFields#isCustomFieldFilled
 // (which treats every boolean as filled, since a form checkbox is always either true or false once

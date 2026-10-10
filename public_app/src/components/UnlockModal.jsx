@@ -146,7 +146,13 @@ export default function UnlockModal({ providerId, providerName, fee, onClose, on
                 ) : null}
               </div>
             ) : null}
-            <button type="button" className="primary-button" onClick={onClose}>Done</button>
+            <div className="unlock-actions">
+              {revealed?.contact?.phone ? <a className="primary-button" href={`tel:${revealed.contact.phone}`}>Call now</a> : null}
+              {revealed?.contact?.whatsapp ? (
+                <a className="secondary-button" href={`https://wa.me/${String(revealed.contact.whatsapp).replace(/[^\d]/g, "")}`} target="_blank" rel="noreferrer">WhatsApp</a>
+              ) : null}
+            </div>
+            <button type="button" className="payment-option" onClick={onClose}>Done</button>
           </>
         ) : stage === "failed" ? (
           <>

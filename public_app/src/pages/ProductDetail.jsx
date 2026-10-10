@@ -18,7 +18,7 @@ import UnlockModal from "../components/UnlockModal";
 import ProductGallery from "../components/product/ProductGallery";
 import ProductRow from "../components/product/ProductRow";
 import { ProductDetailSkeleton, ProductRowSkeleton } from "../components/Skeleton";
-import SellerCard from "../components/product/SellerCard";
+import ProviderContactCard from "../components/ProviderContactCard";
 // Purely presentational {label, value} list - already generic over any field/value set (built
 // for a provider's onboarding answers), reused as-is here for a product's category attributes
 // (Make, Color, Mileage, ...) rather than writing a second copy of the same rendering logic.
@@ -51,7 +51,6 @@ export default function ProductDetail() {
   const [listing, setListing] = useState(null);
   const [tree, setTree] = useState([]);
   const [providerRecord, setProviderRecord] = useState(null);
-  const [contact, setContact] = useState(null);
   // null = still loading (shows a skeleton row), [] = loaded and empty (row is hidden).
   const [similar, setSimilar] = useState(null);
   const [moreFromSeller, setMoreFromSeller] = useState(null);
@@ -71,7 +70,6 @@ export default function ProductDetail() {
     setSimilar(null);
     setMoreFromSeller(null);
     setProviderRecord(null);
-    setContact(null);
     window.scrollTo({ top: 0 });
 
     request(`/listings/${encodeURIComponent(listingId)}`)
@@ -98,10 +96,8 @@ export default function ProductDetail() {
             setProviderRecord(record);
             if (record?.contactLocked && (session || getUnlockedContactId(result.providerId))) {
               fetchUnlockedContact(result.providerId, session)
-                .then((unlocked) => active && setContact(unlocked.contact))
+                .then((unlocked) => active && setProviderRecord((prev) => (prev ? { ...prev, contactLocked: false, contact: unlocked.contact, location: unlocked.location } : prev)))
                 .catch(() => {});
-            } else if (record && !record.contactLocked) {
-              setContact(record.contact);
             }
           })
           .catch(() => {});
@@ -173,8 +169,7 @@ export default function ProductDetail() {
   const revealContact = () =>
     fetchUnlockedContact(listing.providerId, session)
       .then((unlocked) => {
-        setContact(unlocked.contact);
-        setProviderRecord((prev) => (prev ? { ...prev, contactLocked: false } : prev));
+        setProviderRecord((prev) => (prev ? { ...prev, contactLocked: false, contact: unlocked.contact, location: unlocked.location } : prev));
         return true;
       })
       .catch(() => false);
@@ -311,11 +306,11 @@ export default function ProductDetail() {
               </div>
 
               {seller ? (
-                <SellerCard
-                  seller={{ ...seller, ...(providerRecord ? { ratingAvg: providerRecord.ratingAvg ?? seller.ratingAvg } : {}) }}
-                  contact={contact}
+                <ProviderContactCard
+                  variant="inline"
+                  provider={providerRecord}
+                  fallback={seller}
                   pending={providerRecord === null}
-                  locked={Boolean(providerRecord?.contactLocked) && !contact}
                   listingName={listing.name}
                   onUnlock={() => setUnlockOpen(true)}
                 />

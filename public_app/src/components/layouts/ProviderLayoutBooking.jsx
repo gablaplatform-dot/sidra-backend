@@ -1,7 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-import ContactSidebar from "../ContactSidebar";
 import ProviderCustomFields, { hasAnsweredCustomFields } from "../ProviderCustomFields";
 import { IconBox, IconChevronLeft, IconClockIcon, IconImage, IconStar } from "../icons";
 
@@ -95,10 +94,6 @@ export default function ProviderLayoutBooking({ provider, categoryId, categoryNa
             )}
           </section>
         </div>
-
-        <aside className="provider-detail-sidebar">
-          <ContactSidebar provider={provider} onUnlock={onUnlock} />
-        </aside>
       </div>
     </>
   );

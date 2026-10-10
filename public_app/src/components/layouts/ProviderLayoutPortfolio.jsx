@@ -1,7 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-import ContactSidebar from "../ContactSidebar";
 import ProviderCustomFields, { hasAnsweredCustomFields } from "../ProviderCustomFields";
 import { IconChevronLeft, IconImage, IconStar } from "../icons";
 
@@ -67,10 +66,6 @@ export default function ProviderLayoutPortfolio({ provider, categoryId, category
             </section>
           ) : null}
         </div>
-
-        <aside className="provider-detail-sidebar">
-          <ContactSidebar provider={provider} onUnlock={onUnlock} />
-        </aside>
       </div>
     </>
   );
