@@ -5,7 +5,6 @@ import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
 import { mapCategoryDto } from "../lib/shopMappers";
 
-import ShopTopBar from "../components/shop/ShopTopBar";
 import ShopNavbar from "../components/shop/ShopNavbar";
 import { CategoryCard } from "../components/shop/ShopCategoryRow";
 import ShopFooterTrust from "../components/shop/ShopFooterTrust";
@@ -40,7 +39,6 @@ export default function ShopAllCategories() {
 
   return (
     <main className="shop-shell">
-      <ShopTopBar />
       <ShopNavbar session={session} onLogout={logout} />
 
       <nav className="breadcrumb">

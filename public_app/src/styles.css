@@ -1343,37 +1343,6 @@ button { cursor: pointer; }
   font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif;
 }
 
-/* ============ Top announcement bar ============ */
-.shop-topbar {
-  background: #0a0a0a;
-  color: #ffffff;
-}
-.shop-topbar-inner {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 10px 5vw;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 42px;
-  flex-wrap: wrap;
-}
-.shop-topbar-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #f1f5f9;
-  white-space: nowrap;
-}
-.shop-topbar-item svg { color: #ea580c; flex-shrink: 0; }
-
-@media (max-width: 720px) {
-  .shop-topbar-inner { gap: 16px; padding: 10px 20px; }
-  .shop-topbar-item:nth-child(n+3) { display: none; }
-}
-
 /* ============ Main navbar ============ */
 .shop-navbar {
   background: #ffffff;

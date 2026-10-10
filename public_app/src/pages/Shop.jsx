@@ -7,7 +7,6 @@ import { mapCategoryDto, mapProductDto, mapPromotionDto } from "../lib/shopMappe
 import { getCurrentPosition } from "../lib/geolocation";
 import { getPreferredDistrict } from "../lib/userLocation";
 
-import ShopTopBar from "../components/shop/ShopTopBar";
 import ShopNavbar from "../components/shop/ShopNavbar";
 import ShopHero from "../components/shop/ShopHero";
 import ShopAdsHero from "../components/shop/ShopAdsHero";
@@ -145,7 +144,6 @@ export default function Shop() {
 
   return (
     <main className="shop-shell">
-      <ShopTopBar />
       <ShopNavbar session={session} onLogout={logout} />
       {ads === null ? <ShopHeroSkeleton /> : ads.length ? <ShopAdsHero ads={ads} /> : <ShopHero products={displayNewArrivals.slice(0, 4)} />}
       <ShopTrustBar />

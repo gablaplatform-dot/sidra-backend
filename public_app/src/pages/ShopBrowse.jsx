@@ -17,7 +17,6 @@ import {
   readFilters,
   toApiParams
 } from "../lib/browseFilters";
-import ShopTopBar from "../components/shop/ShopTopBar";
 import ShopNavbar from "../components/shop/ShopNavbar";
 import ShopFooterTrust from "../components/shop/ShopFooterTrust";
 import BrowseSidebar from "../components/shop/browse/BrowseSidebar";
@@ -197,7 +196,6 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
 
   return (
     <main className="shop-shell">
-      <ShopTopBar />
       <ShopNavbar session={session} onLogout={onLogout} />
 
       <nav className="breadcrumb">

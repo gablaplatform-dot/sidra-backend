@@ -1,9 +1,3 @@
-export const ANNOUNCEMENTS = [
-  { icon: "truck", text: "Free Countrywide Delivery Over UGX 200,000" },
-  { icon: "fire", text: "Summer Sale Up To 70% Off" },
-  { icon: "bolt", text: "Limited Time Flash Deals" }
-];
-
 export const NAV_LINKS = [
   { label: "Home", href: "/home" },
   { label: "Shop", href: "/shop" },
