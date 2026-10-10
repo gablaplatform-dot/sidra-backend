@@ -90,7 +90,15 @@ export default function ProfileOrdersTab() {
               )}
 
               {order.fulfillment?.method === "delivery" && order.fulfillment?.address ? (
-                <p className="provider-meta">Deliver to: {order.fulfillment.address}</p>
+                <p className="provider-meta">
+                  Deliver to: {order.fulfillment.address}
+                  {Number.isFinite(order.fulfillment.lat) && Number.isFinite(order.fulfillment.lng) ? (
+                    <>
+                      {" · "}
+                      <a href={`https://www.google.com/maps/dir/?api=1&destination=${order.fulfillment.lat},${order.fulfillment.lng}`} target="_blank" rel="noreferrer">Get directions</a>
+                    </>
+                  ) : null}
+                </p>
               ) : order.fulfillment?.method === "pickup" ? (
                 <p className="provider-meta">Customer will pick up</p>
               ) : null}

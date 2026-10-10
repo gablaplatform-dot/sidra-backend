@@ -3919,3 +3919,63 @@ button { cursor: pointer; }
 .wel-submit { width: 100%; justify-content: center; }
 .wel-skip { display: block; margin: 16px auto 0; color: #64748b; text-decoration: none; font-weight: 700; }
 .wel-skip:hover { color: #0b2046; text-decoration: underline; }
+
+/* ---------- delivery location picker (map pin + place search) ---------- */
+.dlp { display: grid; gap: 10px; }
+.dlp-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 14px; background: #f1f5f9; }
+.dlp-modes button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 10px; border: 0; border-radius: 11px; background: transparent; color: #475569; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; transition: background 0.15s, color 0.15s, box-shadow 0.15s; }
+.dlp-modes button.is-active { background: #fff; color: #c2410c; box-shadow: 0 6px 16px -10px rgba(15, 23, 42, 0.5); }
+.dlp-open { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; border: 1.5px dashed #fdba74; border-radius: 14px; background: #fff7ed; color: #0b2046; text-align: left; font: inherit; cursor: pointer; }
+.dlp-open:hover:not([disabled]) { border-color: #ea580c; }
+.dlp-open[disabled] { opacity: 0.6; cursor: not-allowed; }
+.dlp-open strong { display: block; font-size: 15px; }
+.dlp-open small { display: block; margin-top: 2px; color: #7c5a3c; font-size: 12.5px; line-height: 1.4; }
+.dlp-open-icon, .dlp-selected-icon, .dlp-place-icon { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: #ffedd5; color: #c2410c; }
+.dlp-selected { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1.5px solid #bbf7d0; border-radius: 14px; background: #f0fdf4; }
+.dlp-selected-text { min-width: 0; flex: 1; }
+.dlp-selected-text small, .dlp-place small { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #15803d; }
+.dlp-selected-text strong { display: block; color: #0b2046; font-size: 14.5px; line-height: 1.35; overflow-wrap: anywhere; }
+.dlp-selected-actions { display: flex; align-items: center; gap: 4px; }
+.dlp-selected-actions button { border: 0; background: transparent; color: #c2410c; font: inherit; font-weight: 700; font-size: 13px; padding: 8px; border-radius: 8px; cursor: pointer; display: inline-flex; }
+.dlp-selected-actions button:last-child { color: #94a3b8; }
+.dlp-search-field { display: flex; align-items: center; gap: 10px; padding: 0 14px; border: 1.5px solid #dbe2ea; border-radius: 14px; background: #fff; color: #64748b; }
+.dlp-search-field:focus-within { border-color: #ea580c; box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.14); }
+.dlp-search-field input { flex: 1; min-width: 0; border: 0; outline: 0; padding: 14px 0; font: inherit; font-size: 15px; background: transparent; color: #0f172a; }
+.dlp-search-ok { color: #16a34a; font-weight: 800; }
+.dlp-hint { margin: 0; font-size: 12.5px; color: #64748b; line-height: 1.45; }
+.dlp-hint.is-ok { color: #15803d; }
+
+.dlp-sheet { position: fixed; inset: 0; z-index: 9000; background: rgba(11, 32, 70, 0.55); display: flex; align-items: stretch; justify-content: center; }
+.dlp-sheet-panel { position: relative; display: flex; flex-direction: column; width: 100%; background: #fff; overflow: hidden; }
+.dlp-sheet-head { position: absolute; z-index: 3; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 12px; padding: calc(12px + env(safe-area-inset-top, 0px)) 14px 22px; background: linear-gradient(#fff 55%, rgba(255, 255, 255, 0)); pointer-events: none; }
+.dlp-sheet-head > * { pointer-events: auto; }
+.dlp-sheet-head strong { display: block; color: #0b2046; font-size: 16px; }
+.dlp-sheet-head small { display: block; color: #64748b; font-size: 12.5px; margin-top: 1px; }
+.dlp-circle { width: 42px; height: 42px; border-radius: 50%; border: 0; background: #fff; color: #0b2046; display: grid; place-items: center; font-size: 22px; font-weight: 600; line-height: 1; cursor: pointer; box-shadow: 0 8px 22px -8px rgba(15, 23, 42, 0.55); }
+.dlp-circle:active { transform: scale(0.96); }
+.dlp-map-wrap { position: relative; flex: 1; min-height: 0; background: #e8edf4; }
+.dlp-map { position: absolute; inset: 0; }
+.dlp-map-error { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: #b91c1c; font-weight: 700; background: #f8fafc; }
+.dlp-pin { position: absolute; left: 50%; top: 50%; width: 44px; height: 56px; margin: -56px 0 0 -22px; pointer-events: none; transition: transform 0.18s ease; filter: drop-shadow(0 6px 8px rgba(15, 23, 42, 0.35)); }
+.dlp-pin.is-lifted { transform: translateY(-12px); }
+.dlp-pin-shadow { position: absolute; left: 50%; bottom: -4px; width: 14px; height: 6px; margin-left: -7px; border-radius: 50%; background: rgba(15, 23, 42, 0.35); transition: transform 0.18s ease, opacity 0.18s ease; }
+.dlp-pin.is-lifted .dlp-pin-shadow { transform: scale(0.6); opacity: 0.5; }
+.dlp-map-tools { position: absolute; z-index: 2; right: 14px; bottom: 16px; display: grid; gap: 10px; }
+.dlp-locate { color: #ea580c; }
+.dlp-locate.is-busy svg { animation: dlp-spin 0.9s linear infinite; }
+@keyframes dlp-spin { to { transform: rotate(360deg); } }
+.dlp-notice { position: absolute; z-index: 2; left: 14px; right: 70px; bottom: 16px; padding: 10px 14px; border-radius: 12px; background: rgba(11, 32, 70, 0.92); color: #fff; font-size: 13px; line-height: 1.4; box-shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.7); }
+.dlp-sheet-foot { display: grid; gap: 12px; padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #e5e7eb; background: #fff; }
+.dlp-place { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.dlp-place > div { min-width: 0; flex: 1; }
+.dlp-place strong { display: block; color: #0b2046; font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; }
+.dlp-place-skel { display: block; height: 16px; width: 70%; border-radius: 6px; margin-top: 4px; }
+.dlp-confirm { width: 100%; justify-content: center; padding: 15px; font-size: 16px; }
+.pac-container { z-index: 10000 !important; border-radius: 14px; margin-top: 6px; border: 1px solid #e2e8f0; box-shadow: 0 24px 50px -24px rgba(15, 23, 42, 0.5); font-family: inherit; }
+.pac-item { padding: 10px 14px; cursor: pointer; }
+
+@media (min-width: 760px) {
+  .dlp-sheet { align-items: center; padding: 24px; }
+  .dlp-sheet-panel { max-width: 760px; height: min(680px, 100%); border-radius: 22px; box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.6); }
+}
+@media (prefers-reduced-motion: reduce) { .dlp-pin, .dlp-pin-shadow, .dlp-locate.is-busy svg { transition: none; animation: none; } }

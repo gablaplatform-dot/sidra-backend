@@ -267,7 +267,15 @@ export class EngagementService {
     if (method === "delivery" && !address) {
       throw new AppError({ message: "Enter a delivery address", statusCode: 400, code: "ORDER_ADDRESS_REQUIRED" });
     }
-    const cleanFulfillment = method ? { method, ...(method === "delivery" ? { address } : {}) } : {};
+    // Where the buyer picked on the map or chose from the suggestions. The coordinates are kept
+    // for the seller's directions; they are never shown to the buyer as numbers.
+    const lat = Number(fulfillment?.lat);
+    const lng = Number(fulfillment?.lng);
+    const hasPoint = method === "delivery" && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+    const locationSource = ["map", "search"].includes(fulfillment?.locationSource) ? fulfillment.locationSource : undefined;
+    const cleanFulfillment = method
+      ? { method, ...(method === "delivery" ? { address } : {}), ...(hasPoint ? { lat, lng, ...(locationSource ? { locationSource } : {}) } : {}) }
+      : {};
 
     const provider = await prisma.provider.findUnique({ where: { id: providerId } });
     if (!provider || !provider.isApproved || provider.moderationStatus !== "approved") {

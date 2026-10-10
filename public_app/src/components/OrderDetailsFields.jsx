@@ -1,5 +1,7 @@
 import React from "react";
 
+import DeliveryLocationPicker from "./DeliveryLocationPicker";
+
 // Contact + delivery details for a cash order, shared by the order dialog and the cart.
 export default function OrderDetailsFields({ value, onChange, delivery = true }) {
   const set = (patch) => onChange({ ...value, ...patch });
@@ -27,10 +29,13 @@ export default function OrderDetailsFields({ value, onChange, delivery = true })
             </div>
           </div>
           {value.method === "delivery" ? (
-            <label className="field">
-              <span>Delivery address</span>
-              <input value={value.address} onChange={(e) => set({ address: e.target.value })} placeholder="Area, street, landmark" autoComplete="street-address" />
-            </label>
+            <div className="field">
+              <span>Where should it be delivered?</span>
+              <DeliveryLocationPicker
+                value={value.location}
+                onChange={(location) => set({ location, address: location?.address || "" })}
+              />
+            </div>
           ) : null}
         </>
       ) : null}

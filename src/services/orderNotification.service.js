@@ -39,6 +39,7 @@ export class OrderNotificationService {
       customer.name ? `Customer: ${customer.name}` : null,
       customer.phone ? `Phone: ${customer.phone}` : null,
       fulfillment.method === "delivery" ? `Deliver to: ${fulfillment.address}` : fulfillment.method === "pickup" ? "Customer will pick up" : null,
+      fulfillment.method === "delivery" && Number.isFinite(fulfillment.lat) && Number.isFinite(fulfillment.lng) ? `Directions: https://www.google.com/maps/dir/?api=1&destination=${fulfillment.lat},${fulfillment.lng}` : null,
       customer.notes ? `Note: ${customer.notes}` : null,
       isCash ? "Payment: CASH on delivery/pickup - nothing has been paid online" : "Payment: paid online (mobile money)"
     ].filter(Boolean);
