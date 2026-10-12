@@ -23,7 +23,7 @@ import BrowseSidebar from "../components/shop/browse/BrowseSidebar";
 import BrowseCard from "../components/shop/browse/BrowseCard";
 import LocationPicker from "../components/shop/browse/LocationPicker";
 import Pagination from "../components/Pagination";
-import { IconClose } from "../components/icons";
+import { IconClose, IconPin } from "../components/icons";
 import { ProductGridSkeleton, SidebarSkeleton, Skel } from "../components/Skeleton";
 
 const GEO_NOTICES = {
@@ -190,6 +190,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
       onChange={apply}
       onOpenLocation={() => setPickerOpen(true)}
       locationLabel={locationLabel}
+      hideLocation
       onClearAll={clearAll}
     />
   );
@@ -253,6 +254,14 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
               )}
             </div>
             <div className="sb-head-actions">
+              <button type="button" className={`sb-loc-btn ${filters.near || filters.district ? "is-set" : ""}`} onClick={() => setPickerOpen(true)} aria-label={`Location: ${locationLabel}. Change location`}>
+                <IconPin width={18} height={18} />
+                <span>
+                  <small>Location</small>
+                  <b>{locationLabel}</b>
+                </span>
+                <i aria-hidden="true" />
+              </button>
               <button type="button" className="sb-filter-btn" onClick={() => setDrawerOpen(true)}>
                 Filters{filterCount ? ` (${filterCount})` : ""}
               </button>

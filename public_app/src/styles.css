@@ -3513,6 +3513,18 @@ button { cursor: pointer; }
 .sb-results-head h1 { margin: 0; font-size: 24px; color: #0b2046; letter-spacing: -0.01em; }
 .sb-count { margin: 4px 0 0; color: #64748b; font-size: 14px; font-weight: 600; }
 .sb-head-actions { display: flex; align-items: center; gap: 10px; }
+.sb-loc-btn {
+  display: inline-flex; align-items: center; gap: 10px; max-width: 260px; padding: 8px 14px 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 12px;
+  background: #fff; color: #0b2046; font-family: inherit; text-align: left; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.sb-loc-btn:hover { border-color: #ea580c; }
+.sb-loc-btn:focus-visible { outline: 0; border-color: #ea580c; box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.16); }
+.sb-loc-btn > svg { flex: none; color: #ea580c; }
+.sb-loc-btn span { min-width: 0; display: grid; line-height: 1.2; }
+.sb-loc-btn small { font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #94a3b8; }
+.sb-loc-btn b { font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-loc-btn i { flex: none; width: 7px; height: 7px; border-right: 2px solid #94a3b8; border-bottom: 2px solid #94a3b8; transform: rotate(45deg); margin: -3px 0 0 2px; }
+.sb-loc-btn.is-set { border-color: #fdba74; background: #fff7ed; }
 .sb-sort { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #64748b; }
 .sb-sort select {
   padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff;
@@ -3612,6 +3624,12 @@ button { cursor: pointer; }
   .sb-drawer-foot { display: block; position: fixed; bottom: 0; left: 0; width: min(88vw, 380px); padding: 12px; background: #f8fafc; border-top: 1px solid #e2e8f0; box-sizing: border-box; }
   .sb-scrim { display: block; position: fixed; inset: 0; z-index: 70; background: rgba(15, 23, 42, 0.45); }
   .sb-results-head h1 { font-size: 20px; }
+  /* Location and Filters sit side by side right under the title, Sort drops to its own line. */
+  .sb-head-actions { width: 100%; flex-wrap: wrap; gap: 8px; }
+  .sb-loc-btn { flex: 1 1 0; min-width: 0; max-width: none; padding: 9px 12px; }
+  .sb-filter-btn { flex: none; align-self: stretch; align-items: center; }
+  .sb-sort { flex: 1 1 100%; justify-content: space-between; }
+  .sb-sort select { flex: 1; max-width: 240px; }
   .sb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .sb-card-body { padding: 10px 10px 12px; }
   .sb-card-price strong { font-size: 15px; }
