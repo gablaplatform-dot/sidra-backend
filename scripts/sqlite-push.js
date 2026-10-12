@@ -611,6 +611,38 @@ CREATE TABLE IF NOT EXISTS bus_payouts (
   FOREIGN KEY (operatorId) REFERENCES bus_operators(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS document_settings (
+  id TEXT PRIMARY KEY NOT NULL,
+  providerId TEXT NOT NULL,
+  settings JSONB NOT NULL DEFAULT '{}',
+  nextQuoteNo INTEGER NOT NULL DEFAULT 1,
+  nextReceiptNo INTEGER NOT NULL DEFAULT 1,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS order_documents (
+  id TEXT PRIMARY KEY NOT NULL,
+  orderId TEXT NOT NULL,
+  providerId TEXT NOT NULL,
+  userId TEXT,
+  type TEXT NOT NULL,
+  number TEXT NOT NULL,
+  revision INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'issued',
+  total DECIMAL NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'UGX',
+  snapshot JSONB NOT NULL DEFAULT '{}',
+  issuedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  emailedAt DATETIME,
+  emailedTo TEXT,
+  emailStatus TEXT,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (orderId) REFERENCES orders(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS media_assets (
   id TEXT PRIMARY KEY NOT NULL,
   providerId TEXT,
@@ -890,6 +922,11 @@ CREATE INDEX IF NOT EXISTS bus_tickets_operatorId_createdAt_idx ON bus_tickets(o
 CREATE INDEX IF NOT EXISTS bus_announcements_operatorId_createdAt_idx ON bus_announcements(operatorId, createdAt);
 CREATE INDEX IF NOT EXISTS bus_payouts_operatorId_createdAt_idx ON bus_payouts(operatorId, createdAt);
 CREATE INDEX IF NOT EXISTS bus_payouts_status_idx ON bus_payouts(status);
+CREATE UNIQUE INDEX IF NOT EXISTS document_settings_providerId_key ON document_settings(providerId);
+CREATE UNIQUE INDEX IF NOT EXISTS order_documents_providerId_number_revision_key ON order_documents(providerId, number, revision);
+CREATE INDEX IF NOT EXISTS order_documents_orderId_idx ON order_documents(orderId);
+CREATE INDEX IF NOT EXISTS order_documents_providerId_type_issuedAt_idx ON order_documents(providerId, type, issuedAt);
+CREATE INDEX IF NOT EXISTS order_documents_userId_issuedAt_idx ON order_documents(userId, issuedAt);
 CREATE INDEX IF NOT EXISTS media_assets_providerId_createdAt_idx ON media_assets(providerId, createdAt);
 CREATE INDEX IF NOT EXISTS media_assets_ownerId_createdAt_idx ON media_assets(ownerId, createdAt);
 CREATE INDEX IF NOT EXISTS media_assets_kind_idx ON media_assets(kind);

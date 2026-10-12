@@ -137,6 +137,14 @@ export class EngagementController {
     }
   };
 
+  listMyOrders = async (req, res, next) => {
+    try {
+      res.status(200).json({ data: await this.engagementService.listMyOrders({ actorUserId: req.user.id, ...req.query }) });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   listProviderOrders = async (req, res, next) => {
     try {
       res.status(200).json({

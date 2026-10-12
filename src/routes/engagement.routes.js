@@ -158,6 +158,19 @@ export const buildEngagementRoutes = ({ engagementController }) => {
     engagementController.createOrder
   );
   router.get(
+    "/orders/mine",
+    requireAuth([Roles.USER, Roles.PROVIDER]),
+    validate(
+      Joi.object({
+        status: Joi.string().trim().max(80).optional(),
+        page: Joi.number().integer().min(1).optional(),
+        limit: Joi.number().integer().min(1).max(50).optional()
+      }),
+      "query"
+    ),
+    engagementController.listMyOrders
+  );
+  router.get(
     "/provider/orders",
     requireAuth([Roles.PROVIDER]),
     validate(

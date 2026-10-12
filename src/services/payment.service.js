@@ -27,6 +27,12 @@ export class PaymentService {
     this.rideDriverWalletService = rideDriverWalletService;
     this.orderNotificationService = orderNotificationService;
     this.busBookingService = null;
+    this.documentService = null;
+  }
+
+  // Quotations and receipts are wired in after construction (see app.js).
+  attachDocuments(documentService) {
+    this.documentService = documentService;
   }
 
   // Bus ticketing is wired in after construction (it needs this service's callback URLs).
@@ -801,6 +807,8 @@ export class PaymentService {
 
     for (const orderId of newOrderIds) {
       this.orderNotificationService.notifyProviderNewOrder({ orderId }).catch(() => {});
+      // Paid online: the buyer's receipt goes out right away.
+      this.documentService?.issueReceipt({ orderId }).catch(() => {});
     }
 
     return result;

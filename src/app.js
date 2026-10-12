@@ -51,6 +51,7 @@ import { BusCatalogService } from "./services/busCatalog.service.js";
 import { BusOperatorService } from "./services/busOperator.service.js";
 import { BusBookingService } from "./services/busBooking.service.js";
 import { BusOperationsService } from "./services/busOperations.service.js";
+import { DocumentService } from "./services/document.service.js";
 import { hashPassword, verifyPassword } from "./utils/password.js";
 import { signAccessToken } from "./utils/jwt.js";
 import { env } from "./config/env.js";
@@ -145,6 +146,10 @@ export const buildApp = () => {
   const interestService = new InterestService({ listingService });
   const interestController = new InterestController({ interestService });
 
+  const documentService = new DocumentService();
+  paymentService.attachDocuments(documentService);
+  engagementService.attachDocuments(documentService);
+
   const busEmailService = new BusEmailService();
   const busCatalogService = new BusCatalogService();
   const busOperatorService = new BusOperatorService({ emailService: busEmailService, catalogService: busCatalogService, hashPassword });
@@ -180,7 +185,8 @@ export const buildApp = () => {
       rideController,
       promotionController,
       interestController,
-      bus: { busBookingService, busOperatorService, busCatalogService, busOperationsService, storageService }
+      bus: { busBookingService, busOperatorService, busCatalogService, busOperationsService, storageService },
+      documentService
     })
   );
 

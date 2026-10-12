@@ -186,6 +186,8 @@ model Provider {
   @@index([moderationStatus, geohash5])
   @@index([moderationStatus, district])
   @@map("providers")
+  documentSettings DocumentSettings?
+  orderDocuments   OrderDocument[]
 }
 
 model Category {
@@ -662,6 +664,7 @@ model Order {
   provider    Provider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
   transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
   items       OrderItem[]
+  documents   OrderDocument[]
 
   @@index([providerId, status, createdAt])
   @@index([userId, createdAt])
@@ -1189,4 +1192,52 @@ model BusPayout {
   @@index([operatorId, createdAt])
   @@index([status])
   @@map("bus_payouts")
+}
+
+
+// How a provider's quotations and receipts look and read: branding, terms, numbering, tax. One row per
+// provider; `settings` holds the whole template configuration (see services/document/defaults.js).
+model DocumentSettings {
+  id            String   @id @default(cuid())
+  providerId    String   @unique
+  settings      Json     @default("{}")
+  nextQuoteNo   Int      @default(1)
+  nextReceiptNo Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@map("document_settings")
+}
+
+// A quotation or receipt issued against an order. `snapshot` is everything the PDF shows (branding,
+// customer, lines, totals) as it was when issued, so editing the template later never rewrites a
+// document that has already been sent.
+model OrderDocument {
+  id          String    @id @default(cuid())
+  orderId     String
+  providerId  String
+  userId      String?
+  type        String // quotation | receipt
+  number      String
+  revision    Int       @default(1)
+  status      String    @default("issued") // issued | superseded
+  total       Decimal   @default(0)
+  currency    String    @default("UGX")
+  snapshot    Json      @default("{}")
+  issuedAt    DateTime  @default(now())
+  emailedAt   DateTime?
+  emailedTo   String?
+  emailStatus String?
+  createdAt   DateTime  @default(now())
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, number, revision])
+  @@index([orderId])
+  @@index([providerId, type, issuedAt])
+  @@index([userId, issuedAt])
+  @@map("order_documents")
 }

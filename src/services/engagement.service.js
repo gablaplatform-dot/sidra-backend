@@ -17,6 +17,12 @@ const orderPayment = (order) =>
 export class EngagementService {
   constructor({ orderNotificationService = new OrderNotificationService() } = {}) {
     this.orderNotificationService = orderNotificationService;
+    this.documentService = null;
+  }
+
+  // Quotations and receipts are wired in after construction (see app.js).
+  attachDocuments(documentService) {
+    this.documentService = documentService;
   }
 
   async recordProfileVisit({ actorUserId = null, providerId, source, sessionId, ipHash, userAgent, metadata }) {
@@ -323,6 +329,8 @@ export class EngagementService {
     });
 
     this.orderNotificationService.notifyProviderNewOrder({ orderId: order.id }).catch(() => {});
+    // The buyer has not paid yet, so they get the seller's quotation by email.
+    this.documentService?.issueQuotation({ orderId: order.id }).catch(() => {});
 
     return {
       id: order.id,
@@ -363,8 +371,10 @@ export class EngagementService {
       prisma.order.count({ where })
     ]);
 
+    const documents = this.documentService ? await this.documentService.forOrders(items.map((o) => o.id)) : new Map();
     return {
       items: items.map((order) => ({
+        documents: documents.get(order.id) ?? [],
         id: order.id,
         status: order.status,
         subtotal: moneyString(order.subtotal),
@@ -394,7 +404,49 @@ export class EngagementService {
     if (status === "fulfilled" && orderPayment(order).paymentMethod === "cash") {
       data.metadata = { ...(order.metadata ?? {}), paymentStatus: "paid_cash" };
     }
-    return prisma.order.update({ where: { id: order.id }, data });
+    const updated = await prisma.order.update({ where: { id: order.id }, data });
+    // Cash collected on delivery: the buyer gets their receipt now.
+    if (data.metadata?.paymentStatus === "paid_cash") this.documentService?.issueReceipt({ orderId: order.id }).catch(() => {});
+    return updated;
+  }
+
+  // The buyer's own orders with what was ordered, how it stands, and the quotations and receipts tied to each.
+  async listMyOrders({ actorUserId, status, page = 1, limit = 20 }) {
+    const take = Math.min(50, Math.max(1, Number(limit) || 20));
+    const skip = (Math.max(1, Number(page) || 1) - 1) * take;
+    const where = { userId: actorUserId, ...(status ? { status } : {}) };
+    const [rows, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+        include: { items: true, provider: { select: { id: true, businessName: true, media: true } } }
+      }),
+      prisma.order.count({ where })
+    ]);
+    const documents = this.documentService ? await this.documentService.forOrders(rows.map((o) => o.id)) : new Map();
+    return {
+      total,
+      page: Number(page) || 1,
+      items: rows.map((order) => ({
+        id: order.id,
+        status: order.status,
+        subtotal: moneyString(order.subtotal),
+        total: moneyString(order.total),
+        fulfillment: { method: order.fulfillment?.method ?? null, address: order.fulfillment?.address ?? null },
+        ...orderPayment(order),
+        provider: {
+          id: order.provider.id,
+          businessName: order.provider.businessName,
+          avatarUrl: order.provider.media?.avatarUrl ?? null
+        },
+        items: order.items.map((i) => ({ id: i.id, listingId: i.listingId, name: i.name, quantity: i.quantity, unitPrice: moneyString(i.unitPrice), total: moneyString(i.total) })),
+        documents: documents.get(order.id) ?? [],
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
+      }))
+    };
   }
 
   // Lifetime totals reuse the running counters already maintained on Provider (profileViews,
