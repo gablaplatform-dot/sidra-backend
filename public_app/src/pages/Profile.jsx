@@ -12,6 +12,7 @@ import ProfileWalletTab from "../components/profile/ProfileWalletTab";
 import ProfileShopCategoriesTab from "../components/profile/ProfileShopCategoriesTab";
 import ProfileAnalyticsTab from "../components/profile/ProfileAnalyticsTab";
 import ProfileAdsTab from "../components/profile/ProfileAdsTab";
+import ProfileDocumentsTab from "../components/profile/ProfileDocumentsTab";
 import { IconBox, IconCamera, IconClose, IconImage } from "../components/icons";
 import { Skel, SectionSkeleton } from "../components/Skeleton";
 
@@ -24,6 +25,7 @@ const TABS = [
   { key: "shopCategories", label: "Shop categories" },
   { key: "ads", label: "Ads" },
   { key: "orders", label: "Orders" },
+  { key: "documents", label: "Quotes & receipts" },
   { key: "wallet", label: "Wallet" },
   { key: "gallery", label: "Gallery" }
 ];
@@ -38,6 +40,8 @@ export default function Profile() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [activeTab, setActiveTab] = useState("info");
+  const [docsDirty, setDocsDirty] = useState(false);
+  const [focusOrderId, setFocusOrderId] = useState(null);
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -80,6 +84,15 @@ export default function Profile() {
   };
 
   useEffect(load, [session]);
+
+  const changeTab = (key, focusId = null) => {
+    if (key === activeTab && !focusId) return;
+    if (activeTab === "documents" && docsDirty && !window.confirm("You have unsaved changes to your quotation and receipt design. Leave without saving?")) return;
+    setFocusOrderId(focusId);
+    setActiveTab(key);
+  };
+
+  const openOrder = (orderId) => changeTab("orders", orderId);
 
   const logout = () => {
     clearSession();
@@ -264,7 +277,7 @@ export default function Profile() {
                 key={tab.key}
                 type="button"
                 className={`hero-tab ${activeTab === tab.key ? "is-active" : ""}`}
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => changeTab(tab.key)}
               >
                 {tab.label}
               </button>
@@ -378,7 +391,9 @@ export default function Profile() {
 
             {activeTab === "ads" ? <ProfileAdsTab /> : null}
 
-            {activeTab === "orders" ? <ProfileOrdersTab /> : null}
+            {activeTab === "orders" ? <ProfileOrdersTab focusOrderId={focusOrderId} /> : null}
+
+            {activeTab === "documents" ? <ProfileDocumentsTab provider={provider} onOpenOrder={openOrder} onDirtyChange={setDocsDirty} /> : null}
 
             {activeTab === "wallet" ? <ProfileWalletTab /> : null}
 

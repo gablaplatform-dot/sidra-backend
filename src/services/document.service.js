@@ -158,7 +158,7 @@ export class DocumentService {
     const doc = await this._store({ order, provider, type: "quotation", number, revision, snapshot, total: snapshot.totals.total });
     if (previous) await prisma.orderDocument.updateMany({ where: { orderId, type: "quotation", id: { not: doc.id } }, data: { status: "superseded" } });
     if (send && template.email.sendQuotation) await this.email(doc.id).catch(() => {});
-    return this.dto(doc);
+    return this.dto(await prisma.orderDocument.findUnique({ where: { id: doc.id } }));
   }
 
   // The receipt for a paid order. Amounts come from the latest quotation when there is one (so the receipt
@@ -191,7 +191,7 @@ export class DocumentService {
     try {
       const doc = await this._store({ order, provider, type: "receipt", number, revision: 1, snapshot, total: totals.total });
       if (send && template.email.sendReceipt) await this.email(doc.id).catch(() => {});
-      return this.dto(doc);
+      return this.dto(await prisma.orderDocument.findUnique({ where: { id: doc.id } }));
     } catch (e) {
       if (e?.code === "P2002") return this.dto(await prisma.orderDocument.findFirst({ where: { orderId, type: "receipt" } }));
       throw e;

@@ -55,7 +55,7 @@ export const settingsSchema = Joi.object({
     logoUrl: Joi.string().uri().max(1000).allow(""),
     address: text(300),
     phone: text(40),
-    email: Joi.string().trim().email().max(254).allow(""),
+    email: Joi.string().trim().email({ tlds: { allow: false } }).max(254).allow(""),
     website: text(200),
     taxId: text(40),
     accentColor: color

@@ -6,6 +6,7 @@ import App from "./App.jsx";
 import "./styles.css";
 import "./bus.css";
 import "./busOperator.css";
+import "./orders.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

@@ -52,6 +52,7 @@ export default function ShopNavbar({ session, onLogout }) {
                 {link.dropdown ? <span className="shop-nav-chevron"><IconChevronLeft /></span> : null}
               </Link>
             ))}
+            {session ? <Link to="/orders">My orders</Link> : null}
             {isProvider ? <Link to="/profile">Profile</Link> : null}
           </nav>
 
@@ -62,9 +63,9 @@ export default function ShopNavbar({ session, onLogout }) {
             <button type="button" className="shop-icon-button" aria-label="Wishlist">
               <IconHeart />
             </button>
-            <button type="button" className="shop-icon-button" aria-label="Account">
+            <Link to={session ? "/orders" : loginPath(location)} className="shop-icon-button" aria-label={session ? "My orders" : "Sign in"}>
               <IconUser />
-            </button>
+            </Link>
             <Link to="/cart" className="shop-icon-button" aria-label="Cart">
               <IconCart />
               {cartCount > 0 ? <span className="shop-cart-badge">{cartCount}</span> : null}
@@ -97,6 +98,7 @@ export default function ShopNavbar({ session, onLogout }) {
             <Link key={link.label} to={link.href} onClick={() => setDrawerOpen(false)}>{link.label}</Link>
           ))}
           <Link to="/cart" onClick={() => setDrawerOpen(false)}>Cart{cartCount > 0 ? ` (${cartCount})` : ""}</Link>
+          {session ? <Link to="/orders" onClick={() => setDrawerOpen(false)}>My orders</Link> : null}
           {isProvider ? <Link to="/profile" onClick={() => setDrawerOpen(false)}>Profile</Link> : null}
         </nav>
         {session ? (

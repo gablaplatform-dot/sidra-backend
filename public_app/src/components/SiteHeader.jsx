@@ -45,6 +45,7 @@ export default function SiteHeader({ session, onLogout }) {
           {NAV_LINKS.map((link) => (
             <Link key={link.label} to={link.href}>{link.label}</Link>
           ))}
+          {session ? <Link to="/orders">My orders</Link> : null}
           {isProvider ? <Link to="/profile">Profile</Link> : null}
         </nav>
 
@@ -91,6 +92,7 @@ export default function SiteHeader({ session, onLogout }) {
             <Link key={link.label} to={link.href} onClick={closeDrawer}>{link.label}</Link>
           ))}
           <Link to="/cart" onClick={closeDrawer}>Cart{cartCount > 0 ? ` (${cartCount})` : ""}</Link>
+          {session ? <Link to="/orders" onClick={closeDrawer}>My orders</Link> : null}
           {isProvider ? <Link to="/profile" onClick={closeDrawer}>Profile</Link> : null}
         </nav>
         {session ? (
