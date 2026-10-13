@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { loginPath } from "../../lib/authRedirect";
+import BackButton from "../BackButton";
 import { NAV_LINKS } from "../../data/shopData";
 import { getCartCount } from "../../lib/cart";
 import { IconSearch, IconCart, IconMenu, IconClose, IconChevronLeft } from "../icons";
@@ -40,6 +41,7 @@ export default function ShopNavbar({ session, onLogout }) {
     <>
       <header className="shop-navbar">
         <div className="shop-navbar-inner">
+          <BackButton fallback={location.pathname === "/shop" ? "/home" : "/shop"} />
           <Link to="/home" className="shop-brand">
             <span className="shop-brand-mark">G</span>
             <strong>Gabla</strong>

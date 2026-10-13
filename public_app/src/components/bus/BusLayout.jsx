@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 
 import { loginPath } from "../../lib/authRedirect";
+import BackButton from "../BackButton";
 import { clearSession, getSession } from "../../lib/session";
 import { BusIcon, Calendar, ChevronLeft, Ticket, Building } from "./icons";
 
@@ -29,6 +30,7 @@ export default function BusLayout({ children, tabbar = true }) {
       <a href="#bus-main" className="bus-skip">Skip to content</a>
       <header className="bus-header">
         <div className="bus-header-inner">
+          <BackButton className="back-btn-bus" fallback={location.pathname === "/bus" ? "/home" : "/bus"} />
           <Link to="/bus" className="bus-brand" aria-label="Gabla Bus home">
             <span className="bus-brand-mark"><BusIcon size={22} /></span>
             <span className="bus-brand-text"><strong>Gabla Bus</strong><small>Tickets across Uganda</small></span>

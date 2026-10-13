@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { loginPath } from "../lib/authRedirect";
 
 import { getCartCount } from "../lib/cart";
+import BackButton from "./BackButton";
 import { IconBookmark, IconCart, IconClose, IconMenu, IconSearch } from "./icons";
 
 const NAV_LINKS = [
@@ -36,6 +37,7 @@ export default function SiteHeader({ session, onLogout }) {
   return (
     <>
       <header className="site-header shop-themed-header" id="top">
+        {location.pathname !== "/home" ? <BackButton /> : null}
         <Link to="/home#top" className="brand shop-themed-brand">
           <span className="brand-mark shop-themed-brand-mark">G</span>
           <strong>Gabla</strong>

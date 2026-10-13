@@ -4424,3 +4424,17 @@ textarea.docs-input { min-height: 84px; }
   .sb-head-actions { --ctl-h: 52px; grid-template-columns: minmax(0, 1fr) auto; }
   .sb-filter-btn { display: inline-flex; }
 }
+
+
+/* Back button in the headers (phones and tablets). */
+.back-btn { display: none; flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: #f1f5f9; color: #0b2046; place-items: center; cursor: pointer; padding: 0; }
+.back-btn:hover { background: #e2e8f0; }
+.back-btn:focus-visible { outline: 2px solid #ea580c; outline-offset: 2px; }
+@media (max-width: 1024px) {
+  .back-btn { display: grid; }
+  .shop-navbar-inner .back-btn { margin-right: -4px; }
+  .site-header .back-btn { margin-right: -6px; }
+}
+.bus-header .back-btn { background: #fff; color: #0b2046; box-shadow: 0 6px 16px -10px rgba(11, 32, 70, 0.5); }
+.bus-header .back-btn:hover { background: #fff7ed; }
+@media (min-width: 721px) { .bus-header .back-btn { display: none; } }
