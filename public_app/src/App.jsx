@@ -17,6 +17,7 @@ import ShopAllCategories from "./pages/ShopAllCategories";
 import ShopCollection from "./pages/ShopCollection";
 import ProductDetail from "./pages/ProductDetail";
 import MyOrders from "./pages/MyOrders";
+import Services from "./pages/Services";
 import BusHome from "./pages/bus/BusHome";
 import BusSearch from "./pages/bus/BusSearch";
 import BusParks from "./pages/bus/BusParks";
@@ -43,6 +44,7 @@ export default function App() {
       <Route path="/search" element={<SearchResults />} />
       <Route path="/cart" element={<Cart />} />
       <Route path="/orders" element={<MyOrders />} />
+      <Route path="/services" element={<Services />} />
       <Route path="/ride" element={<Ride />} />
       <Route path="/shop" element={<Shop />} />
       <Route path="/shop/categories" element={<ShopAllCategories />} />

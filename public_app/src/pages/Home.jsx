@@ -9,13 +9,14 @@ import ProviderCard from "../components/ProviderCard";
 import { IconArrowRight, IconBike, IconBus, IconTicket, IconBox, IconCar, IconCart, IconChat, IconClockIcon, IconPin, IconSearch, IconShield, IconSparkles, IconStar, IconStore, IconTruck, IconWrench } from "../components/icons";
 import { ProviderCardsSkeleton, Skel } from "../components/Skeleton";
 import { mapCategoryDto } from "../lib/shopMappers";
+import MobileHome from "../components/mobilehome/MobileHome";
 import { busApi, todayEat, ugx } from "../lib/bus";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
 const SEARCH_TABS = ["Nearby", "Top rated", "New", "Featured"];
 
-export default function Home() {
+function DesktopHome() {
   const navigate = useNavigate();
   const location = useLocation();
   const [session, setSessionState] = useState(() => getSession());
@@ -431,5 +432,32 @@ export default function Home() {
         )}
       </section>
     </main>
+  );
+}
+
+
+// Phones get an app-style home (quick actions + category cards); larger screens keep the full landing page.
+const PHONE_QUERY = "(max-width: 760px)";
+
+export default function Home() {
+  const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia(PHONE_QUERY).matches);
+  const [session, setSessionState] = useState(() => getSession());
+
+  useEffect(() => {
+    const media = window.matchMedia(PHONE_QUERY);
+    const update = () => setPhone(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  if (!phone) return <DesktopHome />;
+  return (
+    <MobileHome
+      session={session}
+      onLogout={() => {
+        clearSession();
+        setSessionState(null);
+      }}
+    />
   );
 }

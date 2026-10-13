@@ -7,6 +7,7 @@ import "./styles.css";
 import "./bus.css";
 import "./busOperator.css";
 import "./orders.css";
+import "./mobilehome.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
