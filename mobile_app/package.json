@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Android and iOS shell for the Gabla storefront (Capacitor). The web app itself lives in ../public_app.",
   "scripts": {
-    "build:web": "npm --prefix ../public_app run build -- --mode native --outDir ../mobile_app/www --emptyOutDir",
+    "build:web": "VITE_API_URL=${VITE_API_URL:-https://sidra-api.fly.dev/api/v1} npm --prefix ../public_app run build -- --mode native --outDir ../mobile_app/www --emptyOutDir",
     "assets": "capacitor-assets generate --iconBackgroundColor '#E8A317' --splashBackgroundColor '#FFFFFF'",
     "sync": "npm run build:web && cap sync",
     "android:apk": "npm run sync && cd android && ./gradlew assembleDebug",
