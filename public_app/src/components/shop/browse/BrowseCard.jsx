@@ -29,7 +29,7 @@ export default function BrowseCard({ listing, reason }) {
           {was > price ? <s>{formatUgx(was)}</s> : null}
         </div>
         <h3 className="sb-card-name">{listing.name}</h3>
-        {listing.description ? <p className="sb-card-desc">{listing.description}</p> : null}
+        <p className={`sb-card-desc ${listing.description ? "" : "is-empty"}`}>{listing.description || "\u00a0"}</p>
         {tags.length ? (
           <div className="sb-card-tags">
             {tags.map((tag) => (

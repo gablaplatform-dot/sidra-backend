@@ -4389,3 +4389,19 @@ textarea.docs-input { min-height: 84px; }
   .shop-nav-cta { display: inline-flex; align-items: center; justify-content: center; height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color: #fff; font: inherit; font-weight: 800; font-size: 13px; text-decoration: none; cursor: pointer; box-shadow: 0 10px 30px -14px rgba(234, 88, 12, 0.55); white-space: nowrap; }
   .shop-nav-actions { gap: 8px; }
 }
+
+
+/* Cards in a row share one height; their content is laid out to match so nothing floats in empty space. */
+.sb-card-name { min-height: 2.6em; }
+.sb-card-desc { min-height: 2.8em; }
+.sb-card-tags { flex-wrap: nowrap; overflow: hidden; }
+.sb-card-tags span { flex: none; white-space: nowrap; }
+.sb-grid.is-list .sb-card-name { min-height: 0; }
+.sb-grid.is-list .sb-card-desc { min-height: 0; }
+.sb-grid.is-list .sb-card-desc.is-empty { display: none; }
+@media (max-width: 960px) { .sb-card-desc { min-height: 0; } }
+
+/* The photo must never decide the card's height: the media box keeps its 4:3 shape and the picture fills it. */
+.sb-card-media { overflow: hidden; }
+.sb-card-media > .lazy-img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sb-card-media > .lazy-img > img { width: 100%; height: 100%; object-fit: cover; }
