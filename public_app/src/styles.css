@@ -3624,19 +3624,16 @@ button { cursor: pointer; }
   .sb-drawer-foot { display: block; position: fixed; bottom: 0; left: 0; width: min(88vw, 380px); padding: 12px; background: #f8fafc; border-top: 1px solid #e2e8f0; box-sizing: border-box; }
   .sb-scrim { display: block; position: fixed; inset: 0; z-index: 70; background: rgba(15, 23, 42, 0.45); }
   .sb-results-head h1 { font-size: 20px; }
-  /* Location and Filters sit side by side right under the title, Sort drops to its own line. */
-  .sb-head-actions { width: 100%; flex-wrap: wrap; gap: 8px; }
-  .sb-loc-btn { flex: 1 1 0; min-width: 0; max-width: none; padding: 9px 12px; }
-  .sb-filter-btn { flex: none; align-self: stretch; align-items: center; }
-  .sb-sort { flex: 1 1 100%; justify-content: space-between; }
-  .sb-sort select { flex: 1; max-width: 240px; }
+  /* Row one: Location and Filters. Row two: Sort and the grid/list switch. */
+  .sb-head-actions { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .sb-loc-btn { min-width: 0; max-width: none; padding: 9px 12px; }
+  .sb-filter-btn { align-self: stretch; align-items: center; }
+  .sb-sort { min-width: 0; justify-content: space-between; }
+  .sb-sort select { flex: 1; min-width: 0; max-width: none; }
   .sb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .sb-card-body { padding: 10px 10px 12px; }
   .sb-card-price strong { font-size: 15px; }
   .sb-card-desc { display: none; }
-}
-@media (max-width: 420px) {
-  .sb-grid { grid-template-columns: 1fr; }
 }
 
 /* ---------- Provider page: Products / Services tabs + product filters ---------- */
@@ -3666,9 +3663,6 @@ button { cursor: pointer; }
   .pl-layout { grid-template-columns: 1fr; }
   .pl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pl-contact { padding: 8px 16px 48px; max-width: none; }
-}
-@media (max-width: 420px) {
-  .pl-grid { grid-template-columns: 1fr; }
 }
 
 /* ---------- Product detail page ---------- */
@@ -4361,3 +4355,52 @@ textarea.docs-input { min-height: 84px; }
   .docs-toast, .order-card.is-highlighted { animation: none; }
   .docs-switch-track, .docs-switch-thumb, .docs-acc-chevron, .docs-btn, .docs-doc-chip { transition: none; }
 }
+
+
+/* ---------- product list layouts: grid (two across on phones) and list (compact rows) ---------- */
+.sb-layout-toggle { display: inline-flex; flex: none; padding: 3px; border: 1.5px solid #cbd5e1; border-radius: 12px; background: #fff; gap: 2px; }
+.sb-layout-toggle button { width: 38px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 9px; background: transparent; color: #64748b; cursor: pointer; }
+.sb-layout-toggle button:hover { color: #0b2046; }
+.sb-layout-toggle button.is-active { background: #0b2046; color: #fff; }
+.sb-layout-toggle button:focus-visible { outline: 2px solid #ea580c; outline-offset: 1px; }
+
+/* Phones always show two products across; the card is trimmed so two fit comfortably. */
+@media (max-width: 560px) {
+  .sb-grid:not(.is-list) .sb-card-tags { flex-wrap: nowrap; overflow: hidden; }
+  .sb-grid:not(.is-list) .sb-card-tags span { flex: none; font-size: 11px; padding: 2px 6px; }
+  .sb-grid:not(.is-list) .sb-card-seller { display: none; }
+  .sb-grid:not(.is-list) .sb-card-name { font-size: 13.5px; }
+  .sb-grid:not(.is-list) .sb-card-badge, .sb-grid:not(.is-list) .sb-card-new { top: 8px; font-size: 10.5px; padding: 2px 7px; }
+}
+
+/* List: one product per row, picture on the left. Roughly twice as many products per screen as the grid. */
+.sb-grid.is-list, .sb-grid.pl-grid.is-list { grid-template-columns: 1fr; gap: 10px; }
+.sb-grid.is-list .sb-card { flex-direction: row; align-items: stretch; }
+.sb-grid.is-list .sb-card:hover { transform: none; }
+.sb-grid.is-list .sb-card-media { flex: none; width: 112px; aspect-ratio: auto; min-height: 98px; }
+.sb-grid.is-list .sb-card-media img, .sb-grid.is-list .sb-card-media .skel { position: absolute; inset: 0; height: 100%; }
+.sb-grid.is-list .sb-card-badge, .sb-grid.is-list .sb-card-new { top: 6px; font-size: 10.5px; padding: 2px 7px; }
+.sb-grid.is-list .sb-card-badge { left: 6px; }
+.sb-grid.is-list .sb-card-new { right: auto; left: 6px; top: auto; bottom: 6px; }
+.sb-grid.is-list .sb-card-body { min-width: 0; gap: 3px; padding: 10px 12px; justify-content: center; }
+.sb-grid.is-list .sb-card-price strong { font-size: 16px; }
+.sb-grid.is-list .sb-card-name { font-size: 14px; -webkit-line-clamp: 2; }
+.sb-grid.is-list .sb-card-desc { display: none; }
+.sb-grid.is-list .sb-card-tags { flex-wrap: nowrap; overflow: hidden; display: none; }
+.sb-grid.is-list .sb-card-tags span { flex: none; }
+.sb-grid.is-list .sb-card-foot { border-top: 0; padding-top: 2px; margin-top: 2px; font-size: 12px; }
+.sb-grid.is-list .sb-card-seller { max-width: 55%; }
+.sb-grid.is-list .sb-card-skel .sb-card-media { position: relative; }
+
+@media (min-width: 640px) {
+  .sb-grid.is-list .sb-card-tags { display: flex; }
+  .sb-grid.is-list .sb-card-media { width: 170px; min-height: 130px; }
+  .sb-grid.is-list .sb-card-body { padding: 12px 16px; gap: 5px; }
+  .sb-grid.is-list .sb-card-desc { display: -webkit-box; -webkit-line-clamp: 1; }
+}
+/* On wide screens the rows run two across, so the list fits even more products. */
+@media (min-width: 1180px) {
+  .sb-grid.is-list:not(.pl-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sb-grid.is-list .sb-card-media { width: 150px; }
+}
+@media (prefers-reduced-motion: reduce) { .sb-layout-toggle button { transition: none; } }

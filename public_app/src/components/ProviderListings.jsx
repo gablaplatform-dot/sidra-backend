@@ -6,6 +6,8 @@ import { findCategoryPath } from "../lib/categories";
 import { SORT_OPTIONS, activeFilterCount, bucketLabel, patchParams, prettyKey, readFilters, toApiParams } from "../lib/browseFilters";
 import BrowseSidebar from "./shop/browse/BrowseSidebar";
 import BrowseCard from "./shop/browse/BrowseCard";
+import LayoutToggle from "./shop/browse/LayoutToggle";
+import { useListLayout } from "../lib/listLayout";
 import Pagination from "./Pagination";
 import { IconBox, IconClose } from "./icons";
 import { ProductGridSkeleton, SidebarSkeleton, Skel } from "./Skeleton";
@@ -78,6 +80,7 @@ function ProviderProducts({ provider }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [layout, setLayout] = useListLayout();
 
   const apply = (patch) => setSearchParams(patchParams(searchParams, patch), { replace: false });
 
@@ -213,6 +216,7 @@ function ProviderProducts({ provider }) {
                 ))}
               </select>
             </label>
+            <LayoutToggle value={layout} onChange={setLayout} />
           </div>
         </header>
 
@@ -235,9 +239,9 @@ function ProviderProducts({ provider }) {
         {error ? <div className="error-message home-error">{error}</div> : null}
 
         {loading && !result ? (
-          <ProductGridSkeleton count={6} className="sb-grid pl-grid" />
+          <ProductGridSkeleton count={6} className={`sb-grid pl-grid ${layout === "list" ? "is-list" : ""}`} />
         ) : result?.items?.length ? (
-          <div className={`sb-grid pl-grid ${loading ? "is-loading" : ""}`}>
+          <div className={`sb-grid pl-grid ${layout === "list" ? "is-list" : ""} ${loading ? "is-loading" : ""}`}>
             {result.items.map((listing) => (
               <BrowseCard key={listing.id} listing={listing} />
             ))}

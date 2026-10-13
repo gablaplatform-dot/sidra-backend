@@ -267,3 +267,20 @@ export const IconQr = (props) => (
     <path d="M14 14h2.5v2.5H14zM19 14v2M14 19h2M18 18.5h2.5V21" />
   </svg>
 );
+
+export const IconGrid = (props) => (
+  <svg {...base} {...props}>
+    <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+    <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+    <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+    <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+  </svg>
+);
+
+export const IconList = (props) => (
+  <svg {...base} {...props}>
+    <rect x="3.5" y="4" width="4.5" height="4.5" rx="1" />
+    <rect x="3.5" y="15.5" width="4.5" height="4.5" rx="1" />
+    <path d="M11.5 6h9M11.5 17.75h9M11.5 9.5h5M11.5 21h5" />
+  </svg>
+);

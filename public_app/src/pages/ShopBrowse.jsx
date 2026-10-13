@@ -22,6 +22,8 @@ import ShopFooterTrust from "../components/shop/ShopFooterTrust";
 import BrowseSidebar from "../components/shop/browse/BrowseSidebar";
 import BrowseCard from "../components/shop/browse/BrowseCard";
 import LocationPicker from "../components/shop/browse/LocationPicker";
+import LayoutToggle from "../components/shop/browse/LayoutToggle";
+import { useListLayout } from "../lib/listLayout";
 import Pagination from "../components/Pagination";
 import { IconClose, IconPin } from "../components/icons";
 import { ProductGridSkeleton, SidebarSkeleton, Skel } from "../components/Skeleton";
@@ -46,6 +48,7 @@ const COLLECTIONS = {
 
 export default function ShopBrowse({ categoryId, collection, session, onLogout }) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [layout, setLayout] = useListLayout();
   const filters = useMemo(() => readFilters(searchParams), [searchParams]);
   const queryKey = searchParams.toString();
   const collectionInfo = collection ? COLLECTIONS[collection] : null;
@@ -275,6 +278,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
                   ))}
                 </select>
               </label>
+              <LayoutToggle value={layout} onChange={setLayout} />
             </div>
           </header>
 
@@ -298,9 +302,9 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
           {error ? <div className="error-message home-error">{error}</div> : null}
 
           {loading && !result ? (
-            <ProductGridSkeleton count={8} />
+            <ProductGridSkeleton count={8} className={`sb-grid ${layout === "list" ? "is-list" : ""}`} />
           ) : result?.items?.length ? (
-            <div className={`sb-grid ${loading ? "is-loading" : ""}`}>
+            <div className={`sb-grid ${layout === "list" ? "is-list" : ""} ${loading ? "is-loading" : ""}`}>
               {result.items.map((listing) => (
                 <BrowseCard key={listing.id} listing={listing} />
               ))}
