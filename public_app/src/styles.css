@@ -4405,3 +4405,22 @@ textarea.docs-input { min-height: 84px; }
 .sb-card-media { overflow: hidden; }
 .sb-card-media > .lazy-img { position: absolute; inset: 0; width: 100%; height: 100%; }
 .sb-card-media > .lazy-img > img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Results header controls: one shared height, borders and radius so Location, Filters, Sort and the layout switch line up. */
+.sb-head-actions { --ctl-h: 46px; align-items: stretch; }
+.sb-loc-btn, .sb-filter-btn, .sb-sort, .sb-layout-toggle { height: var(--ctl-h); box-sizing: border-box; border: 1.5px solid #cbd5e1; border-radius: 14px; background: #fff; }
+.sb-loc-btn { padding: 0 14px 0 12px; gap: 10px; align-items: center; }
+.sb-loc-btn i { margin: 0 0 0 auto; transform: rotate(45deg) translateY(-2px); }
+.sb-loc-btn span { flex: 1; min-width: 0; }
+.sb-loc-btn b { display: block; }
+.sb-filter-btn { align-items: center; justify-content: center; padding: 0 20px; font-weight: 800; color: #0b2046; }
+.sb-sort { display: flex; align-items: center; gap: 4px; padding: 0 8px 0 14px; }
+.sb-sort > span { flex: none; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #94a3b8; }
+.sb-sort select { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; padding: 0 6px; font-size: 14.5px; font-weight: 800; color: #0b2046; outline: 0; cursor: pointer; }
+.sb-sort:focus-within { border-color: #ea580c; box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.14); }
+.sb-layout-toggle { padding: 4px; align-items: center; }
+.sb-layout-toggle button { width: 40px; height: 100%; min-height: 0; }
+@media (max-width: 960px) {
+  .sb-head-actions { --ctl-h: 52px; grid-template-columns: minmax(0, 1fr) auto; }
+  .sb-filter-btn { display: inline-flex; }
+}
