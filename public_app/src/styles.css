@@ -4438,3 +4438,13 @@ textarea.docs-input { min-height: 84px; }
 .bus-header .back-btn { background: #fff; color: #0b2046; box-shadow: 0 6px 16px -10px rgba(11, 32, 70, 0.5); }
 .bus-header .back-btn:hover { background: #fff7ed; }
 @media (min-width: 721px) { .bus-header .back-btn { display: none; } }
+
+/* Google button used inside the Android/iOS app (the web button cannot run in a WebView) */
+.google-native-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-width: 260px; max-width: 100%; min-height: 44px; padding: 0 22px;
+  border: 1px solid #dadce0; border-radius: 999px; background: #fff; color: #3c4043;
+  font: 500 15px/1 inherit; font-family: inherit; cursor: pointer;
+}
+.google-native-button:active { background: #f1f3f4; }
+.google-native-button:disabled { opacity: 0.6; }

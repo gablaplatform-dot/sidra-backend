@@ -22,6 +22,14 @@
       "style": "DARK",
       "backgroundColor": "#FFFFFF",
       "overlaysWebView": false
+    },
+    "SocialLogin": {
+      "providers": {
+        "google": true,
+        "facebook": false,
+        "apple": false,
+        "twitter": false
+      }
     }
   }
 }
