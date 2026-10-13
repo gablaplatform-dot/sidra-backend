@@ -371,6 +371,23 @@ model AdminSettings {
   @@map("admin_settings")
 }
 
+// Singleton: the AI "smart search" switch and key. The key is stored encrypted (see
+// src/services/ai/aiSettings.service.js); when none is stored the ANTHROPIC_API_KEY env var is used.
+model AiSettings {
+  id            String    @id @default("singleton")
+  enabled       Boolean   @default(true)
+  apiKeyEnc     String?
+  model         String    @default("claude-haiku-5-5")
+  requestCount  Int       @default(0)
+  errorCount    Int       @default(0)
+  lastError     String?
+  lastUsedAt    DateTime?
+  lastErrorAt   DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  @@map("ai_settings")
+}
+
 model ContactUnlock {
   id         String   @id @default(cuid())
   // Null means an anonymous (not-logged-in) unlock — there's no account to tie it to, so it

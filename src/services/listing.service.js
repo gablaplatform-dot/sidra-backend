@@ -62,6 +62,27 @@ const centroidCache = new Map();
 const CENTROID_TTL_MS = 10 * 60 * 1000;
 
 export class ListingService {
+  constructor({ aiSearchService } = {}) {
+    this.aiSearchService = aiSearchService ?? null;
+  }
+
+  // The "what the AI understood" part of a search: related words plus the product and provider
+  // categories they point at (children included), as one OR condition on the listing.
+  async _aiSearchClauses(text, ai) {
+    const or = [{ name: { contains: text } }];
+    for (const term of ai.terms) or.push({ name: { contains: term } });
+
+    if (ai.productCategoryIds.length) {
+      const groups = await Promise.all(ai.productCategoryIds.map((id) => this._expandProductCategoryIds(id)));
+      or.push({ productCategoryId: { in: [...new Set(groups.flat())] } });
+    }
+    if (ai.serviceCategoryIds.length) {
+      const children = await prisma.category.findMany({ where: { parentId: { in: ai.serviceCategoryIds } }, select: { id: true } });
+      const ids = [...new Set([...ai.serviceCategoryIds, ...children.map((c) => c.id)])];
+      or.push({ categoryId: { in: ids } }, { categoryId: null, provider: { categoryId: { in: ids } } });
+    }
+    return or;
+  }
   async _districtCentroid(district) {
     const cached = centroidCache.get(district);
     if (cached && Date.now() - cached.at < CENTROID_TTL_MS) return cached.value;
@@ -417,7 +438,7 @@ export class ListingService {
     return ids;
   }
 
-  async _buildPublicFilter({ type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, district, minPrice, maxPrice }) {
+  async _buildPublicFilter({ type, q, ai, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, district, minPrice, maxPrice }) {
     const filter = { status: "approved" };
 
     let normalizedType = null;
@@ -429,7 +450,11 @@ export class ListingService {
       filter.type = normalizedType;
     }
 
-    if (q) filter.name = { contains: String(q).trim() };
+    if (q && ai && (ai.terms.length || ai.productCategoryIds.length || ai.serviceCategoryIds.length)) {
+      filter.AND = [...(filter.AND ?? []), { OR: await this._aiSearchClauses(String(q).trim(), ai) }];
+    } else if (q) {
+      filter.name = { contains: String(q).trim() };
+    }
     if (shopCategoryId) filter.shopCategoryId = { in: await this._expandShopCategoryIds(shopCategoryId) };
     if (discountOnly === "true" || discountOnly === true) filter.discountPercent = { not: null };
     if (isNew === "true" || isNew === true) filter.isNew = true;
@@ -522,8 +547,11 @@ export class ListingService {
   async nearbyMap({ q, type, lat, lng, radiusKm = 15, district, around, limit = 40 }) {
     const normalizedLimit = Math.min(60, Math.max(1, Number(limit) || 40));
     const hasGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
+    // Understand what the shopper means ("I want to eat" -> restaurants); null when AI is off or fails.
+    const ai = q ? await this.aiSearchService?.expand(q) : null;
     const result = await this.publicList({
       q,
+      ai,
       type,
       page: 1,
       limit: normalizedLimit,
@@ -540,25 +568,35 @@ export class ListingService {
     const spot = new Map(providers.map((p) => [p.id, p]));
     const round = (n) => Math.round(n * 100) / 100;
 
+    const needle = String(q ?? "").trim().toLowerCase();
     const items = result.items
       .map((item) => {
         const p = spot.get(item.providerId);
         const pin = p?.lat != null && p?.lng != null ? { lat: round(p.lat), lng: round(p.lng) } : null;
         let distanceKm = item.distanceKm;
         if (distanceKm === undefined && pin && centre) distanceKm = Math.round(haversineDistanceKm(centre.lat, centre.lng, pin.lat, pin.lng) * 10) / 10;
-        return { ...item, pin, ...(distanceKm !== undefined ? { distanceKm } : {}) };
+        const matchedBy = !ai || String(item.name ?? "").toLowerCase().includes(needle) ? "exact" : "related";
+        return { ...item, pin, matchedBy, ...(distanceKm !== undefined ? { distanceKm } : {}) };
       })
-      .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+      // Direct matches first, then the things the AI understood, each group nearest first.
+      .sort((a, b) => (a.matchedBy === "exact" ? 0 : 1) - (b.matchedBy === "exact" ? 0 : 1) || (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
 
-    return { items, total: result.total, centre, effectiveRadiusKm: result.effectiveRadiusKm ?? null, widened: Boolean(result.widened) };
+    return {
+      items,
+      total: result.total,
+      centre,
+      effectiveRadiusKm: result.effectiveRadiusKm ?? null,
+      widened: Boolean(result.widened),
+      interpretedAs: ai?.intent || null
+    };
   }
 
-  async publicList({ page = 1, limit = 20, type, q, categoryId, productCategoryId, shopCategoryId, providerId, sort, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, around, minPrice, maxPrice, attrs: rawAttrs }) {
+  async publicList({ page = 1, limit = 20, type, q, ai, categoryId, productCategoryId, shopCategoryId, providerId, sort, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, around, minPrice, maxPrice, attrs: rawAttrs }) {
     const normalizedPage = Math.max(1, Number(page) || 1);
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
     const skip = (normalizedPage - 1) * normalizedLimit;
     const attrs = parseAttrs(rawAttrs);
-    const baseArgs = { type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, minPrice, maxPrice };
+    const baseArgs = { type, q, ai, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, minPrice, maxPrice };
 
     // "Arrange around my district": no exact position and no explicit location, default ordering ->
     // rank everything nearest-first from the middle of the shopper's district. An explicit sort

@@ -23,6 +23,8 @@ import { ShopCategoryController } from "./controllers/shopCategory.controller.js
 import { ListingService } from "./services/listing.service.js";
 import { ListingController } from "./controllers/listing.controller.js";
 import { AdminSettingsService } from "./services/adminSettings.service.js";
+import { AiSettingsService } from "./services/ai/aiSettings.service.js";
+import { AiSearchService } from "./services/ai/aiSearch.service.js";
 import { AdminSettingsController } from "./controllers/adminSettings.controller.js";
 import { TransactionService } from "./services/transaction.service.js";
 import { TransactionController } from "./controllers/transaction.controller.js";
@@ -106,7 +108,9 @@ export const buildApp = () => {
   const shopCategoryService = new ShopCategoryService();
   const shopCategoryController = new ShopCategoryController({ shopCategoryService });
 
-  const listingService = new ListingService();
+  const aiSettingsService = new AiSettingsService();
+  const aiSearchService = new AiSearchService({ aiSettingsService });
+  const listingService = new ListingService({ aiSearchService });
   const listingController = new ListingController({ listingService });
 
   const adminSettingsService = new AdminSettingsService();
@@ -189,7 +193,9 @@ export const buildApp = () => {
       promotionController,
       interestController,
       bus: { busBookingService, busOperatorService, busCatalogService, busOperationsService, storageService },
-      documentService
+      documentService,
+      aiSettingsService,
+      aiSearchService
     })
   );
 

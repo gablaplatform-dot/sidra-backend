@@ -40,6 +40,8 @@ export const env = {
   // Server-side key for the Google Routes API (real road distance/duration/polyline for ride
   // fares and navigation). Falls back to a straight-line estimate wherever this is unset or the
   // API call fails, so it's safe to leave empty until Routes API is enabled for the key.
+  // Fallback key for AI smart search; an admin-saved key (Settings -> AI smart search) takes priority.
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   googleRoutesApiKey: process.env.GOOGLE_ROUTES_API_KEY ?? ""
 };
 

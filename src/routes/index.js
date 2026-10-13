@@ -19,6 +19,7 @@ import { buildPromotionRoutes } from "./promotion.routes.js";
 import { buildInterestRoutes } from "./interest.routes.js";
 import { buildBusRoutes } from "./bus.routes.js";
 import { buildDocumentRoutes } from "./document.routes.js";
+import { buildAiAdminRoutes } from "./aiAdmin.routes.js";
 
 export const buildRoutes = ({
   authController,
@@ -40,7 +41,9 @@ export const buildRoutes = ({
   promotionController,
   interestController,
   bus,
-  documentService
+  documentService,
+  aiSettingsService,
+  aiSearchService
 }) => {
   const router = Router();
 
@@ -62,6 +65,7 @@ export const buildRoutes = ({
   router.use("/documents", buildDocumentRoutes({ documentService }));
   router.use("/admin", buildAdminDataRoutes({ adminController }));
   router.use("/admin", buildAdminSettingsRoutes({ adminSettingsController }));
+  router.use("/admin/ai", buildAiAdminRoutes({ aiSettingsService, aiSearchService }));
   router.use("/admin", buildAdminTransactionsRoutes({ transactionController }));
   router.use("/admin/roles", buildAdminRoleRoutes({ adminRoleController }));
   router.use("/admin-invites", buildAdminInviteRoutes({ adminInviteController }));

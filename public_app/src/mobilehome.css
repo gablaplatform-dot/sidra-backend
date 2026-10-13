@@ -109,6 +109,7 @@
 .mh-find-tags { display: flex; align-items: center; gap: 8px; font-size: 11.5px; }
 .mh-find-tags i { font-style: normal; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #eaf0fc; color: #1e3a8a; }
 .mh-find-tags i.is-service { background: #fff1e6; color: #c2410c; }
+.mh-find-tags i.is-related { background: #f1f5f9; color: #475569; font-weight: 700; }
 .mh-find-tags b { font-weight: 700; color: #15803d; }
 .mh-find-body strong { font-size: 14.5px; font-weight: 800; line-height: 1.25; color: var(--mh-ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .mh-find-price { font-size: 14px; font-weight: 850; color: var(--mh-orange); }

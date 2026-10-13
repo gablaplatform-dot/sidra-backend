@@ -113,6 +113,7 @@ function ResultCard({ item, selected, onPick, innerRef }) {
       <span className="mh-find-body">
         <span className="mh-find-tags">
           <i className={item.type === "service" ? "is-service" : ""}>{item.type === "service" ? "Service" : "Product"}</i>
+          {item.matchedBy === "related" ? <i className="is-related">Related</i> : null}
           {item.distanceKm !== undefined ? <b>{item.distanceKm < 1 ? "< 1 km" : `${item.distanceKm} km`} away</b> : null}
         </span>
         <strong>{item.name}</strong>
@@ -250,7 +251,11 @@ export default function NearbyFinder({ session }) {
           <header className="mh-find-head">
             <div>
               <strong>{loading && !data ? "Searching nearby…" : `${data?.total ?? 0} result${data?.total === 1 ? "" : "s"} for “${query || text.trim()}”`}</strong>
-              <small>{data?.widened ? "Nothing very close, so we widened the search · " : ""}Nearest first</small>
+              <small>
+                {data?.interpretedAs ? `Showing: ${data.interpretedAs} · ` : ""}
+                {data?.widened ? "Nothing very close, so we widened the search · " : ""}
+                Nearest first
+              </small>
             </div>
             <div className="mh-find-toggle" role="group" aria-label="Results view">
               <button type="button" className={mode === "map" ? "is-active" : ""} onClick={() => setMode("map")} aria-pressed={mode === "map"}>Map</button>
