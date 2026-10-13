@@ -182,7 +182,7 @@ export const buildAdminDataRoutes = ({ adminController }) => {
     validate(
       Joi.object({
         type: Joi.string().valid(...Object.values(TransactionType)).optional(),
-        status: Joi.string().valid(...Object.values(TransactionStatus)).optional(),
+        status: Joi.string().valid(...Object.values(TransactionStatus), "completed").optional(),
         from: Joi.date().iso().optional(),
         to: Joi.date().iso().optional(),
         sort: Joi.string().valid("newest", "oldest", "amount").optional(),

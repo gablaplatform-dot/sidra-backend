@@ -1049,7 +1049,7 @@ export class PaymentService {
     const [aggregates, platformWithdrawals, wallet] = await Promise.all([
       Promise.all(
         REVENUE_TYPES.map(({ type, field }) =>
-          prisma.transaction.aggregate({ where: { type, status: "succeeded" }, _sum: { [field]: true } })
+          prisma.transaction.aggregate({ where: { type, status: "succeeded", NOT: { reference: { startsWith: "bus-demo-" } } }, _sum: { [field]: true } })
         )
       ),
       prisma.transaction.findMany({ where: { type: "platform_withdrawal", status: "succeeded" }, select: { amount: true, metadata: true } }),

@@ -5,6 +5,7 @@ import { TransactionService } from "./transaction.service.js";
 import { AdminRoleService } from "./adminRole.service.js";
 import { PERMISSIONS } from "../constants/permissions.js";
 
+export const DEMO_REFERENCE_PREFIX = "bus-demo-";
 const PLATFORM_LEDGER_TYPES = ["contact_unlock", "subscription", "purchase", "cart_purchase", "ride_trip", "bus_ticket", "platform_withdrawal"];
 
 const decimalToNumber = (value) => Number(value?.toString?.() ?? value ?? 0) || 0;
@@ -507,7 +508,8 @@ export class AdminService {
   async listPlatformWalletTransactions(query) {
     const { type, ...rest } = query;
     const types = type ? PLATFORM_LEDGER_TYPES.filter((t) => t === type) : PLATFORM_LEDGER_TYPES;
-    return this.transactionService.adminList({ ...rest, types: types.length ? types : ["__none__"] });
+    // Demo bus payments (see scripts/seed-demo-bus.js) are not real money and stay out of the platform ledger.
+    return this.transactionService.adminList({ ...rest, types: types.length ? types : ["__none__"], excludeReferencePrefix: DEMO_REFERENCE_PREFIX });
   }
 
   async getPlatformRevenueByType() {
