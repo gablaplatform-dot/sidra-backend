@@ -56,6 +56,9 @@ import { hashPassword, verifyPassword } from "./utils/password.js";
 import { signAccessToken } from "./utils/jwt.js";
 import { env } from "./config/env.js";
 
+// The Android and iOS apps (Capacitor) load the storefront from the phone itself, so their requests carry these origins.
+const NATIVE_APP_ORIGINS = ["https://localhost", "capacitor://localhost"];
+
 export const buildApp = () => {
   const app = express();
 
@@ -65,7 +68,7 @@ export const buildApp = () => {
   app.use(
     cors({
       origin(origin, callback) {
-        if (!origin || env.allowedOrigins.length === 0 || env.allowedOrigins.includes(origin)) {
+        if (!origin || env.allowedOrigins.length === 0 || env.allowedOrigins.includes(origin) || NATIVE_APP_ORIGINS.includes(origin)) {
           callback(null, true);
           return;
         }

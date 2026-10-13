@@ -46,15 +46,11 @@ export default function MobileHome({ session, onLogout }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [q, setQ] = useState("");
-  const [shopCats, setShopCats] = useState(null);
   const [serviceCats, setServiceCats] = useState(null);
   const [providers, setProviders] = useState(null);
 
   useEffect(() => {
     let active = true;
-    request("/product-categories/roots?limit=12")
-      .then((r) => active && setShopCats((r?.items || []).map(mapCategoryDto)))
-      .catch(() => active && setShopCats([]));
     request("/categories")
       .then((r) => active && setServiceCats((r?.items || r || []).map(mapCategoryDto)))
       .catch(() => active && setServiceCats([]));
@@ -120,23 +116,14 @@ export default function MobileHome({ session, onLogout }) {
         ))}
       </nav>
 
-      <SectionHead title="Shop by category" to="/shop/categories" />
-      <div className="mh-rail">
-        {shopCats === null
-          ? Array.from({ length: 3 }).map((_, i) => <Skel key={i} w={168} h={228} r={26} style={{ flex: "none" }} />)
-          : shopCats.length
-            ? shopCats.map((c, i) => <TallCard key={c.id} to={`/shop/${c.id}`} name={c.name} image={c.image} caption="Shop now" tone={i} />)
-            : <p className="mh-empty">Shop categories will show here.</p>}
-      </div>
-
-      <SectionHead title="Service categories" to="/services" />
+      <SectionHead title="Categories" to="/services" />
       {serviceCats === null ? (
         <div className="mh-cols"><div className="mh-col"><Skel h={250} r={26} /><Skel h={250} r={26} /></div><div className="mh-col mh-col-drop"><Skel h={250} r={26} /><Skel h={250} r={26} /></div></div>
       ) : serviceCats.length ? (
         <div className="mh-cols">
           {columns.map((col, ci) => (
             <div key={ci} className={`mh-col ${ci ? "mh-col-drop" : ""}`}>
-              {col.map(({ c, i }) => <TallCard key={c.id} to={`/category/${c.id}`} name={c.name} image={c.image} caption="Find a pro" tone={i + 1} />)}
+              {col.map(({ c, i }) => <TallCard key={c.id} to={`/category/${c.id}`} name={c.name} image={c.image} caption="Browse providers" tone={i + 1} />)}
             </div>
           ))}
         </div>

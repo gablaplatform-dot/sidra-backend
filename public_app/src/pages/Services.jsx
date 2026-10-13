@@ -72,7 +72,7 @@ export default function Services() {
           <div className="mh-cols">
             {columns.map((col, ci) => (
               <div key={ci} className={`mh-col ${ci ? "mh-col-drop" : ""}`}>
-                {col.map(({ c, i }) => <TallCard key={c.id} to={`/category/${c.id}`} name={c.name} image={c.image} caption="Find a pro" tone={i + 1} />)}
+                {col.map(({ c, i }) => <TallCard key={c.id} to={`/category/${c.id}`} name={c.name} image={c.image} caption="Browse providers" tone={i + 1} />)}
               </div>
             ))}
           </div>

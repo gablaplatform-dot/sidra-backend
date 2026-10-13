@@ -1,0 +1,25 @@
+{
+  "name": "gabla-mobile-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Android and iOS shell for the Gabla storefront (Capacitor). The web app itself lives in ../public_app.",
+  "scripts": {
+    "build:web": "npm --prefix ../public_app run build -- --mode native --outDir ../mobile_app/www --emptyOutDir",
+    "assets": "capacitor-assets generate --iconBackgroundColor '#E8A317' --splashBackgroundColor '#FFFFFF'",
+    "sync": "npm run build:web && cap sync",
+    "android:apk": "npm run sync && cd android && ./gradlew assembleDebug",
+    "ios:open": "npm run sync && open ios/App/App.xcworkspace"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.3"
+  }
+}

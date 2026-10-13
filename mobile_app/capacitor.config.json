@@ -1,0 +1,27 @@
+{
+  "appId": "com.devcraft.gabla",
+  "appName": "Gabla",
+  "webDir": "www",
+  "backgroundColor": "#FFFFFF",
+  "ios": {
+    "contentInset": "always"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "adjustMarginsForEdgeToEdge": "auto"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "launchAutoHide": true,
+      "backgroundColor": "#FFFFFF",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_INSIDE"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#FFFFFF",
+      "overlaysWebView": false
+    }
+  }
+}
