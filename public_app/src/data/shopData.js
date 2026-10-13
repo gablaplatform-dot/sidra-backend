@@ -9,13 +9,6 @@ export const NAV_LINKS = [
   { label: "Contact", href: "/home#contact" }
 ];
 
-export const TRUST_BADGES = [
-  { icon: "truck", title: "Free Delivery", subtitle: "On orders over UGX 200,000" },
-  { icon: "shield", title: "Secure Payments", subtitle: "Mobile Money & card checkout" },
-  { icon: "refresh", title: "Easy Returns", subtitle: "30-day return policy" },
-  { icon: "headset", title: "24/7 Support", subtitle: "Always here to help" }
-];
-
 export const FOOTER_TRUST = [
   { icon: "shield", title: "Premium Quality", subtitle: "Made with the finest materials" },
   { icon: "truck", title: "Fast Delivery", subtitle: "Quick and reliable shipping" },

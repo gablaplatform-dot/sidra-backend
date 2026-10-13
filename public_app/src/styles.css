@@ -1790,47 +1790,6 @@ button { cursor: pointer; }
   .shop-hero-float-img { width: 40px; height: 40px; }
 }
 
-/* ============ Trust features bar ============ */
-.shop-trustbar {
-  background: #fff;
-  border-bottom: 1px solid #f1f5f9;
-}
-.shop-trustbar-inner {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 36px 5vw;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
-}
-.shop-trust-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 8px 4px;
-}
-.shop-trust-icon {
-  flex: 0 0 auto;
-  width: 48px; height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-  color: #ea580c;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.shop-trust-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.shop-trust-copy strong { color: #0f172a; font-size: 14px; font-weight: 700; }
-.shop-trust-copy span { color: #64748b; font-size: 12px; }
-
-@media (max-width: 900px) {
-  .shop-trustbar-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 28px 24px; }
-}
-@media (max-width: 520px) {
-  .shop-trustbar-inner { grid-template-columns: 1fr; gap: 14px; }
-  .shop-trust-item { padding: 4px; }
-}
-
 /* ============ Section shared ============ */
 .shop-section {
   max-width: 1400px;

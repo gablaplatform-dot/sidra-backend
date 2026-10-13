@@ -11,7 +11,6 @@ import ShopNavbar from "../components/shop/ShopNavbar";
 import ShopHero from "../components/shop/ShopHero";
 import ShopAdsHero from "../components/shop/ShopAdsHero";
 import { ShopHeroSkeleton } from "../components/Skeleton";
-import ShopTrustBar from "../components/shop/ShopTrustBar";
 import ShopForYou from "../components/shop/ShopForYou";
 import ShopCategoryRow from "../components/shop/ShopCategoryRow";
 import ShopNewArrivals from "../components/shop/ShopNewArrivals";
@@ -146,7 +145,6 @@ export default function Shop() {
     <main className="shop-shell">
       <ShopNavbar session={session} onLogout={logout} />
       {ads === null ? <ShopHeroSkeleton /> : ads.length ? <ShopAdsHero ads={ads} /> : <ShopHero products={displayNewArrivals.slice(0, 4)} />}
-      <ShopTrustBar />
       <ShopForYou />
       {!loaded || displayCategories.length ? (
         <ShopCategoryRow categories={displayCategories} loaded={loaded} />
