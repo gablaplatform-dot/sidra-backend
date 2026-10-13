@@ -70,6 +70,11 @@ export default function ShopNavbar({ session, onLogout }) {
               <IconCart />
               {cartCount > 0 ? <span className="shop-cart-badge">{cartCount}</span> : null}
             </Link>
+            {session ? (
+              <button type="button" className="shop-themed-cta shop-nav-cta" onClick={() => onLogout?.()}>Log out</button>
+            ) : (
+              <Link className="shop-themed-cta shop-nav-cta" to={loginPath(location)}>Sign in</Link>
+            )}
             <button
               type="button"
               className="shop-icon-button shop-hamburger"
