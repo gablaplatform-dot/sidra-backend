@@ -5,6 +5,8 @@ import { TransactionService } from "./transaction.service.js";
 import { AdminRoleService } from "./adminRole.service.js";
 import { PERMISSIONS } from "../constants/permissions.js";
 
+const PLATFORM_LEDGER_TYPES = ["contact_unlock", "subscription", "purchase", "cart_purchase", "ride_trip", "bus_ticket", "platform_withdrawal"];
+
 const decimalToNumber = (value) => Number(value?.toString?.() ?? value ?? 0) || 0;
 const moneyString = (value) => (value?.toString ? value.toString() : String(value ?? "0.00"));
 const initials = (name) =>
@@ -499,8 +501,13 @@ export class AdminService {
   // The generic /admin/transactions endpoint can't filter for "platform-owned" rows (a falsy
   // providerId there just means "no filter"), so the platform wallet view goes through
   // TransactionService.adminList directly, which treats providerId: null as a real filter.
+  // Everything that moves money into or out of the platform wallet. Most of these (contact unlocks,
+  // subscriptions, order, ride and bus fees) are recorded against the PROVIDER they relate to, so they
+  // are found by type, not by "no provider". Only platform withdrawals have no provider.
   async listPlatformWalletTransactions(query) {
-    return this.transactionService.adminList({ ...query, providerId: null });
+    const { type, ...rest } = query;
+    const types = type ? PLATFORM_LEDGER_TYPES.filter((t) => t === type) : PLATFORM_LEDGER_TYPES;
+    return this.transactionService.adminList({ ...rest, types: types.length ? types : ["__none__"] });
   }
 
   async getPlatformRevenueByType() {

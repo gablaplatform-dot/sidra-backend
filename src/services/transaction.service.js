@@ -29,6 +29,7 @@ export class TransactionService {
     limit = 50,
     status,
     type,
+    types,
     userId,
     providerId,
     from,
@@ -46,6 +47,7 @@ export class TransactionService {
 
     const typeFilter = normalizeTypeFilter(type);
     if (typeFilter) filter.type = typeFilter;
+    else if (Array.isArray(types) && types.length) filter.type = { in: types };
 
     if (userId !== undefined) {
       if (userId === null || userId === "") {
