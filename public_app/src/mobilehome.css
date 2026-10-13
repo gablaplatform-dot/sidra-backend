@@ -80,3 +80,41 @@
   .sv-page .mh-col-drop { margin-top: 0; }
   .sv-page .mh-col .mh-tall { aspect-ratio: 3 / 4; }
 }
+
+/* ---------- "find it nearby" search on the mobile home ---------- */
+.mh-find { position: relative; }
+.mh-search-clear { flex: none; width: 30px; height: 30px; border: 0; border-radius: 50%; background: #f1f5f9; color: #475569; display: grid; place-items: center; cursor: pointer; }
+.mh-find-panel { margin-top: 14px; padding: 14px; border-radius: 24px; background: #fff; box-shadow: 0 24px 44px -30px rgba(11, 32, 70, 0.55); border: 1px solid #edf0f6; }
+.mh-find-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.mh-find-head div:first-child { min-width: 0; display: grid; gap: 2px; }
+.mh-find-head strong { font-size: 15px; font-weight: 800; color: var(--mh-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mh-find-head small { font-size: 12px; color: var(--mh-muted); font-weight: 600; }
+.mh-find-toggle { flex: none; display: inline-flex; padding: 3px; border-radius: 12px; background: #f1f5f9; }
+.mh-find-toggle button { border: 0; background: transparent; padding: 8px 14px; border-radius: 9px; font: inherit; font-weight: 800; font-size: 13px; color: #64748b; cursor: pointer; }
+.mh-find-toggle button.is-active { background: var(--mh-ink); color: #fff; }
+.mh-find-note { margin: 0 0 10px; font-size: 12.5px; line-height: 1.45; color: var(--mh-muted); }
+.mh-find-note button { margin-left: 6px; border: 0; background: none; padding: 0; color: var(--mh-orange); font: inherit; font-weight: 800; font-size: 12.5px; cursor: pointer; }
+.mh-find-map { width: 100%; height: 300px; border-radius: 20px; overflow: hidden; background: #e8edf4; }
+.mh-find-map.is-error { display: grid; place-items: center; padding: 20px; text-align: center; color: #b91c1c; font-weight: 700; font-size: 14px; }
+.mh-find-rail { display: flex; gap: 10px; margin: 12px -14px 0; padding: 2px 14px 6px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-left: 14px; scrollbar-width: none; }
+.mh-find-rail::-webkit-scrollbar { display: none; }
+.mh-find-rail .mh-find-card { flex: none; width: 272px; scroll-snap-align: start; }
+.mh-find-list { display: grid; gap: 10px; }
+.mh-find-card { display: flex; gap: 12px; padding: 10px; border-radius: 18px; background: #fff; border: 1.5px solid #edf0f6; color: inherit !important; transition: border-color 0.15s, box-shadow 0.15s; }
+.mh-find-card.is-selected { border-color: var(--mh-orange); box-shadow: 0 14px 26px -20px rgba(234, 88, 12, 0.9); }
+.mh-find-thumb { flex: none; width: 84px; height: 84px; border-radius: 14px; overflow: hidden; background: #f1f5f9; position: relative; }
+.mh-find-thumb .lazy-img { position: absolute; inset: 0; }
+.mh-find-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.mh-find-body { min-width: 0; display: grid; align-content: center; gap: 3px; }
+.mh-find-tags { display: flex; align-items: center; gap: 8px; font-size: 11.5px; }
+.mh-find-tags i { font-style: normal; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #eaf0fc; color: #1e3a8a; }
+.mh-find-tags i.is-service { background: #fff1e6; color: #c2410c; }
+.mh-find-tags b { font-weight: 700; color: #15803d; }
+.mh-find-body strong { font-size: 14.5px; font-weight: 800; line-height: 1.25; color: var(--mh-ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mh-find-price { font-size: 14px; font-weight: 850; color: var(--mh-orange); }
+.mh-find-body small { font-size: 12px; color: var(--mh-muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mh-find-empty { padding: 26px 12px; text-align: center; color: var(--mh-muted); font-size: 14px; }
+.mh-find-empty strong { display: block; font-size: 16px; color: var(--mh-ink); margin-bottom: 4px; }
+.mh-find-empty p { margin: 0 0 10px; }
+.mh-find-empty a { color: var(--mh-orange) !important; font-weight: 800; }
+.mh-find-skel { display: grid; gap: 12px; }

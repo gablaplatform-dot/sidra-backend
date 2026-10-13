@@ -516,6 +516,43 @@ export class ListingService {
     return { items: matched.slice(skip, skip + take), total: matched.length };
   }
 
+  // "What would you like to find nearby?": matching products and services, nearest first, each with a map pin.
+  // The pin is the provider's area rounded to ~1 km, never their exact spot - exact location stays behind
+  // the contact unlock. `centre` is where the map should open (the shopper, or the middle of their district).
+  async nearbyMap({ q, type, lat, lng, radiusKm = 15, district, around, limit = 40 }) {
+    const normalizedLimit = Math.min(60, Math.max(1, Number(limit) || 40));
+    const hasGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
+    const result = await this.publicList({
+      q,
+      type,
+      page: 1,
+      limit: normalizedLimit,
+      ...(hasGeo ? { lat: Number(lat), lng: Number(lng), radiusKm: Number(radiusKm) || 15 } : { district, around })
+    });
+
+    let centre = hasGeo ? { lat: Number(lat), lng: Number(lng) } : null;
+    if (!centre && (district || around)) centre = await this._districtCentroid(district || around);
+
+    const providerIds = [...new Set(result.items.map((i) => i.providerId))];
+    const providers = providerIds.length
+      ? await prisma.provider.findMany({ where: { id: { in: providerIds } }, select: { id: true, lat: true, lng: true } })
+      : [];
+    const spot = new Map(providers.map((p) => [p.id, p]));
+    const round = (n) => Math.round(n * 100) / 100;
+
+    const items = result.items
+      .map((item) => {
+        const p = spot.get(item.providerId);
+        const pin = p?.lat != null && p?.lng != null ? { lat: round(p.lat), lng: round(p.lng) } : null;
+        let distanceKm = item.distanceKm;
+        if (distanceKm === undefined && pin && centre) distanceKm = Math.round(haversineDistanceKm(centre.lat, centre.lng, pin.lat, pin.lng) * 10) / 10;
+        return { ...item, pin, ...(distanceKm !== undefined ? { distanceKm } : {}) };
+      })
+      .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+
+    return { items, total: result.total, centre, effectiveRadiusKm: result.effectiveRadiusKm ?? null, widened: Boolean(result.widened) };
+  }
+
   async publicList({ page = 1, limit = 20, type, q, categoryId, productCategoryId, shopCategoryId, providerId, sort, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, around, minPrice, maxPrice, attrs: rawAttrs }) {
     const normalizedPage = Math.max(1, Number(page) || 1);
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));

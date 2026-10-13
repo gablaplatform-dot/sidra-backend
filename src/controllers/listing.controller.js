@@ -70,6 +70,14 @@ export class ListingController {
     }
   };
 
+  nearbyMap = async (req, res, next) => {
+    try {
+      res.status(200).json({ data: await this.listingService.nearbyMap(req.query) });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   facets = async (req, res, next) => {
     try {
       const result = await this.listingService.facets(req.query);

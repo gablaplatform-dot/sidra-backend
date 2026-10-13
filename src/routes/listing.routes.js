@@ -63,6 +63,25 @@ export const buildListingRoutes = ({ listingController }) => {
     listingController.publicList
   );
 
+  // Powers the home page's "find it nearby" map: matching products and services with approximate pins.
+  router.get(
+    "/nearby-map",
+    validate(
+      Joi.object({
+        q: Joi.string().trim().min(1).max(200).required(),
+        type: browseQuery.type,
+        lat: browseQuery.lat,
+        lng: browseQuery.lng,
+        radiusKm: Joi.number().min(0).max(1000).optional(),
+        district: browseQuery.district,
+        around: browseQuery.around,
+        limit: Joi.number().integer().min(1).max(60).optional()
+      }).and("lat", "lng"),
+      "query"
+    ),
+    listingController.nearbyMap
+  );
+
   router.get(
     "/facets",
     validate(Joi.object(browseQuery).and("lat", "lng", "radiusKm"), "query"),

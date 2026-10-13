@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import { request } from "../../lib/api";
 import { mapCategoryDto } from "../../lib/shopMappers";
 import { loginPath } from "../../lib/authRedirect";
 import { Skel } from "../Skeleton";
 import LazyImg from "../LazyImg";
-import { IconBell, IconBusTicket, IconFind, IconMenuLines, IconRideCar, IconServicesWrench, IconShopBag, IconArrowUpRight, IconStarFilled } from "./HomeIcons";
+import NearbyFinder from "./NearbyFinder";
+import { IconBell, IconBusTicket, IconMenuLines, IconRideCar, IconServicesWrench, IconShopBag, IconArrowUpRight, IconStarFilled } from "./HomeIcons";
 import { IconClose } from "../icons";
 
 const TILES = [
@@ -43,9 +44,7 @@ function SectionHead({ title, to, label = "See all" }) {
 }
 
 export default function MobileHome({ session, onLogout }) {
-  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [q, setQ] = useState("");
   const [serviceCats, setServiceCats] = useState(null);
   const [providers, setProviders] = useState(null);
 
@@ -72,11 +71,6 @@ export default function MobileHome({ session, onLogout }) {
 
   const user = session?.user;
   const isProvider = Boolean(session?.provider);
-  const submit = (event) => {
-    event.preventDefault();
-    const text = q.trim();
-    navigate(text ? `/search?q=${encodeURIComponent(text)}` : "/search");
-  };
 
   return (
     <div className="mh">
@@ -102,10 +96,7 @@ export default function MobileHome({ session, onLogout }) {
         <span>do you need today?</span>
       </h1>
 
-      <form className="mh-search" onSubmit={submit} role="search">
-        <IconFind />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="What would you like to find?" aria-label="Search Gabla" enterKeyHint="search" />
-      </form>
+      <NearbyFinder session={session} />
 
       <nav className="mh-tiles" aria-label="Quick actions">
         {TILES.map(({ key, label, to, Icon, tone }) => (
