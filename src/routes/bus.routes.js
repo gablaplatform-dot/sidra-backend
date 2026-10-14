@@ -5,6 +5,7 @@ import { validate } from "../middlewares/validate.middleware.js";
 import { requireAuth, requirePermission } from "../middlewares/auth.middleware.js";
 import { Roles } from "../constants/enums.js";
 import { buildFieldSchema } from "../constants/dynamicFieldSchema.js";
+import { boundedAnswers } from "../utils/validators.js";
 
 const id = Joi.string().trim().min(1).max(64);
 const date = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/);
@@ -52,7 +53,7 @@ const profileInput = Joi.object({
   parkLat: Joi.number().min(-90).max(90).allow(null).optional(),
   parkLng: Joi.number().min(-180).max(180).allow(null).optional(),
   fleetSize: Joi.number().integer().min(0).max(5000).default(0),
-  customFields: Joi.object().unknown(true).default({})
+  customFields: boundedAnswers().default({})
 });
 
 // Handlers are tiny (parse request -> call service -> wrap in { data }), so they live here rather
@@ -208,7 +209,7 @@ export const buildBusRoutes = ({ busBookingService, busOperatorService, busCatal
         parkLat: Joi.number().min(-90).max(90).allow(null).optional(),
         parkLng: Joi.number().min(-180).max(180).allow(null).optional(),
         fleetSize: Joi.number().integer().min(0).max(5000).optional(),
-        customFields: Joi.object().unknown(true).optional()
+        customFields: boundedAnswers().optional()
       })
     ),
     h((req) => busOperatorService.updateMe(req.user.id, req.body))

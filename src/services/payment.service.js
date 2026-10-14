@@ -11,6 +11,7 @@ import { RideDriverWalletService } from "./rideDriverWallet.service.js";
 import { OrderNotificationService } from "./orderNotification.service.js";
 import { parseMoneyToCents, centsToDecimal, feeFromPercentCents } from "../utils/money.js";
 import { flagRefundDue } from "../utils/refunds.js";
+import { webhookKey } from "../utils/webhookKey.js";
 
 const SUBSCRIPTION_PERIOD_DAYS = 30;
 
@@ -50,7 +51,7 @@ export class PaymentService {
   // The gateway posts payment results to these URLs. They carry a secret key (derived from JWT_SECRET) so that a
   // stranger who learns a transaction reference can't post a fake "paid" result; see verifyWebhookKey.
   webhookKey() {
-    return crypto.createHmac("sha256", env.jwtSecret).update("mobile-money-webhook").digest("hex").slice(0, 40);
+    return webhookKey();
   }
 
   verifyWebhookKey(presented) {
@@ -582,11 +583,16 @@ export class PaymentService {
       });
       if (claim.count === 0) return { ok: true, reason: "already_processed" };
 
-      // A paid amount that doesn't match what we asked for is held for a person to look at, not passed on.
+      // A reported amount that differs from what we asked for is recorded. It only holds the payment for a person
+      // to check when MOBILE_MONEY_ENFORCE_AMOUNT=true: until we've seen what the gateway reports for a real payment
+      // (the figure may include its own charges), holding on it could park every genuine payment.
       const reportedAmount = Number(payload.amount ?? payload.amount_paid ?? payload.paid_amount);
       if (Number.isFinite(reportedAmount) && reportedAmount > 0 && Math.round(reportedAmount) !== Math.round(Number(transaction.amount))) {
-        await flagRefundDue({ db: tx, transactionId: transaction.id, reason: `amount_mismatch: paid ${reportedAmount}, expected ${transaction.amount}` });
-        return { ok: true, transactionId: transaction.id, type: transaction.type, held: true };
+        if (process.env.MOBILE_MONEY_ENFORCE_AMOUNT === "true") {
+          await flagRefundDue({ db: tx, transactionId: transaction.id, reason: `amount_mismatch: paid ${reportedAmount}, expected ${transaction.amount}` });
+          return { ok: true, transactionId: transaction.id, type: transaction.type, held: true };
+        }
+        process.stderr.write(`[webhook] amount differs for ${reference}: gateway ${reportedAmount}, expected ${transaction.amount}\n`);
       }
 
       if (transaction.type === "purchase") {

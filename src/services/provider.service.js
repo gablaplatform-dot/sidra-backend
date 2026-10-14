@@ -509,6 +509,7 @@ export class ProviderService {
 
   async getOnboardingInfo({ token }) {
     const payload = this.verifyOnboardingToken(token);
+    if (payload.kind !== "relink") await this.liveInvitation(token, payload, { statuses: ["sent", "accepted"] });
     const provider = await prisma.provider.findUnique({ where: { id: String(payload.providerId) } });
     if (!provider) {
       throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
@@ -593,8 +594,11 @@ export class ProviderService {
     // already registered before keeps whatever moderation state an admin has since given them.
     if (!provider.registeredAt) {
       data.registeredAt = new Date();
-      data.isApproved = true;
-      data.moderationStatus = "approved";
+      // Only a provider still awaiting approval goes live; one an admin rejected or suspended stays that way.
+      if (provider.moderationStatus === "pending") {
+        data.isApproved = true;
+        data.moderationStatus = "approved";
+      }
     }
 
     if (Object.keys(data).length) {

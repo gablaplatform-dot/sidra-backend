@@ -7,6 +7,7 @@ import { geohashEncode, geohashSearchCells, haversineDistanceKm } from "../utils
 import { RideDriverWalletService } from "./rideDriverWallet.service.js";
 import { MobileMoneyService } from "./mobileMoney.service.js";
 import { RoutingService } from "./routing.service.js";
+import { webhookKey } from "../utils/webhookKey.js";
 
 const VEHICLE_TYPES = ["boda", "car"];
 const GEOHASH_PRECISION_FINE = 6; // ~1.2km x 0.6km cells - the primary search
@@ -101,8 +102,8 @@ export class RideService {
 
   mobileMoneyCallbackUrls() {
     return {
-      successUrl: `${env.apiBaseUrl}/api/v1/payments/webhooks/mobilemoney/success`,
-      failedUrl: `${env.apiBaseUrl}/api/v1/payments/webhooks/mobilemoney/failed`
+      successUrl: `${env.apiBaseUrl}/api/v1/payments/webhooks/mobilemoney/success?k=${webhookKey()}`,
+      failedUrl: `${env.apiBaseUrl}/api/v1/payments/webhooks/mobilemoney/failed?k=${webhookKey()}`
     };
   }
 

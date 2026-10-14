@@ -12,8 +12,10 @@ const URL_TLDS = "com|net|org|ug|co|io|me|app|biz|info|shop|store|online|site|li
 // Every pattern below is bounded: nothing here may backtrack badly on a long run of letters.
 const RULES = [
   { kind: "email", label: "an email address", re: /[\w.+-]{1,64}\s{0,3}(?:@|\(at\)|\[at\]|\{at\})\s{0,3}[\w-]{1,63}\s{0,3}(?:\.|\(dot\)|\[dot\]|\sdot\s)\s{0,3}[a-z]{2,24}/i },
-  { kind: "email", label: "an email address", re: /\b[\w.-]{2,40}\s{1,3}(?:at|@)\s{1,3}[a-z0-9-]{2,30}\s{1,3}(?:dot|\.)\s{1,3}(?:com|net|org|ug|co|io|me)\b/i },
-  { kind: "link", label: "a website or link", re: new RegExp(`(?:https?:\\/\\/|www\\.)\\S{1,200}|\\b[a-z0-9-]{2,63}\\s{0,2}\\.\\s{0,2}(?:${URL_TLDS})\\b(?:\\/\\S{0,100})?|\\b(?:wa\\.me|t\\.me|t\\.co|bit\\.ly|goo\\.gl|maps\\.app|linktr\\.ee|tinyurl\\.com|gabla\\.cc)\\S{0,100}`, "i") },
+  { kind: "email", label: "an email address", re: /\b[\w.-]{2,40}\s{1,3}(?:at|@)\s{1,3}[a-z0-9-]{2,30}(?:\.|\s{1,3}dot\s{1,3})(?:com|net|org|ug|co|io|me)\b/i },
+  // A web address: nothing but a dot (or the spelled-out word "dot") may sit between the name and the ending, so an
+  // ordinary sentence break like "Quiet area. Shop nearby." is never mistaken for one.
+  { kind: "link", label: "a website or link", re: new RegExp(`(?:https?:\\/\\/|www\\.)\\S{1,200}|\\b[a-z0-9-]{2,63}(?:\\.|\\s{1,2}dot\\s{1,2})(?:${URL_TLDS})\\b(?:\\/\\S{0,100})?|\\b(?:wa\\.me|t\\.me|t\\.co|bit\\.ly|goo\\.gl|maps\\.app|linktr\\.ee|tinyurl\\.com|gabla\\.cc)\\S{0,100}`, "i") },
   { kind: "social", label: "a social media handle", re: /(?:^|[\s(])@[a-z0-9_.]{3,}|\b(?:facebook|instagram|tiktok|snapchat|twitter|linkedin)\.[a-z]+|\b(?:fb|ig|insta)\s*[:\-]\s*\S+/i },
   { kind: "contact", label: "a request to contact them directly", re: /\b(?:call|text|sms|whats\s?app|telegram|dm|inbox|ring|phone|contact|reach)\s+(?:me|us|on|via|at|through|:)\b|\bwhats\s?app\s*(?:no|number|:)/i },
   { kind: "address", label: "a street address or location", re: /\b(?:plot|block|suite|shop\s?no\.?|p\.?\s?o\.?\s?box)\s*#?\s*\d+|\b(?:located|situated|find us|visit us|we are)\s+(?:at|in|along|opposite|near|behind|next to|off|on)\b/i },
