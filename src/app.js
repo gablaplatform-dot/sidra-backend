@@ -22,7 +22,10 @@ import { ShopCategoryService } from "./services/shopCategory.service.js";
 import { ShopCategoryController } from "./controllers/shopCategory.controller.js";
 import { ListingService } from "./services/listing.service.js";
 import { ListingController } from "./controllers/listing.controller.js";
+import { ServiceCategoryService } from "./services/serviceCategory.service.js";
 import { AdminSettingsService } from "./services/adminSettings.service.js";
+import { ServiceBookingService } from "./services/serviceBooking.service.js";
+import { ContactGuardService } from "./services/ai/contactGuard.service.js";
 import { AiSettingsService } from "./services/ai/aiSettings.service.js";
 import { AiSearchService } from "./services/ai/aiSearch.service.js";
 import { AdminSettingsController } from "./controllers/adminSettings.controller.js";
@@ -105,12 +108,18 @@ export const buildApp = () => {
   const productCategoryService = new ProductCategoryService();
   const productCategoryController = new ProductCategoryController({ productCategoryService });
 
+  const serviceCategoryService = new ServiceCategoryService();
+  // Same controller as products: it just calls whichever tree service it is given.
+  const serviceCategoryController = new ProductCategoryController({ productCategoryService: serviceCategoryService });
+
   const shopCategoryService = new ShopCategoryService();
   const shopCategoryController = new ShopCategoryController({ shopCategoryService });
 
   const aiSettingsService = new AiSettingsService();
   const aiSearchService = new AiSearchService({ aiSettingsService });
-  const listingService = new ListingService({ aiSearchService });
+  const contactGuardService = new ContactGuardService({ aiSettingsService });
+  const serviceBookingService = new ServiceBookingService();
+  const listingService = new ListingService({ aiSearchService, contactGuardService });
   const listingController = new ListingController({ listingService });
 
   const adminSettingsService = new AdminSettingsService();
@@ -178,6 +187,7 @@ export const buildApp = () => {
       providerController,
       categoryController,
       productCategoryController,
+      serviceCategoryController,
       shopCategoryController,
       listingController,
       adminSettingsController,
@@ -195,7 +205,8 @@ export const buildApp = () => {
       bus: { busBookingService, busOperatorService, busCatalogService, busOperationsService, storageService },
       documentService,
       aiSettingsService,
-      aiSearchService
+      aiSearchService,
+      serviceBookingService
     })
   );
 

@@ -297,6 +297,10 @@ export class EngagementService {
       if (item.listingId && !listing) {
         throw new AppError({ message: "Listing not found", statusCode: 404, code: "LISTING_NOT_FOUND" });
       }
+      // Services aren't ordered: guests unlock the provider's contact, or book when the service takes bookings.
+      if (listing?.type === "service") {
+        throw new AppError({ message: "Services can't be ordered. Unlock the provider's contact, or book if bookings are open.", statusCode: 400, code: "SERVICE_NOT_ORDERABLE" });
+      }
       const quantity = Math.max(1, Math.min(99, Number(item.quantity) || 1));
       // For a real listing the price is always the listing's own: the client's unitPrice is only
       // trusted for free-form lines that have no listing behind them.

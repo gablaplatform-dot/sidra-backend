@@ -47,12 +47,18 @@ export class AiSettingsService {
     return { enabled: Boolean(row.enabled && apiKey), apiKey, model: row.model || DEFAULT_MODEL };
   }
 
+  async getModerationFlags() {
+    const row = await this._row();
+    return { moderateServices: row.moderateServices !== false };
+  }
+
   async get() {
     const row = await this._row();
     const savedKey = row.apiKeyEnc ? decrypt(row.apiKeyEnc) : "";
     const activeKey = savedKey || env.anthropicApiKey;
     return {
       enabled: Boolean(row.enabled),
+      moderateServices: row.moderateServices !== false,
       model: row.model || DEFAULT_MODEL,
       keySource: savedKey ? "admin" : env.anthropicApiKey ? "environment" : "none",
       keyPreview: mask(activeKey),
@@ -65,9 +71,10 @@ export class AiSettingsService {
     };
   }
 
-  async update({ enabled, apiKey, model, clearKey }) {
+  async update({ enabled, apiKey, model, clearKey, moderateServices }) {
     await this._row();
     const data = {};
+    if (moderateServices !== undefined) data.moderateServices = Boolean(moderateServices);
     if (enabled !== undefined) data.enabled = Boolean(enabled);
     if (model !== undefined) data.model = String(model).trim() || DEFAULT_MODEL;
     if (clearKey) data.apiKeyEnc = null;

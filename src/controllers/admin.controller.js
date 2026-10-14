@@ -93,6 +93,14 @@ export class AdminController {
     }
   };
 
+  listServiceCategories = async (req, res, next) => {
+    try {
+      res.status(200).json({ data: await this.adminService.listProductCategories({ kind: "service" }) });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   listListings = async (req, res, next) => {
     try {
       res.status(200).json({ data: await this.adminService.listListings(req.query) });

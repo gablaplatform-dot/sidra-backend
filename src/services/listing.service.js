@@ -2,6 +2,7 @@ import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 import { findNearbyProviderIds } from "./geoProviderSearch.js";
 import { haversineDistanceKm } from "../utils/geohash.js";
+import { BOOKING_MODES, normalizeBookingConfig } from "./serviceBooking.service.js";
 
 const GEOHASH_SAFE_RADIUS_KM = 20; // a 3x3 geohash5 cell grid covers ~15km across - beyond this,
 // cell lookup would silently miss real matches, so wider radii fall back to a full provider scan
@@ -62,8 +63,66 @@ const centroidCache = new Map();
 const CENTROID_TTL_MS = 10 * 60 * 1000;
 
 export class ListingService {
-  constructor({ aiSearchService } = {}) {
+  constructor({ aiSearchService, contactGuardService } = {}) {
     this.aiSearchService = aiSearchService ?? null;
+    this.contactGuardService = contactGuardService ?? null;
+  }
+
+  // A service must sit in a leaf of the service-category tree, like a product does in the product tree.
+  async assertServiceCategory(serviceCategoryId) {
+    if (!serviceCategoryId) {
+      throw new AppError({ message: "Choose a category for this service", statusCode: 400, code: "CATEGORY_REQUIRED" });
+    }
+    const category = await prisma.serviceCategory.findUnique({ where: { id: serviceCategoryId } });
+    if (!category) throw new AppError({ message: "Category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
+    const childCount = await prisma.serviceCategory.count({ where: { parentId: serviceCategoryId } });
+    if (childCount > 0) throw new AppError({ message: "Choose a more specific subcategory", statusCode: 400, code: "CATEGORY_NOT_LEAF" });
+    return category;
+  }
+
+  // The questions that apply to a category: its own plus every ancestor's (a child overrides by key).
+  async _effectiveServiceFields(serviceCategoryId) {
+    const rows = await prisma.serviceCategory.findMany({ select: { id: true, parentId: true, listingFields: true } });
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const chain = [];
+    for (let node = byId.get(serviceCategoryId); node; node = node.parentId ? byId.get(node.parentId) : undefined) chain.unshift(node);
+    const merged = new Map();
+    for (const node of chain) for (const field of Array.isArray(node.listingFields) ? node.listingFields : []) merged.set(field.key, field);
+    return [...merged.values()];
+  }
+
+  // Server-side check of the answers a service provider gave to its category's required questions.
+  async assertRequiredAnswers(serviceCategoryId, customFields) {
+    const missing = (await this._effectiveServiceFields(serviceCategoryId))
+      .filter((f) => f.required && f.type !== "boolean")
+      .filter((f) => {
+        const v = customFields?.[f.key];
+        return Array.isArray(v) ? v.length === 0 : v === undefined || v === null || String(v).trim() === "";
+      })
+      .map((f) => f.label || f.key);
+    if (missing.length) {
+      throw new AppError({ message: `Please answer: ${missing.join(", ")}`, statusCode: 400, code: "MISSING_ANSWERS", details: missing });
+    }
+  }
+
+  // bookingMode + the details that go with it, validated and tidied. "none" clears the booking details.
+  normalizeBooking({ bookingMode, booking, price }) {
+    const mode = bookingMode ?? "none";
+    if (!BOOKING_MODES.includes(mode)) throw new AppError({ message: "Invalid booking mode", statusCode: 400, code: "INVALID_BOOKING_MODE" });
+    if (mode === "none") return { bookingMode: "none", booking: {} };
+    if (!(Number(price) > 0)) throw new AppError({ message: "Set a price per night, day or hour so guests can book.", statusCode: 400, code: "PRICE_REQUIRED_FOR_BOOKING" });
+    return { bookingMode: mode, booking: normalizeBookingConfig(booking) };
+  }
+
+  // The gate on a service submission: no phone numbers, links, handles or addresses.
+  async guardService({ name, description, customFields, booking, imageUrls }) {
+    if (!this.contactGuardService) return;
+    await this.contactGuardService.assertClean({
+      name,
+      description,
+      customFields: { ...(customFields ?? {}), _bookingInstructions: booking?.instructions ?? "", _bookingDeposit: booking?.depositNote ?? "" },
+      imageUrls
+    });
   }
 
   // The "what the AI understood" part of a search: related words plus the product and provider
@@ -75,6 +134,10 @@ export class ListingService {
     if (ai.productCategoryIds.length) {
       const groups = await Promise.all(ai.productCategoryIds.map((id) => this._expandProductCategoryIds(id)));
       or.push({ productCategoryId: { in: [...new Set(groups.flat())] } });
+    }
+    if (ai.listingServiceCategoryIds?.length) {
+      const groups = await Promise.all(ai.listingServiceCategoryIds.map((id) => this._expandServiceCategoryIds(id)));
+      or.push({ serviceCategoryId: { in: [...new Set(groups.flat())] } });
     }
     if (ai.serviceCategoryIds.length) {
       const children = await prisma.category.findMany({ where: { parentId: { in: ai.serviceCategoryIds } }, select: { id: true } });
@@ -136,7 +199,7 @@ export class ListingService {
     }
   }
 
-  async createListing({ actorUserId, name, description, price = 0, type, categoryId, productCategoryId, shopCategoryId, media, customFields, featured, onlinePaymentEnabled, originalPrice, discountPercent, isNew, sku, inventory }) {
+  async createListing({ actorUserId, name, description, price = 0, type, categoryId, productCategoryId, serviceCategoryId, bookingMode, booking, shopCategoryId, media, customFields, featured, onlinePaymentEnabled, originalPrice, discountPercent, isNew, sku, inventory }) {
     const provider = await this.getProviderForUser(actorUserId);
 
     const normalizedType = String(type ?? "").toLowerCase();
@@ -144,8 +207,14 @@ export class ListingService {
       throw new AppError({ message: "Invalid type", statusCode: 400, code: "INVALID_TYPE" });
     }
     await this.assertShopCategoryOwnership({ shopCategoryId, providerId: provider.id });
+    let bookingFields = { bookingMode: "none", booking: {} };
     if (normalizedType === "product") {
       await this.assertProductCategory(productCategoryId);
+    } else {
+      await this.assertServiceCategory(serviceCategoryId);
+      await this.assertRequiredAnswers(serviceCategoryId, customFields);
+      bookingFields = this.normalizeBooking({ bookingMode, booking, price });
+      await this.guardService({ name, description, customFields, booking: bookingFields.booking, imageUrls: [media?.imageUrl, ...(media?.gallery ?? [])].filter(Boolean) });
     }
 
     if (discountPercent !== undefined && discountPercent !== null) {
@@ -165,6 +234,8 @@ export class ListingService {
         providerId: provider.id,
         categoryId: normalizedType === "product" ? null : (categoryId !== undefined ? categoryId : provider.categoryId),
         productCategoryId: normalizedType === "product" ? productCategoryId : null,
+        serviceCategoryId: normalizedType === "service" ? serviceCategoryId : null,
+        ...bookingFields,
         shopCategoryId: shopCategoryId ?? null,
         name,
         description: description ?? "",
@@ -202,6 +273,7 @@ export class ListingService {
     if (updates.price !== undefined) update.price = updates.price;
     if (updates.categoryId !== undefined) update.categoryId = updates.categoryId;
     if (updates.productCategoryId !== undefined) update.productCategoryId = updates.productCategoryId;
+    if (updates.serviceCategoryId !== undefined) update.serviceCategoryId = updates.serviceCategoryId;
     if (updates.shopCategoryId !== undefined) {
       await this.assertShopCategoryOwnership({ shopCategoryId: updates.shopCategoryId, providerId: provider.id });
       update.shopCategoryId = updates.shopCategoryId || null;
@@ -246,7 +318,44 @@ export class ListingService {
       await this.assertProductCategory(update.productCategoryId !== undefined ? update.productCategoryId : listing.productCategoryId);
     }
     if (becomingProduct) update.categoryId = null;
+    if (becomingProduct) {
+      update.serviceCategoryId = null;
+      update.bookingMode = "none";
+      update.booking = {};
+    }
     if (becomingService) update.productCategoryId = null;
+
+    if (effectiveType === "service") {
+      const nextCategoryId = update.serviceCategoryId !== undefined ? update.serviceCategoryId : listing.serviceCategoryId;
+      if (update.serviceCategoryId !== undefined || becomingService) await this.assertServiceCategory(nextCategoryId);
+      const nextFields = update.customFields !== undefined ? update.customFields : listing.customFields;
+      if (nextCategoryId && (update.customFields !== undefined || update.serviceCategoryId !== undefined)) await this.assertRequiredAnswers(nextCategoryId, nextFields);
+
+      const bookingTouched = updates.bookingMode !== undefined || updates.booking !== undefined || updates.price !== undefined;
+      let nextBooking = listing.booking;
+      if (bookingTouched) {
+        const normalized = this.normalizeBooking({
+          bookingMode: updates.bookingMode !== undefined ? updates.bookingMode : listing.bookingMode,
+          booking: updates.booking !== undefined ? updates.booking : listing.booking,
+          price: update.price !== undefined ? update.price : listing.price
+        });
+        update.bookingMode = normalized.bookingMode;
+        update.booking = normalized.booking;
+        nextBooking = normalized.booking;
+      }
+
+      const textTouched = ["name", "description", "customFields"].some((k) => update[k] !== undefined) || updates.booking !== undefined || update.media !== undefined;
+      if (textTouched) {
+        const media = update.media !== undefined ? update.media : null;
+        await this.guardService({
+          name: update.name ?? listing.name,
+          description: update.description ?? listing.description,
+          customFields: nextFields,
+          booking: nextBooking,
+          imageUrls: media ? [media.imageUrl, ...(media.gallery ?? [])].filter(Boolean) : []
+        });
+      }
+    }
 
     const updated = await prisma.serviceProduct.update({ where: { id: listingId }, data: update });
 
@@ -308,6 +417,9 @@ export class ListingService {
       ...(distanceKm !== undefined ? { distanceKm: Math.round(distanceKm * 10) / 10 } : {}),
       categoryId: i.categoryId,
       productCategoryId: i.productCategoryId,
+      serviceCategoryId: i.serviceCategoryId ?? null,
+      bookingMode: i.bookingMode ?? "none",
+      booking: i.bookingMode && i.bookingMode !== "none" ? normalizeBookingConfig(i.booking) : null,
       shopCategoryId: i.shopCategoryId,
       name: i.name,
       description: i.description,
@@ -438,7 +550,20 @@ export class ListingService {
     return ids;
   }
 
-  async _buildPublicFilter({ type, q, ai, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, district, minPrice, maxPrice }) {
+  async _expandServiceCategoryIds(serviceCategoryId) {
+    const rows = await prisma.serviceCategory.findMany({ select: { id: true, parentId: true } });
+    const childrenByParent = new Map();
+    for (const row of rows) {
+      if (!row.parentId) continue;
+      if (!childrenByParent.has(row.parentId)) childrenByParent.set(row.parentId, []);
+      childrenByParent.get(row.parentId).push(row.id);
+    }
+    const ids = [serviceCategoryId];
+    for (let i = 0; i < ids.length; i += 1) ids.push(...(childrenByParent.get(ids[i]) ?? []));
+    return ids;
+  }
+
+  async _buildPublicFilter({ type, q, ai, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, district, minPrice, maxPrice }) {
     const filter = { status: "approved" };
 
     let normalizedType = null;
@@ -450,12 +575,14 @@ export class ListingService {
       filter.type = normalizedType;
     }
 
-    if (q && ai && (ai.terms.length || ai.productCategoryIds.length || ai.serviceCategoryIds.length)) {
+    if (q && ai && (ai.terms.length || ai.productCategoryIds.length || ai.serviceCategoryIds.length || ai.listingServiceCategoryIds?.length)) {
       filter.AND = [...(filter.AND ?? []), { OR: await this._aiSearchClauses(String(q).trim(), ai) }];
     } else if (q) {
       filter.name = { contains: String(q).trim() };
     }
     if (shopCategoryId) filter.shopCategoryId = { in: await this._expandShopCategoryIds(shopCategoryId) };
+    if (serviceCategoryId) filter.serviceCategoryId = { in: await this._expandServiceCategoryIds(serviceCategoryId) };
+    if (bookable === "true" || bookable === true) filter.bookingMode = { not: "none" };
     if (discountOnly === "true" || discountOnly === true) filter.discountPercent = { not: null };
     if (isNew === "true" || isNew === true) filter.isNew = true;
     // "New arrivals" = flagged new OR listed in the last 30 days - the same rule the Shop homepage row uses.
@@ -478,7 +605,7 @@ export class ListingService {
       const categoryIds = await this._expandProductCategoryIds(productCategoryId);
       filter.productCategoryId = { in: categoryIds };
       filter.provider = providerFilter;
-    } else if (categoryId) {
+    } else if (categoryId && !serviceCategoryId) {
       filter.OR = [
         { categoryId, provider: providerFilter },
         { categoryId: null, provider: { ...providerFilter, categoryId } }
@@ -591,12 +718,12 @@ export class ListingService {
     };
   }
 
-  async publicList({ page = 1, limit = 20, type, q, ai, categoryId, productCategoryId, shopCategoryId, providerId, sort, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, around, minPrice, maxPrice, attrs: rawAttrs }) {
+  async publicList({ page = 1, limit = 20, type, q, ai, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, sort, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, around, minPrice, maxPrice, attrs: rawAttrs }) {
     const normalizedPage = Math.max(1, Number(page) || 1);
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
     const skip = (normalizedPage - 1) * normalizedLimit;
     const attrs = parseAttrs(rawAttrs);
-    const baseArgs = { type, q, ai, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, minPrice, maxPrice };
+    const baseArgs = { type, q, ai, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, minPrice, maxPrice };
 
     // "Arrange around my district": no exact position and no explicit location, default ordering ->
     // rank everything nearest-first from the middle of the shopper's district. An explicit sort
@@ -699,10 +826,10 @@ export class ListingService {
   // return. Every group's counts ignore that group's OWN selection (so ticking "Apple" still shows
   // what "Dell" would add) but respect every other active filter, and all of it is scoped to the
   // chosen location, so numbers always match what the result grid would show.
-  async facets({ type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
+  async facets({ type, q, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
     const attrs = parseAttrs(rawAttrs);
     const hasGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Number.isFinite(Number(radiusKm));
-    const filter = await this._buildPublicFilter({ type, q, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals });
+    const filter = await this._buildPublicFilter({ type, q, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals });
 
     let geo = null;
     if (hasGeo) {
@@ -728,6 +855,7 @@ export class ListingService {
         price: true,
         discountPercent: true,
         productCategoryId: true,
+        serviceCategoryId: true,
         shopCategoryId: true,
         customFields: true,
         provider: { select: { district: true } }
@@ -803,6 +931,7 @@ export class ListingService {
       attributes,
       districts: [...districtCounts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
       categoryCounts,
+      serviceCategoryCounts: Object.fromEntries(countBy(matching, (r) => (r.serviceCategoryId ? [r.serviceCategoryId] : []))),
       shopCategoryCounts: Object.fromEntries(countBy(matching, (r) => (r.shopCategoryId ? [r.shopCategoryId] : []))),
       discountCount: rows.filter((r) => passes(r, "discount") && r.discountPercent != null).length,
       truncated: rows.length >= MAX_FACET_CANDIDATES,

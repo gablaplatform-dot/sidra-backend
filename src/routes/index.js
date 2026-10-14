@@ -1,3 +1,4 @@
+import Joi from "joi";
 import { Router } from "express";
 import { buildAuthRoutes } from "./auth.routes.js";
 import { buildProviderRoutes } from "./provider.routes.js";
@@ -19,6 +20,7 @@ import { buildPromotionRoutes } from "./promotion.routes.js";
 import { buildInterestRoutes } from "./interest.routes.js";
 import { buildBusRoutes } from "./bus.routes.js";
 import { buildDocumentRoutes } from "./document.routes.js";
+import { buildBookingRoutes } from "./booking.routes.js";
 import { buildAiAdminRoutes } from "./aiAdmin.routes.js";
 
 export const buildRoutes = ({
@@ -26,6 +28,7 @@ export const buildRoutes = ({
   providerController,
   categoryController,
   productCategoryController,
+  serviceCategoryController,
   shopCategoryController,
   listingController,
   adminSettingsController,
@@ -43,7 +46,8 @@ export const buildRoutes = ({
   bus,
   documentService,
   aiSettingsService,
-  aiSearchService
+  aiSearchService,
+  serviceBookingService
 }) => {
   const router = Router();
 
@@ -52,6 +56,16 @@ export const buildRoutes = ({
   router.use("/providers", buildProviderRoutes({ providerController }));
   router.use("/categories", buildCategoryRoutes({ categoryController }));
   router.use("/product-categories", buildProductCategoryRoutes({ productCategoryController }));
+  router.use(
+    "/service-categories",
+    buildProductCategoryRoutes({
+      productCategoryController: serviceCategoryController,
+      extra: {
+        bookable: Joi.boolean().optional(),
+        bookingUnit: Joi.string().valid("night", "day", "hour").allow(null, "").optional()
+      }
+    })
+  );
   router.use("/shop-categories", buildShopCategoryRoutes({ shopCategoryController }));
   router.use("/listings", buildListingRoutes({ listingController }));
   router.use("/payments", buildPaymentRoutes({ paymentController }));
@@ -62,6 +76,7 @@ export const buildRoutes = ({
   router.use("/promotions", buildPromotionRoutes({ promotionController }));
   router.use("/interest", buildInterestRoutes({ interestController }));
   router.use("/bus", buildBusRoutes(bus));
+  router.use("/bookings", buildBookingRoutes({ serviceBookingService }));
   router.use("/documents", buildDocumentRoutes({ documentService }));
   router.use("/admin", buildAdminDataRoutes({ adminController }));
   router.use("/admin", buildAdminSettingsRoutes({ adminSettingsController }));

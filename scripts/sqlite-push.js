@@ -180,6 +180,23 @@ CREATE TABLE IF NOT EXISTS product_categories (
   FOREIGN KEY (parentId) REFERENCES product_categories(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS service_categories (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  parentId TEXT,
+  imageUrl TEXT,
+  listingFields JSONB NOT NULL DEFAULT '[]',
+  isActive BOOLEAN NOT NULL DEFAULT 1,
+  moderationStatus TEXT NOT NULL DEFAULT 'approved',
+  createdByProviderId TEXT,
+  sortOrder INTEGER NOT NULL DEFAULT 0,
+  bookable BOOLEAN NOT NULL DEFAULT 0,
+  bookingUnit TEXT,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (parentId) REFERENCES service_categories(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS service_products (
   id TEXT PRIMARY KEY NOT NULL,
   providerId TEXT NOT NULL,
@@ -399,6 +416,40 @@ CREATE TABLE IF NOT EXISTS interest_events (
   meta JSONB NOT NULL DEFAULT '{}',
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS service_bookings (
+  id TEXT PRIMARY KEY NOT NULL,
+  reference TEXT NOT NULL,
+  listingId TEXT NOT NULL,
+  providerId TEXT NOT NULL,
+  userId TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  mode TEXT NOT NULL DEFAULT 'request',
+  unit TEXT NOT NULL,
+  startAt DATETIME NOT NULL,
+  endAt DATETIME NOT NULL,
+  startDate TEXT NOT NULL,
+  endDate TEXT NOT NULL,
+  startTime TEXT,
+  endTime TEXT,
+  quantity INTEGER NOT NULL DEFAULT 1,
+  guests INTEGER NOT NULL DEFAULT 1,
+  units INTEGER NOT NULL DEFAULT 1,
+  unitPrice DECIMAL NOT NULL DEFAULT 0.00,
+  total DECIMAL NOT NULL DEFAULT 0.00,
+  customer JSONB NOT NULL DEFAULT '{}',
+  listingName TEXT NOT NULL DEFAULT '',
+  policy TEXT NOT NULL DEFAULT 'flexible',
+  providerNote TEXT,
+  expiresAt DATETIME,
+  respondedAt DATETIME,
+  cancelledBy TEXT,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (listingId) REFERENCES service_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS ai_settings (
@@ -867,6 +918,13 @@ CREATE INDEX IF NOT EXISTS service_products_status_createdAt_idx ON service_prod
 CREATE INDEX IF NOT EXISTS service_products_featured_status_idx ON service_products(featured, status);
 CREATE UNIQUE INDEX IF NOT EXISTS shop_categories_providerId_parentId_name_key ON shop_categories(providerId, parentId, name);
 CREATE INDEX IF NOT EXISTS shop_categories_providerId_parentId_idx ON shop_categories(providerId, parentId);
+CREATE UNIQUE INDEX IF NOT EXISTS service_categories_parentId_name_key ON service_categories(parentId, name);
+CREATE INDEX IF NOT EXISTS service_categories_parentId_idx ON service_categories(parentId);
+CREATE INDEX IF NOT EXISTS service_categories_isActive_sortOrder_idx ON service_categories(isActive, sortOrder);
+CREATE UNIQUE INDEX IF NOT EXISTS service_bookings_reference_key ON service_bookings(reference);
+CREATE INDEX IF NOT EXISTS service_bookings_listingId_status_startAt_idx ON service_bookings(listingId, status, startAt);
+CREATE INDEX IF NOT EXISTS service_bookings_providerId_status_startAt_idx ON service_bookings(providerId, status, startAt);
+CREATE INDEX IF NOT EXISTS service_bookings_userId_createdAt_idx ON service_bookings(userId, createdAt);
 CREATE UNIQUE INDEX IF NOT EXISTS product_categories_parentId_name_key ON product_categories(parentId, name);
 CREATE INDEX IF NOT EXISTS product_categories_parentId_idx ON product_categories(parentId);
 CREATE INDEX IF NOT EXISTS product_categories_isActive_sortOrder_idx ON product_categories(isActive, sortOrder);
@@ -1024,12 +1082,17 @@ const ensureColumn = (table, column, definition) => {
   ["users", "adminRoleId", "TEXT"],
   ["providers", "district", "TEXT"],
   ["product_categories", "listingFields", "JSONB NOT NULL DEFAULT '[]'"],
+  ["service_products", "serviceCategoryId", "TEXT"],
+  ["service_products", "bookingMode", "TEXT NOT NULL DEFAULT 'none'"],
+  ["service_products", "booking", "JSONB NOT NULL DEFAULT '{}'"],
+  ["ai_settings", "moderateServices", "BOOLEAN NOT NULL DEFAULT 1"],
   ["promotions", "videoUrl", "TEXT"],
   ["promotions", "moderationStatus", "TEXT NOT NULL DEFAULT 'approved'"]
 ].forEach(([table, column, definition]) => ensureColumn(table, column, definition));
 
 // These indexes have to be created after the ensureColumn pass above, since on a database
 // created before these columns existed, the column (and therefore the index) can't exist yet.
+runSql("CREATE INDEX IF NOT EXISTS service_products_serviceCategoryId_status_idx ON service_products(serviceCategoryId, status);");
 runSql("CREATE INDEX IF NOT EXISTS service_products_productCategoryId_status_idx ON service_products(productCategoryId, status);");
 runSql("CREATE INDEX IF NOT EXISTS providers_moderationStatus_geohash6_idx ON providers(moderationStatus, geohash6);");
 runSql("CREATE INDEX IF NOT EXISTS providers_moderationStatus_geohash5_idx ON providers(moderationStatus, geohash5);");

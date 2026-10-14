@@ -315,12 +315,14 @@ export class AdminService {
   // Same shape/rationale as listCategories above, for the dedicated shop/product category tree -
   // no viewType filter here since this model only ever holds product categories, and "providers"
   // doesn't apply (a product category isn't a provider's business type), so it counts listings only.
-  async listProductCategories() {
+  async listProductCategories({ kind = "product" } = {}) {
+    const isService = kind === "service";
+    const fk = isService ? "serviceCategoryId" : "productCategoryId";
     const [categories, listingCounts] = await Promise.all([
-      prisma.productCategory.findMany({ orderBy: [{ parentId: "asc" }, { sortOrder: "asc" }, { name: "asc" }] }),
-      prisma.serviceProduct.groupBy({ by: ["productCategoryId"], _count: { _all: true } })
+      (isService ? prisma.serviceCategory : prisma.productCategory).findMany({ orderBy: [{ parentId: "asc" }, { sortOrder: "asc" }, { name: "asc" }] }),
+      prisma.serviceProduct.groupBy({ by: [fk], _count: { _all: true } })
     ]);
-    const listingMap = new Map(listingCounts.map((c) => [String(c.productCategoryId), c._count._all]));
+    const listingMap = new Map(listingCounts.map((c) => [String(c[fk]), c._count._all]));
     const children = new Map();
     for (const c of categories) {
       if (!c.parentId) continue;
@@ -352,6 +354,7 @@ export class AdminService {
         createdByProviderId: c.createdByProviderId ?? null,
         listingFields: ownListingFields,
         effectiveListingFields,
+        ...(isService ? { bookable: Boolean(c.bookable), bookingUnit: c.bookingUnit ?? null } : {}),
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
         children: (children.get(String(c.id)) ?? []).map((child) => toDto(child, effectiveListingFields))

@@ -98,6 +98,7 @@ export const buildAdminDataRoutes = ({ adminController }) => {
     adminController.listCategories
   );
   router.get("/product-categories", requirePermission("categories"), adminController.listProductCategories);
+  router.get("/service-categories", requirePermission("categories"), adminController.listServiceCategories);
   router.get(
     "/listings",
     requirePermission("listings"),

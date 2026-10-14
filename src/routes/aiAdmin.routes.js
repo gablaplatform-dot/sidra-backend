@@ -25,6 +25,7 @@ export const buildAiAdminRoutes = ({ aiSettingsService, aiSearchService }) => {
     validate(
       Joi.object({
         enabled: Joi.boolean().optional(),
+        moderateServices: Joi.boolean().optional(),
         apiKey: Joi.string().trim().min(10).max(400).optional(),
         clearKey: Joi.boolean().optional(),
         model: Joi.string().trim().min(3).max(80).optional()

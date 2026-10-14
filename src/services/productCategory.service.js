@@ -8,16 +8,28 @@ const uniqueError = (e) => e?.code === "P2002";
 // storefront folders). Admin manages the whole tree; a provider can only add subcategories to it,
 // never new top-level categories, when creating a product.
 export class ProductCategoryService {
-  async createCategory({ name, imageUrl, isActive, listingFields }) {
+  // Which Prisma table this tree lives in; ServiceCategoryService reuses everything below on its own table.
+  get db() {
+    return prisma.productCategory;
+  }
+
+  // Extra columns a subclass stores on a node (none for products).
+  pickExtra() {
+    return {};
+  }
+
+  async createCategory(input) {
+    const { name, imageUrl, isActive, listingFields } = input;
     try {
       const sortOrder = await this.getNextSortOrder(null);
-      const created = await prisma.productCategory.create({
+      const created = await this.db.create({
         data: {
           name,
           parentId: null,
           imageUrl: imageUrl ?? null,
           isActive: isActive ?? true,
           listingFields: listingFields ?? [],
+          ...this.pickExtra(input),
           sortOrder
         }
       });
@@ -30,24 +42,26 @@ export class ProductCategoryService {
     }
   }
 
-  async createSubcategory({ name, parentId, imageUrl, isActive, listingFields }) {
+  async createSubcategory(input) {
+    const { name, parentId, imageUrl, isActive, listingFields } = input;
     if (!parentId) {
       throw new AppError({ message: "Invalid parentId", statusCode: 400, code: "INVALID_PARENT_ID" });
     }
-    const parent = await prisma.productCategory.findUnique({ where: { id: parentId } });
+    const parent = await this.db.findUnique({ where: { id: parentId } });
     if (!parent) {
       throw new AppError({ message: "Parent category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
     }
 
     try {
       const sortOrder = await this.getNextSortOrder(parentId);
-      const created = await prisma.productCategory.create({
+      const created = await this.db.create({
         data: {
           name,
           parentId,
           imageUrl: imageUrl ?? parent.imageUrl ?? null,
           isActive: isActive ?? true,
           listingFields: listingFields ?? [],
+          ...this.pickExtra(input),
           sortOrder
         }
       });
@@ -75,14 +89,14 @@ export class ProductCategoryService {
       throw new AppError({ message: "Choose a parent category", statusCode: 400, code: "PARENT_ID_REQUIRED" });
     }
     const provider = await this.getProviderForUser(actorUserId);
-    const parent = await prisma.productCategory.findUnique({ where: { id: parentId } });
+    const parent = await this.db.findUnique({ where: { id: parentId } });
     if (!parent) {
       throw new AppError({ message: "Parent category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
     }
 
     try {
       const sortOrder = await this.getNextSortOrder(parentId);
-      const created = await prisma.productCategory.create({
+      const created = await this.db.create({
         data: {
           name,
           parentId,
@@ -102,7 +116,8 @@ export class ProductCategoryService {
     }
   }
 
-  async updateCategory({ id, name, parentId, imageUrl, isActive, moderationStatus, listingFields }) {
+  async updateCategory(input) {
+    const { id, name, parentId, imageUrl, isActive, moderationStatus, listingFields } = input;
     if (!id) {
       throw new AppError({ message: "Invalid id", statusCode: 400, code: "INVALID_CATEGORY_ID" });
     }
@@ -113,6 +128,7 @@ export class ProductCategoryService {
     if (isActive !== undefined) update.isActive = isActive;
     if (moderationStatus !== undefined) update.moderationStatus = moderationStatus;
     if (listingFields !== undefined) update.listingFields = listingFields;
+    Object.assign(update, this.pickExtra(input));
     if (parentId !== undefined) {
       if (parentId !== null && parentId !== "" && typeof parentId !== "string") {
         throw new AppError({ message: "Invalid parentId", statusCode: 400, code: "INVALID_PARENT_ID" });
@@ -121,11 +137,11 @@ export class ProductCategoryService {
         if (parentId === id) {
           throw new AppError({ message: "Category cannot be its own parent", statusCode: 400, code: "INVALID_PARENT" });
         }
-        const parent = await prisma.productCategory.findUnique({ where: { id: parentId } });
+        const parent = await this.db.findUnique({ where: { id: parentId } });
         if (!parent) {
           throw new AppError({ message: "Parent category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
         }
-        const pairs = await prisma.productCategory.findMany({ select: { id: true, parentId: true } });
+        const pairs = await this.db.findMany({ select: { id: true, parentId: true } });
         const parentById = new Map(pairs.map((c) => [c.id, c.parentId ?? null]));
         let current = parentId;
         while (current) {
@@ -139,7 +155,7 @@ export class ProductCategoryService {
     }
 
     try {
-      const updated = await prisma.productCategory.update({ where: { id }, data: update });
+      const updated = await this.db.update({ where: { id }, data: update });
       return this.toDto(updated);
     } catch (e) {
       if (e instanceof AppError) throw e;
@@ -157,11 +173,11 @@ export class ProductCategoryService {
     if (!id) {
       throw new AppError({ message: "Invalid id", statusCode: 400, code: "INVALID_CATEGORY_ID" });
     }
-    const cat = await prisma.productCategory.findUnique({ where: { id } });
+    const cat = await this.db.findUnique({ where: { id } });
     if (!cat) {
       throw new AppError({ message: "Category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
     }
-    const subcategoryCount = await prisma.productCategory.count({ where: { parentId: id } });
+    const subcategoryCount = await this.db.count({ where: { parentId: id } });
     if (subcategoryCount > 0) {
       throw new AppError({
         message: "This category has subcategories. Delete or move them first.",
@@ -169,7 +185,7 @@ export class ProductCategoryService {
         code: "CATEGORY_HAS_SUBCATEGORIES"
       });
     }
-    await prisma.productCategory.delete({ where: { id } });
+    await this.db.delete({ where: { id } });
     return { deleted: true };
   }
 
@@ -182,7 +198,7 @@ export class ProductCategoryService {
     }
 
     const normalizedParentId = parentId || null;
-    const siblings = await prisma.productCategory.findMany({
+    const siblings = await this.db.findMany({
       where: { parentId: normalizedParentId },
       select: { id: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
@@ -197,7 +213,7 @@ export class ProductCategoryService {
     }
 
     await prisma.$transaction(
-      orderedIds.map((id, index) => prisma.productCategory.update({ where: { id }, data: { sortOrder: index } }))
+      orderedIds.map((id, index) => this.db.update({ where: { id }, data: { sortOrder: index } }))
     );
     return { reordered: true, parentId: normalizedParentId, orderedIds };
   }
@@ -205,7 +221,7 @@ export class ProductCategoryService {
   async getNestedCategories() {
     // Same shape as category.service.js#getNestedCategories: an inactive node drops its whole
     // subtree; a pending (provider-submitted) subcategory stays live, only flagged for review.
-    const categories = await prisma.productCategory.findMany({
+    const categories = await this.db.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
     });
@@ -247,7 +263,7 @@ export class ProductCategoryService {
 
   async listRoots({ limit = 6 } = {}) {
     const normalizedLimit = Math.min(60, Math.max(1, Number(limit) || 6));
-    const rows = await prisma.productCategory.findMany({
+    const rows = await this.db.findMany({
       where: { parentId: null, isActive: true, moderationStatus: "approved" },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       take: normalizedLimit
@@ -272,7 +288,7 @@ export class ProductCategoryService {
   }
 
   async getNextSortOrder(parentId) {
-    const currentMax = await prisma.productCategory.aggregate({ where: { parentId }, _max: { sortOrder: true } });
+    const currentMax = await this.db.aggregate({ where: { parentId }, _max: { sortOrder: true } });
     return (currentMax._max.sortOrder ?? -1) + 1;
   }
 }

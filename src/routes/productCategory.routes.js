@@ -6,7 +6,8 @@ import { requireAuth } from "../middlewares/auth.middleware.js";
 import { Roles } from "../constants/enums.js";
 import { buildFieldSchema } from "../constants/dynamicFieldSchema.js";
 
-export const buildProductCategoryRoutes = ({ productCategoryController }) => {
+// `extra` adds fields to the admin create/update bodies (the service-category tree reuses these routes).
+export const buildProductCategoryRoutes = ({ productCategoryController, extra = {} }) => {
   const router = Router();
   const id = Joi.string().trim().min(1).max(64);
   const imageUrlField = Joi.string().uri().max(1000).allow(null).optional();
@@ -41,7 +42,8 @@ export const buildProductCategoryRoutes = ({ productCategoryController }) => {
         name: Joi.string().trim().max(120).required(),
         imageUrl: imageUrlField,
         isActive: Joi.boolean().optional(),
-        listingFields: listingFieldsField
+        listingFields: listingFieldsField,
+        ...extra
       })
     ),
     productCategoryController.createCategory
@@ -56,7 +58,8 @@ export const buildProductCategoryRoutes = ({ productCategoryController }) => {
         parentId: id.required(),
         imageUrl: imageUrlField,
         isActive: Joi.boolean().optional(),
-        listingFields: listingFieldsField
+        listingFields: listingFieldsField,
+        ...extra
       })
     ),
     productCategoryController.createSubcategory
@@ -84,7 +87,8 @@ export const buildProductCategoryRoutes = ({ productCategoryController }) => {
         imageUrl: imageUrlField,
         isActive: Joi.boolean().optional(),
         moderationStatus: Joi.string().valid("pending", "approved").optional(),
-        listingFields: listingFieldsField
+        listingFields: listingFieldsField,
+        ...extra
       }).min(1)
     ),
     productCategoryController.updateCategory

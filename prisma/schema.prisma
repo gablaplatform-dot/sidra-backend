@@ -43,6 +43,7 @@ model User {
   busBookings    BusBooking[]
   inquiries      Inquiry[]
   orders         Order[]
+  serviceBookings ServiceBooking[]
   auditLogs      AuditLog[] @relation("AuditActor")
   requestedWithdrawals WithdrawalRequest[] @relation("WithdrawalRequestedBy")
   approvedWithdrawals  WithdrawalRequest[] @relation("WithdrawalApprovedBy")
@@ -176,6 +177,8 @@ model Provider {
   promotions     Promotion[]
   createdCategories Category[] @relation("CategoryCreatedBy")
   createdProductCategories ProductCategory[] @relation("ProductCategoryCreatedBy")
+  createdServiceCategories ServiceCategory[] @relation("ServiceCategoryCreatedBy")
+  serviceBookings ServiceBooking[]
 
   @@index([categoryId, createdAt])
   @@index([publicSlug])
@@ -267,6 +270,12 @@ model ServiceProduct {
   providerId   String
   categoryId   String?
   productCategoryId String?
+  // Services have their own category tree (see ServiceCategory); products use productCategoryId.
+  serviceCategoryId String?
+  // "none" = contact-only service; "request" = the provider approves each booking; "instant" = confirmed
+  // automatically when the dates are free. `booking` holds the details (unit, units on offer, capacity, ...).
+  bookingMode  String              @default("none")
+  booking      Json                @default("{}")
   shopCategoryId String?
   name         String
   description  String              @default("")
@@ -291,7 +300,9 @@ model ServiceProduct {
   provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   productCategory ProductCategory? @relation(fields: [productCategoryId], references: [id], onDelete: SetNull)
+  serviceCategory ServiceCategory? @relation(fields: [serviceCategoryId], references: [id], onDelete: SetNull)
   shopCategory ShopCategory? @relation(fields: [shopCategoryId], references: [id], onDelete: SetNull)
+  bookings ServiceBooking[]
   orderItems OrderItem[]
   favorites  Favorite[]
   reviews    Review[]
@@ -301,6 +312,7 @@ model ServiceProduct {
   @@index([featured, status])
   @@index([categoryId, status])
   @@index([productCategoryId, status])
+  @@index([serviceCategoryId, status])
   @@index([shopCategoryId, status])
   @@map("service_products")
 }
@@ -376,6 +388,8 @@ model AdminSettings {
 model AiSettings {
   id            String    @id @default("singleton")
   enabled       Boolean   @default(true)
+  // Block service listings that carry contact details, links or an address (checked by AI + patterns).
+  moderateServices Boolean @default(true)
   apiKeyEnc     String?
   model         String    @default("claude-haiku-5-5")
   requestCount  Int       @default(0)
@@ -386,6 +400,80 @@ model AiSettings {
   updatedAt     DateTime  @updatedAt
 
   @@map("ai_settings")
+}
+
+// The category tree for services (hotels, venues, repairs, salons, ...): the same shape as
+// ProductCategory - admin manages it, providers add subcategories, and each node carries the
+// questions ("listingFields") a provider answers when listing a service in it. `bookable` /
+// `bookingUnit` hint that services here are usually booked (nights, days or hours).
+model ServiceCategory {
+  id                  String            @id @default(cuid())
+  name                String
+  parentId            String?
+  imageUrl            String?
+  listingFields       Json              @default("[]")
+  isActive            Boolean           @default(true)
+  moderationStatus    String            @default("approved")
+  createdByProviderId String?
+  sortOrder           Int               @default(0)
+  bookable            Boolean           @default(false)
+  bookingUnit         String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  parent   ServiceCategory?  @relation("ServiceCategoryToServiceCategory", fields: [parentId], references: [id], onDelete: SetNull)
+  children ServiceCategory[] @relation("ServiceCategoryToServiceCategory")
+
+  createdByProvider Provider?        @relation("ServiceCategoryCreatedBy", fields: [createdByProviderId], references: [id], onDelete: SetNull)
+  serviceProducts   ServiceProduct[]
+
+  @@unique([parentId, name])
+  @@index([parentId])
+  @@index([isActive, sortOrder])
+  @@map("service_categories")
+}
+
+// A reservation of a bookable service (a hotel room, a venue, a studio slot). Availability is
+// computed from these rows, the same way bus seats are: confirmed bookings and still-open
+// requests hold the dates; an unanswered request expires and frees them.
+model ServiceBooking {
+  id          String   @id @default(cuid())
+  reference   String   @unique
+  listingId   String
+  providerId  String
+  userId      String?
+  status      String   @default("pending") // pending | confirmed | declined | cancelled | completed | expired
+  mode        String   @default("request")  // request | instant (what the listing was set to when booked)
+  unit        String   // night | day | hour
+  startAt     DateTime
+  endAt       DateTime
+  startDate   String   // EAT calendar date, "YYYY-MM-DD"
+  endDate     String
+  startTime   String?
+  endTime     String?
+  quantity    Int      @default(1) // how many rooms / spaces
+  guests      Int      @default(1)
+  units       Int      @default(1) // how many nights / days / hours
+  unitPrice   Decimal  @default(0.00)
+  total       Decimal  @default(0.00)
+  customer    Json     @default("{}")
+  listingName String   @default("")
+  policy      String   @default("flexible") // cancellation policy at the time of booking
+  providerNote String?
+  expiresAt   DateTime?
+  respondedAt DateTime?
+  cancelledBy String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  listing  ServiceProduct @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  provider Provider       @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  user     User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([listingId, status, startAt])
+  @@index([providerId, status, startAt])
+  @@index([userId, createdAt])
+  @@map("service_bookings")
 }
 
 model ContactUnlock {
