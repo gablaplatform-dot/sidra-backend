@@ -1,7 +1,7 @@
 import { Router } from "express";
 import Joi from "joi";
 
-import { requireAuth, optionalAuth } from "../middlewares/auth.middleware.js";
+import { requireAuth, optionalAuth, requirePermission } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { Roles } from "../constants/enums.js";
 
@@ -100,7 +100,7 @@ export const buildPaymentRoutes = ({ paymentController }) => {
 
   router.post(
     "/admin/withdrawals/:withdrawalRequestId/approve",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("wallets"),
     validate(Joi.object({ withdrawalRequestId: id.required() }), "params"),
     validate(Joi.object({ note })),
     paymentController.adminApproveWithdrawal
@@ -108,7 +108,7 @@ export const buildPaymentRoutes = ({ paymentController }) => {
 
   router.post(
     "/admin/withdrawals/:withdrawalRequestId/reject",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("wallets"),
     validate(Joi.object({ withdrawalRequestId: id.required() }), "params"),
     validate(Joi.object({ note })),
     paymentController.adminRejectWithdrawal
@@ -116,7 +116,7 @@ export const buildPaymentRoutes = ({ paymentController }) => {
 
   router.post(
     "/admin/withdrawals/:withdrawalRequestId/mark-paid",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("wallets"),
     validate(Joi.object({ withdrawalRequestId: id.required() }), "params"),
     validate(Joi.object({ note })),
     paymentController.adminMarkWithdrawalPaid

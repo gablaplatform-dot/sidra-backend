@@ -1,8 +1,9 @@
 import { Router } from "express";
 import Joi from "joi";
 
+import { boundedAnswers } from "../utils/validators.js";
 import { validate } from "../middlewares/validate.middleware.js";
-import { requireAuth } from "../middlewares/auth.middleware.js";
+import { requireAuth, requirePermission } from "../middlewares/auth.middleware.js";
 import { Roles } from "../constants/enums.js";
 import { UGANDA_DISTRICTS } from "../constants/ugandaDistricts.js";
 
@@ -30,12 +31,12 @@ export const buildProviderRoutes = ({ providerController }) => {
     phone: Joi.string().trim().max(32).allow(null).optional(),
     whatsapp: Joi.string().trim().max(32).allow(null).optional(),
     email: Joi.string().email().max(254).allow(null).optional(),
-    website: Joi.string().uri().max(500).allow(null).optional()
+    website: Joi.string().uri({ scheme: ["http", "https"] }).max(500).allow(null).optional()
   });
   const mediaSchema = Joi.object({
-    avatarUrl: Joi.string().uri().max(1000).allow(null).optional(),
-    coverUrl: Joi.string().uri().max(1000).allow(null).optional(),
-    gallery: Joi.array().items(Joi.string().uri().max(1000)).max(40).optional()
+    avatarUrl: Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null).optional(),
+    coverUrl: Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null).optional(),
+    gallery: Joi.array().items(Joi.string().uri({ scheme: ["http", "https"] }).max(1000)).max(40).optional()
   });
 
   router.get(
@@ -61,7 +62,7 @@ export const buildProviderRoutes = ({ providerController }) => {
   );
   router.post(
     "/admin",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("providers"),
     validate(
       identifierSchema.keys({
         name: Joi.string().trim().max(200).required(),
@@ -72,7 +73,7 @@ export const buildProviderRoutes = ({ providerController }) => {
         location: locationSchema.optional(),
         contact: contactSchema.optional(),
         media: mediaSchema.optional(),
-        customFields: Joi.object().unknown(true).optional()
+        customFields: boundedAnswers().optional()
       })
     ),
     providerController.adminCreateProvider
@@ -80,19 +81,19 @@ export const buildProviderRoutes = ({ providerController }) => {
 
   router.patch(
     "/admin/:providerId/approval",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("providers"),
     validate(Joi.object({ approved: Joi.boolean().required() })),
     providerController.adminSetApproval
   );
   router.post(
     "/admin/:providerId/resend-invitation",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("providers"),
     validate(Joi.object({ providerId: id.required() }), "params"),
     providerController.adminResendInvitation
   );
   router.post(
     "/admin/:providerId/resend-google-link",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("providers"),
     validate(Joi.object({ providerId: id.required() }), "params"),
     providerController.adminResendGoogleLink
   );
@@ -116,7 +117,7 @@ export const buildProviderRoutes = ({ providerController }) => {
           location: locationSchema.optional(),
           contact: contactSchema.optional(),
           media: mediaSchema.optional(),
-          customFields: Joi.object().unknown(true).optional()
+          customFields: boundedAnswers().optional()
         }).optional()
       })
     ),
@@ -140,7 +141,7 @@ export const buildProviderRoutes = ({ providerController }) => {
         location: locationSchema.optional(),
         contact: contactSchema.optional(),
         media: mediaSchema.optional(),
-        customFields: Joi.object().unknown(true).optional(),
+        customFields: boundedAnswers().optional(),
         onlinePaymentsEnabled: Joi.boolean().optional()
       })
     ),

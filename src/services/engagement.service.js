@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../config/db.js";
 import { AppError } from "../utils/AppError.js";
 import { OrderNotificationService } from "./orderNotification.service.js";
+import { flagRefundDue } from "../utils/refunds.js";
 
 const moneyString = (value) => (value?.toString ? value.toString() : String(value ?? "0.00"));
 const toDecimal = (value) => new Prisma.Decimal(String(value ?? "0"));
@@ -432,6 +433,10 @@ export class EngagementService {
       data.metadata = { ...(order.metadata ?? {}), paymentStatus: "paid_cash" };
     }
     const updated = await prisma.order.update({ where: { id: order.id }, data });
+    // A paid order that is cancelled or rejected goes to the refund queue; the provider's credit is reversed when it's settled.
+    if (order.transactionId && ["canceled", "rejected"].includes(status)) {
+      await flagRefundDue({ transactionId: order.transactionId, reason: `order_${status}`, needsReversal: true });
+    }
     // Cash collected on delivery: the buyer gets their receipt now.
     if (data.metadata?.paymentStatus === "paid_cash") this.documentService?.issueReceipt({ orderId: order.id }).catch(() => {});
     // Accepted online order: tell the buyer they can pay now.

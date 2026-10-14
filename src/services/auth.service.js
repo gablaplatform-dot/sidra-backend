@@ -223,10 +223,20 @@ export class AuthService {
     const email = this.normalizeEmail(profile.email);
     const googleSub = String(profile.sub);
     const existing = await prisma.user.findFirst({ where: { OR: [{ googleSub }, { email }] } });
+    if (existing && existing.isActive === false) {
+      throw new AppError({ message: "This account has been suspended.", statusCode: 403, code: "ACCOUNT_INACTIVE" });
+    }
+    // Admin accounts sign in with their password only: an email match must never hand one over to a Google identity.
+    if (existing && existing.role === "admin" && existing.googleSub !== googleSub) {
+      throw new AppError({ message: "Admins sign in with email and password.", statusCode: 403, code: "ADMIN_PASSWORD_ONLY" });
+    }
     const user = existing
       ? await prisma.user.update({
           where: { id: existing.id },
           data: {
+            // Someone may have registered this email with a password before its owner ever signed in with Google
+            // (the email was never verified then). Linking Google proves ownership, so that password is dropped.
+            ...(existing.googleSub !== googleSub && existing.role === "user" && existing.passwordHash ? { passwordHash: "" } : {}),
             googleSub,
             authProvider: existing.authProvider === "password" ? "google" : existing.authProvider,
             avatarUrl: profile.picture ?? existing.avatarUrl,
@@ -292,45 +302,6 @@ export class AuthService {
     return { user: await this.userDto(user) };
   }
 
-  async bootstrapAdmin({ name, email, phone, password }) {
-    const existingAdmin = await prisma.user.findFirst({ where: { role: "admin" }, select: { id: true } });
-    if (existingAdmin) {
-      throw new AppError({ message: "Admin already exists", statusCode: 409, code: "ADMIN_EXISTS" });
-    }
-
-    const normalizedEmail = email ? this.normalizeEmail(email) : null;
-    if (!normalizedEmail) {
-      throw new AppError({ message: "Email is required", statusCode: 400, code: "EMAIL_REQUIRED" });
-    }
-
-    const superAdminRole = await this.ensureSuperAdminRole();
-
-    const passwordHash = await this.hashPassword(password);
-    const created = await prisma.user.create({
-      data: {
-        name,
-        email: normalizedEmail,
-        phone: this.normalizePhone(phone),
-        passwordHash,
-        role: "admin",
-        isActive: true,
-        adminRoleId: superAdminRole.id
-      }
-    });
-
-    const accessToken = this.signAccessToken({
-      payload: { sub: created.id, role: "admin", roleId: superAdminRole.id },
-      secret: this.jwt.secret,
-      issuer: this.jwt.issuer,
-      ttlSeconds: this.jwt.accessTtlSeconds
-    });
-
-    const obj = created;
-    return {
-      accessToken,
-      user: await this.userDto(obj)
-    };
-  }
 
   async ensureSuperAdminRole() {
     const superAdmin = SYSTEM_ROLES.find((r) => r.key === "super_admin");

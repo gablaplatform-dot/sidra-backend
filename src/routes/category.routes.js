@@ -2,7 +2,7 @@ import { Router } from "express";
 import Joi from "joi";
 
 import { validate } from "../middlewares/validate.middleware.js";
-import { requireAuth } from "../middlewares/auth.middleware.js";
+import { requireAuth, requirePermission } from "../middlewares/auth.middleware.js";
 import { CategoryBehavior, CategoryModerationStatus, CategoryViewType, Roles } from "../constants/enums.js";
 import { buildFieldSchema } from "../constants/dynamicFieldSchema.js";
 
@@ -10,7 +10,7 @@ export const buildCategoryRoutes = ({ categoryController }) => {
   const router = Router();
   const id = Joi.string().trim().min(1).max(64);
   const fieldSchema = buildFieldSchema();
-  const imageUrlField = Joi.string().uri().max(1000).allow(null).optional();
+  const imageUrlField = Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null).optional();
 
   router.get(
     "/",
@@ -25,7 +25,7 @@ export const buildCategoryRoutes = ({ categoryController }) => {
 
   router.post(
     "/",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("categories"),
     validate(
       Joi.object({
         name: Joi.string().trim().max(120).required(),
@@ -44,7 +44,7 @@ export const buildCategoryRoutes = ({ categoryController }) => {
 
   router.post(
     "/sub",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("categories"),
     validate(
       Joi.object({
         name: Joi.string().trim().max(120).required(),
@@ -64,7 +64,7 @@ export const buildCategoryRoutes = ({ categoryController }) => {
 
   router.patch(
     "/reorder",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("categories"),
     validate(
       Joi.object({
         parentId: id.allow(null).optional(),
@@ -76,7 +76,7 @@ export const buildCategoryRoutes = ({ categoryController }) => {
 
   router.patch(
     "/:categoryId",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("categories"),
     validate(
       Joi.object({
         name: Joi.string().trim().max(120).optional(),
@@ -95,7 +95,7 @@ export const buildCategoryRoutes = ({ categoryController }) => {
     categoryController.updateCategory
   );
 
-  router.delete("/:categoryId", requireAuth([Roles.ADMIN]), categoryController.deleteCategory);
+  router.delete("/:categoryId", requireAuth([Roles.ADMIN]), requirePermission("categories"), categoryController.deleteCategory);
 
   return router;
 };

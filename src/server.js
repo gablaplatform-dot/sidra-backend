@@ -4,6 +4,7 @@ import { env, assertRequiredEnv } from "./config/env.js";
 import { connectDb, disconnectDb } from "./config/db.js";
 import { buildApp } from "./app.js";
 import { BootstrapService } from "./services/bootstrap.service.js";
+import { startMaintenance } from "./jobs/maintenance.js";
 import { hashPassword } from "./utils/password.js";
 
 const main = async () => {
@@ -16,6 +17,7 @@ const main = async () => {
   const server = http.createServer(app);
 
   server.listen(env.port, "0.0.0.0");
+  startMaintenance(app.locals.runMaintenance);
 
   const shutdown = async () => {
     server.close(async () => {

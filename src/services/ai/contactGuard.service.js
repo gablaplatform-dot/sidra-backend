@@ -9,9 +9,11 @@ import { askClaude, parseJsonObject } from "./anthropic.js";
 const NUMBER_WORDS = "(?:zero|oh|one|two|three|four|five|six|seven|eight|nine)";
 const URL_TLDS = "com|net|org|ug|co|io|me|app|biz|info|shop|store|online|site|link|xyz";
 
+// Every pattern below is bounded: nothing here may backtrack badly on a long run of letters.
 const RULES = [
-  { kind: "email", label: "an email address", re: /[\w.+-]+\s*(?:@|\(at\)|\[at\]|\{at\})\s*[\w-]+\s*(?:\.|\(dot\)|\[dot\]|\sdot\s)\s*[a-z]{2,}/i },
-  { kind: "link", label: "a website or link", re: new RegExp(`(?:https?:\\/\\/|www\\.)\\S+|\\b[a-z0-9-]{2,}\\.(?:${URL_TLDS})\\b(?:\\/\\S*)?|\\b(?:wa\\.me|t\\.me|bit\\.ly|goo\\.gl|maps\\.app)\\S*`, "i") },
+  { kind: "email", label: "an email address", re: /[\w.+-]{1,64}\s{0,3}(?:@|\(at\)|\[at\]|\{at\})\s{0,3}[\w-]{1,63}\s{0,3}(?:\.|\(dot\)|\[dot\]|\sdot\s)\s{0,3}[a-z]{2,24}/i },
+  { kind: "email", label: "an email address", re: /\b[\w.-]{2,40}\s{1,3}(?:at|@)\s{1,3}[a-z0-9-]{2,30}\s{1,3}(?:dot|\.)\s{1,3}(?:com|net|org|ug|co|io|me)\b/i },
+  { kind: "link", label: "a website or link", re: new RegExp(`(?:https?:\\/\\/|www\\.)\\S{1,200}|\\b[a-z0-9-]{2,63}\\s{0,2}\\.\\s{0,2}(?:${URL_TLDS})\\b(?:\\/\\S{0,100})?|\\b(?:wa\\.me|t\\.me|t\\.co|bit\\.ly|goo\\.gl|maps\\.app|linktr\\.ee|tinyurl\\.com|gabla\\.cc)\\S{0,100}`, "i") },
   { kind: "social", label: "a social media handle", re: /(?:^|[\s(])@[a-z0-9_.]{3,}|\b(?:facebook|instagram|tiktok|snapchat|twitter|linkedin)\.[a-z]+|\b(?:fb|ig|insta)\s*[:\-]\s*\S+/i },
   { kind: "contact", label: "a request to contact them directly", re: /\b(?:call|text|sms|whats\s?app|telegram|dm|inbox|ring|phone|contact|reach)\s+(?:me|us|on|via|at|through|:)\b|\bwhats\s?app\s*(?:no|number|:)/i },
   { kind: "address", label: "a street address or location", re: /\b(?:plot|block|suite|shop\s?no\.?|p\.?\s?o\.?\s?box)\s*#?\s*\d+|\b(?:located|situated|find us|visit us|we are)\s+(?:at|in|along|opposite|near|behind|next to|off|on)\b/i },
@@ -22,16 +24,21 @@ const digitsOf = (text) => String(text).replace(/[^\d]/g, "");
 
 // Phone numbers: Ugandan (07xx, +256), or any run of 9+ digits once spacing/dashes are ignored.
 const phoneIn = (text) => {
-  const candidates = String(text).match(/\+?\d[\d\s().-]{7,}\d/g) ?? [];
+  // Separators between digits can be spaces, dots, dashes, slashes or underscores: strip them all.
+  const candidates = String(text).match(/\+?\d(?:[\s().\-/_]{0,3}\d){8,24}/g) ?? [];
   for (const candidate of candidates) {
     if (digitsOf(candidate).length >= 9) return candidate.trim();
   }
-  const words = new RegExp(`(?:\\b${NUMBER_WORDS}\\b[\\s,.-]*){7,}`, "i").exec(text);
+  const words = new RegExp(`(?:\\b${NUMBER_WORDS}\\b[\\s,.-]{0,3}){7,20}`, "i").exec(text);
   return words ? words[0].trim() : null;
 };
 
+const MAX_SCAN_CHARS = 2000;
+// Width-folded (full-width and Arabic-Indic digits become plain ones) and length-capped before any pattern runs.
+const prepare = (text) => String(text ?? "").normalize("NFKC").replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x660)).slice(0, MAX_SCAN_CHARS);
+
 export const scanText = (text) => {
-  const value = String(text ?? "");
+  const value = prepare(text);
   if (!value.trim()) return [];
   const found = [];
   const phone = phoneIn(value);
@@ -43,10 +50,19 @@ export const scanText = (text) => {
   return found;
 };
 
-const stringValues = (value, out = []) => {
+// Every string in the answers, plus numbers (a phone number can be stored as one) and the keys themselves,
+// which are public too. Bounded in count so an oversized payload can't turn this into a slow loop.
+const stringValues = (value, out = [], depth = 0) => {
+  if (out.length > 300 || depth > 4) return out;
   if (typeof value === "string") out.push(value);
-  else if (Array.isArray(value)) value.forEach((v) => stringValues(v, out));
-  else if (value && typeof value === "object") Object.values(value).forEach((v) => stringValues(v, out));
+  else if (typeof value === "number") out.push(String(value));
+  else if (Array.isArray(value)) value.slice(0, 100).forEach((v) => stringValues(v, out, depth + 1));
+  else if (value && typeof value === "object") {
+    for (const [k, v] of Object.entries(value).slice(0, 100)) {
+      out.push(k);
+      stringValues(v, out, depth + 1);
+    }
+  }
   return out;
 };
 

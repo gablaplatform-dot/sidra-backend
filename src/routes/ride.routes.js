@@ -2,7 +2,7 @@ import { Router } from "express";
 import Joi from "joi";
 
 import { validate } from "../middlewares/validate.middleware.js";
-import { requireAuth } from "../middlewares/auth.middleware.js";
+import { requireAuth, requirePermission } from "../middlewares/auth.middleware.js";
 import { Roles } from "../constants/enums.js";
 
 export const buildRideRoutes = ({ rideController }) => {
@@ -39,7 +39,7 @@ export const buildRideRoutes = ({ rideController }) => {
         vehicleType: vehicleType.required(),
         vehicleModel: Joi.string().trim().max(120).allow(null).optional(),
         licensePlate: Joi.string().trim().max(40).allow(null).optional(),
-        licensePhotoUrl: Joi.string().uri().max(2000).required(),
+        licensePhotoUrl: Joi.string().uri({ scheme: ["http", "https"] }).max(2000).required(),
         contact: Joi.object({
           phone: Joi.string().trim().max(32).allow(null).optional()
         }).unknown(true).optional()
@@ -59,7 +59,7 @@ export const buildRideRoutes = ({ rideController }) => {
         vehicleType: vehicleType.optional(),
         vehicleModel: Joi.string().trim().max(120).allow(null).optional(),
         licensePlate: Joi.string().trim().max(40).allow(null).optional(),
-        licensePhotoUrl: Joi.string().uri().max(2000).optional(),
+        licensePhotoUrl: Joi.string().uri({ scheme: ["http", "https"] }).max(2000).optional(),
         contact: Joi.object().unknown(true).optional()
       }).min(1)
     ),
@@ -135,7 +135,7 @@ export const buildRideRoutes = ({ rideController }) => {
   // --- Admin ---
   router.get(
     "/admin/drivers",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("rides"),
     validate(
       Joi.object({
         moderationStatus: Joi.string().valid("pending", "approved", "rejected", "suspended").optional(),
@@ -148,14 +148,14 @@ export const buildRideRoutes = ({ rideController }) => {
   );
   router.patch(
     "/admin/drivers/:driverId/approval",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("rides"),
     validate(Joi.object({ driverId: id.required() }), "params"),
     validate(Joi.object({ approved: Joi.boolean().required(), rejectionReason: Joi.string().trim().max(500).allow(null).optional() })),
     rideController.adminSetDriverApproval
   );
   router.get(
     "/admin/trips",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("rides"),
     validate(
       Joi.object({
         status: Joi.string().trim().max(40).optional(),
@@ -166,10 +166,10 @@ export const buildRideRoutes = ({ rideController }) => {
     ),
     rideController.adminListTrips
   );
-  router.get("/admin/settings", requireAuth([Roles.ADMIN]), rideController.getRideSettings);
+  router.get("/admin/settings", requireAuth([Roles.ADMIN]), requirePermission("rides"), rideController.getRideSettings);
   router.put(
     "/admin/settings",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("rides"),
     validate(
       Joi.object({
         vehicleType: vehicleType.required(),

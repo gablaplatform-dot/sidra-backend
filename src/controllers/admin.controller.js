@@ -93,6 +93,22 @@ export class AdminController {
     }
   };
 
+  listRefunds = async (_req, res, next) => {
+    try {
+      res.status(200).json({ data: await this.adminService.listRefundQueue() });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  resolveRefund = async (req, res, next) => {
+    try {
+      res.status(200).json({ data: await this.adminService.resolveRefund({ adminUserId: req.user.id, transactionId: req.params.transactionId, note: req.body.note, skipReversal: Boolean(req.body.skipReversal) }) });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   listServiceCategories = async (req, res, next) => {
     try {
       res.status(200).json({ data: await this.adminService.listProductCategories({ kind: "service" }) });

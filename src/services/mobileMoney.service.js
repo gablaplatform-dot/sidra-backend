@@ -4,6 +4,9 @@ import { env } from "../config/env.js";
 // Wraps the devpay/hive mobile money gateway (https://hive-sooty-eight.vercel.app).
 // Deposits are async: this call only tells us the USSD prompt was sent — the real
 // success/failure lands later on our webhook. Withdrawals respond synchronously.
+// True when a payout error doesn't tell us whether the money moved (timeout, dropped connection, gateway 5xx).
+export const isAmbiguousPayoutError = (error) => error?.details?.ambiguous === true;
+
 export class MobileMoneyService {
   assertConfigured() {
     if (!env.mobileMoneyApiKey || !env.mobileMoneyApiPassword) {
@@ -21,14 +24,16 @@ export class MobileMoneyService {
       response = await fetch(`${env.mobileMoneyBaseUrl}${path}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(25000)
       });
     } catch (networkError) {
+      // A timeout or dropped connection may happen after the gateway already acted, so the outcome is unknown.
       throw new AppError({
         message: "Unable to reach the mobile money gateway",
         statusCode: 502,
         code: "MOBILE_MONEY_UNREACHABLE",
-        details: { error: networkError.message }
+        details: { error: networkError.message, ambiguous: true }
       });
     }
 
@@ -82,7 +87,8 @@ export class MobileMoneyService {
         message: result.data?.message || "The mobile money payout failed",
         statusCode: 502,
         code: "MOBILE_MONEY_WITHDRAWAL_FAILED",
-        details: result.data
+        // A clear refusal (4xx) means no money left; a server error (5xx) might have happened anyway.
+        details: { ...(result.data ?? {}), ambiguous: result.status >= 500 }
       });
     }
 

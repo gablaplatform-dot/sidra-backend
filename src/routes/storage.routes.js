@@ -26,7 +26,7 @@ export const buildStorageRoutes = ({ storageController }) => {
     validate(
       Joi.object({
         key: Joi.string().trim().max(1000).required(),
-        url: Joi.string().uri().max(2000).required(),
+        url: Joi.string().uri({ scheme: ["http", "https"] }).max(2000).required(),
         providerId: Joi.string().trim().min(1).max(64).allow(null).optional(),
         mimeType: Joi.string().trim().max(120).allow(null).optional(),
         size: Joi.number().integer().min(0).allow(null).optional(),

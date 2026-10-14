@@ -11,7 +11,7 @@ const date = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/);
 const time = Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/);
 const money = Joi.number().min(0).max(100000000);
 const phone = Joi.string().trim().min(7).max(20);
-const url = Joi.string().uri().max(1000).allow(null, "");
+const url = Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null, "");
 
 const stop = Joi.object({ name: Joi.string().trim().max(80).required(), offsetMinutes: Joi.number().integer().min(0).max(2000).optional() });
 const ticketTypeInput = Joi.object({ name: Joi.string().trim().max(60).required(), price: money.required(), description: Joi.string().trim().max(200).allow("").optional() });

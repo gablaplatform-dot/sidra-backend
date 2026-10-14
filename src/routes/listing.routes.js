@@ -1,6 +1,7 @@
 import { Router } from "express";
 import Joi from "joi";
 
+import { boundedAnswers } from "../utils/validators.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { Roles, ServiceProductType } from "../constants/enums.js";
@@ -9,8 +10,8 @@ import { UGANDA_DISTRICTS } from "../constants/ugandaDistricts.js";
 export const buildListingRoutes = ({ listingController }) => {
   const router = Router();
   const mediaSchema = Joi.object({
-    imageUrl: Joi.string().uri().max(1000).allow(null).optional(),
-    gallery: Joi.array().items(Joi.string().uri().max(1000)).max(40).optional()
+    imageUrl: Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null).optional(),
+    gallery: Joi.array().items(Joi.string().uri({ scheme: ["http", "https"] }).max(1000)).max(40).optional()
   });
   const id = Joi.string().trim().min(1).max(64);
   const sortOptions = ["newest", "price_asc", "price_desc", "bestsellers", "featured"];
@@ -166,7 +167,7 @@ export const buildListingRoutes = ({ listingController }) => {
         booking: Joi.object().unknown(true).optional(),
         shopCategoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
-        customFields: Joi.object().unknown(true).optional(),
+        customFields: boundedAnswers().optional(),
         featured: Joi.boolean().optional(),
         onlinePaymentEnabled: Joi.boolean().optional(),
         ...enrichmentFields
@@ -191,7 +192,7 @@ export const buildListingRoutes = ({ listingController }) => {
         booking: Joi.object().unknown(true).optional(),
         shopCategoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
-        customFields: Joi.object().unknown(true).optional(),
+        customFields: boundedAnswers().optional(),
         featured: Joi.boolean().optional(),
         onlinePaymentEnabled: Joi.boolean().optional(),
         ...enrichmentFields

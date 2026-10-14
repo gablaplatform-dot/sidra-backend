@@ -24,6 +24,7 @@ import { ListingService } from "./services/listing.service.js";
 import { ListingController } from "./controllers/listing.controller.js";
 import { ServiceCategoryService } from "./services/serviceCategory.service.js";
 import { AdminSettingsService } from "./services/adminSettings.service.js";
+import { runMaintenance } from "./jobs/maintenance.js";
 import { ServiceBookingService } from "./services/serviceBooking.service.js";
 import { ContactGuardService } from "./services/ai/contactGuard.service.js";
 import { AiSettingsService } from "./services/ai/aiSettings.service.js";
@@ -180,6 +181,8 @@ export const buildApp = () => {
   paymentService.attachBusBooking(busBookingService);
   paymentService.attachServiceBooking(serviceBookingService);
   const busOperationsService = new BusOperationsService({ emailService: busEmailService, catalogService: busCatalogService, bookingService: busBookingService });
+
+  app.locals.runMaintenance = () => runMaintenance({ serviceBookingService });
 
   app.use(
     "/api/v1",

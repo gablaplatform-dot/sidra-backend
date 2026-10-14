@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { prisma } from "../config/db.js";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/AppError.js";
+import { flagRefundDue } from "../utils/refunds.js";
 import { addDaysToDateString, eatDateString, eatTimeString, eatToUtc, isDateString, isTimeString, todayEat } from "../utils/busTime.js";
 
 const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
@@ -346,6 +347,11 @@ export class ServiceBookingService {
       extra.payBy = new Date(Date.now() + hours * HOUR_MS);
     }
     if ((action === "decline" || action === "cancel") && booking.paymentStatus !== "paid") extra.paymentStatus = "none";
+    // Cancelling a booking the guest already paid for sends the payment to the refund queue.
+    if (action === "cancel" && booking.paymentStatus === "paid") {
+      extra.paymentStatus = "refund_pending";
+      if (booking.transactionId) await flagRefundDue({ transactionId: booking.transactionId, reason: "booking_cancelled_by_provider", needsReversal: true });
+    }
     await prisma.serviceBooking.update({
       where: { id },
       data: { status: rule.to, providerNote: cleanNote, respondedAt: new Date(), ...extra, ...(action === "cancel" ? { cancelledBy: "provider" } : {}) }
@@ -359,7 +365,9 @@ export class ServiceBookingService {
     const booking = await prisma.serviceBooking.findFirst({ where: { id, userId } });
     if (!booking) throw err("Booking not found", "BOOKING_NOT_FOUND", 404);
     if (!HOLDING.includes(booking.status)) throw err(`This booking is already ${booking.status}.`, "INVALID_STATUS", 409);
-    await prisma.serviceBooking.update({ where: { id }, data: { status: "cancelled", cancelledBy: "customer", respondedAt: new Date(), ...(booking.paymentStatus === "paid" ? {} : { paymentStatus: "none" }) } });
+    await prisma.serviceBooking.update({ where: { id }, data: { status: "cancelled", cancelledBy: "customer", respondedAt: new Date(), paymentStatus: booking.paymentStatus === "paid" ? "refund_pending" : "none" } });
+    // The guest cancelled after paying: whether and how much to return follows the cancellation policy, so it's queued for a person to decide.
+    if (booking.paymentStatus === "paid" && booking.transactionId) await flagRefundDue({ transactionId: booking.transactionId, reason: "booking_cancelled_by_guest", needsReversal: true });
     this._notify("cancelled_by_customer", id).catch(() => {});
     return this.toDto(await this._load(id), { viewer: "customer" });
   }

@@ -2,9 +2,36 @@ import { AppError } from "../utils/AppError.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 import { env } from "../config/env.js";
 import { prisma } from "../config/db.js";
+import { Roles } from "../constants/enums.js";
+
+const SESSION_ROLES = new Set(Object.values(Roles));
+
+// A session token has a user id and a role and no `purpose`. One-off links (onboarding, admin invites)
+// are signed with the same secret but are not sessions and must never work as one.
+const sessionFrom = (payload) => {
+  if (!payload || typeof payload.sub !== "string" || !payload.sub) return null;
+  if (payload.purpose) return null;
+  if (!SESSION_ROLES.has(payload.role)) return null;
+  return { id: payload.sub, role: payload.role, roleId: payload.roleId ?? null };
+};
+
+// Suspending or deactivating an account must stop it working now, not when its token expires. The flag is
+// re-read from the user row, with a short cache so this is not a query on every request.
+const ACTIVE_TTL_MS = 15 * 1000;
+const activeCache = new Map();
+export const forgetUserActive = (userId) => activeCache.delete(String(userId));
+const isUserActive = async (userId) => {
+  const hit = activeCache.get(userId);
+  if (hit && Date.now() - hit.at < ACTIVE_TTL_MS) return hit.active;
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { isActive: true } });
+  const active = Boolean(user) && user.isActive !== false;
+  if (activeCache.size > 5000) activeCache.clear();
+  activeCache.set(userId, { active, at: Date.now() });
+  return active;
+};
 
 export const requireAuth = (allowedRoles = []) => {
-  return (req, _res, next) => {
+  return async (req, _res, next) => {
     const header = req.headers.authorization ?? "";
     const [scheme, token] = header.split(" ");
 
@@ -12,18 +39,27 @@ export const requireAuth = (allowedRoles = []) => {
       return next(new AppError({ message: "Unauthorized", statusCode: 401, code: "UNAUTHORIZED" }));
     }
 
+    let session;
     try {
-      const payload = verifyAccessToken({ token, secret: env.jwtSecret, issuer: env.jwtIssuer });
-      req.user = { id: payload.sub, role: payload.role, roleId: payload.roleId ?? null };
-
-      if (allowedRoles.length && !allowedRoles.includes(req.user.role)) {
-        return next(new AppError({ message: "Forbidden", statusCode: 403, code: "FORBIDDEN" }));
-      }
-
-      next();
+      session = sessionFrom(verifyAccessToken({ token, secret: env.jwtSecret, issuer: env.jwtIssuer }));
     } catch {
-      next(new AppError({ message: "Unauthorized", statusCode: 401, code: "UNAUTHORIZED" }));
+      session = null;
     }
+    if (!session) return next(new AppError({ message: "Unauthorized", statusCode: 401, code: "UNAUTHORIZED" }));
+
+    try {
+      if (!(await isUserActive(session.id))) {
+        return next(new AppError({ message: "This account is not active.", statusCode: 403, code: "ACCOUNT_INACTIVE" }));
+      }
+    } catch (error) {
+      return next(error);
+    }
+
+    req.user = session;
+    if (allowedRoles.length && !allowedRoles.includes(req.user.role)) {
+      return next(new AppError({ message: "Forbidden", statusCode: 403, code: "FORBIDDEN" }));
+    }
+    next();
   };
 };
 
@@ -34,8 +70,8 @@ export const optionalAuth = () => {
     if (scheme !== "Bearer" || !token) return next();
 
     try {
-      const payload = verifyAccessToken({ token, secret: env.jwtSecret, issuer: env.jwtIssuer });
-      req.user = { id: payload.sub, role: payload.role, roleId: payload.roleId ?? null };
+      const session = sessionFrom(verifyAccessToken({ token, secret: env.jwtSecret, issuer: env.jwtIssuer }));
+      if (session) req.user = session;
     } catch {
       // Public endpoints still work without a valid optional token.
     }

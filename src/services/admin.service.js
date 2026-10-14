@@ -1,5 +1,6 @@
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
+import { forgetUserActive } from "../middlewares/auth.middleware.js";
 import { PaymentService } from "./payment.service.js";
 import { TransactionService } from "./transaction.service.js";
 import { AdminRoleService } from "./adminRole.service.js";
@@ -157,12 +158,18 @@ export class AdminService {
 
   async setUserStatus({ userId, isActive }) {
     let user;
+    // Admin accounts are managed from the Admins screen, where the "keep one Super Admin" rules apply.
+    const target = await prisma.user.findUnique({ where: { id: objectId(userId, "INVALID_USER_ID") }, select: { role: true } });
+    if (target?.role === "admin") {
+      throw new AppError({ message: "Admin accounts are managed under Admins & roles.", statusCode: 403, code: "USE_ADMIN_SCREEN" });
+    }
     try {
       user = await prisma.user.update({ where: { id: objectId(userId, "INVALID_USER_ID") }, data: { isActive: Boolean(isActive) } });
     } catch (e) {
       if (e?.code === "P2025") throw new AppError({ message: "User not found", statusCode: 404, code: "USER_NOT_FOUND" });
       throw e;
     }
+    forgetUserActive(user.id);
     return this.userDto(user);
   }
 
@@ -508,6 +515,14 @@ export class AdminService {
   // Everything that moves money into or out of the platform wallet. Most of these (contact unlocks,
   // subscriptions, order, ride and bus fees) are recorded against the PROVIDER they relate to, so they
   // are found by type, not by "no provider". Only platform withdrawals have no provider.
+  async listRefundQueue() {
+    return this.paymentService.listRefundQueue();
+  }
+
+  async resolveRefund(args) {
+    return this.paymentService.resolveRefund(args);
+  }
+
   async listPlatformWalletTransactions(query) {
     const { type, ...rest } = query;
     const types = type ? PLATFORM_LEDGER_TYPES.filter((t) => t === type) : PLATFORM_LEDGER_TYPES;
@@ -793,6 +808,7 @@ export class AdminService {
     }
 
     const updated = await prisma.user.update({ where: { id: user.id }, data: update, include: { adminRole: true } });
+    forgetUserActive(user.id);
 
     if (willDeactivate || patch.isActive === true) {
       await prisma.auditLog.create({

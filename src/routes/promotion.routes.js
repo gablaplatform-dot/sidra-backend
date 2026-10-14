@@ -1,8 +1,9 @@
 import { Router } from "express";
 import Joi from "joi";
 
+import { linkTarget } from "../utils/validators.js";
 import { validate } from "../middlewares/validate.middleware.js";
-import { requireAuth } from "../middlewares/auth.middleware.js";
+import { requireAuth, requirePermission } from "../middlewares/auth.middleware.js";
 import { PromotionType, Roles } from "../constants/enums.js";
 import { UGANDA_DISTRICTS } from "../constants/ugandaDistricts.js";
 
@@ -12,10 +13,10 @@ export const buildPromotionRoutes = ({ promotionController }) => {
   const adMediaFields = {
     title: Joi.string().trim().max(200),
     subtitle: Joi.string().trim().max(500).allow(null),
-    imageUrl: Joi.string().uri().max(1000).allow(null),
-    videoUrl: Joi.string().uri().max(1000).allow(null),
+    imageUrl: Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null),
+    videoUrl: Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null),
     ctaLabel: Joi.string().trim().max(120).allow(null),
-    ctaHref: Joi.string().trim().max(500).allow(null),
+    ctaHref: linkTarget(500).allow(null),
     startsAt: Joi.date().allow(null),
     endsAt: Joi.date().allow(null)
   };
@@ -102,7 +103,7 @@ export const buildPromotionRoutes = ({ promotionController }) => {
 
   router.get(
     "/admin",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("promotions"),
     validate(
       Joi.object({
         page: Joi.number().integer().min(1).optional(),
@@ -123,7 +124,7 @@ export const buildPromotionRoutes = ({ promotionController }) => {
 
   router.post(
     "/",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("promotions"),
     validate(
       Joi.object({
         title: Joi.string().trim().max(200).required(),
@@ -132,9 +133,9 @@ export const buildPromotionRoutes = ({ promotionController }) => {
         startsAt: Joi.date().allow(null).optional(),
         endsAt: Joi.date().allow(null).optional(),
         discountPercent: Joi.number().integer().min(1).max(100).allow(null).optional(),
-        imageUrl: Joi.string().uri().max(1000).allow(null).optional(),
+        imageUrl: Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null).optional(),
         ctaLabel: Joi.string().trim().max(120).allow(null).optional(),
-        ctaHref: Joi.string().trim().max(500).allow(null).optional(),
+        ctaHref: linkTarget(500).allow(null).optional(),
         listingIds: Joi.array().items(Joi.string().trim().max(64)).optional(),
         categoryId: id.allow(null).optional(),
         providerId: id.allow(null).optional(),
@@ -149,7 +150,7 @@ export const buildPromotionRoutes = ({ promotionController }) => {
 
   router.patch(
     "/:promotionId",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("promotions"),
     validate(
       Joi.object({
         title: Joi.string().trim().max(200).optional(),
@@ -158,9 +159,9 @@ export const buildPromotionRoutes = ({ promotionController }) => {
         startsAt: Joi.date().allow(null).optional(),
         endsAt: Joi.date().allow(null).optional(),
         discountPercent: Joi.number().integer().min(1).max(100).allow(null).optional(),
-        imageUrl: Joi.string().uri().max(1000).allow(null).optional(),
+        imageUrl: Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null).optional(),
         ctaLabel: Joi.string().trim().max(120).allow(null).optional(),
-        ctaHref: Joi.string().trim().max(500).allow(null).optional(),
+        ctaHref: linkTarget(500).allow(null).optional(),
         listingIds: Joi.array().items(Joi.string().trim().max(64)).optional(),
         categoryId: id.allow(null).optional(),
         providerId: id.allow(null).optional(),
@@ -175,7 +176,7 @@ export const buildPromotionRoutes = ({ promotionController }) => {
 
   router.delete(
     "/:promotionId",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("promotions"),
     validate(Joi.object({ promotionId: id.required() }), "params"),
     promotionController.remove
   );

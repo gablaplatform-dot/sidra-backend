@@ -67,12 +67,4 @@ export class AuthController {
     }
   };
 
-  bootstrapAdmin = async (req, res, next) => {
-    try {
-      const result = await this.authService.bootstrapAdmin(req.body);
-      res.status(201).json({ data: result });
-    } catch (e) {
-      next(e);
-    }
-  };
 }

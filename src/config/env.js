@@ -37,6 +37,9 @@ export const env = {
   mobileMoneyBaseUrl: (process.env.MOBILE_MONEY_BASE_URL ?? "https://hive-sooty-eight.vercel.app").replace(/\/$/, ""),
   mobileMoneyApiKey: process.env.MOBILE_MONEY_API_KEY ?? "",
   mobileMoneyApiPassword: process.env.MOBILE_MONEY_API_PASSWORD ?? "",
+  // When true, payment callbacks without the secret key are refused. Leave off until one real payment has been
+  // confirmed with the keyed URLs, then switch it on (until then a missing or wrong key is only logged).
+  mobileMoneyWebhookEnforce: String(process.env.MOBILE_MONEY_WEBHOOK_ENFORCE ?? "").toLowerCase() === "true",
   // Server-side key for the Google Routes API (real road distance/duration/polyline for ride
   // fares and navigation). Falls back to a straight-line estimate wherever this is unset or the
   // API call fails, so it's safe to leave empty until Routes API is enabled for the key.

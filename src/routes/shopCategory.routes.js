@@ -8,7 +8,7 @@ import { Roles } from "../constants/enums.js";
 export const buildShopCategoryRoutes = ({ shopCategoryController }) => {
   const router = Router();
   const id = Joi.string().trim().min(1).max(64);
-  const imageUrlField = Joi.string().uri().max(1000).allow(null).optional();
+  const imageUrlField = Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null).optional();
 
   router.get("/mine", requireAuth([Roles.PROVIDER]), shopCategoryController.listMine);
   router.get(

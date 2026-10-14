@@ -44,12 +44,12 @@ export const buildAuthRoutes = ({ authController }) => {
     phone: Joi.string().trim().max(32).allow(null).optional(),
     whatsapp: Joi.string().trim().max(32).allow(null).optional(),
     email: Joi.string().email().max(254).allow(null).optional(),
-    website: Joi.string().uri().max(500).allow(null).optional()
+    website: Joi.string().uri({ scheme: ["http", "https"] }).max(500).allow(null).optional()
   });
   const mediaSchema = Joi.object({
-    avatarUrl: Joi.string().uri().max(1000).allow(null).optional(),
-    coverUrl: Joi.string().uri().max(1000).allow(null).optional(),
-    gallery: Joi.array().items(Joi.string().uri().max(1000)).max(40).optional()
+    avatarUrl: Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null).optional(),
+    coverUrl: Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null).optional(),
+    gallery: Joi.array().items(Joi.string().uri({ scheme: ["http", "https"] }).max(1000)).max(40).optional()
   });
 
   router.post("/register/user", validate(registerUserSchema), authController.registerUser);
@@ -78,7 +78,7 @@ export const buildAuthRoutes = ({ authController }) => {
       Joi.object({
         name: Joi.string().trim().max(200).optional(),
         phone: Joi.string().trim().max(32).allow(null, "").optional(),
-        avatarUrl: Joi.string().uri().max(1000).allow(null).optional(),
+        avatarUrl: Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null).optional(),
         profile: Joi.object({
           district: Joi.string().valid(...UGANDA_DISTRICTS).allow(null, "").optional(),
           onboarded: Joi.boolean().optional()
@@ -89,18 +89,5 @@ export const buildAuthRoutes = ({ authController }) => {
     ),
     authController.updateMe
   );
-  router.post(
-    "/bootstrap/admin",
-    validate(
-      Joi.object({
-        name: Joi.string().trim().max(200).required(),
-        email: Joi.string().email().max(254).required(),
-        phone: Joi.string().max(32).optional(),
-        password: Joi.string().min(8).max(128).required()
-      })
-    ),
-    authController.bootstrapAdmin
-  );
-
   return router;
 };

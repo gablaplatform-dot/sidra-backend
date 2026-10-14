@@ -230,6 +230,14 @@ export const buildAdminDataRoutes = ({ adminController }) => {
     validate(Joi.object({ note: Joi.string().trim().max(2000).allow(null).optional() })),
     adminController.markWithdrawalPaid
   );
+  router.get("/refunds", requirePermission("wallets"), adminController.listRefunds);
+  router.post(
+    "/refunds/:transactionId/resolve",
+    requirePermission("wallets"),
+    validate(Joi.object({ transactionId: id.required() }), "params"),
+    validate(Joi.object({ note: Joi.string().trim().max(2000).allow(null, "").optional(), skipReversal: Joi.boolean().optional() })),
+    adminController.resolveRefund
+  );
   router.get("/subscriptions", requirePermission("subscriptions"), adminController.listSubscriptions);
   router.get(
     "/reviews",

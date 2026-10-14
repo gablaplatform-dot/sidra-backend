@@ -6,10 +6,11 @@ import { prisma } from "../config/db.js";
 import { env } from "../config/env.js";
 import { WalletService } from "./wallet.service.js";
 import { TransactionService } from "./transaction.service.js";
-import { MobileMoneyService } from "./mobileMoney.service.js";
+import { MobileMoneyService, isAmbiguousPayoutError } from "./mobileMoney.service.js";
 import { RideDriverWalletService } from "./rideDriverWallet.service.js";
 import { OrderNotificationService } from "./orderNotification.service.js";
 import { parseMoneyToCents, centsToDecimal, feeFromPercentCents } from "../utils/money.js";
+import { flagRefundDue } from "../utils/refunds.js";
 
 const SUBSCRIPTION_PERIOD_DAYS = 30;
 
@@ -46,10 +47,23 @@ export class PaymentService {
     this.serviceBookingService = serviceBookingService;
   }
 
+  // The gateway posts payment results to these URLs. They carry a secret key (derived from JWT_SECRET) so that a
+  // stranger who learns a transaction reference can't post a fake "paid" result; see verifyWebhookKey.
+  webhookKey() {
+    return crypto.createHmac("sha256", env.jwtSecret).update("mobile-money-webhook").digest("hex").slice(0, 40);
+  }
+
+  verifyWebhookKey(presented) {
+    const expected = Buffer.from(this.webhookKey());
+    const got = Buffer.from(String(presented ?? ""));
+    return got.length === expected.length && crypto.timingSafeEqual(got, expected);
+  }
+
   mobileMoneyCallbackUrls() {
+    const key = this.webhookKey();
     return {
-      successUrl: `${env.apiBaseUrl}/api/v1/payments/webhooks/mobilemoney/success`,
-      failedUrl: `${env.apiBaseUrl}/api/v1/payments/webhooks/mobilemoney/failed`
+      successUrl: `${env.apiBaseUrl}/api/v1/payments/webhooks/mobilemoney/success?k=${key}`,
+      failedUrl: `${env.apiBaseUrl}/api/v1/payments/webhooks/mobilemoney/failed?k=${key}`
     };
   }
 
@@ -545,7 +559,9 @@ export class PaymentService {
       if (!transaction) {
         return { ok: false, reason: "unknown_reference" };
       }
-      if (transaction.status !== "pending") {
+      // A payment the gateway later confirms still counts after we marked it failed (a timeout can fail a
+      // request that the gateway had in fact accepted), so "failed" is a valid state to succeed from.
+      if (transaction.status !== "pending" && transaction.status !== "failed") {
         return { ok: true, reason: "already_processed" };
       }
 
@@ -554,39 +570,60 @@ export class PaymentService {
         msisdn: payload.msisdn ?? null,
         payerNames: payload.payer_names ?? null,
         payerEmail: payload.payer_email ?? null,
-        dateTime: payload.date_time ?? null
+        dateTime: payload.date_time ?? null,
+        webhookPayload: JSON.stringify(payload).slice(0, 1500),
+        ...(transaction.status === "failed" ? { lateSuccess: true } : {})
       };
 
-      await tx.transaction.update({
-        where: { id: transaction.id },
+      // Claimed with a conditional update, so two deliveries of the same callback can't both credit.
+      const claim = await tx.transaction.updateMany({
+        where: { id: transaction.id, status: { in: ["pending", "failed"] } },
         data: { status: "succeeded", metadata: { ...(transaction.metadata ?? {}), ...networkMetadata } }
       });
+      if (claim.count === 0) return { ok: true, reason: "already_processed" };
+
+      // A paid amount that doesn't match what we asked for is held for a person to look at, not passed on.
+      const reportedAmount = Number(payload.amount ?? payload.amount_paid ?? payload.paid_amount);
+      if (Number.isFinite(reportedAmount) && reportedAmount > 0 && Math.round(reportedAmount) !== Math.round(Number(transaction.amount))) {
+        await flagRefundDue({ db: tx, transactionId: transaction.id, reason: `amount_mismatch: paid ${reportedAmount}, expected ${transaction.amount}` });
+        return { ok: true, transactionId: transaction.id, type: transaction.type, held: true };
+      }
 
       if (transaction.type === "purchase") {
-        if (transaction.providerId) {
-          await this.walletService.creditBalance({ providerId: transaction.providerId, amountDec: transaction.netAmount, session: tx });
-        }
-        if (Number(transaction.fee) > 0) {
-          await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
-        }
-
-        // Paying an order the seller already accepted: mark that order paid.
+        // Paying an order the seller accepted: apply it only while the order is still payable; otherwise the
+        // money is held and queued for a refund rather than credited to the seller.
         const payingOrderId = transaction.metadata?.orderId;
         if (payingOrderId) {
           const order = await tx.order.findUnique({ where: { id: payingOrderId }, include: { items: true } });
-          if (order && !order.transactionId) {
-            await tx.order.update({
-              where: { id: order.id },
-              data: {
-                transactionId: transaction.id,
-                fee: transaction.fee,
-                metadata: { ...(order.metadata ?? {}), paymentMethod: "online", paymentStatus: "paid", paidAt: new Date().toISOString() }
-              }
-            });
-            for (const item of order.items) {
-              if (item.listingId) await tx.serviceProduct.update({ where: { id: item.listingId }, data: { soldCount: { increment: item.quantity } } });
+          const payable = order && !order.transactionId && order.status === "accepted" && order.metadata?.paymentStatus === "payable";
+          if (!payable) {
+            await flagRefundDue({ db: tx, transactionId: transaction.id, reason: !order ? "order_missing" : order.transactionId ? "order_already_paid" : `order_${order.status}` });
+            return { ok: true, transactionId: transaction.id, type: transaction.type, held: true };
+          }
+          if (transaction.providerId) {
+            await this.walletService.creditBalance({ providerId: transaction.providerId, amountDec: transaction.netAmount, session: tx });
+          }
+          if (Number(transaction.fee) > 0) {
+            await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
+          }
+          await tx.order.update({
+            where: { id: order.id },
+            data: {
+              transactionId: transaction.id,
+              fee: transaction.fee,
+              metadata: { ...(order.metadata ?? {}), paymentMethod: "online", paymentStatus: "paid", paidAt: new Date().toISOString() }
             }
-            paidOrderIds.push(order.id);
+          });
+          for (const item of order.items) {
+            if (item.listingId) await tx.serviceProduct.update({ where: { id: item.listingId }, data: { soldCount: { increment: item.quantity } } });
+          }
+          paidOrderIds.push(order.id);
+        } else {
+          if (transaction.providerId) {
+            await this.walletService.creditBalance({ providerId: transaction.providerId, amountDec: transaction.netAmount, session: tx });
+          }
+          if (Number(transaction.fee) > 0) {
+            await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
           }
         }
       } else if (transaction.type === "contact_unlock") {
@@ -695,19 +732,24 @@ export class PaymentService {
         }
       } else if (transaction.type === "service_booking") {
         const bookingId = transaction.metadata?.bookingId;
+        const booking = bookingId ? await tx.serviceBooking.findUnique({ where: { id: bookingId } }) : null;
+        // Only a booking that is still confirmed and waiting for payment takes the money. A cancelled or expired
+        // booking, or one already paid, holds it for a refund instead of crediting the provider.
+        if (!booking || booking.status !== "confirmed" || booking.paymentStatus !== "payable") {
+          await flagRefundDue({ db: tx, transactionId: transaction.id, reason: !booking ? "booking_missing" : booking.paymentStatus === "paid" ? "booking_already_paid" : `booking_${booking.status}` });
+          return { ok: true, transactionId: transaction.id, type: transaction.type, held: true };
+        }
         if (transaction.providerId) {
           await this.walletService.creditBalance({ providerId: transaction.providerId, amountDec: transaction.netAmount, session: tx });
         }
         if (Number(transaction.fee) > 0) {
           await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
         }
-        if (bookingId) {
-          await tx.serviceBooking.update({
-            where: { id: bookingId },
-            data: { paymentStatus: "paid", amountPaid: transaction.amount, paidAt: new Date(), transactionId: transaction.id, payBy: null }
-          });
-          paidBookingIds.push(bookingId);
-        }
+        await tx.serviceBooking.update({
+          where: { id: bookingId },
+          data: { paymentStatus: "paid", amountPaid: transaction.amount, paidAt: new Date(), transactionId: transaction.id, payBy: null }
+        });
+        paidBookingIds.push(bookingId);
       } else if (transaction.type === "ride_trip") {
         const tripId = transaction.metadata?.tripId;
         const trip = tripId ? await tx.rideTrip.findUnique({ where: { id: tripId } }) : null;
@@ -722,6 +764,7 @@ export class PaymentService {
       } else if (transaction.type === "bus_ticket" && this.busBookingService) {
         const outcome = await this.busBookingService.confirmPayment({ tx, transaction, walletService: this.walletService });
         if (outcome?.confirmed) busBookingToEmail = outcome.bookingId;
+        if (outcome?.refundDue) await flagRefundDue({ db: tx, transactionId: transaction.id, reason: "bus_seats_gone" });
       }
 
       return { ok: true, transactionId: transaction.id, type: transaction.type };
@@ -762,7 +805,8 @@ export class PaymentService {
       return { ok: true, reason: "already_processed" };
     }
 
-    await prisma.transaction.update({ where: { id: transaction.id }, data: { status: "failed" } });
+    const moved = await prisma.transaction.updateMany({ where: { id: transaction.id, status: "pending" }, data: { status: "failed" } });
+    if (moved.count === 0) return { ok: true, reason: "already_processed" };
     if (transaction.type === "bus_ticket" && this.busBookingService) {
       await this.busBookingService.failPayment(transaction);
     }
@@ -852,10 +896,11 @@ export class PaymentService {
     });
   }
 
-  // Approving a withdrawal pays it out immediately: the gateway's withdraw call responds
-  // synchronously (no webhook), so we mark it approved first (so it can't be approved twice
-  // concurrently), attempt the real payout, and land on "paid" or roll back to "rejected"
-  // based on that one response.
+  // Approving a withdrawal pays it out immediately: the gateway's withdraw call responds synchronously (no
+  // webhook). The request is CLAIMED first with a conditional update, so two clicks or two admins can never
+  // both pay it. A clear refusal from the gateway puts the money back; if the outcome is unknown (timeout,
+  // dropped connection, gateway error) the request is parked as "payout_unknown" for a person to settle,
+  // because refunding the wallet after a payout that did go through would pay the provider twice.
   async adminApproveWithdrawal({ adminUserId, withdrawalRequestId, note }) {
     if (!withdrawalRequestId) {
       throw new AppError({ message: "Invalid withdrawalRequestId", statusCode: 400, code: "INVALID_WITHDRAWAL_ID" });
@@ -866,7 +911,7 @@ export class PaymentService {
       throw new AppError({ message: "Withdrawal not found", statusCode: 404, code: "WITHDRAWAL_NOT_FOUND" });
     }
     if (reqDoc.status !== "requested") {
-      throw new AppError({ message: "Invalid state", statusCode: 409, code: "INVALID_WITHDRAWAL_STATE" });
+      throw new AppError({ message: "This withdrawal has already been handled.", statusCode: 409, code: "INVALID_WITHDRAWAL_STATE" });
     }
 
     const provider = await prisma.provider.findUnique({ where: { id: reqDoc.providerId } });
@@ -875,10 +920,13 @@ export class PaymentService {
       throw new AppError({ message: "This provider has no phone number on file for payout", statusCode: 400, code: "PROVIDER_PHONE_MISSING" });
     }
 
-    await prisma.withdrawalRequest.update({
-      where: { id: withdrawalRequestId },
+    const claim = await prisma.withdrawalRequest.updateMany({
+      where: { id: withdrawalRequestId, status: "requested" },
       data: { status: "approved", approvedBy: adminUserId, approvedAt: new Date(), ...(note !== undefined ? { note } : {}) }
     });
+    if (claim.count === 0) {
+      throw new AppError({ message: "This withdrawal has already been handled.", statusCode: 409, code: "INVALID_WITHDRAWAL_STATE" });
+    }
 
     try {
       await this.mobileMoneyService.initiateWithdrawal({
@@ -888,28 +936,40 @@ export class PaymentService {
         userId: reqDoc.providerId
       });
     } catch (payoutError) {
+      if (isAmbiguousPayoutError(payoutError)) {
+        await prisma.withdrawalRequest.updateMany({
+          where: { id: withdrawalRequestId, status: "approved" },
+          data: { status: "payout_unknown", note: "The payout may or may not have gone through. Check the gateway, then mark it paid or reject it." }
+        });
+        throw new AppError({
+          message: "The payout's outcome is unknown. Check the gateway balance and statement, then mark it paid or reject it here.",
+          statusCode: 502,
+          code: "PAYOUT_OUTCOME_UNKNOWN"
+        });
+      }
       await prisma.$transaction(async (tx) => {
-        await this.walletService.creditBalance({ providerId: reqDoc.providerId, amountDec: reqDoc.amount, session: tx });
-        await tx.transaction.update({ where: { id: reqDoc.transactionId }, data: { status: "failed" } });
-        await tx.withdrawalRequest.update({
-          where: { id: withdrawalRequestId },
+        const moved = await tx.withdrawalRequest.updateMany({
+          where: { id: withdrawalRequestId, status: "approved" },
           data: { status: "rejected", rejectedBy: adminUserId, rejectedAt: new Date(), note: `Payout failed: ${payoutError.message}` }
         });
+        if (moved.count === 0) return;
+        await this.walletService.creditBalance({ providerId: reqDoc.providerId, amountDec: reqDoc.amount, session: tx });
+        await tx.transaction.update({ where: { id: reqDoc.transactionId }, data: { status: "failed" } });
       });
       throw payoutError;
     }
 
     const updated = await prisma.$transaction(async (tx) => {
       await tx.transaction.update({ where: { id: reqDoc.transactionId }, data: { status: "succeeded" } });
-      return tx.withdrawalRequest.update({
-        where: { id: withdrawalRequestId },
-        data: { status: "paid", paidBy: adminUserId, paidAt: new Date() }
-      });
+      await tx.withdrawalRequest.updateMany({ where: { id: withdrawalRequestId, status: "approved" }, data: { status: "paid", paidBy: adminUserId, paidAt: new Date() } });
+      return tx.withdrawalRequest.findUnique({ where: { id: withdrawalRequestId } });
     });
 
     return { withdrawalRequestId: updated.id, status: updated.status };
   }
 
+  // A request can be rejected only while it is waiting, or after an unknown payout once someone has checked
+  // the gateway. Never while a payout is in flight.
   async adminRejectWithdrawal({ adminUserId, withdrawalRequestId, note }) {
     if (!withdrawalRequestId) {
       throw new AppError({ message: "Invalid withdrawalRequestId", statusCode: 400, code: "INVALID_WITHDRAWAL_ID" });
@@ -920,22 +980,22 @@ export class PaymentService {
       if (!reqDoc) {
         throw new AppError({ message: "Withdrawal not found", statusCode: 404, code: "WITHDRAWAL_NOT_FOUND" });
       }
-      if (reqDoc.status !== "requested" && reqDoc.status !== "approved") {
-        throw new AppError({ message: "Invalid state", statusCode: 409, code: "INVALID_WITHDRAWAL_STATE" });
+      const moved = await tx.withdrawalRequest.updateMany({
+        where: { id: withdrawalRequestId, status: { in: ["requested", "payout_unknown"] } },
+        data: { status: "rejected", rejectedBy: adminUserId, rejectedAt: new Date(), ...(note !== undefined ? { note } : {}) }
+      });
+      if (moved.count === 0) {
+        throw new AppError({ message: "This withdrawal can't be rejected in its current state.", statusCode: 409, code: "INVALID_WITHDRAWAL_STATE" });
       }
 
       await this.walletService.creditBalance({ providerId: reqDoc.providerId, amountDec: reqDoc.amount, session: tx });
       await tx.transaction.update({ where: { id: reqDoc.transactionId }, data: { status: "canceled" } });
 
-      const updated = await tx.withdrawalRequest.update({
-        where: { id: withdrawalRequestId },
-        data: { status: "rejected", rejectedBy: adminUserId, rejectedAt: new Date(), ...(note !== undefined ? { note } : {}) }
-      });
-
-      return { withdrawalRequestId: updated.id, status: updated.status };
+      return { withdrawalRequestId, status: "rejected" };
     });
   }
 
+  // For a payout that went through but whose result we never saw (unknown outcome, or a crash mid-approval).
   async adminMarkWithdrawalPaid({ adminUserId, withdrawalRequestId, note }) {
     if (!withdrawalRequestId) {
       throw new AppError({ message: "Invalid withdrawalRequestId", statusCode: 400, code: "INVALID_WITHDRAWAL_ID" });
@@ -946,18 +1006,84 @@ export class PaymentService {
       if (!reqDoc) {
         throw new AppError({ message: "Withdrawal not found", statusCode: 404, code: "WITHDRAWAL_NOT_FOUND" });
       }
-      if (reqDoc.status !== "approved") {
-        throw new AppError({ message: "Invalid state", statusCode: 409, code: "INVALID_WITHDRAWAL_STATE" });
+      const stuck = reqDoc.status === "approved" && reqDoc.approvedAt && reqDoc.approvedAt < new Date(Date.now() - 5 * 60 * 1000);
+      if (reqDoc.status !== "payout_unknown" && !stuck) {
+        throw new AppError({ message: "Only an unknown or stuck payout can be marked paid by hand.", statusCode: 409, code: "INVALID_WITHDRAWAL_STATE" });
       }
-
-      await tx.transaction.update({ where: { id: reqDoc.transactionId }, data: { status: "succeeded" } });
-
-      const updated = await tx.withdrawalRequest.update({
-        where: { id: withdrawalRequestId },
+      const moved = await tx.withdrawalRequest.updateMany({
+        where: { id: withdrawalRequestId, status: reqDoc.status },
         data: { status: "paid", paidBy: adminUserId, paidAt: new Date(), ...(note !== undefined ? { note } : {}) }
       });
+      if (moved.count === 0) {
+        throw new AppError({ message: "This withdrawal has already been handled.", statusCode: 409, code: "INVALID_WITHDRAWAL_STATE" });
+      }
+      await tx.transaction.update({ where: { id: reqDoc.transactionId }, data: { status: "succeeded" } });
+      return { withdrawalRequestId, status: "paid" };
+    });
+  }
 
-      return { withdrawalRequestId: updated.id, status: updated.status };
+  // Payments we hold but could not pass on, or that must go back after a cancellation. The actual money is returned
+  // outside the system (mobile money), then settled here.
+  async listRefundQueue() {
+    const rows = await prisma.transaction.findMany({
+      where: { status: "succeeded", type: { in: ["purchase", "service_booking", "bus_ticket", "contact_unlock", "subscription"] } },
+      orderBy: { createdAt: "desc" },
+      take: 1500,
+      include: { user: { select: { name: true, email: true, phone: true } }, provider: { select: { businessName: true } } }
+    });
+    const items = rows
+      .filter((t) => t.metadata?.refundDue && !t.metadata?.refundedAt)
+      .map((t) => ({
+        transactionId: t.id,
+        type: t.type,
+        amount: t.amount.toString(),
+        net: t.netAmount.toString(),
+        fee: t.fee.toString(),
+        reason: t.metadata.refundReason ?? "",
+        needsReversal: Boolean(t.metadata.needsReversal),
+        flaggedAt: t.metadata.refundFlaggedAt ?? t.updatedAt,
+        payerPhone: t.metadata.msisdn ?? t.metadata.phone ?? t.user?.phone ?? null,
+        payerName: t.metadata.payerNames ?? t.user?.name ?? null,
+        payerEmail: t.user?.email ?? null,
+        provider: t.provider?.businessName ?? null,
+        reference: t.reference
+      }));
+    return { items };
+  }
+
+  // Marks a refund as paid back. If the provider had been credited, that credit is taken back from their wallet
+  // first; when their balance is too low the admin must either wait or settle with the provider by hand (skipReversal).
+  async resolveRefund({ adminUserId, transactionId, note, skipReversal = false }) {
+    return prisma.$transaction(async (tx) => {
+      const transaction = await tx.transaction.findUnique({ where: { id: transactionId } });
+      if (!transaction || !transaction.metadata?.refundDue || transaction.metadata?.refundedAt) {
+        throw new AppError({ message: "This payment isn't waiting for a refund.", statusCode: 404, code: "REFUND_NOT_FOUND" });
+      }
+      if (transaction.metadata.needsReversal && !skipReversal) {
+        if (transaction.providerId && Number(transaction.netAmount) > 0) {
+          const debited = await this.walletService.debitBalance({ providerId: transaction.providerId, amountDec: transaction.netAmount, session: tx });
+          if (!debited) {
+            throw new AppError({ message: "The provider's wallet no longer holds this amount (they may have withdrawn it). Settle with them directly, then resolve with 'skip reversal'.", statusCode: 409, code: "PROVIDER_BALANCE_TOO_LOW" });
+          }
+        }
+        if (Number(transaction.fee) > 0) {
+          await this.walletService.debitBalance({ providerId: null, amountDec: transaction.fee, session: tx });
+        }
+      }
+      await tx.transaction.update({
+        where: { id: transaction.id },
+        data: { status: "refunded", metadata: { ...transaction.metadata, refundedAt: new Date().toISOString(), refundedBy: adminUserId, refundNote: note ?? null, reversalSkipped: Boolean(skipReversal) } }
+      });
+      const orderId = transaction.metadata?.orderId;
+      if (orderId) {
+        const order = await tx.order.findUnique({ where: { id: orderId } });
+        if (order) await tx.order.update({ where: { id: orderId }, data: { metadata: { ...(order.metadata ?? {}), paymentStatus: "refunded" } } });
+      }
+      const bookingId = transaction.metadata?.bookingId;
+      if (bookingId && transaction.type === "service_booking") {
+        await tx.serviceBooking.updateMany({ where: { id: bookingId, transactionId: transaction.id }, data: { paymentStatus: "refunded" } });
+      }
+      return { transactionId: transaction.id, status: "refunded" };
     });
   }
 
@@ -1029,7 +1155,7 @@ export class PaymentService {
     }
 
     const normalizedType = type ? String(type).toLowerCase() : null;
-    if (normalizedType && !["contact_unlock", "subscription", "purchase"].includes(normalizedType)) {
+    if (normalizedType && !["contact_unlock", "subscription", "purchase", "bus_ticket", "service_booking"].includes(normalizedType)) {
       throw new AppError({ message: "Invalid type", statusCode: 400, code: "INVALID_TYPE" });
     }
 
@@ -1075,6 +1201,12 @@ export class PaymentService {
         userId: "platform"
       });
     } catch (payoutError) {
+      if (isAmbiguousPayoutError(payoutError)) {
+        // Left pending with the wallet still debited: the money may have gone out. Settle it by hand.
+        const current = await prisma.transaction.findUnique({ where: { id: transactionId }, select: { metadata: true } });
+        await prisma.transaction.update({ where: { id: transactionId }, data: { metadata: { ...(current?.metadata ?? {}), payoutUnknown: true } } });
+        throw new AppError({ message: "The payout's outcome is unknown. Check the gateway statement before trying again.", statusCode: 502, code: "PAYOUT_OUTCOME_UNKNOWN" });
+      }
       await prisma.$transaction(async (tx) => {
         await this.walletService.creditBalance({ providerId: null, amountDec, session: tx });
         await tx.transaction.update({ where: { id: transactionId }, data: { status: "failed" } });

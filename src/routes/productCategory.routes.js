@@ -2,7 +2,7 @@ import { Router } from "express";
 import Joi from "joi";
 
 import { validate } from "../middlewares/validate.middleware.js";
-import { requireAuth } from "../middlewares/auth.middleware.js";
+import { requireAuth, requirePermission } from "../middlewares/auth.middleware.js";
 import { Roles } from "../constants/enums.js";
 import { buildFieldSchema } from "../constants/dynamicFieldSchema.js";
 
@@ -10,7 +10,7 @@ import { buildFieldSchema } from "../constants/dynamicFieldSchema.js";
 export const buildProductCategoryRoutes = ({ productCategoryController, extra = {} }) => {
   const router = Router();
   const id = Joi.string().trim().min(1).max(64);
-  const imageUrlField = Joi.string().uri().max(1000).allow(null).optional();
+  const imageUrlField = Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null).optional();
   const listingFieldsField = Joi.array().items(buildFieldSchema()).optional();
 
   router.get("/", productCategoryController.listNested);
@@ -36,7 +36,7 @@ export const buildProductCategoryRoutes = ({ productCategoryController, extra = 
 
   router.post(
     "/",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("categories"),
     validate(
       Joi.object({
         name: Joi.string().trim().max(120).required(),
@@ -51,7 +51,7 @@ export const buildProductCategoryRoutes = ({ productCategoryController, extra = 
 
   router.post(
     "/sub",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("categories"),
     validate(
       Joi.object({
         name: Joi.string().trim().max(120).required(),
@@ -67,7 +67,7 @@ export const buildProductCategoryRoutes = ({ productCategoryController, extra = 
 
   router.patch(
     "/reorder",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("categories"),
     validate(
       Joi.object({
         parentId: id.allow(null).optional(),
@@ -79,7 +79,7 @@ export const buildProductCategoryRoutes = ({ productCategoryController, extra = 
 
   router.patch(
     "/:categoryId",
-    requireAuth([Roles.ADMIN]),
+    requireAuth([Roles.ADMIN]), requirePermission("categories"),
     validate(
       Joi.object({
         name: Joi.string().trim().max(120).optional(),
@@ -94,7 +94,7 @@ export const buildProductCategoryRoutes = ({ productCategoryController, extra = 
     productCategoryController.updateCategory
   );
 
-  router.delete("/:categoryId", requireAuth([Roles.ADMIN]), productCategoryController.deleteCategory);
+  router.delete("/:categoryId", requireAuth([Roles.ADMIN]), requirePermission("categories"), productCategoryController.deleteCategory);
 
   return router;
 };
