@@ -152,6 +152,8 @@ export const buildEngagementRoutes = ({ engagementController }) => {
           .required(),
         customer: Joi.object().unknown(true).optional(),
         fulfillment: Joi.object().unknown(true).optional(),
+        // "cash": pay the seller on delivery or pickup. "online": pay by mobile money once the seller accepts.
+        paymentMethod: Joi.string().valid("cash", "online").default("cash"),
         metadata: Joi.object().unknown(true).optional()
       })
     ),

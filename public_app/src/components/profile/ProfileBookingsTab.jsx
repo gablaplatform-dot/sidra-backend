@@ -47,6 +47,15 @@ function Row({ booking, onChanged }) {
           {booking.customer?.email ? <> · <a href={`mailto:${booking.customer.email}`}>{booking.customer.email}</a></> : null}
         </p>
         {booking.customer?.notes ? <p className="pbk-note">“{booking.customer.notes}”</p> : null}
+        {booking.amountDue > 0 && !["declined", "cancelled", "expired"].includes(booking.status) ? (
+          <p className="pbk-pay">
+            {booking.paymentStatus === "paid"
+              ? `Paid online: ${formatUgx(booking.amountPaid)}`
+              : booking.paymentStatus === "payable"
+                ? `Waiting for the guest to pay ${formatUgx(booking.amountDue)}`
+                : `Guest will pay ${formatUgx(booking.amountDue)} online once you accept`}
+          </p>
+        ) : null}
         <small className="pbk-ref">Ref {booking.reference}{booking.mode === "instant" ? " · booked instantly" : ""}</small>
       </div>
 

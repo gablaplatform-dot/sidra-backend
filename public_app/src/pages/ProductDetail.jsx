@@ -13,7 +13,6 @@ import { trackInterest } from "../lib/tracking";
 import { getUnlockedContactId } from "../lib/unlockedContacts";
 import SiteHeader from "../components/SiteHeader";
 import OrderModal from "../components/OrderModal";
-import BuyNowModal from "../components/BuyNowModal";
 import UnlockModal from "../components/UnlockModal";
 import ProductGallery from "../components/product/ProductGallery";
 import ProductRow from "../components/product/ProductRow";
@@ -64,8 +63,7 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [added, setAdded] = useState(false);
-  const [ordering, setOrdering] = useState(false);
-  const [buying, setBuying] = useState(false);
+  const [ordering, setOrdering] = useState(null); // null | "cash" | "online"
   const [unlockOpen, setUnlockOpen] = useState(false);
   const [shareNote, setShareNote] = useState("");
 
@@ -139,8 +137,8 @@ export default function ProductDetail() {
     if (!getSession()) return;
     const online = listing.provider?.onlinePaymentsEnabled !== false && listing.onlinePaymentEnabled !== false;
     if (resume === "book") document.getElementById("book")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    else if (resume === "buy" && listing.type === "product" && online) setBuying(true);
-    else if (resume === "order" || resume === "buy") setOrdering(true);
+    else if (resume === "buy" && listing.type === "product" && online) setOrdering("online");
+    else if (resume === "order" || resume === "buy") setOrdering("cash");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resume, listing]);
 
@@ -207,11 +205,11 @@ export default function ProductDetail() {
       {contactOpen ? "See contact details" : "Unlock contact details"}
     </button>
   ) : canBuyNow ? (
-    <button type="button" className="cta-button ecommerce-order-button" onClick={() => setBuying(true)}>
-      Buy now
+    <button type="button" className="cta-button ecommerce-order-button" onClick={() => setOrdering("online")}>
+      Order now
     </button>
   ) : (
-    <button type="button" className="cta-button ecommerce-order-button" onClick={() => setOrdering(true)}>
+    <button type="button" className="cta-button ecommerce-order-button" onClick={() => setOrdering("cash")}>
       Order now · pay on delivery
     </button>
   );
@@ -308,7 +306,7 @@ export default function ProductDetail() {
                   {primaryAction}
                   {canBuyNow ? (
                     <div className="pd-actions-row">
-                      <button type="button" className="secondary-button" onClick={() => setOrdering(true)}>
+                      <button type="button" className="secondary-button" onClick={() => setOrdering("cash")}>
                         Pay on delivery
                       </button>
                       <button type="button" className="secondary-button ecommerce-cart-button" onClick={handleAddToCart}>
@@ -316,7 +314,7 @@ export default function ProductDetail() {
                       </button>
                     </div>
                   ) : null}
-                  {canBuyNow ? <p className="pd-pay-note">Pay now with mobile money, or order and pay cash when you receive it.</p> : null}
+                  {canBuyNow ? <p className="pd-pay-note">Send your order and pay by mobile money once the seller accepts it, or choose pay on delivery.</p> : null}
                   {isService && !bookable ? <p className="pd-pay-note">Unlock the provider&apos;s phone and location to talk about the job and agree a price directly.</p> : null}
                 </div>
 
@@ -374,9 +372,8 @@ export default function ProductDetail() {
       )}
 
       {ordering ? (
-        <OrderModal listing={listing} providerId={listing.providerId} onClose={() => setOrdering(false)} />
+        <OrderModal listing={listing} providerId={listing.providerId} payOnline={ordering === "online"} onClose={() => setOrdering(null)} />
       ) : null}
-      {buying ? <BuyNowModal listing={listing} onClose={() => setBuying(false)} /> : null}
       {unlockOpen && providerRecord ? (
         <UnlockModal
           providerId={listing.providerId}

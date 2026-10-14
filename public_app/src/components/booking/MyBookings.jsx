@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { formatUgx } from "../../lib/format";
+import { getSession } from "../../lib/session";
 import { BOOKING_STATUS, cancelBooking, myBookings, plural, todayEat, UNIT_WORD, whenLabel } from "../../lib/bookings";
 import { Skel } from "../Skeleton";
+import PaymentModal from "../PaymentModal";
 import { IconCalendar, IconPin } from "../icons";
 
 const FILTERS = [
@@ -20,11 +22,12 @@ const hoursLeft = (iso) => {
   return h >= 1 ? `${h}h ${Math.floor((ms % 3600000) / 60000)}m` : `${Math.max(1, Math.floor(ms / 60000))}m`;
 };
 
-function BookingCard({ booking, onChanged }) {
+function BookingCard({ booking, onChanged, phone }) {
   const status = BOOKING_STATUS[booking.status] || BOOKING_STATUS.pending;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   const cancel = async () => {
     setBusy(true);
@@ -60,6 +63,20 @@ function BookingCard({ booking, onChanged }) {
         {booking.total > 0 ? <div><dt>Total</dt><dd>{formatUgx(booking.total)}</dd></div> : null}
       </dl>
 
+      {booking.paymentStatus === "payable" && booking.canPay ? (
+        <div className="bkc-pay">
+          <div>
+            <strong>Pay {formatUgx(booking.amountDue)} to keep this booking</strong>
+            <small>{booking.amountDue < booking.total ? `That's the deposit; ${formatUgx(booking.total - booking.amountDue)} is paid to the provider directly. ` : ""}{booking.payBy ? `Pay within ${hoursLeft(booking.payBy) || "the next few minutes"}, or the dates are released.` : ""}</small>
+          </div>
+          <button type="button" className="mo-paynow" onClick={() => setPaying(true)}>Pay now</button>
+        </div>
+      ) : booking.paymentStatus === "paid" ? (
+        <p className="bkc-note"><strong>Paid:</strong> {formatUgx(booking.amountPaid)} received{booking.amountPaid < booking.total ? `. The remaining ${formatUgx(booking.total - booking.amountPaid)} is paid to the provider directly.` : "."}</p>
+      ) : booking.paymentStatus === "awaiting_approval" && booking.status === "pending" ? (
+        <p className="bkc-note">Once the provider confirms, you can pay {formatUgx(booking.amountDue)} here. Nothing is charged before that.</p>
+      ) : null}
+
       {booking.status === "pending" ? (
         <p className="bkc-note">
           Waiting for {booking.provider.businessName} to answer{booking.expiresAt && hoursLeft(booking.expiresAt) ? ` (they have ${hoursLeft(booking.expiresAt)} left)` : ""}. The dates are held for you meanwhile.
@@ -80,6 +97,17 @@ function BookingCard({ booking, onChanged }) {
       <p className="bkc-policy">{booking.policyText}</p>
 
       {error ? <p className="mo-error">{error}</p> : null}
+      {paying ? (
+        <PaymentModal
+          title="Pay for your booking"
+          summary={`${booking.listing.name} · ${whenLabel(booking)}`}
+          amount={booking.amountDue}
+          endpoint={`/payments/bookings/${encodeURIComponent(booking.id)}/pay`}
+          defaultPhone={phone}
+          onClose={() => setPaying(false)}
+          onPaid={onChanged}
+        />
+      ) : null}
       {booking.canCancel ? (
         confirming ? (
           <div className="bkc-confirm">
@@ -130,7 +158,7 @@ export default function MyBookings() {
       {items === null ? (
         <div className="mo-card"><Skel h={44} w={240} r={12} /><Skel h={14} w="80%" style={{ marginTop: 16 }} /><Skel h={54} w="100%" r={12} style={{ marginTop: 16 }} /></div>
       ) : shown.length ? (
-        <div className="mo-list">{shown.map((b) => <BookingCard key={b.id} booking={b} onChanged={load} />)}</div>
+        <div className="mo-list">{shown.map((b) => <BookingCard key={b.id} booking={b} onChanged={load} phone={getSession()?.user?.phone || ""} />)}</div>
       ) : (
         <div className="mo-empty">
           <strong>{items.length ? "Nothing here" : "No bookings yet"}</strong>

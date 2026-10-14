@@ -8,6 +8,7 @@ import { formatUgx } from "../lib/format";
 import { ORDER_STATUS, openDocumentPdf } from "../lib/myOrders";
 import SiteHeader from "../components/SiteHeader";
 import MyBookings from "../components/booking/MyBookings";
+import PaymentModal from "../components/PaymentModal";
 import { Skel } from "../components/Skeleton";
 import { IconBox, IconCheck, IconPin, IconReceipt } from "../components/icons";
 
@@ -22,13 +23,16 @@ const bucket = (order) => (order.status === "fulfilled" ? "done" : ["rejected", 
 const dateLabel = (value) => new Date(value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 const orderRef = (id) => `#${String(id).slice(-6).toUpperCase()}`;
 
-function OrderCard({ order }) {
+function OrderCard({ order, onPaid, phone }) {
   const status = ORDER_STATUS[order.status] || ORDER_STATUS.pending;
   const paid = order.paymentStatus === "paid" || order.paymentStatus === "paid_cash";
   const quotes = order.documents.filter((d) => d.type === "quotation");
   const receipts = order.documents.filter((d) => d.type === "receipt");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [paying, setPaying] = useState(false);
+  const online = order.paymentMethod === "online";
+  const closed = online && order.paymentStatus === "closed";
 
   const open = async (doc) => {
     setBusy(doc.id);
@@ -42,7 +46,7 @@ function OrderCard({ order }) {
     }
   };
 
-  const steps = ["Placed", "Accepted", paid && order.status === "fulfilled" ? "Delivered & paid" : "Completed"];
+  const steps = online || order.paymentMethod === "mobile_money" ? ["Placed", paid ? "Accepted & paid" : "Accepted", "Completed"] : ["Placed", "Accepted", paid && order.status === "fulfilled" ? "Delivered & paid" : "Completed"];
 
   return (
     <article className="mo-card">
@@ -82,10 +86,23 @@ function OrderCard({ order }) {
           <small>{paid ? "Paid" : "To pay"}</small>
           <strong>{formatUgx(order.total)}</strong>
         </div>
-        <span className={`mo-chip ${paid ? "mo-chip-green" : "mo-chip-amber"}`}>
-          {order.paymentMethod === "mobile_money" ? "Paid by mobile money" : paid ? "Cash collected" : order.fulfillment.method === "pickup" ? "Pay cash on pickup" : "Pay cash on delivery"}
-        </span>
+        {online && order.paymentStatus === "payable" ? (
+          <button type="button" className="mo-paynow" onClick={() => setPaying(true)}>Pay now</button>
+        ) : (
+          <span className={`mo-chip ${paid ? "mo-chip-green" : "mo-chip-amber"}`}>
+            {order.paymentMethod === "mobile_money"
+              ? "Paid by mobile money"
+              : online
+                ? closed ? "Not charged" : "Waiting for the seller to accept"
+                : paid ? "Cash collected" : order.fulfillment.method === "pickup" ? "Pay cash on pickup" : "Pay cash on delivery"}
+          </span>
+        )}
       </div>
+      {online && order.paymentStatus === "payable" ? (
+        <p className="mo-where">The seller accepted your order. Pay now to confirm it. Nothing was charged until you pay.</p>
+      ) : online && order.paymentStatus === "awaiting_approval" ? (
+        <p className="mo-where">You&apos;ll be able to pay as soon as the seller confirms it&apos;s available. We&apos;ll email you.</p>
+      ) : null}
       {order.fulfillment.method === "delivery" && order.fulfillment.address ? (
         <p className="mo-where"><IconPin width={15} height={15} /> {order.fulfillment.address}</p>
       ) : order.fulfillment.method === "pickup" ? (
@@ -116,6 +133,17 @@ function OrderCard({ order }) {
         )}
         {error ? <p className="mo-error">{error}</p> : null}
       </section>
+      {paying ? (
+        <PaymentModal
+          title="Pay for your order"
+          summary={`${order.provider.businessName} · ${order.items.map((i) => `${i.name} × ${i.quantity}`).join(", ")}`}
+          amount={Number(order.total)}
+          endpoint={`/payments/orders/${encodeURIComponent(order.id)}/pay`}
+          defaultPhone={phone}
+          onClose={() => setPaying(false)}
+          onPaid={onPaid}
+        />
+      ) : null}
     </article>
   );
 }
@@ -199,7 +227,7 @@ export default function MyOrders() {
             {orders === null ? (
               <><CardSkeleton /><CardSkeleton /></>
             ) : shown.length ? (
-              <div className="mo-list">{shown.map((o) => <OrderCard key={o.id} order={o} />)}</div>
+              <div className="mo-list">{shown.map((o) => <OrderCard key={o.id} order={o} onPaid={load} phone={session?.user?.phone || ""} />)}</div>
             ) : (
               <div className="mo-empty">
                 <strong>{orders.length ? "No orders here" : "You haven't ordered anything yet"}</strong>

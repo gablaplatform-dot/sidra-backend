@@ -65,7 +65,8 @@ export const TransactionType = Object.freeze({
   PLATFORM_WITHDRAWAL: "platform_withdrawal",
   CART_PURCHASE: "cart_purchase",
   RIDE_TRIP: "ride_trip",
-  BUS_TICKET: "bus_ticket"
+  BUS_TICKET: "bus_ticket",
+  SERVICE_BOOKING: "service_booking"
 });
 
 export const TransactionStatus = Object.freeze({

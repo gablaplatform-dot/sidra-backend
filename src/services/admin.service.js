@@ -6,7 +6,7 @@ import { AdminRoleService } from "./adminRole.service.js";
 import { PERMISSIONS } from "../constants/permissions.js";
 
 export const DEMO_REFERENCE_PREFIX = "bus-demo-";
-const PLATFORM_LEDGER_TYPES = ["contact_unlock", "subscription", "purchase", "cart_purchase", "ride_trip", "bus_ticket", "platform_withdrawal"];
+const PLATFORM_LEDGER_TYPES = ["contact_unlock", "subscription", "purchase", "cart_purchase", "ride_trip", "bus_ticket", "service_booking", "platform_withdrawal"];
 
 const decimalToNumber = (value) => Number(value?.toString?.() ?? value ?? 0) || 0;
 const moneyString = (value) => (value?.toString ? value.toString() : String(value ?? "0.00"));

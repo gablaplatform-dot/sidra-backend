@@ -463,6 +463,14 @@ model ServiceBooking {
   expiresAt   DateTime?
   respondedAt DateTime?
   cancelledBy String?
+  // Payment happens only after the provider has said yes: none (no online payment) | awaiting_approval
+  // | payable (confirmed, pay by payBy) | paid. amountDue is the deposit (or full amount) asked online.
+  paymentStatus String   @default("none")
+  amountDue     Decimal  @default(0.00)
+  amountPaid    Decimal  @default(0.00)
+  payBy         DateTime?
+  paidAt        DateTime?
+  transactionId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

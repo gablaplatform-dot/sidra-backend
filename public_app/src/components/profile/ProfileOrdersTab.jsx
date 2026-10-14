@@ -14,9 +14,12 @@ const STATUS_LABELS = {
   canceled: "Canceled"
 };
 
-const NEXT_ACTIONS = {
-  pending: [{ status: "accepted", label: "Accept" }, { status: "rejected", label: "Reject" }],
-  accepted: [{ status: "fulfilled", label: "Mark fulfilled" }, { status: "canceled", label: "Cancel" }]
+// An online order is paid only after you accept it, and can be completed once it's paid.
+const actionsFor = (order) => {
+  const online = order.paymentMethod === "online";
+  if (order.status === "pending") return [{ status: "accepted", label: online ? "Accept: buyer can pay" : "Accept" }, { status: "rejected", label: "Reject" }];
+  if (order.status === "accepted") return [...(online ? [] : [{ status: "fulfilled", label: "Mark fulfilled" }]), ...(order.paymentMethod === "mobile_money" ? [{ status: "fulfilled", label: "Mark fulfilled" }] : []), { status: "canceled", label: "Cancel" }];
+  return [];
 };
 
 const formatUgx = (value) => `UGX ${Number(value || 0).toLocaleString()}`;
@@ -24,7 +27,8 @@ const formatDate = (value) => new Date(value).toLocaleDateString(undefined, { ye
 
 // A cash / pay-on-delivery order that hasn't been paid yet and is still open: the seller can still adjust the quotation.
 const canEditQuotation = (order) =>
-  order.paymentMethod === "cash" && order.paymentStatus !== "paid_cash" && (order.status === "pending" || order.status === "accepted");
+  (order.paymentMethod === "cash" && order.paymentStatus !== "paid_cash" && (order.status === "pending" || order.status === "accepted")) ||
+  (order.paymentMethod === "online" && ["awaiting_approval", "payable"].includes(order.paymentStatus) && (order.status === "pending" || order.status === "accepted"));
 
 // Superseded revisions stay on record in Quotes & receipts; only the current documents show on the order.
 const issuedDocs = (order) => (order.documents || []).filter((doc) => doc.status !== "superseded");
@@ -118,6 +122,10 @@ export default function ProfileOrdersTab({ focusOrderId = null }) {
 
               {order.paymentMethod === "mobile_money" ? (
                 <span className="od-order-pay is-paid">Paid online &middot; mobile money</span>
+              ) : order.paymentMethod === "online" ? (
+                <span className="od-order-pay is-cash">
+                  {order.paymentStatus === "payable" ? `Accepted · waiting for the buyer to pay ${formatUgx(order.total)}` : order.paymentStatus === "closed" ? "Online payment closed" : "Pays online after you accept"}
+                </span>
               ) : order.paymentStatus === "paid_cash" ? (
                 <span className="od-order-pay is-paid">Cash collected</span>
               ) : (
@@ -169,9 +177,9 @@ export default function ProfileOrdersTab({ focusOrderId = null }) {
                 </div>
               ) : null}
 
-              {NEXT_ACTIONS[order.status] ? (
+              {actionsFor(order).length ? (
                 <div className="listing-actions order-actions">
-                  {NEXT_ACTIONS[order.status].map((action) => (
+                  {actionsFor(order).map((action) => (
                     <button
                       key={action.status}
                       type="button"

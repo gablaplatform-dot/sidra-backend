@@ -31,38 +31,19 @@ export const buildPaymentRoutes = ({ paymentController }) => {
     paymentController.unlockContact
   );
 
+  // Paying happens after the seller / provider has approved: see PaymentService#payOrder and #payServiceBooking.
   router.post(
-    "/products/purchase",
+    "/orders/:orderId/pay",
     requireAuth([Roles.USER, Roles.PROVIDER]),
-    validate(
-      Joi.object({
-        listingId: id.required(),
-        quantity: Joi.number().integer().min(1).max(99).optional(),
-        phone
-      })
-    ),
-    paymentController.purchaseProduct
+    validate(Joi.object({ phone })),
+    paymentController.payOrder
   );
 
   router.post(
-    "/cart/checkout",
+    "/bookings/:bookingId/pay",
     requireAuth([Roles.USER, Roles.PROVIDER]),
-    validate(
-      Joi.object({
-        items: Joi.array()
-          .items(
-            Joi.object({
-              listingId: id.required(),
-              quantity: Joi.number().integer().min(1).max(99).optional()
-            })
-          )
-          .min(1)
-          .max(50)
-          .required(),
-        phone
-      })
-    ),
-    paymentController.cartCheckout
+    validate(Joi.object({ phone })),
+    paymentController.payBooking
   );
 
   // Also polled by anonymous contact-unlock payments — see optionalAuth note above. The

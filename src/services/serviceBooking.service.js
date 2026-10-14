@@ -49,6 +49,9 @@ export const normalizeBookingConfig = (input = {}) => {
     openFrom: time(input.openFrom, "08:00"),
     openTo: time(input.openTo, "22:00"),
     cancellation: Object.keys(POLICIES).includes(input.cancellation) ? input.cancellation : "flexible",
+    // Share of the total the guest pays online once the provider has confirmed (0 = no online payment).
+    depositPercent: [0, 20, 30, 50, 100].includes(Number(input.depositPercent)) ? Number(input.depositPercent) : 0,
+    payWithinHours: int(input.payWithinHours, 24, 1, 72),
     depositNote: String(input.depositNote ?? "").trim().slice(0, 200),
     instructions: String(input.instructions ?? "").trim().slice(0, 600),
     blockedDates: [...new Set(blocked)].sort().slice(0, 500)
@@ -63,13 +66,16 @@ export class ServiceBookingService {
   // ----- availability -------------------------------------------------------------------------
 
   async _expireStale() {
-    await prisma.serviceBooking.updateMany({ where: { status: "pending", expiresAt: { lt: new Date() } }, data: { status: "expired" } });
+    const now = new Date();
+    await prisma.serviceBooking.updateMany({ where: { status: "pending", expiresAt: { lt: now } }, data: { status: "expired" } });
+    // A confirmed booking that asked for payment but wasn't paid in time frees its dates.
+    await prisma.serviceBooking.updateMany({ where: { status: "confirmed", paymentStatus: "payable", payBy: { lt: now } }, data: { status: "expired", paymentStatus: "none" } });
   }
 
   async _listing(listingId) {
     const listing = await prisma.serviceProduct.findFirst({
       where: { id: listingId, type: "service", status: "approved", provider: { isApproved: true, moderationStatus: "approved" } },
-      include: { provider: { select: { id: true, userId: true, businessName: true } } }
+      include: { provider: { select: { id: true, userId: true, businessName: true, onlinePaymentsEnabled: true } } }
     });
     if (!listing || listing.bookingMode === "none") throw err("This service can't be booked online.", "NOT_BOOKABLE", 404);
     return { listing, config: normalizeBookingConfig(listing.booking) };
@@ -222,6 +228,9 @@ export class ServiceBookingService {
     const instant = listing.bookingMode === "instant";
     const unitPrice = Number(listing.price);
     const total = unitPrice * interval.units * quantity;
+    // Online payment is asked only after approval; instant bookings are approved on the spot, so it opens right away.
+    const amountDue = config.depositPercent > 0 && listing.provider.onlinePaymentsEnabled !== false ? Math.round((total * config.depositPercent) / 100) : 0;
+    const paymentStatus = amountDue > 0 ? (instant ? "payable" : "awaiting_approval") : "none";
 
     const booking = await prisma.$transaction(async (tx) => {
       const held = await this._holding(tx, listing.id, interval.startAt, interval.endAt);
@@ -250,7 +259,10 @@ export class ServiceBookingService {
           listingName: listing.name,
           policy: config.cancellation,
           expiresAt: instant ? null : new Date(Date.now() + config.responseHours * HOUR_MS),
-          respondedAt: instant ? new Date() : null
+          respondedAt: instant ? new Date() : null,
+          amountDue,
+          paymentStatus,
+          payBy: paymentStatus === "payable" ? new Date(Date.now() + config.payWithinHours * HOUR_MS) : null
         }
       });
     });
@@ -327,9 +339,16 @@ export class ServiceBookingService {
     }
     if (action === "complete" && booking.startAt > new Date()) throw err("You can mark it complete once it has started.", "TOO_EARLY", 409);
 
+    const extra = {};
+    if (action === "accept" && booking.paymentStatus === "awaiting_approval") {
+      const hours = normalizeBookingConfig((await prisma.serviceProduct.findUnique({ where: { id: booking.listingId }, select: { booking: true } }))?.booking).payWithinHours;
+      extra.paymentStatus = "payable";
+      extra.payBy = new Date(Date.now() + hours * HOUR_MS);
+    }
+    if ((action === "decline" || action === "cancel") && booking.paymentStatus !== "paid") extra.paymentStatus = "none";
     await prisma.serviceBooking.update({
       where: { id },
-      data: { status: rule.to, providerNote: cleanNote, respondedAt: new Date(), ...(action === "cancel" ? { cancelledBy: "provider" } : {}) }
+      data: { status: rule.to, providerNote: cleanNote, respondedAt: new Date(), ...extra, ...(action === "cancel" ? { cancelledBy: "provider" } : {}) }
     });
     if (action !== "complete") this._notify(action === "accept" ? "confirmed" : action === "decline" ? "declined" : "cancelled_by_provider", id).catch(() => {});
     return this.toDto(await this._load(id), { viewer: "provider" });
@@ -340,7 +359,7 @@ export class ServiceBookingService {
     const booking = await prisma.serviceBooking.findFirst({ where: { id, userId } });
     if (!booking) throw err("Booking not found", "BOOKING_NOT_FOUND", 404);
     if (!HOLDING.includes(booking.status)) throw err(`This booking is already ${booking.status}.`, "INVALID_STATUS", 409);
-    await prisma.serviceBooking.update({ where: { id }, data: { status: "cancelled", cancelledBy: "customer", respondedAt: new Date() } });
+    await prisma.serviceBooking.update({ where: { id }, data: { status: "cancelled", cancelledBy: "customer", respondedAt: new Date(), ...(booking.paymentStatus === "paid" ? {} : { paymentStatus: "none" }) } });
     this._notify("cancelled_by_customer", id).catch(() => {});
     return this.toDto(await this._load(id), { viewer: "customer" });
   }
@@ -373,7 +392,12 @@ export class ServiceBookingService {
       providerNote: b.providerNote,
       expiresAt: b.expiresAt,
       createdAt: b.createdAt,
-      cancelledBy: b.cancelledBy
+      cancelledBy: b.cancelledBy,
+      paymentStatus: b.paymentStatus,
+      amountDue: Number(b.amountDue),
+      amountPaid: Number(b.amountPaid),
+      payBy: b.payBy,
+      paidAt: b.paidAt
     };
     if (viewer === "provider") {
       return { ...base, customer: b.customer, canComplete: b.status === "confirmed" && b.startAt <= new Date() };
@@ -388,7 +412,7 @@ export class ServiceBookingService {
           mapsUrl: Number.isFinite(b.provider?.location?.geo?.coordinates?.[1]) ? `https://www.google.com/maps/search/?api=1&query=${b.provider.location.geo.coordinates[1]},${b.provider.location.geo.coordinates[0]}` : null
         }
       : null;
-    return { ...base, contact, canCancel: HOLDING.includes(b.status) };
+    return { ...base, contact, canCancel: HOLDING.includes(b.status), canPay: b.status === "confirmed" && b.paymentStatus === "payable" && (!b.payBy || b.payBy > new Date()) };
   }
 
   // ----- emails (best effort, never block a booking) ----------------------------------------------
@@ -402,6 +426,10 @@ export class ServiceBookingService {
       headers: { Authorization: `Bearer ${env.resendApiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ from: env.resendFromEmail, to, subject, text, html })
     });
+  }
+
+  notifyPaid(id) {
+    return this._notify("paid", id);
   }
 
   _when(b) {
@@ -427,7 +455,7 @@ export class ServiceBookingService {
       await this._send({
         to: customerEmail,
         subject: b.status === "confirmed" ? `Your booking is confirmed — ${b.listingName}` : `We've sent your request — ${b.listingName}`,
-        lines: [b.status === "confirmed" ? "Your booking is confirmed." : "Your request was sent. The provider will answer shortly and we'll email you.", summary, POLICIES[b.policy]],
+        lines: [b.status === "confirmed" ? "Your booking is confirmed." : "Your request was sent. The provider will answer shortly and we'll email you.", summary, ...(b.paymentStatus === "payable" ? [`Pay ${ugx(b.amountDue)} within ${Math.round((b.payBy - Date.now()) / HOUR_MS)} hours to keep it: open Orders → Bookings on Gabla.`] : b.paymentStatus === "awaiting_approval" ? [`Once the provider accepts you can pay ${ugx(b.amountDue)} online. Nothing is charged before that.`] : []), POLICIES[b.policy]],
         footer: "You can see this booking any time under Orders → Bookings on Gabla."
       });
     } else if (event === "confirmed") {
@@ -435,8 +463,11 @@ export class ServiceBookingService {
       await this._send({
         to: customerEmail,
         subject: `Booking confirmed — ${b.listingName}`,
-        lines: ["Good news: the provider accepted your booking.", summary, ...(c?.address ? [`Where: ${c.address}`] : []), ...(c?.phone ? [`Phone: ${c.phone}`] : []), ...(b.providerNote ? [`Note from the provider: ${b.providerNote}`] : []), ...(b.listing?.booking?.depositNote ? [`Deposit: ${b.listing.booking.depositNote}`] : []), POLICIES[b.policy]]
+        lines: ["Good news: the provider accepted your booking.", summary, ...(c?.address ? [`Where: ${c.address}`] : []), ...(c?.phone ? [`Phone: ${c.phone}`] : []), ...(b.providerNote ? [`Note from the provider: ${b.providerNote}`] : []), ...(b.paymentStatus === "payable" ? [`Pay ${ugx(b.amountDue)} within ${Math.max(1, Math.round((b.payBy - Date.now()) / HOUR_MS))} hours to keep your booking: open Orders → Bookings on Gabla.`] : []), ...(b.listing?.booking?.depositNote ? [`Note: ${b.listing.booking.depositNote}`] : []), POLICIES[b.policy]]
       });
+    } else if (event === "paid") {
+      await this._send({ to: providerEmail, subject: `Booking paid: ${b.listingName}`, lines: [`The guest paid ${ugx(b.amountPaid)} for this booking (minus Gabla's fee, credited to your wallet).`, summary] });
+      await this._send({ to: customerEmail, subject: `Payment received: ${b.listingName}`, lines: [`We received your payment of ${ugx(b.amountPaid)}.`, summary, "See you there!"] });
     } else if (event === "declined") {
       await this._send({ to: customerEmail, subject: `Booking request declined — ${b.listingName}`, lines: ["Sorry, the provider couldn't take this booking.", summary, ...(b.providerNote ? [`Note from the provider: ${b.providerNote}`] : []), "You can try other dates or another provider on Gabla."] });
     } else if (event === "cancelled_by_provider") {

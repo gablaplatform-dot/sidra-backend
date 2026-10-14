@@ -37,28 +37,19 @@ export class PaymentController {
     }
   };
 
-  purchaseProduct = async (req, res, next) => {
+  payOrder = async (req, res, next) => {
     try {
-      const result = await this.paymentService.purchaseProduct({
-        actorUserId: req.user.id,
-        listingId: req.body.listingId,
-        quantity: req.body.quantity,
-        phone: req.body.phone
-      });
-      res.status(200).json({ data: result });
+      const result = await this.paymentService.payOrder({ actorUserId: req.user.id, orderId: req.params.orderId, phone: req.body.phone });
+      res.status(202).json({ data: result });
     } catch (e) {
       next(e);
     }
   };
 
-  cartCheckout = async (req, res, next) => {
+  payBooking = async (req, res, next) => {
     try {
-      const result = await this.paymentService.cartCheckout({
-        actorUserId: req.user.id,
-        items: req.body.items,
-        phone: req.body.phone
-      });
-      res.status(200).json({ data: result });
+      const result = await this.paymentService.payServiceBooking({ actorUserId: req.user.id, bookingId: req.params.bookingId, phone: req.body.phone });
+      res.status(202).json({ data: result });
     } catch (e) {
       next(e);
     }

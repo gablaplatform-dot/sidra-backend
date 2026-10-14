@@ -178,6 +178,7 @@ export const buildApp = () => {
     callbackUrls: () => paymentService.mobileMoneyCallbackUrls()
   });
   paymentService.attachBusBooking(busBookingService);
+  paymentService.attachServiceBooking(serviceBookingService);
   const busOperationsService = new BusOperationsService({ emailService: busEmailService, catalogService: busCatalogService, bookingService: busBookingService });
 
   app.use(

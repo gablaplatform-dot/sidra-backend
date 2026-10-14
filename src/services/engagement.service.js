@@ -9,10 +9,15 @@ const toDecimal = (value) => new Prisma.Decimal(String(value ?? "0"));
 
 // How an order is paid, derived so older orders need no migration: anything tied to a mobile-money
 // transaction was paid online; everything else is a cash order (pay on delivery / pickup).
-const orderPayment = (order) =>
-  order.transactionId
-    ? { paymentMethod: "mobile_money", paymentStatus: "paid" }
-    : { paymentMethod: "cash", paymentStatus: order.metadata?.paymentStatus ?? "unpaid" };
+// An online order is paid only after the seller accepts it: awaiting_approval -> payable -> paid.
+const orderPayment = (order) => {
+  if (order.transactionId) return { paymentMethod: "mobile_money", paymentStatus: "paid" };
+  if (order.metadata?.paymentMethod === "online") {
+    const closed = ["rejected", "canceled"].includes(order.status);
+    return { paymentMethod: "online", paymentStatus: closed ? "closed" : order.metadata?.paymentStatus ?? "awaiting_approval" };
+  }
+  return { paymentMethod: "cash", paymentStatus: order.metadata?.paymentStatus ?? "unpaid" };
+};
 
 export class EngagementService {
   constructor({ orderNotificationService = new OrderNotificationService() } = {}) {
@@ -251,7 +256,7 @@ export class EngagementService {
   // An order placed through here is always a "cash" order: nothing is charged online and the buyer
   // pays the seller directly on delivery or pickup. (Orders paid by mobile money are created by the
   // payment service when the transaction succeeds, and carry a transactionId instead.)
-  async createOrder({ actorUserId, providerId, items, customer, fulfillment, metadata }) {
+  async createOrder({ actorUserId, providerId, items, customer, fulfillment, metadata, paymentMethod = "cash" }) {
     if (!Array.isArray(items) || !items.length) {
       throw new AppError({ message: "Order items are required", statusCode: 400, code: "ORDER_ITEMS_REQUIRED" });
     }
@@ -318,6 +323,17 @@ export class EngagementService {
 
     const subtotal = normalizedItems.reduce((sum, item) => sum.add(item.total), new Prisma.Decimal("0"));
 
+    // Paying online is offered only where the seller and every item allow it; the charge itself waits for the seller's approval.
+    const online = paymentMethod === "online";
+    if (online) {
+      if (!provider.onlinePaymentsEnabled || listings.some((l) => l.onlinePaymentEnabled === false)) {
+        throw new AppError({ message: "This seller isn't taking online payments. Choose pay on delivery.", statusCode: 400, code: "ONLINE_PAYMENTS_UNAVAILABLE" });
+      }
+      if (subtotal.lte(0)) {
+        throw new AppError({ message: "This order has no price to pay online.", statusCode: 400, code: "INVALID_AMOUNT" });
+      }
+    }
+
     const order = await prisma.order.create({
       data: {
         userId: actorUserId,
@@ -326,7 +342,7 @@ export class EngagementService {
         total: subtotal,
         customer: cleanCustomer,
         fulfillment: cleanFulfillment,
-        metadata: { ...(metadata ?? {}), paymentMethod: "cash", paymentStatus: "unpaid" },
+        metadata: { ...(metadata ?? {}), ...(online ? { paymentMethod: "online", paymentStatus: "awaiting_approval" } : { paymentMethod: "cash", paymentStatus: "unpaid" }) },
         items: { create: normalizedItems }
       },
       include: { items: true }
@@ -341,7 +357,8 @@ export class EngagementService {
       providerId: order.providerId,
       providerName: provider.businessName,
       status: order.status,
-      paymentMethod: "cash",
+      paymentMethod: online ? "online" : "cash",
+      paymentStatus: online ? "awaiting_approval" : "unpaid",
       subtotal: moneyString(order.subtotal),
       total: moneyString(order.total),
       fulfillment: order.fulfillment,
@@ -404,13 +421,21 @@ export class EngagementService {
     const order = await prisma.order.findFirst({ where: { id: orderId, providerId: provider.id } });
     if (!order) throw new AppError({ message: "Order not found", statusCode: 404, code: "ORDER_NOT_FOUND" });
 
+    const payment = orderPayment(order);
     const data = { status };
-    if (status === "fulfilled" && orderPayment(order).paymentMethod === "cash") {
+    if (payment.paymentMethod === "online" && !order.transactionId) {
+      // Online orders: accepting opens payment; completing needs the money in; declining closes it.
+      if (status === "accepted") data.metadata = { ...(order.metadata ?? {}), paymentStatus: "payable", approvedAt: new Date().toISOString() };
+      else if (status === "fulfilled") throw new AppError({ message: "This order hasn't been paid yet. You can complete it once the buyer pays.", statusCode: 409, code: "ORDER_NOT_PAID" });
+      else if (status === "pending") data.metadata = { ...(order.metadata ?? {}), paymentStatus: "awaiting_approval" };
+    } else if (status === "fulfilled" && payment.paymentMethod === "cash") {
       data.metadata = { ...(order.metadata ?? {}), paymentStatus: "paid_cash" };
     }
     const updated = await prisma.order.update({ where: { id: order.id }, data });
     // Cash collected on delivery: the buyer gets their receipt now.
     if (data.metadata?.paymentStatus === "paid_cash") this.documentService?.issueReceipt({ orderId: order.id }).catch(() => {});
+    // Accepted online order: tell the buyer they can pay now.
+    if (status === "accepted" && data.metadata?.paymentStatus === "payable") this.orderNotificationService.notifyBuyerOrderApproved({ orderId: order.id }).catch(() => {});
     return updated;
   }
 

@@ -64,3 +64,7 @@
   .mo-docs li { flex-direction: column; align-items: stretch; }
   .mo-docs li button { width: 100%; }
 }
+
+/* Pay after approval */
+.mo-paynow { border: 0; border-radius: 999px; padding: 11px 24px; background: linear-gradient(135deg, #ea580c, #c2410c); color: #fff; font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 8px 18px -8px rgba(234, 88, 12, 0.7); }
+.pay-amount { margin: 4px 0 14px; font-size: 28px; font-weight: 800; color: #0b2046; }

@@ -42,6 +42,8 @@ const defaultBooking = (unit = "night") => ({
   openFrom: "08:00",
   openTo: "20:00",
   cancellation: "flexible",
+  depositPercent: 0,
+  payWithinHours: 24,
   depositNote: "",
   instructions: "",
   blockedDates: []
@@ -135,7 +137,23 @@ function BookingSection({ form, setForm, blockDate, setBlockDate }) {
             </Field>
           </div>
 
-          <Field label="Deposit or payment note (optional)" hint="Shown to guests, e.g. 30% to confirm, balance on arrival">
+          <div className="form-grid two">
+            <Field label="Take payment online" hint="Guests pay this share by mobile money only after you confirm the booking. Nothing is charged before.">
+              <select value={b.depositPercent} onChange={(e) => set({ depositPercent: Number(e.target.value) })}>
+                <option value={0}>No, guests pay me directly</option>
+                <option value={20}>20% deposit</option>
+                <option value={30}>30% deposit</option>
+                <option value={50}>50% deposit</option>
+                <option value={100}>Full amount</option>
+              </select>
+            </Field>
+            {b.depositPercent > 0 ? (
+              <Field label="Guest must pay within (hours)" hint="After you confirm. Unpaid bookings expire and free the dates.">
+                <input type="number" min="1" max="72" value={b.payWithinHours} onChange={num("payWithinHours")} />
+              </Field>
+            ) : null}
+          </div>
+          <Field label="Payment note (optional)" hint="Shown to guests, e.g. balance due on arrival">
             <input maxLength={200} value={b.depositNote} onChange={(e) => set({ depositNote: e.target.value })} />
           </Field>
           <Field label="House rules & instructions (optional)" hint="Guests see this once the booking is confirmed" as="div">
@@ -642,7 +660,7 @@ export default function ListingForm() {
                       checked={form.onlinePaymentEnabled}
                       onChange={(e) => setForm({ ...form, onlinePaymentEnabled: e.target.checked })}
                     />
-                    <span>Let customers pay for this product online with mobile money</span>
+                    <span>Let customers pay online with mobile money after you accept their order</span>
                   </label>
                 </Field>
               ) : null}

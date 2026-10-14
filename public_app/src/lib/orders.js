@@ -2,7 +2,7 @@ import { request } from "./api";
 import { trackInterest } from "./tracking";
 
 // Cash orders: nothing is charged online, the order goes straight to the seller and the buyer pays
-// them on delivery or pickup. (Mobile-money purchases go through BuyNowModal / the cart checkout.)
+// them on delivery or pickup. (Online orders use the same call with paymentMethod "online": the seller accepts first, then the buyer pays from My orders.)
 
 export const initialOrderDetails = (session) => ({
   name: session?.user?.name || "",
@@ -30,12 +30,14 @@ const fulfillmentFor = (details) => {
   return { method: "delivery", address: details.address.trim(), ...point };
 };
 
-export const placeCashOrder = async ({ providerId, items, details, delivery = true }) => {
+// paymentMethod "cash": pay the seller on delivery or pickup. "online": pay by mobile money once the seller accepts.
+export const placeCashOrder = async ({ providerId, items, details, delivery = true, paymentMethod = "cash" }) => {
   const order = await request("/engagement/orders", {
     method: "POST",
     body: JSON.stringify({
       providerId,
       items,
+      paymentMethod,
       customer: { name: details.name.trim(), phone: details.phone.trim(), notes: details.notes.trim() || undefined },
       fulfillment: delivery ? fulfillmentFor(details) : undefined
     })

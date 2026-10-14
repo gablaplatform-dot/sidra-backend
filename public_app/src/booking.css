@@ -133,3 +133,9 @@
 .sb-card-book { background: #0b2046 !important; color: #fff !important; right: 10px; left: auto; }
 .sv-bookable { margin-bottom: 8px; }
 .pbk-actions .cta-button, .pbk-actions .secondary-button, .pbk-actions .bkc-danger { width: auto; min-height: 0; height: auto; padding: 10px 20px; font-size: 14px; line-height: 1.2; }
+
+.bk-pay-note { padding: 10px 12px; border-radius: 12px; background: #ecfdf5; color: #14532d; font-size: 13px; }
+.bkc-pay { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px; border-radius: 16px; background: #fff7ed; border: 1px solid #fed7aa; }
+.bkc-pay strong { display: block; color: #7c2d12; }
+.bkc-pay small { color: #9a3412; }
+.pbk-pay { margin: 6px 0 0; font-size: 13px; font-weight: 700; color: #0f766e; }

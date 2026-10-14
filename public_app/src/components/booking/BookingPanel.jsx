@@ -150,6 +150,8 @@ export default function BookingPanel({ listing }) {
   const tooShort = ready && units < config.minUnits;
   const tooLong = ready && units > config.maxUnits;
   const total = price * units * qty;
+  const onlinePct = Number(config.depositPercent) || 0;
+  const dueOnline = onlinePct > 0 && total > 0 ? Math.round((total * onlinePct) / 100) : 0;
 
   const payload = () => ({
     listingId: listing.id,
@@ -248,6 +250,7 @@ export default function BookingPanel({ listing }) {
                 <span>{price > 0 ? `${formatUgx(price)} × ${plural(units, unitWord)}${qty > 1 ? ` × ${qty}` : ""}` : "Price agreed with the provider"}</span>
                 {price > 0 ? <strong>{formatUgx(total)}</strong> : null}
               </div>
+              {dueOnline > 0 ? <p className="bk-hint bk-pay-note">After {instant ? "booking" : "the provider confirms"} you pay <strong>{formatUgx(dueOnline)}</strong> ({onlinePct === 100 ? "the full amount" : `${onlinePct}% deposit`}) by mobile money. Nothing is charged now.</p> : null}
               <button type="button" className="cta-button bk-go" onClick={() => { setError(""); setStep("details"); }}>Continue</button>
             </div>
           ) : (
@@ -285,7 +288,7 @@ export default function BookingPanel({ listing }) {
             <label className="field"><span>Phone number</span><input required inputMode="tel" value={details.phone} onChange={(e) => setDetails({ ...details, phone: e.target.value })} autoComplete="tel" placeholder="0772 123 456" /></label>
             <label className="field"><span>Email (for your confirmation)</span><input type="email" value={details.email} onChange={(e) => setDetails({ ...details, email: e.target.value })} autoComplete="email" /></label>
             <label className="field"><span>Anything the provider should know? (optional)</span><textarea rows="3" maxLength={800} value={details.notes} onChange={(e) => setDetails({ ...details, notes: e.target.value })} /></label>
-            <p className="bk-hint">{instant ? "Your booking is confirmed straight away." : `The provider answers within ${config.responseHours} hours. The dates are held for you meanwhile, and you'll get an email either way.`} {price > 0 ? "No payment is taken now." : ""}</p>
+            <p className="bk-hint">{instant ? "Your booking is confirmed straight away." : `The provider answers within ${config.responseHours} hours. The dates are held for you meanwhile, and you'll get an email either way.`} {price > 0 ? (dueOnline > 0 ? `No payment is taken now; you pay ${formatUgx(dueOnline)} once it's confirmed.` : "No payment is taken now.") : ""}</p>
             <button type="submit" className="cta-button bk-go" disabled={submitting}>{submitting ? "Sending…" : instant ? `Confirm booking${price > 0 ? ` · ${formatUgx(total)}` : ""}` : "Send booking request"}</button>
           </form>
         )
@@ -313,7 +316,8 @@ export default function BookingPanel({ listing }) {
               {result.contact.mapsUrl ? <a href={result.contact.mapsUrl} target="_blank" rel="noreferrer">Open in Maps</a> : null}
             </div>
           ) : null}
-          <Link to="/orders?tab=bookings" className="primary-button" style={{ display: "block", textAlign: "center" }}>View my bookings</Link>
+          {result.paymentStatus === "payable" ? <p className="bk-hint bk-pay-note">Pay <strong>{formatUgx(result.amountDue)}</strong> within {config.payWithinHours} hours from My bookings to keep it.</p> : result.paymentStatus === "awaiting_approval" ? <p className="bk-hint bk-pay-note">Once confirmed you can pay {formatUgx(result.amountDue)} from My bookings.</p> : null}
+          <Link to="/orders?tab=bookings" className="primary-button" style={{ display: "block", textAlign: "center" }}>{result.paymentStatus === "payable" ? "Pay now" : "View my bookings"}</Link>
           <button type="button" className="link-button" onClick={reset}>Book other dates</button>
         </div>
       ) : null}

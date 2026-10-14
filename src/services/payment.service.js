@@ -27,6 +27,7 @@ export class PaymentService {
     this.rideDriverWalletService = rideDriverWalletService;
     this.orderNotificationService = orderNotificationService;
     this.busBookingService = null;
+    this.serviceBookingService = null;
     this.documentService = null;
   }
 
@@ -38,6 +39,11 @@ export class PaymentService {
   // Bus ticketing is wired in after construction (it needs this service's callback URLs).
   attachBusBooking(busBookingService) {
     this.busBookingService = busBookingService;
+  }
+
+  // Bookings are wired in after construction too (they need this service to take payments).
+  attachServiceBooking(serviceBookingService) {
+    this.serviceBookingService = serviceBookingService;
   }
 
   mobileMoneyCallbackUrls() {
@@ -394,206 +400,130 @@ export class PaymentService {
     };
   }
 
-  async purchaseProduct({ actorUserId, listingId, quantity = 1, phone }) {
-    if (!listingId) {
-      throw new AppError({ message: "Invalid listingId", statusCode: 400, code: "INVALID_LISTING_ID" });
-    }
+  // Charging happens only after the seller has accepted: the buyer places an order (EngagementService#createOrder),
+  // the seller approves it, and only then can it be paid. That way nobody pays for something that turns out
+  // not to be available.
+  async payOrder({ actorUserId, orderId, phone }) {
     if (!phone) {
       throw new AppError({ message: "A phone number is required to pay by mobile money", statusCode: 400, code: "PHONE_REQUIRED" });
     }
 
-    const q = Math.max(1, Math.min(99, Number(quantity) || 1));
-
-    const { transactionId, providerId, reference, amountDec } = await prisma.$transaction(async (tx) => {
-      const settings = await this.getSettings(tx);
-
-      const listing = await tx.serviceProduct.findUnique({ where: { id: listingId } });
-      if (!listing || listing.type !== "product" || listing.status !== "approved") {
-        throw new AppError({ message: "Product not found", statusCode: 404, code: "PRODUCT_NOT_FOUND" });
+    const prepared = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({ where: { id: orderId, userId: actorUserId }, include: { items: true } });
+      if (!order) throw new AppError({ message: "Order not found", statusCode: 404, code: "ORDER_NOT_FOUND" });
+      if (order.transactionId || order.metadata?.paymentStatus === "paid") {
+        throw new AppError({ message: "This order is already paid.", statusCode: 409, code: "ORDER_ALREADY_PAID" });
+      }
+      if (order.metadata?.paymentMethod !== "online" || order.metadata?.paymentStatus !== "payable" || order.status !== "accepted") {
+        throw new AppError({ message: "You can pay once the seller has accepted your order.", statusCode: 409, code: "ORDER_NOT_PAYABLE" });
       }
 
-      const provider = await tx.provider.findUnique({ where: { id: listing.providerId } });
+      // One payment prompt at a time: a second tap just re-uses the one already waiting.
+      const recent = await tx.transaction.findMany({ where: { userId: actorUserId, type: "purchase", status: "pending", createdAt: { gt: new Date(Date.now() - 10 * 60 * 1000) } } });
+      const waiting = recent.find((t) => t.metadata?.orderId === order.id);
+      if (waiting) return { reuse: waiting };
+
+      const [settings, provider] = await Promise.all([this.getSettings(tx), tx.provider.findUnique({ where: { id: order.providerId } })]);
       if (!provider || !provider.isApproved || provider.moderationStatus !== "approved") {
         throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
       }
-
       const effective = this.computeEffectiveForProvider({ global: settings, provider });
-      if (!effective.enableEcommerce) {
-        throw new AppError({ message: "Ecommerce disabled", statusCode: 400, code: "ECOMMERCE_DISABLED" });
-      }
-      if (!effective.enableWallet) {
-        throw new AppError({ message: "Wallet disabled", statusCode: 400, code: "WALLET_DISABLED" });
-      }
-      if (!provider.onlinePaymentsEnabled) {
-        throw new AppError({ message: "This provider does not accept online payments", statusCode: 400, code: "PROVIDER_ONLINE_PAYMENTS_DISABLED" });
-      }
-      if (!listing.onlinePaymentEnabled) {
-        throw new AppError({ message: "Online purchase is disabled for this listing", statusCode: 400, code: "LISTING_ONLINE_PAYMENT_DISABLED" });
+      if (!effective.enableEcommerce || !effective.enableWallet || !provider.onlinePaymentsEnabled) {
+        throw new AppError({ message: "This seller isn't taking online payments right now. Pay them directly.", statusCode: 400, code: "ONLINE_PAYMENTS_UNAVAILABLE" });
       }
 
-      const unitCents = parseMoneyToCents(listing.price);
-      const amountCents = unitCents * BigInt(q);
+      const amountCents = parseMoneyToCents(order.total);
+      if (amountCents <= 0n) throw new AppError({ message: "This order has no amount to pay.", statusCode: 400, code: "INVALID_AMOUNT" });
       const feeCents = feeFromPercentCents({ amountCents, percent: effective.transactionFeePercent });
-      const netCents = amountCents - feeCents;
-
-      const amountDec = centsToDecimal(amountCents);
-      const feeDec = centsToDecimal(feeCents);
-      const netDec = centsToDecimal(netCents);
-
       const reference = `purchase-${crypto.randomUUID()}`;
       const transaction = await tx.transaction.create({
         data: {
           type: "purchase",
           userId: actorUserId,
           providerId: provider.id,
-          amount: amountDec,
-          fee: feeDec,
-          netAmount: netDec,
+          amount: centsToDecimal(amountCents),
+          fee: centsToDecimal(feeCents),
+          netAmount: centsToDecimal(amountCents - feeCents),
           status: "pending",
           reference,
-          metadata: { listingId: listing.id, quantity: q, phone }
+          metadata: { orderId: order.id, phone }
         }
       });
-
-      return { transactionId: transaction.id, providerId: provider.id, reference, amountDec };
+      return { transaction, reference, amountDec: centsToDecimal(amountCents) };
     });
 
-    try {
-      await this.mobileMoneyService.initiateDeposit({
-        amount: amountDec,
-        phone,
-        reference,
-        ...this.mobileMoneyCallbackUrls()
-      });
-    } catch (gatewayError) {
-      await prisma.transaction.update({ where: { id: transactionId }, data: { status: "failed" } });
-      throw gatewayError;
+    if (prepared.reuse) {
+      return { transactionId: prepared.reuse.id, status: "pending", message: "Check your phone to approve the mobile money payment." };
     }
 
-    return {
-      transactionId,
-      providerId,
-      status: "pending",
-      message: "Check your phone to approve the mobile money payment."
-    };
+    try {
+      await this.mobileMoneyService.initiateDeposit({ amount: prepared.amountDec, phone, reference: prepared.reference, ...this.mobileMoneyCallbackUrls() });
+    } catch (gatewayError) {
+      await prisma.transaction.update({ where: { id: prepared.transaction.id }, data: { status: "failed" } });
+      throw gatewayError;
+    }
+    return { transactionId: prepared.transaction.id, status: "pending", message: "Check your phone to approve the mobile money payment." };
   }
 
-  // One mobile money deposit for the whole cart, potentially spanning multiple sellers - each
-  // line item is priced and fee'd against its own provider's effective settings up front, and
-  // the split only actually happens once the single deposit succeeds (see handleMobileMoneySuccess).
-  async cartCheckout({ actorUserId, items, phone }) {
+  // Same rule for bookings: the guest pays the deposit (or the full amount) only once the provider has confirmed.
+  async payServiceBooking({ actorUserId, bookingId, phone }) {
     if (!phone) {
       throw new AppError({ message: "A phone number is required to pay by mobile money", statusCode: 400, code: "PHONE_REQUIRED" });
     }
-    if (!Array.isArray(items) || !items.length) {
-      throw new AppError({ message: "Your cart is empty", statusCode: 400, code: "EMPTY_CART" });
-    }
 
-    // Merge duplicate listingIds defensively - the client-side cart already prevents this, but
-    // the request body can't be trusted to enforce it.
-    const quantityByListingId = new Map();
-    for (const item of items) {
-      if (!item?.listingId) {
-        throw new AppError({ message: "Invalid cart item", statusCode: 400, code: "INVALID_CART_ITEM" });
+    const prepared = await prisma.$transaction(async (tx) => {
+      const booking = await tx.serviceBooking.findFirst({ where: { id: bookingId, userId: actorUserId } });
+      if (!booking) throw new AppError({ message: "Booking not found", statusCode: 404, code: "BOOKING_NOT_FOUND" });
+      if (booking.paymentStatus === "paid") throw new AppError({ message: "This booking is already paid.", statusCode: 409, code: "BOOKING_ALREADY_PAID" });
+      if (booking.status !== "confirmed" || booking.paymentStatus !== "payable") {
+        throw new AppError({ message: "You can pay once the provider has confirmed your booking.", statusCode: 409, code: "BOOKING_NOT_PAYABLE" });
       }
-      const q = Math.max(1, Math.min(99, Number(item.quantity) || 1));
-      quantityByListingId.set(item.listingId, (quantityByListingId.get(item.listingId) ?? 0) + q);
-    }
-
-    const { transactionId, reference, amountDec } = await prisma.$transaction(async (tx) => {
-      const settings = await this.getSettings(tx);
-      const lineItems = [];
-      let totalAmountCents = 0n;
-      let totalFeeCents = 0n;
-
-      for (const [listingId, quantity] of quantityByListingId) {
-        const listing = await tx.serviceProduct.findUnique({ where: { id: listingId } });
-        if (!listing || listing.type !== "product" || listing.status !== "approved") {
-          throw new AppError({ message: "One of the items in your cart is no longer available", statusCode: 404, code: "PRODUCT_NOT_FOUND", details: { listingId } });
-        }
-
-        const provider = await tx.provider.findUnique({ where: { id: listing.providerId } });
-        if (!provider || !provider.isApproved || provider.moderationStatus !== "approved") {
-          throw new AppError({ message: "One of the sellers in your cart is no longer available", statusCode: 404, code: "PROVIDER_NOT_FOUND", details: { listingId } });
-        }
-
-        const effective = this.computeEffectiveForProvider({ global: settings, provider });
-        if (!effective.enableEcommerce) {
-          throw new AppError({ message: "Online purchases are disabled for one of the items in your cart", statusCode: 400, code: "ECOMMERCE_DISABLED", details: { listingId } });
-        }
-        if (!effective.enableWallet) {
-          throw new AppError({ message: "One of the sellers in your cart has their wallet disabled", statusCode: 400, code: "WALLET_DISABLED", details: { listingId } });
-        }
-        if (!provider.onlinePaymentsEnabled) {
-          throw new AppError({ message: "One of the sellers in your cart does not accept online payments", statusCode: 400, code: "PROVIDER_ONLINE_PAYMENTS_DISABLED", details: { listingId } });
-        }
-        if (!listing.onlinePaymentEnabled) {
-          throw new AppError({ message: "Online purchase is disabled for one of the items in your cart", statusCode: 400, code: "LISTING_ONLINE_PAYMENT_DISABLED", details: { listingId } });
-        }
-
-        const unitCents = parseMoneyToCents(listing.price);
-        const amountCents = unitCents * BigInt(quantity);
-        const feeCents = feeFromPercentCents({ amountCents, percent: effective.transactionFeePercent });
-        const netCents = amountCents - feeCents;
-
-        totalAmountCents += amountCents;
-        totalFeeCents += feeCents;
-
-        lineItems.push({
-          listingId: listing.id,
-          providerId: provider.id,
-          name: listing.name,
-          quantity,
-          unitPriceCents: unitCents.toString(),
-          amountCents: amountCents.toString(),
-          feeCents: feeCents.toString(),
-          netCents: netCents.toString()
-        });
+      if (booking.payBy && booking.payBy < new Date()) {
+        throw new AppError({ message: "The payment window for this booking has closed.", statusCode: 409, code: "PAYMENT_WINDOW_CLOSED" });
       }
 
-      if (totalAmountCents <= 0n) {
-        throw new AppError({ message: "Your cart total must be greater than zero", statusCode: 400, code: "INVALID_AMOUNT" });
+      const recent = await tx.transaction.findMany({ where: { userId: actorUserId, type: "service_booking", status: "pending", createdAt: { gt: new Date(Date.now() - 10 * 60 * 1000) } } });
+      const waiting = recent.find((t) => t.metadata?.bookingId === booking.id);
+      if (waiting) return { reuse: waiting };
+
+      const [settings, provider] = await Promise.all([this.getSettings(tx), tx.provider.findUnique({ where: { id: booking.providerId } })]);
+      if (!provider) throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+      const effective = this.computeEffectiveForProvider({ global: settings, provider });
+      if (!effective.enableWallet || !provider.onlinePaymentsEnabled) {
+        throw new AppError({ message: "This provider isn't taking online payments right now. Pay them directly.", statusCode: 400, code: "ONLINE_PAYMENTS_UNAVAILABLE" });
       }
 
-      const amountDec = centsToDecimal(totalAmountCents);
-      const feeDec = centsToDecimal(totalFeeCents);
-      const netDec = centsToDecimal(totalAmountCents - totalFeeCents);
-
-      const reference = `cart-${crypto.randomUUID()}`;
+      const amountCents = parseMoneyToCents(booking.amountDue);
+      if (amountCents <= 0n) throw new AppError({ message: "Nothing to pay online for this booking.", statusCode: 400, code: "INVALID_AMOUNT" });
+      const feeCents = feeFromPercentCents({ amountCents, percent: effective.transactionFeePercent });
+      const reference = `booking-${crypto.randomUUID()}`;
       const transaction = await tx.transaction.create({
         data: {
-          type: "cart_purchase",
+          type: "service_booking",
           userId: actorUserId,
-          providerId: null,
-          amount: amountDec,
-          fee: feeDec,
-          netAmount: netDec,
+          providerId: provider.id,
+          amount: centsToDecimal(amountCents),
+          fee: centsToDecimal(feeCents),
+          netAmount: centsToDecimal(amountCents - feeCents),
           status: "pending",
           reference,
-          metadata: { items: lineItems, phone }
+          metadata: { bookingId: booking.id, phone }
         }
       });
-
-      return { transactionId: transaction.id, reference, amountDec };
+      return { transaction, reference, amountDec: centsToDecimal(amountCents) };
     });
 
-    try {
-      await this.mobileMoneyService.initiateDeposit({
-        amount: amountDec,
-        phone,
-        reference,
-        ...this.mobileMoneyCallbackUrls()
-      });
-    } catch (gatewayError) {
-      await prisma.transaction.update({ where: { id: transactionId }, data: { status: "failed" } });
-      throw gatewayError;
+    if (prepared.reuse) {
+      return { transactionId: prepared.reuse.id, status: "pending", message: "Check your phone to approve the mobile money payment." };
     }
 
-    return {
-      transactionId,
-      status: "pending",
-      message: "Check your phone to approve the mobile money payment."
-    };
+    try {
+      await this.mobileMoneyService.initiateDeposit({ amount: prepared.amountDec, phone, reference: prepared.reference, ...this.mobileMoneyCallbackUrls() });
+    } catch (gatewayError) {
+      await prisma.transaction.update({ where: { id: prepared.transaction.id }, data: { status: "failed" } });
+      throw gatewayError;
+    }
+    return { transactionId: prepared.transaction.id, status: "pending", message: "Check your phone to approve the mobile money payment." };
   }
 
   // Called from the mobile money webhook once a deposit actually completes. Credits the
@@ -606,6 +536,8 @@ export class PaymentService {
     }
 
     const newOrderIds = [];
+    const paidOrderIds = [];
+    const paidBookingIds = [];
     let busBookingToEmail = null;
 
     const result = await prisma.$transaction(async (tx) => {
@@ -638,45 +570,24 @@ export class PaymentService {
           await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
         }
 
-        // A "purchase" transaction only ever comes from BuyNowModal (single-listing, single-provider),
-        // so unlike cart_purchase there's nothing to split - just record the one order it paid for.
-        const listingId = transaction.metadata?.listingId;
-        const quantity = Math.max(1, Number(transaction.metadata?.quantity) || 1);
-        if (listingId && transaction.providerId) {
-          const listing = await tx.serviceProduct.findUnique({ where: { id: listingId } });
-          const unitPrice = new Prisma.Decimal(transaction.amount).div(quantity);
-
-          const order = await tx.order.create({
-            data: {
-              userId: transaction.userId,
-              providerId: transaction.providerId,
-              transactionId: transaction.id,
-              status: "pending",
-              subtotal: transaction.amount,
-              fee: transaction.fee,
-              total: transaction.amount,
-              customer: { phone: transaction.metadata?.phone ?? null },
-              fulfillment: {},
-              metadata: {},
-              items: {
-                create: [
-                  {
-                    listingId,
-                    name: listing?.name ?? "Item",
-                    quantity,
-                    unitPrice,
-                    total: transaction.amount
-                  }
-                ]
+        // Paying an order the seller already accepted: mark that order paid.
+        const payingOrderId = transaction.metadata?.orderId;
+        if (payingOrderId) {
+          const order = await tx.order.findUnique({ where: { id: payingOrderId }, include: { items: true } });
+          if (order && !order.transactionId) {
+            await tx.order.update({
+              where: { id: order.id },
+              data: {
+                transactionId: transaction.id,
+                fee: transaction.fee,
+                metadata: { ...(order.metadata ?? {}), paymentMethod: "online", paymentStatus: "paid", paidAt: new Date().toISOString() }
               }
+            });
+            for (const item of order.items) {
+              if (item.listingId) await tx.serviceProduct.update({ where: { id: item.listingId }, data: { soldCount: { increment: item.quantity } } });
             }
-          });
-
-          if (listing) {
-            await tx.serviceProduct.update({ where: { id: listingId }, data: { soldCount: { increment: quantity } } });
+            paidOrderIds.push(order.id);
           }
-
-          newOrderIds.push(order.id);
         }
       } else if (transaction.type === "contact_unlock") {
         const contactUnlockId = transaction.metadata?.contactUnlockId;
@@ -782,6 +693,21 @@ export class PaymentService {
         if (Number(transaction.fee) > 0) {
           await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
         }
+      } else if (transaction.type === "service_booking") {
+        const bookingId = transaction.metadata?.bookingId;
+        if (transaction.providerId) {
+          await this.walletService.creditBalance({ providerId: transaction.providerId, amountDec: transaction.netAmount, session: tx });
+        }
+        if (Number(transaction.fee) > 0) {
+          await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
+        }
+        if (bookingId) {
+          await tx.serviceBooking.update({
+            where: { id: bookingId },
+            data: { paymentStatus: "paid", amountPaid: transaction.amount, paidAt: new Date(), transactionId: transaction.id, payBy: null }
+          });
+          paidBookingIds.push(bookingId);
+        }
       } else if (transaction.type === "ride_trip") {
         const tripId = transaction.metadata?.tripId;
         const trip = tripId ? await tx.rideTrip.findUnique({ where: { id: tripId } }) : null;
@@ -803,6 +729,14 @@ export class PaymentService {
 
     if (busBookingToEmail) {
       this.busBookingService.sendTicketEmail(busBookingToEmail).catch(() => {});
+    }
+
+    for (const orderId of paidOrderIds) {
+      this.orderNotificationService.notifyProviderOrderPaid({ orderId }).catch(() => {});
+      this.documentService?.issueReceipt({ orderId }).catch(() => {});
+    }
+    for (const bookingId of paidBookingIds) {
+      this.serviceBookingService?.notifyPaid(bookingId).catch(() => {});
     }
 
     for (const orderId of newOrderIds) {
@@ -1043,7 +977,8 @@ export class PaymentService {
       { type: "contact_unlock", field: "netAmount" },
       { type: "subscription", field: "netAmount" },
       { type: "purchase", field: "fee" },
-      { type: "bus_ticket", field: "fee" }
+      { type: "bus_ticket", field: "fee" },
+      { type: "service_booking", field: "fee" }
     ];
 
     const [aggregates, platformWithdrawals, wallet] = await Promise.all([
