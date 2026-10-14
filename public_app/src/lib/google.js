@@ -50,7 +50,8 @@ const initNativeGoogle = async () => {
 
 export const nativeGoogleIdToken = async () => {
   const SocialLogin = await initNativeGoogle();
-  const { result } = await SocialLogin.login({ provider: "google", options: { scopes: ["email", "profile"] } });
+  // No `scopes` option: passing one switches the plugin to an authorisation flow that needs extra MainActivity code. The ID token already carries email and profile.
+  const { result } = await SocialLogin.login({ provider: "google" });
   if (!result?.idToken) throw new Error("Google did not return a sign-in token. Please try again.");
   return result.idToken;
 };
