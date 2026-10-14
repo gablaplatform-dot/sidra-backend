@@ -17,6 +17,14 @@ import { ADS, DEMO_EMAIL_DOMAIN, PROVIDERS, SERVICES } from "./demo-marketplace/
 import { imageUrl, pickImages } from "./demo-marketplace/images.js";
 
 dotenv.config();
+
+// Demo data must never be created on the live platform: it is fake companies, ratings and listings that real
+// customers could buy from. Clearing (--clear) is always allowed.
+if (process.env.NODE_ENV === "production" && !process.argv.includes("--clear") && !process.argv.includes("--yes-seed-production")) {
+  process.stderr.write("Refusing to seed demo data in production. (Use --clear to remove demo data.)\n");
+  process.exit(1);
+}
+
 const prisma = new PrismaClient();
 
 const args = new Set(process.argv.slice(2));

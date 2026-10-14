@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BannerSkeleton } from "../Skeleton";
+import { safeHref } from "../../lib/safeHref";
 
 const IconArrowRight = (props) => (
   <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -41,7 +42,7 @@ const TimeBox = ({ label, value }) => (
 
 function FlashSaleBanner({ flash }) {
   const { days, hours, minutes, seconds } = useCountdown(flash?.remainingSecs ?? 0);
-  const ctaHref = flash?.ctaHref ?? "/shop";
+  const ctaHref = safeHref(flash?.ctaHref, "/shop");
   return (
     <div className="shop-promo shop-promo-flash">
       <div className="shop-promo-flash-copy">
@@ -68,7 +69,7 @@ function FlashSaleBanner({ flash }) {
 }
 
 function NewCollectionBanner({ collection }) {
-  const ctaHref = collection?.ctaHref ?? "/shop";
+  const ctaHref = safeHref(collection?.ctaHref, "/shop");
   return (
     <div className="shop-promo shop-promo-collection">
       <div className="shop-promo-collection-overlay" />

@@ -110,7 +110,6 @@ export class EngagementService {
           description: item.provider.description,
           categoryId: item.provider.categoryId,
           media: item.provider.media ?? {},
-          location: item.provider.location ?? {},
           ratingAvg: item.provider.ratingAvg ?? 0,
           ratingCount: item.provider.ratingCount ?? 0
         }

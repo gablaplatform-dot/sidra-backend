@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { safeHref } from "../../lib/safeHref";
 
 const IconArrowRight = (props) => (
   <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -31,7 +32,7 @@ export default function ShopAdsHero({ ads = [] }) {
 
   if (!ads.length) return null;
   const ad = ads[index % ads.length];
-  const ctaHref = ad.ctaHref || "/shop";
+  const ctaHref = safeHref(ad.ctaHref, "/shop");
 
   return (
     <section className="shop-hero">

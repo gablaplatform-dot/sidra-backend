@@ -606,6 +606,8 @@ model Favorite {
   provider Provider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
   listing  ServiceProduct?  @relation(fields: [listingId], references: [id], onDelete: SetNull)
 
+  // One favourite per person per provider (the API and the hand-written SQL both rely on this).
+  @@unique([userId, providerId])
   @@index([userId, createdAt])
   @@index([providerId])
   @@index([listingId])
@@ -627,6 +629,7 @@ model Review {
   provider Provider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
   listing  ServiceProduct?  @relation(fields: [listingId], references: [id], onDelete: SetNull)
 
+  @@unique([userId, providerId])
   @@index([providerId, status, createdAt])
   @@index([userId])
   @@index([listingId])

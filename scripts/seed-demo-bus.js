@@ -21,6 +21,14 @@ import { addDaysToDateString, enumerateDates, eatToUtc, todayEat, weekdayOf } fr
 import { hashPassword } from "../src/utils/password.js";
 
 dotenv.config();
+
+// Demo data must never be created on the live platform: it is fake companies, ratings and listings that real
+// customers could buy from. Clearing (--clear) is always allowed.
+if (process.env.NODE_ENV === "production" && !process.argv.includes("--clear") && !process.argv.includes("--yes-seed-production")) {
+  process.stderr.write("Refusing to seed demo data in production. (Use --clear to remove demo data.)\n");
+  process.exit(1);
+}
+
 const prisma = new PrismaClient();
 const log = (m) => process.stdout.write(`${m}\n`);
 const DEMO_DOMAIN = "seed.gabla.test";

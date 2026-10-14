@@ -1,4 +1,5 @@
 import { formatUgx } from "./format";
+import { safeHref } from "./safeHref";
 
 const PLACEHOLDER_COVER = "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=premium%20product%20packaging%20minimal%20white%20background&image_size=square_hd";
 const PLACEHOLDER_PROMO = "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=abstract%20orange%20coral%20gradient%20mesh%20banner&image_size=landscape_16_9";
@@ -50,7 +51,7 @@ export const mapPromotionDto = (promo) => {
     subtitle: promo?.subtitle ?? "",
     tag: promo?.subtitle ?? promo?.title,
     cta: promo?.ctaLabel ?? "Shop Now",
-    ctaHref: promo?.ctaHref ?? "/shop",
+    ctaHref: safeHref(promo?.ctaHref, "/shop"),
     image: promo?.imageUrl ?? PLACEHOLDER_PROMO,
     remainingSecs: Number(promo?.remainingSecs ?? 0),
     startsInSecs: Number(promo?.startsInSecs ?? 0),

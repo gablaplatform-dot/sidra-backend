@@ -1,4 +1,5 @@
 import React from "react";
+import { webHref } from "../lib/safeHref";
 
 // Renders whatever a provider answered for their category's custom questions during onboarding
 // (Category.providerFields definitions + Provider.customFields values) - shown publicly on their
@@ -20,7 +21,7 @@ const formatValue = (field, value) => {
   if (field.type === "multi_select") return Array.isArray(value) ? value.join(", ") : "";
   if (field.type === "url") {
     return (
-      <a href={value} target="_blank" rel="noreferrer">{value}</a>
+      <a href={webHref(value) || undefined} target="_blank" rel="noreferrer">{value}</a>
     );
   }
   return field.unit ? `${value} ${field.unit}` : String(value);

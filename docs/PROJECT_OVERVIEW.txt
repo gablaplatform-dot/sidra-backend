@@ -1,0 +1,716 @@
+==============================================================================
+ GABLA (codename "Sidra") - PROJECT OVERVIEW AND FEATURE FLOWS
+==============================================================================
+
+Purpose of this document
+  A plain-language description of what the platform is, every feature it has,
+  and the step-by-step flow of each feature. It is split into:
+
+    PART 1  - What the project is (summary and the four applications)
+    PART 2  - ADMIN SIDE (the admin panel)
+    PART 3  - USER SIDE
+                3A. Regular user / customer interactions
+                3B. Service provider interactions
+    PART 4  - RIDE HAILING (rider, driver, admin)
+    PART 5  - How money moves (fees, wallets, payouts)
+    PART 6  - Current limitations and items to be aware of
+    PART 7  - Technical reference (stack, hosting, key files)
+
+  This document was written from a read-through of the code. Items marked
+  "not built" or "not enforced" are things the code does not do today.
+
+
+==============================================================================
+PART 1 - WHAT THE PROJECT IS
+==============================================================================
+
+Gabla is a local services and marketplace platform for Uganda (currency: UGX).
+It combines three businesses in one system:
+
+  1. A SERVICE DIRECTORY   - customers find local businesses (service
+                             providers) by category, search, and location.
+  2. A MARKETPLACE / SHOP  - providers sell products; customers buy online
+                             with mobile money; the platform takes a fee.
+  3. RIDE HAILING          - "Gabla Ride": boda (motorcycle) and car rides,
+                             with a separate driver app.
+
+The platform earns money from: contact-unlock fees (customers pay to see a
+provider's phone/address), provider monthly subscriptions, a percentage fee
+on every online sale and every withdrawal, and a commission on ride fares.
+
+The system has four applications that all talk to one backend:
+
+  1. BACKEND API   - the server. Holds all data and business rules.
+  2. ADMIN PANEL   - web app used by the company's staff (admins).
+  3. PUBLIC APP    - the website customers and providers use.
+  4. DRIVER APP    - mobile app (Flutter) used by ride drivers.
+
+Who uses the system (the four roles in the code)
+  - ADMIN     Company staff. Can have limited permissions (see Part 2).
+  - PROVIDER  A business listed on the platform.
+  - USER      A normal customer.
+  - DRIVER    A ride-hailing driver (a user who was approved as a driver).
+
+Payments
+  All payments are by MOBILE MONEY. The customer enters a phone number, gets
+  a prompt on the phone (USSD), approves it, and the system is told the
+  result by the payment gateway. Payouts to providers/drivers/platform also
+  go out by mobile money.
+
+
+==============================================================================
+PART 2 - ADMIN SIDE (the Admin Panel)
+==============================================================================
+
+The admin panel is a separate web app. Everything below is something an
+admin does there (or, where noted, something that exists on the server but
+has no screen yet).
+
+------------------------------------------------------------------------------
+2.1  How the first admin is created and how admins log in
+------------------------------------------------------------------------------
+First admin (set up once at deployment):
+  1. The person deploying sets two server settings: an admin email and an
+     admin password.
+  2. When the server starts, it creates that account automatically and gives
+     it the Super Admin role. (On every restart it re-activates that account
+     and re-applies the Super Admin role.)
+  3. The admin opens the admin panel, enters email + password, and is in.
+  (A fallback exists: if no admin exists yet, a one-time public "bootstrap"
+  endpoint lets the first caller create a Super Admin. Setting the admin
+  email/password in step 1 avoids that being open.)
+
+Normal login:
+  1. Admin opens the panel and enters email + password.
+  2. The server checks them. Wrong details are refused; a suspended account
+     is refused.
+  3. The panel stores a session token and shows only the menu items the
+     admin's role allows. The session lasts 1 hour.
+
+------------------------------------------------------------------------------
+2.2  Admin roles and permissions
+------------------------------------------------------------------------------
+Each admin has a role, and a role is a list of permissions. Permissions:
+  Core:    users, providers, categories, listings, reviews, inquiries,
+           orders, media
+  Finance: transactions, wallets, subscriptions
+  System:  reports, settings, adminroles
+
+Four built-in roles exist:
+  - Super Admin  : everything. Protected - cannot be edited or deleted.
+  - Operations   : users, providers, categories, listings, reviews,
+                   inquiries, orders.
+  - Finance      : transactions, wallets, subscriptions, reports.
+  - Auditor      : reports only.
+Custom roles can be created.
+
+Flow - create a custom role:
+  1. Admin (with "adminroles" permission) opens "Roles".
+  2. Clicks to add a role, names it, ticks the permissions.
+  3. Saves. The role can now be given to admins.
+  Rules: only a Super Admin can grant the "adminroles" permission; a role
+  cannot be deleted while admins or pending invites use it; the last Super
+  Admin cannot be demoted or suspended; role changes are audit-logged.
+
+Flow - invite a new admin:
+  1. Admin opens "Admins", clicks "Invite admin".
+  2. Enters the person's name, email, and chooses a role. Submits.
+  3. The system emails a "Set your password" link (valid 7 days). If email
+     is not configured, the panel shows the link so the admin can copy and
+     send it manually.
+  4. The invitee opens the link, sees their name/email/role, chooses a
+     password (8+ characters), and submits.
+  5. The system creates their admin account and logs them in.
+  Admins can also resend or revoke a pending invite.
+
+Flow - suspend / reactivate / re-role an admin:
+  1. Admin opens "Admins".
+  2. Uses the role dropdown or the Suspend/Reactivate button on a row.
+  3. The change takes effect on that person's next request. (You cannot
+     change your own role or suspend yourself.)
+
+------------------------------------------------------------------------------
+2.3  Dashboard
+------------------------------------------------------------------------------
+  1. Admin opens the Dashboard (first screen after login).
+  2. Sees headline numbers: users, providers, pending providers, listings,
+     active subscriptions, transactions, revenue, fees, wallet balances,
+     reviews, new inquiries, pending orders.
+  Note: the two charts (revenue by month, users vs providers) currently show
+  sample/demo data, and the date buttons do nothing.
+
+------------------------------------------------------------------------------
+2.4  Users
+------------------------------------------------------------------------------
+  1. Admin opens "Users" and sees the list of accounts; can search/filter.
+  The screen is view-only. The server can suspend/reactivate a user
+  (a suspended user cannot log in with password), but there is no button for
+  it in the panel yet.
+
+------------------------------------------------------------------------------
+2.5  Providers - onboarding and approval
+------------------------------------------------------------------------------
+Providers are normally ADDED BY AN ADMIN (self-registration is off by
+default). The flow:
+
+  ONBOARDING A NEW PROVIDER
+  1. Admin opens "Providers" and clicks "Add provider".
+  2. Fills the form: business name, contact person, email, phone, WhatsApp,
+     website, category, description, location (searched on Google Maps and
+     pinned on a map) and Uganda district. Submits.
+  3. The system creates the provider account and an empty profile, and
+     emails the business a personal onboarding link (valid 7 days).
+  4. The provider opens the link (this is on the public app - see 3B.1),
+     completes their profile and connects their Google account.
+  5. As soon as the provider submits their profile, they are AUTOMATICALLY
+     APPROVED and appear on the public site. (The admin can still suspend
+     or reject them afterwards.)
+
+  MODERATING A PROVIDER
+  1. Admin opens "Providers", finds the business, opens the row menu.
+  2. Chooses Approve, Reject, Suspend, or back to Pending.
+  3. Effect: only approved providers are visible on the public site. A
+     suspended/rejected provider (and all their listings) disappears from
+     browsing, search, contact unlock, and buying. The provider can still
+     log in and edit their own data.
+
+  OTHER PROVIDER ACTIONS
+  - Resend Google link: emails the provider a fresh link to reconnect their
+    Google sign-in (for providers who lost access to their profile).
+  - Turn online payments on/off for one provider: if off, customers cannot
+    pay that provider online (they can only send an order request).
+  - Delete provider: removes the provider, their account and listings.
+  - Detail panel: tabs Overview, Services (their listings), Wallet,
+    Transactions, Analytics. (Wallet/Transactions tabs currently show
+    empty/zero - known issue.)
+  - Per-provider fee overrides: the server lets an admin set a different
+    subscription fee, contact fee, or transaction-fee % for one provider;
+    there is no screen for this yet.
+
+------------------------------------------------------------------------------
+2.6  Categories (service directory)
+------------------------------------------------------------------------------
+Categories organise providers (e.g. Restaurants > Fast food). They form a
+tree, with sub-categories.
+
+Flow - create a category:
+  1. Admin opens "Categories", clicks "Add category" (or opens a category
+     and adds a sub-category).
+  2. General tab: name, image upload, Active/Paused.
+  3. Layout & search tab: choose how provider pages in this category look
+     (default, gallery, menu, booking, portfolio, or ecommerce) and add
+     search aliases (extra words that should find this category).
+  4. Provider fields tab: define extra questions every provider in this
+     category must answer (e.g. "Opening hours"). Types: text, number,
+     yes/no, dropdown, date, phone, link, etc.
+  5. Listing fields tab: define extra details for each service/product
+     listing in this category.
+  6. Save. The category appears on the public site immediately.
+
+Other actions: drag to reorder; edit; pause (hides the category and all
+sub-categories from the public); delete (blocked if it has sub-categories;
+providers in it become uncategorised).
+Effect on users: the layout choice changes how provider pages look, the
+fields appear in provider onboarding and listing forms, aliases improve
+search.
+
+------------------------------------------------------------------------------
+2.7  Shop categories (product taxonomy)
+------------------------------------------------------------------------------
+A separate category tree used only for the Shop (products).
+  1. Admin opens "Shop Categories" and creates/edits categories and
+     sub-categories the same way as 2.6 (name, image, active, listing
+     fields that every product in that category must fill in).
+  2. Providers pick a LEAF category when they create a product. If the
+     right sub-category is missing, the provider may add a sub-category
+     themselves; it goes live immediately but is flagged "Pending review".
+  3. Admin sees the flag and clicks Approve (or edits, pauses, or deletes).
+  Pausing a category hides its whole branch from the Shop.
+
+------------------------------------------------------------------------------
+2.8  Listings moderation (services and products)
+------------------------------------------------------------------------------
+Providers' listings go live the moment they are saved; admin moderation
+happens after the fact.
+  1. Admin opens "Listings", filters/searches.
+  2. Opens a listing: Edit (title, price, status Approved/Pending/Suspended,
+     type, description, online-payment toggle), Feature it, or Remove it.
+  3. "Ban provider" suspends the listing's owner.
+  Effect: only Approved listings of Approved providers are visible publicly.
+
+------------------------------------------------------------------------------
+2.9  Settings (platform-wide business rules)
+------------------------------------------------------------------------------
+  1. Admin opens "Settings".
+  2. Turns features on/off and sets the fees (all in UGX / percent):
+       - Provider Subscriptions (on/off, monthly fee)
+       - Contact Unlock Fee (on/off, fee)
+       - Internal Wallet System (on/off)
+       - E-commerce Module (on/off)
+       - Transaction fee percent (platform's cut of sales/withdrawals)
+       - Minimum withdrawal amount
+  3. Saves. Effect is immediate:
+       - Contact fee ON  -> provider phone/address are hidden until a
+                            customer pays.
+       - Subscription ON -> providers can buy a 30-day subscription.
+       - E-commerce/Wallet ON -> customers can buy online; providers can
+                            withdraw earnings.
+  Important: fees start at 0, and a 0 fee blocks subscription and contact
+  payments - the admin must set real fees first.
+
+------------------------------------------------------------------------------
+2.10  Money screens: Transactions, Wallets, Subscriptions, Platform Wallet
+------------------------------------------------------------------------------
+  TRANSACTIONS  : list of every payment (subscription, contact unlock,
+                  purchase, cart purchase, withdrawal, ride) with status.
+                  View only.
+  WALLETS       : each provider's balance, total earned, withdrawn, and
+                  pending withdrawals. View only.
+  SUBSCRIPTIONS : each provider subscription with amount and expiry. View
+                  only.
+  REPORTS       : summary cards, daily revenue series, top categories,
+                  status breakdowns; CSV export.
+
+  PLATFORM WALLET (the company's own earnings):
+  1. Admin (with "wallets" permission) opens "Platform Wallet" and sees the
+     balance and a revenue breakdown (contact unlocks, subscriptions,
+     sales fees).
+  2. Clicks "Withdraw", enters amount, destination phone, optional revenue
+     type and note.
+  3. The system checks the amount against what is available for that
+     revenue type, deducts it, and sends the money by mobile money. If the
+     payout fails, the money is returned to the platform wallet.
+
+------------------------------------------------------------------------------
+2.11  Provider withdrawal requests (admin approval)
+------------------------------------------------------------------------------
+  1. A provider requests a withdrawal (see 3B.9). Their wallet is debited
+     right away.
+  2. An admin approves, rejects, or marks it paid.
+       - APPROVE : the system immediately sends the payout (amount minus
+                   fee) to the provider's phone by mobile money. If it
+                   fails, the provider's wallet is refunded and the request
+                   is marked rejected.
+       - REJECT  : the provider's wallet is refunded.
+       - MARK PAID: for manual payouts after approval.
+  This is currently available through the server only - the admin panel has
+  no screen for withdrawals yet.
+
+------------------------------------------------------------------------------
+2.12  Promotions and ads
+------------------------------------------------------------------------------
+  - Admins can create site banners, flash sales and "new collection"
+    promotions (title, image, dates, discount %, linked products). They
+    appear in the Shop. Server-only today - no admin screen yet.
+  - Providers create their own ads (see 3B.8). Admin can pause or delete
+    them via the server; there is no screen yet.
+
+------------------------------------------------------------------------------
+2.13  Other admin tools that exist on the server without a screen yet
+------------------------------------------------------------------------------
+  - Reviews: approve/reject customer reviews (reviews start hidden).
+  - Inquiries: update the status of customer inquiries.
+  - Orders: change the status of any order.
+  - Media: remove uploaded media records.
+
+------------------------------------------------------------------------------
+2.14  Gabla Ride admin (drivers, trips, fares)
+------------------------------------------------------------------------------
+Admin opens "Gabla Ride" which has four tabs:
+
+  APPROVING A DRIVER
+  1. A driver applies from the driver app (see Part 4).
+  2. Admin opens "Gabla Ride" > "Pending Drivers".
+  3. Views the driver's vehicle details and licence/permit photo.
+  4. Clicks Approve, or Reject (with an optional reason).
+  5. Effect: only approved drivers can go online and receive ride requests.
+     A rejected driver sees the reason in the app and can upload a new
+     photo to be reviewed again.
+
+  SETTING FARES
+  1. Admin opens "Fare Settings".
+  2. For each vehicle type (boda, car) enters: base fare, price per km,
+     price per minute, minimum fare, commission %, and an active switch.
+  3. Saves. Rides cannot be booked for a vehicle type until fares are saved
+     (nothing is pre-filled).
+
+  OTHER TABS
+  - All Drivers: full driver list.
+  - Live Trips: all trips with status, rider and driver; refreshes every
+    5 seconds. View only.
+
+
+==============================================================================
+PART 3 - USER SIDE (the public website)
+==============================================================================
+
+Sign-in (applies to everyone)
+  1. Visitor opens "Login" and taps "Continue with Google". (A Google
+     One-Tap prompt can also appear on the home page.)
+  2. First time: an account is created automatically as a normal customer.
+     Returning: signed in.
+  3. Visitors who are not signed in can browse, search, and pay to unlock a
+     provider's contact. Ordering, checkout, and rides need sign-in.
+
+==============================================================================
+PART 3A - REGULAR USER / CUSTOMER INTERACTIONS
+==============================================================================
+
+3A.1  Browse by category
+  1. Customer opens the home page and sees category tiles and top-rated
+     providers.
+  2. Taps a category -> sees sub-categories, the providers in it, and the
+     products/services in it.
+  3. Taps a provider to open their page.
+  Only approved providers appear.
+
+3A.2  Search
+  1. Customer types in the search box (home page or search page).
+  2. The system shows three groups: matching Categories, Service providers,
+     and Products & services.
+  3. Search tolerates spelling mistakes and understands admin-defined
+     aliases (e.g. "wash my car" finds the Car Wash category).
+
+3A.3  Nearby search (Shop)
+  1. Customer opens the Shop and taps the search; a "Search nearby" box
+     opens. Types what they want and submits.
+  2. The browser asks for location permission.
+       - Allowed : results within 15 km, nearest first, each showing
+                   "N km away".
+       - Denied  : the customer picks their district from a list instead.
+  3. If nothing is found nearby, the search automatically widens (3x the
+     distance, then the whole country) and says it widened.
+
+3A.4  The Shop
+  1. Customer opens the Shop and sees: a hero carousel of provider ads
+     (nearest first; or new arrivals if there are no ads), promo banners,
+     category tiles, new arrivals, and best sellers.
+  2. Browses categories (with sub-category chips) and opens a product page:
+     image, price, discount, description, specification list, and "Sold
+     by <provider>".
+  3. Buying options depend on the provider:
+       - Online payments on  -> "Buy now" and "Add to cart".
+       - Online payments off -> "Order now" (request only).
+
+3A.5  Unlocking a provider's contact
+  Used when the platform has the contact fee switched on.
+  1. Customer opens a provider page. Phone, WhatsApp, email, website and
+     street address are hidden; city/region still show.
+  2. Taps "Unlock contact & location". A box shows the fee and asks for a
+     mobile money number. (No account needed.)
+  3. Customer approves the payment prompt on their phone.
+  4. The page waits (checks every 3 seconds, up to about 1 minute), then
+     reveals phone, WhatsApp, website and a map/directions link.
+  5. Later visits: a signed-in customer keeps access to that provider. A
+     visitor who was not signed in keeps access only on the same device.
+  The fee goes entirely to the platform, not to the provider.
+
+3A.6  Buy now (one product, pay immediately)
+  1. Signed-in customer opens a product and taps "Buy now".
+  2. Enters quantity and mobile money number.
+  3. Approves the payment prompt on their phone.
+  4. On success the order is created, the provider is emailed, and the
+     customer sees "Payment confirmed".
+
+3A.7  Cart and checkout
+  1. Customer taps "Add to cart" on products (cart is stored in the browser;
+     no account needed to add).
+  2. Opens the Cart: items grouped by seller; edits quantities; removes
+     items.
+  3. Signs in if needed, enters a mobile money number, taps checkout.
+  4. Approves one payment prompt for the total.
+  5. The system splits the payment into one order per seller, credits each
+     seller, emails each seller, and shows the receipt.
+  Prices are always re-read from the server at payment time.
+
+3A.8  Order now (request an order without paying online)
+  1. Signed-in customer taps "Order now" (shown for services, or for
+     products where online payment is off).
+  2. Enters name, phone, quantity and an optional note. Submits.
+  3. The provider is emailed and contacts the customer to confirm. No
+     payment is taken.
+
+3A.9  Book a ride
+  See Part 4 (rider flow).
+
+3A.10  Not available to customers yet
+  The server supports favourites, reviews/ratings and general inquiries, but
+  the website has no screens for them, and there is no customer order
+  history page.
+
+==============================================================================
+PART 3B - SERVICE PROVIDER INTERACTIONS
+==============================================================================
+
+3B.1  Becoming a provider (onboarding)
+  1. An admin adds the business (see 2.5). The business gets an email with
+     a personal link, valid 7 days.
+  2. Provider opens the link. Details the admin entered (name, phone,
+     website, location) are shown locked; the provider fills in the rest,
+     including any category-specific questions, and submits.
+  3. The profile goes live immediately.
+  4. The provider taps "Continue with Google" to link their Google account.
+     It must be the same email the invitation was sent to.
+  5. They are signed in and land on their dashboard.
+  Lost access? On the login page the provider enters their email and gets a
+  fresh reconnect link.
+
+3B.2  Provider dashboard (the "Profile" page)
+  After sign-in a provider sees a "Profile" link. It has eight tabs:
+  Profile info, Analytics, Products & services, Shop categories, Ads,
+  Orders, Wallet, Gallery.
+
+3B.3  Edit profile and gallery
+  1. Provider opens "Profile info", edits business name, description,
+     phone, WhatsApp, website, cover and avatar photos, and the "Accept
+     online mobile money payments" switch. Saves.
+  2. In "Gallery" uploads up to 40 photos shown on the public page.
+  (Location and category are set by the admin.)
+
+3B.4  Add a product or service
+  1. Provider opens "Products & services" and taps "+ Add".
+  2. Chooses Product or Service.
+  3. Fills in name, description, price, photos, and the extra fields
+     required by the category. Optional: original price + discount %, "new"
+     badge, SKU, featured, and for products an "accept online payment"
+     switch.
+  4. For a product: picks the Shop category level by level (must end on a
+     leaf); can add a missing sub-category (flagged for admin review). For a
+     service: uses the provider's own directory category.
+  5. Optionally files it under one of the provider's own shop folders (3B.5).
+  6. Saves. The listing is LIVE immediately.
+  Providers can edit or delete listings at any time. The system counts views
+  and sales per listing.
+
+3B.5  Shop categories (the provider's own storefront folders)
+  1. Provider opens "Shop categories".
+  2. Creates folders and sub-folders (name, optional image), renames,
+     re-orders, deletes (not allowed if it has sub-folders).
+  3. Customers see these as a "Shop by category" row on that provider's
+     page (for providers using the ecommerce layout).
+  (Separate from the platform-wide Shop categories admins manage.)
+
+3B.6  Subscription
+  1. Provider opens "Wallet" and sees "Active until <date>" or "Not active".
+  2. Taps Activate/Renew; sees the fee for 30 days; enters a mobile money
+     number and approves the prompt.
+  3. On success the subscription runs 30 days; renewing adds 30 more days on
+     top. The fee goes to the platform.
+  (Currently informational: nothing stops a provider without a subscription
+  from being listed or selling.)
+
+3B.7  Receiving and handling orders
+  1. A customer buys or requests an order (3A.6 - 3A.8).
+  2. The provider gets an email ("New order on Gabla - UGX ...") - this is
+     the only notification (no in-app, SMS or push alert).
+  3. Provider opens the "Orders" tab (must refresh manually) and sees
+     customer name, phone, items, total, status.
+  4. Pending order -> Accept or Reject. Accepted order -> Mark fulfilled or
+     Cancel.
+  Paid orders have already credited the provider's wallet at payment time.
+  Cancelling a paid order does not refund the customer automatically.
+
+3B.8  Ads
+  1. Provider opens "Ads".
+  2. Enters a title, optional subtitle, optional button text and link, and
+     uploads one image or a video. Saves.
+  3. The ad goes live straight away in the Shop hero carousel, shown to
+     customers nearest the provider first, and is flagged for admin review.
+  Ads are free and unlimited today. Providers can delete their ads.
+
+3B.9  Wallet, earnings and withdrawals
+  Earning:
+    - Each paid sale credits the provider with the sale minus the platform's
+      transaction-fee percent.
+    - Contact-unlock and subscription payments do NOT go to the provider.
+  Withdrawing:
+    1. Provider opens "Wallet", taps "Request withdrawal", enters an amount
+       and optional note.
+    2. The system checks the minimum withdrawal and the balance, takes the
+       amount out of the wallet immediately, and deducts the platform fee
+       percent from the payout.
+    3. An admin approves (see 2.11) and the net amount is sent by mobile
+       money to the provider's phone (or WhatsApp number) on file.
+    4. If rejected or if the payout fails, the money returns to the wallet.
+  The provider is not notified of the outcome; they check the Wallet tab.
+
+3B.10  Analytics
+  1. Provider opens "Analytics" and picks a period (7-90 days).
+  2. Sees profile views, contact clicks (call, WhatsApp, website,
+     directions), paid contact unlocks, listing views, items sold, orders,
+     fulfilled revenue, rating, a daily visits chart, and top 5 listings.
+
+3B.11  Providers as customers
+  A provider account can also pay (cart, subscription) and book rides, but
+  cannot use "Order now" or favourite/review.
+
+
+==============================================================================
+PART 4 - RIDE HAILING ("Gabla Ride")
+==============================================================================
+Two vehicle types: boda and car. Riders use the website (page "Ride");
+drivers use the separate mobile app; admins approve and set fares (2.14).
+
+4.1  Rider flow (website)
+  1. Rider opens "Ride". The map centres on their location (or Kampala).
+  2. Sets pickup and drop-off by searching an address or tapping the map.
+  3. The page shows a route line and an upfront fare for each vehicle type
+     (base fare + distance + time, with a minimum fare).
+  4. Rider picks Boda or Car and a payment method: Cash or Mobile Money
+     (mobile money needs a phone number). Must be signed in.
+  5. Taps request. The system finds the nearest online, approved, free
+     driver of that type. If none: "No drivers nearby" and the rider can
+     try again.
+  6. Rider sees the proposed driver (name, vehicle, plate, rating, fare,
+     distance, ETA) and taps "Confirm this driver" or cancels. Only after
+     confirming is the driver notified.
+  7. Rider watches the trip live (updates every 4 seconds): driver on the
+     way -> driver arrived -> on the way. Can call the driver, or cancel
+     before the trip starts.
+  8. Trip complete. Cash: paid in person. Mobile money: a payment prompt is
+     sent to the rider's phone when the driver ends the trip.
+  A reload resumes an in-progress ride. One active ride per rider.
+
+4.2  Driver flow (mobile app)
+  Becoming a driver:
+    1. Driver installs the app, registers with phone, password, name (or
+       signs in).
+    2. The app asks for vehicle type, model, number plate, optional contact
+       phone, and a REQUIRED licence/permit photo (camera or gallery).
+    3. Submits. Status is "pending" - the app shows "Application under
+       review". They are now registered as a driver.
+    4. Admin approves or rejects (2.14). Rejected drivers see the reason and
+       can upload a new photo to be reviewed again.
+  Working:
+    5. Approved driver opens the app (tabs: Dashboard, Trips, Wallet,
+       Profile) and switches Online. The app sends their GPS location
+       continuously.
+    6. A request appears (only after the rider has confirmed). Driver
+       accepts or declines. Declining passes the request to the next nearest
+       driver.
+    7. After accepting, the map shows pickup, drop-off and route; driver can
+       call the rider.
+    8. Driver taps through: Arrived -> Start trip -> Complete.
+    9. On completion the app shows "you earned UGX ...". Trips tab lists
+       history and earnings; Wallet tab shows balance; Profile tab shows
+       rating and lets the driver edit vehicle model and plate.
+
+4.3  Ride money
+  - Fare = fixed at request time (the estimate), not metered.
+  - Platform commission = the commission % for that vehicle type.
+    Driver earns fare minus commission.
+  - Mobile money: when the rider pays, the driver's in-app wallet is credited
+    and the commission goes to the platform wallet.
+  - Cash: the trip is recorded but nothing is added to the driver wallet and
+    commission is not collected (a deliberate simplification in the code).
+
+
+==============================================================================
+PART 5 - HOW MONEY MOVES
+==============================================================================
+
+ What                        Paid by      Platform gets     Recipient gets
+ --------------------------  -----------  ----------------  ------------------
+ Contact unlock              Customer     100% of the fee   -
+ Provider subscription       Provider     100% of the fee   -
+ Product sale (buy/cart)     Customer     Transaction-fee % Provider wallet:
+                                                            sale minus fee
+ Provider withdrawal         Provider     Transaction-fee % Net amount to
+                                          of the amount     provider phone
+ Ride (mobile money)         Rider        Commission %      Driver wallet:
+                                                            fare minus comm.
+ Ride (cash)                 Rider        nothing recorded  paid direct
+ Provider ads                free         -                 -
+
+ All fees and switches are configured by an admin in Settings (2.9);
+ ride commission and fares are configured in Fare Settings (2.14).
+ Every mobile-money payment follows the same pattern: the system records a
+ pending transaction -> the customer approves on their phone -> the payment
+ gateway confirms -> the system completes the order / unlock / subscription.
+
+
+==============================================================================
+PART 6 - CURRENT LIMITATIONS AND ITEMS TO BE AWARE OF
+==============================================================================
+
+Built on the server but no screen yet
+  - Admin: approving/rejecting provider withdrawals, promotions/ads,
+    reviews, inquiries, orders, media, suspending users, per-provider fee
+    overrides.
+  - Customer: favourites, reviews, inquiries, order history.
+
+Behaviour that differs from what the wording suggests
+  - Providers are auto-approved when they finish onboarding, and listings and
+    ads go live immediately; "pending review" labels do not hide them.
+  - Subscriptions are recorded but never enforced and never expire
+    automatically.
+  - Admin settings text says plans are required for listing; the code does
+    not enforce that.
+  - Inventory is stored but not checked or reduced when items are sold.
+  - Cancelling/rejecting a paid order does not refund the customer.
+  - The fee charged on withdrawals is not credited to the platform wallet.
+  - Notifications are email only (orders). No SMS/push; ride updates use
+    polling.
+  - Ride fares are not seeded: rides do not work until an admin saves fares.
+  - Driver ratings and rider ratings exist in the data model but there is no
+    way to give a rating. Drivers have no payout/withdrawal path.
+  - Admin panel dashboard charts and some home-page numbers/stars are
+    placeholders.
+
+Security and access-control items worth a review before wide launch
+  - Several admin actions (including approving provider withdrawals, ride
+    admin, category management, provider invites/approval) check only that
+    the user is an admin, not the finer permissions (e.g. an Auditor could
+    call them).
+  - The payment-confirmation webhooks have no signature check.
+  - "Order now" trusts the unit price sent by the browser.
+  - If no first-admin email/password is configured, the first person to call
+    the bootstrap endpoint becomes Super Admin.
+  - A suspended user keeps working on some endpoints until their 1-hour
+    session expires; Google sign-in ignores the suspended flag.
+
+Scale
+  - The database is SQLite on a single server: fine for launch; plan a move
+    to PostgreSQL before heavy traffic or multiple servers.
+
+
+==============================================================================
+PART 7 - TECHNICAL REFERENCE
+==============================================================================
+
+Applications
+  Backend API   : Node.js 22, Express, Prisma ORM, SQLite.   (repo root, src/)
+  Admin panel   : React 18, Vite, Tailwind.                  (admin_ui/)
+  Public app    : React 18, Vite.                            (public_app/)
+  Driver app    : Flutter (Android/iOS).                     (driver_app/)
+
+Third-party services
+  - Mobile money gateway (payments and payouts)
+  - Google Sign-In, Google Maps / Places, Google Routes (distances, routes)
+  - Cloudflare R2 (photo/video storage)
+  - Resend (email: invitations, order notifications)
+
+Hosting (see docs/HOSTING.md)
+  - Backend + public app: Fly.io (Johannesburg region), one container, with
+    a persistent volume for the database.
+  - Admin panel: Cloudflare Pages.
+  - Media: Cloudflare R2.
+
+Repo notes
+  - admin_ui/ has its own repository (Gabla_admin) and is ignored by the
+    main repo. public_app/ is deployed through its own repository
+    (Gabla_public).
+  - Database structure: docs/DATABASE_STRUCTURE.md
+  - Database changes: use "npm run db:push" (not "prisma migrate dev").
+
+Key backend areas (src/)
+  routes/        - API endpoints (auth, provider, listing, search, payment,
+                   engagement, promotion, ride, category, productCategory,
+                   shopCategory, storage, admin*)
+  services/      - business logic (payment, provider, listing, ride,
+                   search, wallet, promotion, auth, admin*)
+  prisma/schema.prisma - data model (about 30 tables)
+
+==============================================================================
+ END OF DOCUMENT
+==============================================================================

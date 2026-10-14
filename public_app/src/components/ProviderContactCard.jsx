@@ -5,6 +5,7 @@ import { monthYear } from "../lib/format";
 import { CLEAN_MAP_STYLE, loadGoogleMaps } from "../lib/maps";
 import { trackContactEvent } from "../lib/providerContact";
 import { IconChat, IconCheck, IconClose, IconGlobe, IconLock, IconPhone, IconPin, IconShield, IconStar } from "./icons";
+import { webHref } from "../lib/safeHref";
 
 const ugx = (value) => `UGX ${Number(value || 0).toLocaleString("en-US")}`;
 const waLink = (whatsapp, text) => `https://wa.me/${String(whatsapp).replace(/[^\d]/g, "")}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
@@ -166,7 +167,7 @@ export default function ProviderContactCard({ provider, fallback, pending, categ
             ) : null}
             {(locked ? avail.website : contact.website) ? (
               <Row icon={<IconGlobe width={18} height={18} />} label="Website" locked={locked}>
-                <a href={contact.website} target="_blank" rel="noreferrer" onClick={() => track("website", contact.website)}>{String(contact.website).replace(/^https?:\/\//, "")}</a>
+                <a href={webHref(contact.website) || undefined} target="_blank" rel="noreferrer" onClick={() => track("website", contact.website)}>{String(contact.website).replace(/^https?:\/\//, "")}</a>
               </Row>
             ) : null}
             {(locked ? avail.address || avail.pin : location.address) ? (

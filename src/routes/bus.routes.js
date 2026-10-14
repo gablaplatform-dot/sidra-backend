@@ -159,8 +159,9 @@ export const buildBusRoutes = ({ busBookingService, busOperatorService, busCatal
         filename: Joi.string().trim().max(200).optional()
       })
     ),
-    h((req) => {
+    h(async (req) => {
       const payload = busOperatorService.verifyOnboardingToken(req.body.token);
+      await busOperatorService.liveInvitation(req.body.token, payload);
       return storageService.createUploadUrl({ actorUserId: String(payload.sub), role: "bus_operator", contentType: req.body.contentType, folder: "bus-operators", filename: req.body.filename });
     })
   );

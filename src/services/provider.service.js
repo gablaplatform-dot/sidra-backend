@@ -86,9 +86,11 @@ export class ProviderService {
     };
   }
 
-  signOnboardingToken({ userId, providerId }) {
+  // kind "invite": the emailed onboarding link (one use, backed by a ProviderInvitation row).
+  // kind "relink": only reconnects Google sign-in for an existing provider; it can't change a password or approval.
+  signOnboardingToken({ userId, providerId, kind = "invite" }) {
     return jwt.sign(
-      { sub: String(userId), providerId: String(providerId), purpose: "provider_onboarding" },
+      { sub: String(userId), providerId: String(providerId), purpose: "provider_onboarding", kind },
       env.jwtSecret,
       { issuer: env.jwtIssuer, expiresIn: "7d" }
     );
@@ -217,6 +219,18 @@ export class ProviderService {
     return payload;
   }
 
+  // The invitation behind an emailed link: it must be the latest one sent (resending replaces the old link),
+  // not yet used and not expired.
+  async liveInvitation(token, payload, { statuses = ["sent"] } = {}) {
+    const invitation = await prisma.providerInvitation.findFirst({
+      where: { providerId: String(payload.providerId), tokenHash: tokenHash(token), status: { in: statuses }, expiresAt: { gt: new Date() } }
+    });
+    if (!invitation) {
+      throw new AppError({ message: "This invitation link has already been used or replaced. Ask for a new one.", statusCode: 400, code: "INVALID_TOKEN" });
+    }
+    return invitation;
+  }
+
   async adminCreateProvider({
     name,
     email,
@@ -313,7 +327,7 @@ export class ProviderService {
     ]);
 
     return {
-      onboardingToken,
+      delivery: emailDelivery,
       user: {
         id: createdUser.id,
         name: createdUser.name,
@@ -382,8 +396,9 @@ export class ProviderService {
             metadata: { deliveryProvider: "resend", ...emailDelivery }
           }
         });
-    await prisma.provider.update({ where: { id: provider.id }, data: { onboardingStatus: "invitation_sent", invitationSentAt: now } });
-    return { onboardingToken: token, invitationId: invitation.id, delivery: emailDelivery };
+    // A provider who already registered keeps their live status: this link only lets them set new sign-in details.
+    await prisma.provider.update({ where: { id: provider.id }, data: provider.registeredAt ? { invitationSentAt: now } : { onboardingStatus: "invitation_sent", invitationSentAt: now } });
+    return { invitationId: invitation.id, delivery: emailDelivery };
   }
 
   async sendLinkGoogleEmail({ to, businessName, token }) {
@@ -468,9 +483,9 @@ export class ProviderService {
     if (!provider) throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
     const user = await prisma.user.findUnique({ where: { id: provider.userId } });
     if (!user?.email) throw new AppError({ message: "Provider email is required", statusCode: 400, code: "EMAIL_REQUIRED" });
-    const token = this.signOnboardingToken({ userId: user.id, providerId: provider.id });
+    const token = this.signOnboardingToken({ userId: user.id, providerId: provider.id, kind: "relink" });
     const delivery = await this.sendLinkGoogleEmail({ to: user.email, businessName: provider.businessName, token });
-    return { onboardingToken: token, delivery };
+    return { delivery };
   }
 
   // Public, self-service version of the above — a provider who can't see their profile after
@@ -484,7 +499,7 @@ export class ProviderService {
       if (user) {
         const provider = await prisma.provider.findUnique({ where: { userId: user.id } });
         if (provider) {
-          const token = this.signOnboardingToken({ userId: user.id, providerId: provider.id });
+          const token = this.signOnboardingToken({ userId: user.id, providerId: provider.id, kind: "relink" });
           await this.sendLinkGoogleEmail({ to: user.email, businessName: provider.businessName, token });
         }
       }
@@ -539,15 +554,27 @@ export class ProviderService {
 
   async completeOnboarding({ token, password, profile }) {
     const payload = this.verifyOnboardingToken(token);
+    if (payload.kind === "relink") {
+      throw new AppError({ message: "This link can only reconnect Google sign-in.", statusCode: 400, code: "INVALID_TOKEN" });
+    }
     const provider = await prisma.provider.findUnique({ where: { id: String(payload.providerId) } });
     if (!provider) {
       throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
     }
 
-    // Providers now authenticate with Google, so a typed password is no longer collected here.
-    // A random one still backs the account in case password login is ever needed later.
-    const passwordHash = await this.hashPassword(password || crypto.randomBytes(32).toString("hex"));
-    await prisma.user.update({ where: { id: provider.userId }, data: { passwordHash } });
+    // The link works once: claim its invitation before doing anything, so a copy of the link is dead afterwards.
+    const claim = await prisma.providerInvitation.updateMany({
+      where: { providerId: provider.id, tokenHash: tokenHash(token), status: "sent", expiresAt: { gt: new Date() } },
+      data: { status: "accepted", acceptedAt: new Date() }
+    });
+    if (claim.count === 0) {
+      throw new AppError({ message: "This invitation link has already been used or replaced. Ask for a new one.", statusCode: 400, code: "INVALID_TOKEN" });
+    }
+
+    // Providers sign in with Google; a typed password is optional and only replaces the old one when given.
+    if (password) {
+      await prisma.user.update({ where: { id: provider.userId }, data: { passwordHash: await this.hashPassword(password) } });
+    }
 
     const data = {};
     if (profile?.businessName !== undefined) data.businessName = profile.businessName;
@@ -561,19 +588,18 @@ export class ProviderService {
     if (profile?.media !== undefined) data.media = profile.media ?? {};
     if (profile?.customFields !== undefined) data.customFields = profile.customFields ?? {};
     data.onboardingStatus = "registered";
-    data.registeredAt = new Date();
     data.invitationAcceptedAt = new Date();
-    data.isApproved = true;
-    data.moderationStatus = "approved";
+    // The first registration of an admin-invited provider goes live (the invitation is the approval). A provider who
+    // already registered before keeps whatever moderation state an admin has since given them.
+    if (!provider.registeredAt) {
+      data.registeredAt = new Date();
+      data.isApproved = true;
+      data.moderationStatus = "approved";
+    }
 
     if (Object.keys(data).length) {
       await prisma.provider.update({ where: { id: provider.id }, data });
     }
-    await prisma.providerInvitation.updateMany({
-      where: { providerId: provider.id, tokenHash: tokenHash(token), status: "sent" },
-      data: { status: "accepted", acceptedAt: new Date() }
-    });
-
     return this.getProviderProfile({ providerId: provider.id, includeUnapproved: true });
   }
 
@@ -585,6 +611,9 @@ export class ProviderService {
   // fresh customer account instead of their own profile.
   async linkGoogleAccount({ onboardingToken, idToken }) {
     const payload = this.verifyOnboardingToken(onboardingToken);
+    // An invitation link must still be backed by its invitation (used or replaced links stop working);
+    // a reconnect link is bound by the Google-email match below.
+    if (payload.kind !== "relink") await this.liveInvitation(onboardingToken, payload, { statuses: ["sent", "accepted"] });
     const userId = String(payload.sub);
 
     if (!env.googleClientId) {

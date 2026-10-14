@@ -469,9 +469,12 @@ export class AdminService {
     });
     const providerMap = new Map(providers.map((p) => [p.id, p]));
     const userMap = new Map(users.map((u) => [u.id, u]));
+    const payoutContacts = await prisma.provider.findMany({ where: { id: { in: requests.map((r) => r.providerId) } }, select: { id: true, contact: true } });
+    const phoneByProvider = new Map(payoutContacts.map((p) => [p.id, p.contact?.phone || p.contact?.whatsapp || null]));
     return {
       items: requests.map((r) => ({
         id: r.id,
+        payoutPhone: phoneByProvider.get(r.providerId) ?? null,
         providerId: r.providerId,
         provider: providerMap.get(String(r.providerId))?.businessName ?? "Unknown provider",
         amount: moneyString(r.amount),

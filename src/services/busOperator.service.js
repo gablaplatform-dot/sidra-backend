@@ -92,6 +92,15 @@ export class BusOperatorService {
     });
   }
 
+  // The invitation behind a link: the latest one sent for this company, unused and not expired.
+  async liveInvitation(token, payload, { statuses = ["sent"] } = {}) {
+    const invitation = await prisma.busOperatorInvitation.findFirst({
+      where: { operatorId: String(payload.operatorId), tokenHash: tokenHash(token), status: { in: statuses }, expiresAt: { gt: new Date() } }
+    });
+    if (!invitation) throw bad("This invitation link has already been used or replaced. Ask for a new one.", "INVALID_TOKEN");
+    return invitation;
+  }
+
   verifyOnboardingToken(token) {
     let payload;
     try {
@@ -168,14 +177,14 @@ export class BusOperatorService {
     } else {
       await prisma.busOperatorInvitation.create({ data: { operatorId: operator.id, sentAt: now, ...data } });
     }
-    await prisma.busOperator.update({ where: { id: operator.id }, data: { onboardingStatus: "invitation_sent", invitationSentAt: now } });
+    // A company that already registered stays live; the new link only lets them set new sign-in details.
+    await prisma.busOperator.update({ where: { id: operator.id }, data: operator.onboardingStatus === "registered" ? { invitationSentAt: now } : { onboardingStatus: "invitation_sent", invitationSentAt: now } });
     return { ...delivery, link: delivery.sent ? undefined : link }; // when email isn't configured the admin can copy the link
   }
 
   async resendInvitation(operatorId) {
     const operator = await prisma.busOperator.findUnique({ where: { id: operatorId }, include: { user: true } });
     if (!operator) throw bad("Bus operator not found", "BUS_OPERATOR_NOT_FOUND", 404);
-    if (operator.onboardingStatus === "registered") throw bad("This operator has already completed registration", "ALREADY_REGISTERED", 409);
     const existing = await prisma.busOperatorInvitation.findFirst({ where: { operatorId }, orderBy: { createdAt: "desc" } });
     return this._sendInvitation({ operator, email: operator.user.email, userId: operator.userId, existingInvitationId: existing?.id });
   }
@@ -241,6 +250,7 @@ export class BusOperatorService {
   // ---------------------------------------------------------------- onboarding (by emailed link)
   async getOnboardingInfo({ token }) {
     const payload = this.verifyOnboardingToken(token);
+    await this.liveInvitation(token, payload, { statuses: ["sent", "accepted"] });
     const operator = await prisma.busOperator.findUnique({ where: { id: String(payload.operatorId) }, include: { user: true } });
     if (!operator) throw bad("Bus operator not found", "BUS_OPERATOR_NOT_FOUND", 404);
     const [settings, types] = await Promise.all([this.getSettings(), this.catalogService.listTypes()]);
@@ -254,8 +264,23 @@ export class BusOperatorService {
 
   async completeOnboarding({ token, profile, routes, password }) {
     const payload = this.verifyOnboardingToken(token);
+    await this.liveInvitation(token, payload);
     const operator = await prisma.busOperator.findUnique({ where: { id: String(payload.operatorId) } });
     if (!operator) throw bad("Bus operator not found", "BUS_OPERATOR_NOT_FOUND", 404);
+
+    // A company that already registered uses its link only to set new sign-in details: nothing else is touched.
+    if (operator.onboardingStatus === "registered") {
+      const used = await prisma.busOperatorInvitation.updateMany({ where: { operatorId: operator.id, tokenHash: tokenHash(token), status: "sent" }, data: { status: "accepted", acceptedAt: new Date() } });
+      if (used.count === 0) throw bad("This invitation link has already been used or replaced. Ask for a new one.", "INVALID_TOKEN");
+      if (password) await prisma.user.update({ where: { id: operator.userId }, data: { passwordHash: await this.hashPassword(password) } });
+      const existingUser = await prisma.user.findUnique({ where: { id: operator.userId } });
+      const session = jwt.sign({ sub: existingUser.id, role: existingUser.role }, env.jwtSecret, { issuer: env.jwtIssuer, expiresIn: env.jwtAccessTtlSeconds });
+      return {
+        accessToken: session,
+        user: { id: existingUser.id, name: existingUser.name, email: existingUser.email, role: existingUser.role, phone: existingUser.phone, authProvider: existingUser.authProvider, avatarUrl: existingUser.avatarUrl, profile: existingUser.profile ?? {} },
+        busOperator: await this.getOperator(operator.id)
+      };
+    }
 
     // Required admin-defined questions must be answered.
     const settings = await this.getSettings();
@@ -300,10 +325,11 @@ export class BusOperatorService {
     await prisma.busOperator.update({ where: { id: operator.id }, data: { onboardingStatus: "registered", registeredAt: new Date() } });
     // Operators who prefer email + password set it here; those using Google can skip it.
     if (password) await prisma.user.update({ where: { id: operator.userId }, data: { passwordHash: await this.hashPassword(password) } });
-    await prisma.busOperatorInvitation.updateMany({
+    const used = await prisma.busOperatorInvitation.updateMany({
       where: { operatorId: operator.id, tokenHash: tokenHash(token), status: "sent" },
       data: { status: "accepted", acceptedAt: new Date() }
     });
+    if (used.count === 0) throw bad("This invitation link has already been used or replaced. Ask for a new one.", "INVALID_TOKEN");
     const user = await prisma.user.findUnique({ where: { id: operator.userId } });
     const accessToken = jwt.sign({ sub: user.id, role: user.role }, env.jwtSecret, { issuer: env.jwtIssuer, expiresIn: env.jwtAccessTtlSeconds });
     return {
@@ -317,6 +343,7 @@ export class BusOperatorService {
   // someone holds the invitation, the matching Google email proves it is the invited person.
   async linkGoogleAccount({ onboardingToken, idToken }) {
     const payload = this.verifyOnboardingToken(onboardingToken);
+    await this.liveInvitation(onboardingToken, payload, { statuses: ["sent", "accepted"] });
     if (!env.googleClientId) throw bad("Google login is not configured", "GOOGLE_LOGIN_NOT_CONFIGURED", 503);
     const profile = await verifyGoogleIdToken(idToken, env.googleClientId);
     const googleSub = String(profile.sub);

@@ -86,7 +86,15 @@ export const buildApp = () => {
   );
   app.use(defaultRateLimit);
   app.use(express.json({ limit: "1mb" }));
-  app.use(morgan("combined"));
+  // Links that carry a secret token (onboarding, invites) must not end up in the access logs.
+  const redact = (value) =>
+    String(value ?? "-")
+      .replace(/([?&]token=)[^&\s]+/gi, "$1[redacted]")
+      .replace(/(\/(?:onboarding|admin-invites)\/)[^/?\s]+/gi, "$1[redacted]")
+      .replace(/([?&]k=)[0-9a-f]{20,}/gi, "$1[redacted]");
+  morgan.token("safe-url", (req) => redact(req.originalUrl || req.url));
+  morgan.token("safe-referrer", (req) => redact(req.headers.referer || req.headers.referrer));
+  app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :safe-url HTTP/:http-version" :status :res[content-length] ":safe-referrer" ":user-agent"'));
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true, service: "sidra-backend" });
