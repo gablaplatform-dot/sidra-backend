@@ -8,6 +8,29 @@ Date: 2026-10-14. Scope: everything except the Get a ride module. Six parallel c
 
 Counts: 14 launch blockers, about 20 high, about 35 medium.
 
+## Status: the 14 blockers (updated 2026-10-14, later the same day)
+
+All 14 are fixed and deployed. Each was checked by running it, not just by reading the change.
+
+| # | Blocker | What changed | Checked |
+|---|---|---|---|
+| 1 | Admin routes without permissions | Permission checks on payouts, providers, categories (all trees), promotions and rides; new `promotions` and `rides` permission keys | An Auditor token gets 403 on every one of those routes; a Super Admin still works |
+| 2 | Reusable onboarding links | Provider and bus-operator links are single-use, a resend replaces the old link, tokens are no longer returned by the API, "reconnect Google" links can't change passwords or approval, a suspended provider stays suspended, access logs redact tokens. Admin "resend" now doubles as "reset access" for registered companies | Replayed and replaced links are refused; a suspended provider stayed suspended |
+| 3 | Open admin bootstrap | Route deleted | 404 |
+| 4 | Tokens without a user id | `requireAuth` accepts only real session tokens (user id + known role, no `purpose`) | Invite-like, onboarding-like and id-less tokens all get 401 |
+| 5 | Suspension not enforced | Active status re-checked on every request (15 s cache), Google sign-in refuses suspended accounts, requires a verified email, never signs into an admin account, drops an unverified self-registered password on first link | A deactivated admin is blocked after the cache window |
+| 6 | Server freeze on long text | Strings and answer objects are size-limited, every guard pattern is bounded, text is Unicode-normalised first | 200,000 characters now scan in 5 ms (was about 40 s for 100,000) |
+| 7 | `javascript:` links | Web-only URL schemes on every URL field, ad links must start with `/` or `https://`, the storefront only renders web links | `javascript:` ad link rejected with a readable message |
+| 8 | Unauthenticated payment callback | Callback URLs carry a secret key; `MOBILE_MONEY_WEBHOOK_ENFORCE=true` makes the API refuse callbacks without it; amount is compared when the gateway reports one; the raw callback is stored. **Enforcement is OFF until one real payment confirms your gateway keeps the query string.** | Key present/missing behave correctly; enforced mode blocks a keyless call |
+| 9 | Late or failed-then-paid payments dropped | A "failed" payment that later succeeds is honoured; stale pending payments are closed by a 5-minute job (which also expires unpaid bookings); callbacks claim the transaction atomically | Timeout then late success credited once; replay is a no-op |
+| 10 | No refund path | Payments that can't be applied (cancelled, expired, already paid, wrong amount) are held, not credited, and queued; cancelling a paid order or booking queues a refund; admin settles it in a new Refunds list, reversing the seller's credit | All four cases tested, including reversal |
+| 11 | Payout double-pay | Approval claims the request atomically, rejects only from safe states, a gateway timeout or 5xx parks it as "payout unknown" instead of refunding | 3 simultaneous approvals paid once; timeout parked; refusal refunded the wallet |
+| 12 | No withdrawals screen | New admin screen **Payouts & refunds** (approve and pay, reject, mark paid, settle unknown payouts, refund queue) | Built and API-tested; check it in the admin app after the Cloudflare deploy |
+| 13 | Favourites/reviews broken | Restored the unique key the code and database rely on; favourites no longer return exact location | Both endpoints work, idempotent |
+| 14 | Demo data on production | Both demo datasets cleared after a SQLite backup and a Fly snapshot (310 demo bus users, 10 demo providers, 148 listings, 4 ads); seed scripts now refuse to run in production; demo logos removed | 0 demo users, 0 bus companies, `/bus/parks` empty; 3 real products and 5 real services remain |
+
+Also done on the way: server errors are now logged, JSON and size errors return 400/413, validation errors say what to fix (the apps show the message), 5xx responses no longer include internal details.
+
 ---
 
 ## A. Launch blockers (fix before real users or real money)
