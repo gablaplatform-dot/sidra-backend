@@ -8,6 +8,7 @@ import { clearSession, getSession } from "../lib/session";
 import SiteHeader from "../components/SiteHeader";
 import Field from "../components/Field";
 import ProfileOrdersTab from "../components/profile/ProfileOrdersTab";
+import ProfileBookingsTab from "../components/profile/ProfileBookingsTab";
 import ProfileWalletTab from "../components/profile/ProfileWalletTab";
 import ProfileShopCategoriesTab from "../components/profile/ProfileShopCategoriesTab";
 import ProfileAnalyticsTab from "../components/profile/ProfileAnalyticsTab";
@@ -25,6 +26,7 @@ const TABS = [
   { key: "shopCategories", label: "Shop categories" },
   { key: "ads", label: "Ads" },
   { key: "orders", label: "Orders" },
+  { key: "bookings", label: "Bookings" },
   { key: "documents", label: "Quotes & receipts" },
   { key: "wallet", label: "Wallet" },
   { key: "gallery", label: "Gallery" }
@@ -390,6 +392,8 @@ export default function Profile() {
             {activeTab === "shopCategories" ? <ProfileShopCategoriesTab /> : null}
 
             {activeTab === "ads" ? <ProfileAdsTab /> : null}
+
+            {activeTab === "bookings" ? <ProfileBookingsTab /> : null}
 
             {activeTab === "orders" ? <ProfileOrdersTab focusOrderId={focusOrderId} /> : null}
 

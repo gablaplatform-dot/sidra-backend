@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { request } from "../lib/api";
 import { findCategoryPath } from "../lib/categories";
@@ -264,7 +264,7 @@ function ProviderProducts({ provider }) {
   );
 }
 
-function ServiceCards({ services, onOrder }) {
+function ServiceCards({ services }) {
   return (
     <div className="listing-grid">
       {services.map((item) => (
@@ -275,12 +275,10 @@ function ServiceCards({ services, onOrder }) {
           <div className="listing-body">
             <h3>{item.name}</h3>
             {item.description ? <p className="provider-meta">{item.description}</p> : null}
-            {Number(item.price) > 0 ? <div className="listing-price">UGX {Number(item.price).toLocaleString()}</div> : null}
-            {onOrder ? (
-              <button type="button" className="cta-button ecommerce-order-button" onClick={() => onOrder(item)}>
-                Order now
-              </button>
-            ) : null}
+            {Number(item.price) > 0 ? <div className="listing-price">UGX {Number(item.price).toLocaleString()}{item.bookingMode && item.bookingMode !== "none" && item.booking ? ` / ${item.booking.unit}` : ""}</div> : null}
+            <Link to={`/shop/product/${item.id}`} className="cta-button ecommerce-order-button" style={{ display: "block", textAlign: "center" }}>
+              {item.bookingMode && item.bookingMode !== "none" ? "Check availability" : "View details"}
+            </Link>
           </div>
         </div>
       ))}
@@ -331,7 +329,7 @@ export default function ProviderListings({ provider, listings, onOrderService, i
           ) : (
             <h2 className="pl-title">{tab === "products" ? "Products" : "Services"}</h2>
           )}
-          {tab === "products" ? <ProviderProducts provider={provider} /> : <ServiceCards services={services} onOrder={onOrderService} />}
+          {tab === "products" ? <ProviderProducts provider={provider} /> : <ServiceCards services={services} />}
         </>
       )}
     </section>

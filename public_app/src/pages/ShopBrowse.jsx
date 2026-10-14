@@ -18,6 +18,7 @@ import {
   toApiParams
 } from "../lib/browseFilters";
 import ShopNavbar from "../components/shop/ShopNavbar";
+import SiteHeader from "../components/SiteHeader";
 import ShopFooterTrust from "../components/shop/ShopFooterTrust";
 import BrowseSidebar from "../components/shop/browse/BrowseSidebar";
 import BrowseCard from "../components/shop/browse/BrowseCard";
@@ -46,7 +47,12 @@ const COLLECTIONS = {
   all: { title: "All products", sort: "featured", params: {} }
 };
 
-export default function ShopBrowse({ categoryId, collection, session, onLogout }) {
+export default function ShopBrowse({ categoryId, collection, session, onLogout, kind = "product" }) {
+  // The same browse page serves services (their own category tree, /services/c/:id); only the
+  // endpoint, links and wording change.
+  const isService = kind === "service";
+  const basePath = isService ? "/services/c" : "/shop";
+  const noun = isService ? "services" : "products";
   const [searchParams, setSearchParams] = useSearchParams();
   const [layout, setLayout] = useListLayout();
   const filters = useMemo(() => readFilters(searchParams), [searchParams]);
@@ -72,7 +78,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
 
   useEffect(() => {
     let active = true;
-    request("/product-categories")
+    request(isService ? "/service-categories" : "/product-categories")
       .then((data) => active && setTree(data?.items || data || []))
       .catch(() => active && setTree([]));
     return () => {
@@ -102,7 +108,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
     let active = true;
     setLoading(true);
     setError("");
-    const base = { ...toApiParams(filters, { categoryId: categoryId || null, coords }), ...(collectionInfo?.params || {}), ...(arranged ? { around: preferred } : {}) };
+    const base = { ...toApiParams(filters, { categoryId: categoryId || null, coords, kind }), ...(collectionInfo?.params || {}), ...(arranged ? { around: preferred } : {}) };
     const listParams = new URLSearchParams({ ...base, page: String(filters.page), limit: String(PAGE_SIZE), sort });
     Promise.all([
       request(`/listings?${listParams.toString()}`),
@@ -113,7 +119,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
         setResult(list);
         setFacets(facetData);
       })
-      .catch((loadError) => active && setError(loadError.message || "Unable to load products."))
+      .catch((loadError) => active && setError(loadError.message || `Unable to load ${noun}.`))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
@@ -123,8 +129,8 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
   }, [categoryId, collection, queryKey, coords, preferred]);
 
   useEffect(() => {
-    if (categoryId) trackInterest({ type: "category", productCategoryId: categoryId });
-  }, [categoryId]);
+    if (categoryId && !isService) trackInterest({ type: "category", productCategoryId: categoryId });
+  }, [categoryId, isService]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -143,13 +149,13 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
     ? filters.near
       ? `Nothing within ${NEAR_RADIUS_KM} km, showing the closest results across Uganda.`
       : `No matching ads in ${filters.district}, showing all of Uganda.`
-    : geoNotice || (result?.arrangedAround ? `Showing the products closest to ${result.arrangedAround} first.` : "");
+    : geoNotice || (result?.arrangedAround ? `Showing the ${noun} closest to ${result.arrangedAround} first.` : "");
   const where = widenedAway ? "Uganda" : filters.near ? "your area" : filters.district || "Uganda";
   const total = result?.total ?? 0;
   const filterCount = activeFilterCount(filters);
 
   useEffect(() => {
-    if (node) document.title = `${node.name} in ${where} for sale | Gabla Shop`;
+    if (node) document.title = isService ? `${node.name} in ${where} | Gabla Services` : `${node.name} in ${where} for sale | Gabla Shop`;
     else if (collectionInfo) document.title = `${collectionInfo.title} | Gabla Shop`;
   }, [node, where, collectionInfo]);
 
@@ -188,7 +194,9 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
       ancestors={ancestors}
       siblings={siblings}
       fieldDefs={fieldDefs}
-      facets={facets}
+      facets={isService && facets ? { ...facets, categoryCounts: facets.serviceCategoryCounts || {} } : facets}
+      basePath={basePath}
+      rootPath={isService ? "/services" : "/shop/categories"}
       filters={filters}
       onChange={apply}
       onOpenLocation={() => setPickerOpen(true)}
@@ -200,14 +208,14 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
 
   return (
     <main className="shop-shell">
-      <ShopNavbar session={session} onLogout={onLogout} />
+      {isService ? <SiteHeader session={session} onLogout={onLogout} /> : <ShopNavbar session={session} onLogout={onLogout} />}
 
       <nav className="breadcrumb">
-        <Link to="/shop">Shop</Link>
+        <Link to={isService ? "/services" : "/shop"}>{isService ? "Services" : "Shop"}</Link>
         {ancestors.map((a) => (
           <React.Fragment key={a.id}>
             <span>/</span>
-            <Link to={`/shop/${a.id}`}>{a.name}</Link>
+            <Link to={`${basePath}/${a.id}`}>{a.name}</Link>
           </React.Fragment>
         ))}
         {node ? (
@@ -247,7 +255,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
                 <Skel h={28} w={280} />
               ) : (
                 <h1>
-                  {filters.q ? `Results for “${filters.q}”` : `${node ? node.name : collectionInfo ? collectionInfo.title : "Products"} in ${where}`}
+                  {filters.q ? `Results for “${filters.q}”` : `${node ? node.name : collectionInfo ? collectionInfo.title : isService ? "All services" : "Products"} in ${where}`}
                 </h1>
               )}
               {loading && !result ? (
@@ -311,15 +319,15 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
             </div>
           ) : !error ? (
             <div className="sb-empty">
-              <h2>No products match</h2>
+              <h2>No {noun} match</h2>
               <p>Try removing a filter or choosing a wider location.</p>
               {chips.length ? (
                 <button type="button" className="sb-apply" onClick={() => setSearchParams(new URLSearchParams())}>
                   Clear all filters
                 </button>
               ) : (
-                <Link to="/shop" className="sb-apply">
-                  Back to shop
+                <Link to={isService ? "/services" : "/shop"} className="sb-apply">
+                  {isService ? "Back to services" : "Back to shop"}
                 </Link>
               )}
             </div>
@@ -344,7 +352,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout }
         />
       ) : null}
 
-      <ShopFooterTrust />
+      {isService ? null : <ShopFooterTrust />}
     </main>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 
 import { request } from "../lib/api";
 import { clearSession, getSession } from "../lib/session";
@@ -7,6 +7,7 @@ import { loginPath } from "../lib/authRedirect";
 import { formatUgx } from "../lib/format";
 import { ORDER_STATUS, openDocumentPdf } from "../lib/myOrders";
 import SiteHeader from "../components/SiteHeader";
+import MyBookings from "../components/booking/MyBookings";
 import { Skel } from "../components/Skeleton";
 import { IconBox, IconCheck, IconPin, IconReceipt } from "../components/icons";
 
@@ -134,6 +135,8 @@ export default function MyOrders() {
   const location = useLocation();
   const [session, setSession] = useState(() => getSession());
   const [orders, setOrders] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") === "bookings" ? "bookings" : "orders";
   const [filter, setFilter] = useState("all");
   const [error, setError] = useState("");
 
@@ -168,8 +171,8 @@ export default function MyOrders() {
       <SiteHeader session={session} onLogout={logout} />
       <div className="mo-wrap">
         <header className="mo-title">
-          <h1>My orders</h1>
-          <p>Everything you have ordered, with the seller&apos;s quotations and your receipts attached.</p>
+          <h1>{tab === "bookings" ? "My bookings" : "My orders"}</h1>
+          <p>{tab === "bookings" ? "Your hotel, venue and appointment bookings, and what the provider has answered." : "Everything you have ordered, with the seller's quotations and your receipts attached."}</p>
         </header>
 
         {!session ? (
@@ -180,6 +183,11 @@ export default function MyOrders() {
           </div>
         ) : (
           <>
+            <div className="mo-tabs" role="tablist" aria-label="Orders or bookings">
+              <button type="button" role="tab" aria-selected={tab === "orders"} className={tab === "orders" ? "is-active" : ""} onClick={() => setSearchParams({})}>Orders</button>
+              <button type="button" role="tab" aria-selected={tab === "bookings"} className={tab === "bookings" ? "is-active" : ""} onClick={() => setSearchParams({ tab: "bookings" })}>Bookings</button>
+            </div>
+            {tab === "bookings" ? <MyBookings /> : <>
             <div className="mo-filters" role="tablist">
               {FILTERS.map((f) => (
                 <button key={f.key} type="button" role="tab" aria-selected={filter === f.key} className={filter === f.key ? "is-active" : ""} onClick={() => setFilter(f.key)}>
@@ -199,6 +207,7 @@ export default function MyOrders() {
                 {!orders.length ? <Link to="/shop" className="primary-button">Browse the shop</Link> : null}
               </div>
             )}
+            </>}
           </>
         )}
       </div>

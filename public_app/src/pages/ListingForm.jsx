@@ -13,6 +13,154 @@ import SiteHeader from "../components/SiteHeader";
 import { IconClose } from "../components/icons";
 import { FormSkeleton } from "../components/Skeleton";
 
+// One dropdown per level of a category tree; the walk stops at a leaf or an unselected level.
+const buildLevels = (tree, path) => {
+  const levels = [];
+  let options = tree;
+  let depth = 0;
+  while (options && options.length) {
+    const selectedId = path[depth] || "";
+    levels.push({ depth, options, selectedId });
+    const node = options.find((c) => c.id === selectedId);
+    if (!node || !node.children?.length) break;
+    options = node.children;
+    depth += 1;
+  }
+  return levels;
+};
+
+const defaultBooking = (unit = "night") => ({
+  unit,
+  inventory: 1,
+  capacity: 2,
+  minUnits: 1,
+  maxUnits: unit === "night" ? 30 : unit === "day" ? 14 : 12,
+  leadTimeHours: 0,
+  responseHours: 24,
+  checkIn: "14:00",
+  checkOut: "11:00",
+  openFrom: "08:00",
+  openTo: "20:00",
+  cancellation: "flexible",
+  depositNote: "",
+  instructions: "",
+  blockedDates: []
+});
+
+const UNIT_LABEL = { night: "night", day: "day", hour: "hour" };
+
+// The provider's booking set-up for a service: how it is booked, what is on offer, and the house rules.
+function BookingSection({ form, setForm, blockDate, setBlockDate }) {
+  const b = form.booking;
+  const unit = b.unit;
+  const set = (patch) => setForm((current) => ({ ...current, booking: { ...current.booking, ...patch } }));
+  const num = (key) => (e) => set({ [key]: e.target.value === "" ? "" : Number(e.target.value) });
+  const on = form.bookingMode !== "none";
+  const addBlocked = () => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(blockDate) || b.blockedDates.includes(blockDate)) return;
+    set({ blockedDates: [...b.blockedDates, blockDate].sort() });
+    setBlockDate("");
+  };
+  return (
+    <section className="booking-setup">
+      <h3>Bookings</h3>
+      <label className="booking-toggle">
+        <input type="checkbox" checked={on} onChange={(e) => setForm((current) => ({ ...current, bookingMode: e.target.checked ? "request" : "none" }))} />
+        <span>
+          <strong>This is a booking service</strong>
+          <small>Guests pick dates or a time and book it here, like hotel rooms, venues or appointments. Leave it off if customers just unlock your contact and call.</small>
+        </span>
+      </label>
+
+      {on ? (
+        <div className="booking-grid">
+          <div className="booking-modes" role="radiogroup" aria-label="How bookings are accepted">
+            {[
+              { id: "request", title: "I approve each booking", text: "Guests send a request. You accept or decline within the time you set; dates are held meanwhile." },
+              { id: "instant", title: "Confirm instantly", text: "Open dates are confirmed straight away, no waiting. Best when you're rarely unavailable." }
+            ].map((m) => (
+              <button key={m.id} type="button" role="radio" aria-checked={form.bookingMode === m.id} className={`booking-mode ${form.bookingMode === m.id ? "is-on" : ""}`} onClick={() => setForm((current) => ({ ...current, bookingMode: m.id }))}>
+                <strong>{m.title}</strong>
+                <small>{m.text}</small>
+              </button>
+            ))}
+          </div>
+
+          <div className="form-grid two">
+            <Field label="Guests book by the">
+              <select value={unit} onChange={(e) => set({ unit: e.target.value, maxUnits: e.target.value === "night" ? 30 : e.target.value === "day" ? 14 : 12 })}>
+                <option value="night">Night (rooms, stays)</option>
+                <option value="day">Day (venues, car hire)</option>
+                <option value="hour">Hour (appointments, studios)</option>
+              </select>
+            </Field>
+            <Field label={unit === "hour" ? "How many can be booked at once" : "How many do you have"} hint={unit === "night" ? "Rooms of this type" : "Identical rooms, spaces or vehicles"}>
+              <input type="number" min="1" value={b.inventory} onChange={num("inventory")} />
+            </Field>
+            <Field label="Guests per unit" hint="Most people one room or space holds">
+              <input type="number" min="1" value={b.capacity} onChange={num("capacity")} />
+            </Field>
+            <Field label={`Minimum ${UNIT_LABEL[unit]}s`}>
+              <input type="number" min="1" value={b.minUnits} onChange={num("minUnits")} />
+            </Field>
+            <Field label={`Maximum ${UNIT_LABEL[unit]}s`}>
+              <input type="number" min="1" value={b.maxUnits} onChange={num("maxUnits")} />
+            </Field>
+            <Field label="Notice needed (hours)" hint="Stops last-minute bookings; 0 for none">
+              <input type="number" min="0" value={b.leadTimeHours} onChange={num("leadTimeHours")} />
+            </Field>
+            {unit === "night" ? (
+              <>
+                <Field label="Check-in from"><input type="time" value={b.checkIn} onChange={(e) => set({ checkIn: e.target.value })} /></Field>
+                <Field label="Check-out by"><input type="time" value={b.checkOut} onChange={(e) => set({ checkOut: e.target.value })} /></Field>
+              </>
+            ) : null}
+            {unit === "hour" ? (
+              <>
+                <Field label="Open from"><input type="time" step="3600" value={b.openFrom} onChange={(e) => set({ openFrom: e.target.value })} /></Field>
+                <Field label="Closes at"><input type="time" step="3600" value={b.openTo} onChange={(e) => set({ openTo: e.target.value })} /></Field>
+              </>
+            ) : null}
+            {form.bookingMode === "request" ? (
+              <Field label="Answer within (hours)" hint="Unanswered requests expire and free the dates">
+                <input type="number" min="2" max="72" value={b.responseHours} onChange={num("responseHours")} />
+              </Field>
+            ) : null}
+            <Field label="Cancellation policy">
+              <select value={b.cancellation} onChange={(e) => set({ cancellation: e.target.value })}>
+                <option value="flexible">Flexible: free up to 24 hours before</option>
+                <option value="moderate">Moderate: free up to 5 days before</option>
+                <option value="strict">Strict: deposit is non-refundable</option>
+              </select>
+            </Field>
+          </div>
+
+          <Field label="Deposit or payment note (optional)" hint="Shown to guests, e.g. 30% to confirm, balance on arrival">
+            <input maxLength={200} value={b.depositNote} onChange={(e) => set({ depositNote: e.target.value })} />
+          </Field>
+          <Field label="House rules & instructions (optional)" hint="Guests see this once the booking is confirmed" as="div">
+            <textarea rows="3" maxLength={600} value={b.instructions} onChange={(e) => set({ instructions: e.target.value })} />
+          </Field>
+
+          <Field label="Dates you're not available" as="div">
+            <div className="booking-block-row">
+              <input type="date" value={blockDate} onChange={(e) => setBlockDate(e.target.value)} />
+              <button type="button" className="secondary-button" onClick={addBlocked}>Block date</button>
+            </div>
+            {b.blockedDates.length ? (
+              <div className="booking-chips">
+                {b.blockedDates.map((d) => (
+                  <span key={d} className="booking-chip">{d}<button type="button" aria-label={`Unblock ${d}`} onClick={() => set({ blockedDates: b.blockedDates.filter((x) => x !== d) })}>×</button></span>
+                ))}
+              </div>
+            ) : null}
+          </Field>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export default function ListingForm() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -22,9 +170,11 @@ export default function ListingForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [categories, setCategories] = useState([]);
   const [productCategories, setProductCategories] = useState([]);
   const [productCategoryPath, setProductCategoryPath] = useState([]); // selected id at each depth, root first
+  const [serviceCategories, setServiceCategories] = useState([]);
+  const [serviceCategoryPath, setServiceCategoryPath] = useState([]);
+  const [blockDate, setBlockDate] = useState("");
   const [newCategoryDraft, setNewCategoryDraft] = useState(null); // 'top' | 'sub' | null
   const [newCategoryName, setNewCategoryName] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
@@ -44,6 +194,9 @@ export default function ListingForm() {
     inventory: "",
     categoryId: "",
     productCategoryId: "",
+    serviceCategoryId: "",
+    bookingMode: "none",
+    booking: defaultBooking(),
     shopCategoryId: "",
     imageUrl: "",
     gallery: [],
@@ -62,8 +215,8 @@ export default function ListingForm() {
     if (!session?.provider) return;
     let active = true;
     Promise.all([
-      request("/categories"),
       request("/product-categories"),
+      request("/service-categories"),
       request("/providers/me"),
       request("/shop-categories/mine"),
       // GET /listings/me caps `limit` at 100 (see src/routes/listing.routes.js) - asking for 200
@@ -73,12 +226,12 @@ export default function ListingForm() {
       // 400 it replaces.
       isEditing ? request("/listings/me?limit=100") : Promise.resolve(null)
     ])
-      .then(([categoryResult, productCategoryResult, providerResult, shopCategoryResult, listingResult]) => {
+      .then(([productCategoryResult, serviceCategoryResult, providerResult, shopCategoryResult, listingResult]) => {
         if (!active) return;
-        const flatCategories = categoryResult?.items || categoryResult || [];
-        setCategories(flatCategories);
         const shopProductCategories = productCategoryResult?.items || productCategoryResult || [];
         setProductCategories(shopProductCategories);
+        const serviceTree = serviceCategoryResult?.items || serviceCategoryResult || [];
+        setServiceCategories(serviceTree);
         setShopCategories(shopCategoryResult?.items || []);
 
         if (isEditing) {
@@ -99,6 +252,9 @@ export default function ListingForm() {
             inventory: listing.inventory ?? "",
             categoryId: listing.categoryId || "",
             productCategoryId: listing.productCategoryId || "",
+            serviceCategoryId: listing.serviceCategoryId || "",
+            bookingMode: listing.bookingMode || "none",
+            booking: { ...defaultBooking(listing.booking?.unit), ...(listing.booking || {}) },
             shopCategoryId: listing.shopCategoryId || "",
             imageUrl: listing.media?.imageUrl || "",
             gallery: listing.media?.gallery || [],
@@ -106,6 +262,10 @@ export default function ListingForm() {
             featured: Boolean(listing.featured),
             onlinePaymentEnabled: listing.onlinePaymentEnabled !== false
           });
+          if (listing.type === "service" && listing.serviceCategoryId) {
+            const found = findCategoryPath(serviceTree, listing.serviceCategoryId);
+            setServiceCategoryPath(found ? [...found.ancestors.map((a) => a.id), found.node.id] : [listing.serviceCategoryId]);
+          }
           if (listing.type === "product" && listing.productCategoryId) {
             const found = findCategoryPath(shopProductCategories, listing.productCategoryId);
             const path = found ? [...found.ancestors.map((a) => a.id), found.node.id] : [listing.productCategoryId];
@@ -124,42 +284,37 @@ export default function ListingForm() {
     };
   }, [session, isEditing, listingId]);
 
-  const flatCategoryOptions = flattenCategories(categories);
-  const selectedCategory = flatCategoryOptions.find((c) => c.id === form.categoryId) || null;
-  const selectedProductCategory = form.type === "product" && form.productCategoryId
-    ? findCategoryPath(productCategories, form.productCategoryId)?.node || null
-    : null;
-  const activeFieldsCategory = form.type === "product" ? selectedProductCategory : selectedCategory;
-  const listingFields = activeFieldsCategory?.effectiveListingFields || activeFieldsCategory?.listingFields || [];
+  const isService = form.type === "service";
+  const tree = isService ? serviceCategories : productCategories;
+  const categoryPath = isService ? serviceCategoryPath : productCategoryPath;
+  const setCategoryPath = isService ? setServiceCategoryPath : setProductCategoryPath;
+  const categoryIdKey = isService ? "serviceCategoryId" : "productCategoryId";
+  const selectedCategoryNode = form[categoryIdKey] ? findCategoryPath(tree, form[categoryIdKey])?.node || null : null;
+  const listingFields = selectedCategoryNode?.effectiveListingFields || selectedCategoryNode?.listingFields || [];
+  const activeFieldsCategory = selectedCategoryNode;
   const flatShopCategoryOptions = flattenCategories(shopCategories);
 
-  // Products use the admin/provider-managed e-commerce category tree, and must be placed at a
-  // leaf of it, however deep that tree goes (mirrors listing.service.js#assertProductCategory).
-  // Each level's dropdown is derived from the previous level's selection; the walk stops once it
-  // reaches a node with no children (a leaf, i.e. a valid product category) or an unselected level.
-  const productLevels = [];
-  {
-    let options = productCategories;
-    let depth = 0;
-    while (options && options.length) {
-      const selectedId = productCategoryPath[depth] || "";
-      productLevels.push({ depth, options, selectedId });
-      const node = options.find((c) => c.id === selectedId);
-      if (!node || !node.children?.length) break;
-      options = node.children;
-      depth += 1;
-    }
-  }
+  // Both products and services sit at a leaf of their own category tree, however deep it goes
+  // (mirrors listing.service.js#assertProductCategory / assertServiceCategory).
+  const productLevels = buildLevels(tree, categoryPath);
   const selectProductCategoryAtDepth = (depth, id) => {
     const level = productLevels[depth];
     const node = level?.options.find((c) => c.id === id) || null;
-    setProductCategoryPath((current) => {
+    setCategoryPath((current) => {
       const next = current.slice(0, depth);
       next[depth] = id;
       return next;
     });
     const isLeaf = id && !node?.children?.length;
-    setForm((current) => ({ ...current, productCategoryId: isLeaf ? id : "", customFields: {} }));
+    setForm((current) => ({
+      ...current,
+      [categoryIdKey]: isLeaf ? id : "",
+      customFields: {},
+      // A bookable category suggests taking bookings, with its usual unit, on a service that has none set yet.
+      ...(isService && isLeaf && node?.bookable && current.bookingMode === "none" && !isEditing
+        ? { bookingMode: "request", booking: defaultBooking(node.bookingUnit || "night") }
+        : {})
+    }));
   };
 
   const startNewSubcategory = () => {
@@ -185,18 +340,18 @@ export default function ListingForm() {
 
   const createSubcategory = async () => {
     const name = newCategoryName.trim();
-    const parentId = productCategoryPath[productCategoryPath.length - 1];
+    const parentId = categoryPath[categoryPath.length - 1];
     if (!name || !parentId) return;
     setCreatingCategory(true);
     setError("");
     try {
-      const created = await request("/product-categories/mine", {
+      const created = await request(isService ? "/service-categories/mine" : "/product-categories/mine", {
         method: "POST",
         body: JSON.stringify({ name, parentId })
       });
-      setProductCategories((current) => insertChildIntoTree(current, parentId, created));
-      setProductCategoryPath((current) => [...current, created.id]);
-      setForm((current) => ({ ...current, productCategoryId: created.id, customFields: {} }));
+      (isService ? setServiceCategories : setProductCategories)((current) => insertChildIntoTree(current, parentId, created));
+      setCategoryPath((current) => [...current, created.id]);
+      setForm((current) => ({ ...current, [categoryIdKey]: created.id, customFields: {} }));
       cancelNewCategory();
     } catch (createError) {
       setError(createError.message || "Unable to create this subcategory.");
@@ -247,15 +402,17 @@ export default function ListingForm() {
       setError("Give it a name.");
       return;
     }
-    if (form.type === "product") {
-      if (!productCategoryPath[0]) {
-        setError("Choose a category for this product.");
-        return;
-      }
-      if (!form.productCategoryId) {
-        setError("Choose a more specific subcategory for this product.");
-        return;
-      }
+    if (!categoryPath[0]) {
+      setError(`Choose a category for this ${form.type}.`);
+      return;
+    }
+    if (!form[categoryIdKey]) {
+      setError(`Choose a more specific subcategory for this ${form.type}.`);
+      return;
+    }
+    if (isService && form.bookingMode !== "none" && !(Number(form.price) > 0)) {
+      setError(`Set a price per ${UNIT_LABEL[form.booking.unit]} so guests can book.`);
+      return;
     }
     const missingField = listingFields.find(
       (field) => field.required && !isCustomFieldFilled(field, form.customFields[field.key])
@@ -295,7 +452,8 @@ export default function ListingForm() {
         inventory: inventoryNum !== null && Number.isInteger(inventoryNum) && inventoryNum >= 0 ? inventoryNum : null,
         type: form.type,
         categoryId: form.categoryId || null,
-        productCategoryId: form.productCategoryId || null,
+        productCategoryId: isService ? null : form.productCategoryId || null,
+        ...(isService ? { serviceCategoryId: form.serviceCategoryId || null, bookingMode: form.bookingMode, booking: form.bookingMode === "none" ? {} : form.booking } : {}),
         shopCategoryId: form.shopCategoryId || null,
         media: { imageUrl: form.imageUrl || null, gallery: form.gallery },
         customFields: form.customFields,
@@ -310,6 +468,7 @@ export default function ListingForm() {
       navigate("/profile", { replace: true });
     } catch (submitError) {
       setError(submitError.message || "Unable to save this listing.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSaving(false);
     }
@@ -342,41 +501,25 @@ export default function ListingForm() {
               <h3>Details</h3>
               <div className="form-grid two">
                 <Field label="Type">
-                  <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+                  <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value, customFields: {} })}>
                     <option value="service">Service</option>
                     <option value="product">Product</option>
                   </select>
                 </Field>
-                {form.type === "product" ? (
-                  <>
-                    {productLevels.map((level) => (
-                      <Field key={level.depth} label={level.depth === 0 ? "Category *" : "Subcategory *"}>
-                        <select
-                          value={level.selectedId}
-                          onChange={(e) => selectProductCategoryAtDepth(level.depth, e.target.value)}
-                        >
-                          <option value="">{level.depth === 0 ? "Choose a category" : "Choose a subcategory"}</option>
-                          {level.options.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                      </Field>
-                    ))}
-                  </>
-                ) : (
-                  <Field label="Category">
-                    <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value, customFields: {} })}>
-                      <option value="">Uncategorized</option>
-                      {flatCategoryOptions.map((c) => (
-                        <option key={c.id} value={c.id}>{c.path}</option>
+                {productLevels.map((level) => (
+                  <Field key={level.depth} label={level.depth === 0 ? "Category *" : "Subcategory *"}>
+                    <select value={level.selectedId} onChange={(e) => selectProductCategoryAtDepth(level.depth, e.target.value)}>
+                      <option value="">{level.depth === 0 ? "Choose a category" : "Choose a subcategory"}</option>
+                      {level.options.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>
                   </Field>
-                )}
+                ))}
                 <Field label="Name">
                   <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </Field>
-                <Field label="Price (UGX)">
+                <Field label={isService && form.bookingMode !== "none" ? `Price per ${UNIT_LABEL[form.booking.unit]} (UGX)` : "Price (UGX)"}>
                   <input type="number" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
                 </Field>
                 {form.type === "product" ? (
@@ -425,13 +568,13 @@ export default function ListingForm() {
                 </Field>
               </div>
 
-              {form.type === "product" && !productCategories.length ? (
+              {!tree.length ? (
                 <p className="provider-meta">
-                  No shop categories exist yet — ask an admin to create one before you can add a product.
+                  No {isService ? "service" : "shop"} categories exist yet — ask an admin to create one before you can add a {form.type}.
                 </p>
               ) : null}
 
-              {form.type === "product" && productCategoryPath[0] ? (
+              {categoryPath[0] ? (
                 <div className="new-category-panel">
                   {newCategoryDraft ? (
                     <div className="form-grid two">
@@ -464,6 +607,11 @@ export default function ListingForm() {
               <Field label="Description" as="div">
                 <textarea rows="8" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </Field>
+              {isService ? (
+                <p className="provider-meta listing-guard-note">
+                  Describe the service itself. Don&apos;t put phone numbers, WhatsApp, emails, links or addresses in the text or the photos &mdash; customers get your contact details when they unlock them, and listings that include them are rejected.
+                </p>
+              ) : null}
               <Field label="Highlight this listing" as="div">
                 <label className="checkbox-row">
                   <input
@@ -499,6 +647,10 @@ export default function ListingForm() {
                 </Field>
               ) : null}
             </section>
+
+            {isService ? (
+              <BookingSection form={form} setForm={setForm} blockDate={blockDate} setBlockDate={setBlockDate} />
+            ) : null}
 
             {listingFields.length ? (
               <section>

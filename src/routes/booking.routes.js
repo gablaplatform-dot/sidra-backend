@@ -43,7 +43,7 @@ export const buildBookingRoutes = ({ serviceBookingService }) => {
         customer: Joi.object({
           name: Joi.string().trim().min(2).max(120).required(),
           phone: Joi.string().trim().min(7).max(40).required(),
-          email: Joi.string().trim().email().max(200).allow("").optional(),
+          email: Joi.string().trim().email({ tlds: { allow: false } }).max(200).allow("").optional(),
           notes: Joi.string().trim().max(800).allow("").optional()
         }).required()
       })

@@ -11,7 +11,7 @@ function subtreeCount(node, counts) {
   return (counts[node.id] || 0) + (node.children || []).reduce((sum, child) => sum + subtreeCount(child, counts), 0);
 }
 
-function CategoryBlock({ node, ancestors, siblings, categoryCounts }) {
+function CategoryBlock({ node, ancestors, siblings, categoryCounts, basePath, rootPath }) {
   const [showAll, setShowAll] = useState(false);
   const hasCounts = Boolean(categoryCounts);
   // On a "view all" page there is no current category, so the top-level categories are the list.
@@ -26,9 +26,9 @@ function CategoryBlock({ node, ancestors, siblings, categoryCounts }) {
     <section className="sb-block sb-block-categories">
       <h2 className="sb-block-head">Categories</h2>
       <div className="sb-block-body">
-        <Link to="/shop/categories" className="sb-cat-link sb-cat-root">All categories</Link>
+        <Link to={rootPath} className="sb-cat-link sb-cat-root">All categories</Link>
         {ancestors.map((a) => (
-          <Link key={a.id} to={`/shop/${a.id}`} className="sb-cat-link sb-cat-anc">
+          <Link key={a.id} to={`${basePath}/${a.id}`} className="sb-cat-link sb-cat-anc">
             &lsaquo; {a.name}
           </Link>
         ))}
@@ -36,7 +36,7 @@ function CategoryBlock({ node, ancestors, siblings, categoryCounts }) {
         <ul className="sb-cat-list">
           {visible.map(({ child, count }) => (
             <li key={child.id}>
-              <Link to={`/shop/${child.id}`} className="sb-cat-link">
+              <Link to={`${basePath}/${child.id}`} className="sb-cat-link">
                 <span>{child.name}</span>
                 {count !== null ? <em>{count.toLocaleString()}</em> : null}
               </Link>
@@ -147,7 +147,7 @@ function AttributeGroup({ group, selected, open, onToggleOpen, onToggleValue }) 
 
 // `categorySlot` replaces the shop's category-link block (a provider page filters in place instead of
 // navigating), and `hideLocation` drops the location block where location is meaningless.
-export default function BrowseSidebar({ node, ancestors, siblings, fieldDefs, facets, filters, onChange, onOpenLocation, locationLabel, onClearAll, categorySlot, hideLocation }) {
+export default function BrowseSidebar({ node, ancestors, siblings, fieldDefs, facets, filters, onChange, onOpenLocation, locationLabel, onClearAll, categorySlot, hideLocation, basePath = "/shop", rootPath = "/shop/categories" }) {
   const [closed, setClosed] = useState({});
 
   const defs = fieldDefs.filter((f) => FILTERABLE.has(f.type));
@@ -178,7 +178,7 @@ export default function BrowseSidebar({ node, ancestors, siblings, fieldDefs, fa
 
   return (
     <aside className="sb-sidebar">
-      {categorySlot ?? <CategoryBlock node={node} ancestors={ancestors} siblings={siblings} categoryCounts={facets?.categoryCounts} />}
+      {categorySlot ?? <CategoryBlock node={node} ancestors={ancestors} siblings={siblings} categoryCounts={facets?.categoryCounts} basePath={basePath} rootPath={rootPath} />}
 
       {hideLocation ? null : (
         <section className="sb-block">

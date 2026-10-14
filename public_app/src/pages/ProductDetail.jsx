@@ -19,11 +19,18 @@ import ProductGallery from "../components/product/ProductGallery";
 import ProductRow from "../components/product/ProductRow";
 import { ProductDetailSkeleton, ProductRowSkeleton } from "../components/Skeleton";
 import ProviderContactCard from "../components/ProviderContactCard";
+import BookingPanel from "../components/booking/BookingPanel";
 // Purely presentational {label, value} list - already generic over any field/value set (built
 // for a provider's onboarding answers), reused as-is here for a product's category attributes
 // (Make, Color, Mileage, ...) rather than writing a second copy of the same rendering logic.
 import ProviderCustomFields, { hasAnsweredCustomFields } from "../components/ProviderCustomFields";
 import { IconCart, IconPin } from "../components/icons";
+
+const SERVICE_TIPS = [
+  "Agree the price and exactly what is included before any work starts.",
+  "Keep your conversation and payments traceable, and pay after the service where you can.",
+  "Check reviews and ask for examples of similar work."
+];
 
 const SAFETY_TIPS = [
   "Meet the seller in a public place and inspect the item before paying.",
@@ -79,11 +86,9 @@ export default function ProductDetail() {
         trackInterest({ type: "view", listingId: result.id });
 
         // Everything below is progressive enrichment: none of it may block or break the page.
-        if (result?.type === "product") {
-          request("/product-categories")
-            .then((data) => active && setTree(data?.items || data || []))
-            .catch(() => {});
-        }
+        request(result?.type === "service" ? "/service-categories" : "/product-categories")
+          .then((data) => active && setTree(data?.items || data || []))
+          .catch(() => {});
         request(`/listings/${encodeURIComponent(listingId)}/similar?limit=8`)
           .then((data) => active && setSimilar(data?.items || []))
           .catch(() => active && setSimilar([]));
@@ -114,15 +119,13 @@ export default function ProductDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listingId]);
 
-  const found = useMemo(
-    () => (listing?.productCategoryId ? findCategoryPath(tree, listing.productCategoryId) : null),
-    [tree, listing?.productCategoryId]
-  );
+  const categoryKey = listing?.type === "service" ? listing?.serviceCategoryId : listing?.productCategoryId;
+  const found = useMemo(() => (categoryKey ? findCategoryPath(tree, categoryKey) : null), [tree, categoryKey]);
   const specFields = found?.node?.effectiveListingFields || [];
   const images = useMemo(() => (listing ? uniqueImages(listing) : []), [listing]);
 
   useEffect(() => {
-    if (listing) document.title = `${listing.name} - ${formatUgx(listing.price)} | Gabla Shop`;
+    if (listing) document.title = `${listing.name} - ${formatUgx(listing.price)} | Gabla ${listing.type === "service" ? "Services" : "Shop"}`;
   }, [listing]);
 
   // Back from signing in via the buy / order dialog: reopen it instead of making the shopper find
@@ -135,7 +138,8 @@ export default function ProductDetail() {
     setSearchParams(next, { replace: true });
     if (!getSession()) return;
     const online = listing.provider?.onlinePaymentsEnabled !== false && listing.onlinePaymentEnabled !== false;
-    if (resume === "buy" && listing.type === "product" && online) setBuying(true);
+    if (resume === "book") document.getElementById("book")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    else if (resume === "buy" && listing.type === "product" && online) setBuying(true);
     else if (resume === "order" || resume === "buy") setOrdering(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resume, listing]);
@@ -188,15 +192,30 @@ export default function ProductDetail() {
   const isService = listing?.type === "service";
   // Online payment (mobile money) and cash on delivery are both offered when the seller allows
   // online payment; otherwise cash ordering is the only way to buy.
-  const primaryAction = canBuyNow ? (
+  const bookable = isService && listing?.bookingMode && listing.bookingMode !== "none" && listing.booking;
+  const contactOpen = providerRecord && !providerRecord.contactLocked;
+  const goToContact = () => {
+    if (providerRecord?.contactLocked) setUnlockOpen(true);
+    else document.getElementById("contact")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+  const primaryAction = bookable ? (
+    <button type="button" className="cta-button ecommerce-order-button" onClick={() => document.getElementById("book")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+      {listing.bookingMode === "instant" ? "Book now" : "Check availability"}
+    </button>
+  ) : isService ? (
+    <button type="button" className="cta-button ecommerce-order-button" onClick={goToContact}>
+      {contactOpen ? "See contact details" : "Unlock contact details"}
+    </button>
+  ) : canBuyNow ? (
     <button type="button" className="cta-button ecommerce-order-button" onClick={() => setBuying(true)}>
       Buy now
     </button>
   ) : (
     <button type="button" className="cta-button ecommerce-order-button" onClick={() => setOrdering(true)}>
-      {isService ? "Request this service" : "Order now · pay on delivery"}
+      Order now · pay on delivery
     </button>
   );
+  const unitWord = bookable ? ` / ${listing.booking.unit}` : "";
 
   return (
     <main className="home-shell home-themed pd-page">
@@ -212,17 +231,17 @@ export default function ProductDetail() {
       ) : (
         <>
           <nav className="breadcrumb">
-            <Link to="/shop">Shop</Link>
+            <Link to={isService ? "/services" : "/shop"}>{isService ? "Services" : "Shop"}</Link>
             {(found?.ancestors || []).map((a) => (
               <React.Fragment key={a.id}>
                 <span>/</span>
-                <Link to={`/shop/${a.id}`}>{a.name}</Link>
+                <Link to={isService ? `/services/c/${a.id}` : `/shop/${a.id}`}>{a.name}</Link>
               </React.Fragment>
             ))}
             {found?.node ? (
               <>
                 <span>/</span>
-                <Link to={`/shop/${categoryId}`}>{found.node.name}</Link>
+                <Link to={isService ? `/services/c/${categoryId}` : `/shop/${categoryId}`}>{found.node.name}</Link>
               </>
             ) : null}
             <span>/</span>
@@ -250,7 +269,7 @@ export default function ProductDetail() {
               <section className="pd-card pd-safety">
                 <h2>Safety tips</h2>
                 <ul>
-                  {SAFETY_TIPS.map((tip) => (
+                  {(isService ? SERVICE_TIPS : SAFETY_TIPS).map((tip) => (
                     <li key={tip}>{tip}</li>
                   ))}
                 </ul>
@@ -271,7 +290,7 @@ export default function ProductDetail() {
                 </p>
 
                 <div className="pd-price">
-                  <strong>{price > 0 ? formatUgx(price) : "Contact for price"}</strong>
+                  <strong>{price > 0 ? `${formatUgx(price)}${unitWord}` : "Contact for price"}</strong>
                   {was > price ? <s>{formatUgx(was)}</s> : null}
                   {listing.discountPercent ? <span className="pd-discount">-{listing.discountPercent}%</span> : null}
                 </div>
@@ -298,6 +317,7 @@ export default function ProductDetail() {
                     </div>
                   ) : null}
                   {canBuyNow ? <p className="pd-pay-note">Pay now with mobile money, or order and pay cash when you receive it.</p> : null}
+                  {isService && !bookable ? <p className="pd-pay-note">Unlock the provider&apos;s phone and location to talk about the job and agree a price directly.</p> : null}
                 </div>
 
                 <button type="button" className="pd-share" onClick={share}>
@@ -305,7 +325,10 @@ export default function ProductDetail() {
                 </button>
               </div>
 
+              {bookable ? <BookingPanel key={listing.id} listing={listing} /> : null}
+
               {seller ? (
+                <div id="contact">
                 <ProviderContactCard
                   variant="inline"
                   provider={providerRecord}
@@ -314,6 +337,7 @@ export default function ProductDetail() {
                   listingName={listing.name}
                   onUnlock={() => setUnlockOpen(true)}
                 />
+                </div>
               ) : null}
             </aside>
           </div>
@@ -322,9 +346,9 @@ export default function ProductDetail() {
             <ProductRowSkeleton count={4} />
           ) : (
             <ProductRow
-              title="Similar products"
+              title={isService ? "Similar services" : "Similar products"}
               items={similar}
-              seeAllTo={categoryId ? `/shop/${categoryId}` : "/shop"}
+              seeAllTo={isService ? (categoryId ? `/services/c/${categoryId}` : "/services") : categoryId ? `/shop/${categoryId}` : "/shop"}
               seeAllLabel="Browse more"
             />
           )}
@@ -341,7 +365,7 @@ export default function ProductDetail() {
 
           <div className="pd-mobilebar">
             <div>
-              <strong>{price > 0 ? formatUgx(price) : "Contact for price"}</strong>
+              <strong>{price > 0 ? `${formatUgx(price)}${unitWord}` : "Contact for price"}</strong>
               {was > price ? <s>{formatUgx(was)}</s> : null}
             </div>
             {primaryAction}

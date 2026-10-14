@@ -13,6 +13,7 @@ export default function BrowseCard({ listing, reason }) {
   const was = Number(listing.originalPrice) || 0;
   const tags = cardTags(listing.customFields);
   const district = listing.provider?.district;
+  const bookable = listing.type === "service" && listing.bookingMode && listing.bookingMode !== "none";
   const distance = Number.isFinite(listing.distanceKm) ? listing.distanceKm : null;
 
   return (
@@ -21,11 +22,12 @@ export default function BrowseCard({ listing, reason }) {
         <LazyImg src={listingCover(listing)} alt={listing.name} loading="lazy" />
         {listing.discountPercent ? <span className="sb-card-badge">-{listing.discountPercent}%</span> : null}
         {listing.isNew ? <span className="sb-card-new">New</span> : null}
+        {bookable ? <span className="sb-card-new sb-card-book">{listing.bookingMode === "instant" ? "Book instantly" : "Bookable"}</span> : null}
       </div>
       <div className="sb-card-body">
         {reason ? <span className="sb-card-reason">{reason}</span> : null}
         <div className="sb-card-price">
-          <strong>{price > 0 ? formatUgx(price) : "Contact for price"}</strong>
+          <strong>{price > 0 ? `${formatUgx(price)}${bookable && listing.booking ? ` / ${listing.booking.unit}` : ""}` : "Contact for price"}</strong>
           {was > price ? <s>{formatUgx(was)}</s> : null}
         </div>
         <h3 className="sb-card-name">{listing.name}</h3>

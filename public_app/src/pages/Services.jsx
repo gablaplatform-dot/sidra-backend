@@ -5,6 +5,7 @@ import { request } from "../lib/api";
 import { clearSession, getSession } from "../lib/session";
 import { mapCategoryDto } from "../lib/shopMappers";
 import SiteHeader from "../components/SiteHeader";
+import BrowseCard from "../components/shop/browse/BrowseCard";
 import { Skel } from "../components/Skeleton";
 import { TallCard } from "../components/mobilehome/MobileHome";
 import { IconFind, IconStarFilled } from "../components/mobilehome/HomeIcons";
@@ -17,14 +18,18 @@ export default function Services() {
   const [session, setSession] = useState(() => getSession());
   const [categories, setCategories] = useState(null);
   const [providers, setProviders] = useState(null);
+  const [bookable, setBookable] = useState(null);
   const [q, setQ] = useState("");
 
   useEffect(() => {
     document.title = "Services | Gabla";
     let active = true;
-    request("/categories")
+    request("/service-categories")
       .then((r) => active && setCategories((r?.items || r || []).map(mapCategoryDto)))
       .catch(() => active && setCategories([]));
+    request("/listings?type=service&bookable=true&limit=6&sort=featured")
+      .then((r) => active && setBookable(r?.items || []))
+      .catch(() => active && setBookable([]));
     request("/providers?sort=top-rated&limit=12")
       .then((r) => active && setProviders(r?.items || r || []))
       .catch(() => active && setProviders([]));
@@ -65,20 +70,29 @@ export default function Services() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search plumbers, tailors, mechanics…" aria-label="Search services" enterKeyHint="search" />
         </form>
 
-        <div className="mh-head"><h2>Categories</h2></div>
+        <div className="mh-head"><h2>Categories</h2><Link to="/services/all">See all services</Link></div>
         {categories === null ? (
           <div className="mh-cols"><div className="mh-col"><Skel h={250} r={26} /><Skel h={250} r={26} /></div><div className="mh-col mh-col-drop"><Skel h={250} r={26} /><Skel h={250} r={26} /></div></div>
         ) : categories.length ? (
           <div className="mh-cols">
             {columns.map((col, ci) => (
               <div key={ci} className={`mh-col ${ci ? "mh-col-drop" : ""}`}>
-                {col.map(({ c, i }) => <TallCard key={c.id} to={`/category/${c.id}`} name={c.name} image={c.image} caption="Browse providers" tone={i + 1} />)}
+                {col.map(({ c, i }) => <TallCard key={c.id} to={`/services/c/${c.id}`} name={c.name} image={c.image} caption="Browse services" tone={i + 1} />)}
               </div>
             ))}
           </div>
         ) : (
           <p className="mh-empty">No service categories yet.</p>
         )}
+
+        {bookable && bookable.length ? (
+          <>
+            <div className="mh-head"><h2>Book online</h2><Link to="/services/all?sort=featured">See all</Link></div>
+            <div className="sb-grid sv-bookable">
+              {bookable.map((listing) => <BrowseCard key={listing.id} listing={listing} />)}
+            </div>
+          </>
+        ) : null}
 
         {providers === null || providers.length ? (
           <>

@@ -18,6 +18,7 @@ import ShopCollection from "./pages/ShopCollection";
 import ProductDetail from "./pages/ProductDetail";
 import MyOrders from "./pages/MyOrders";
 import Services from "./pages/Services";
+import ServiceBrowse from "./pages/ServiceBrowse";
 import BusHome from "./pages/bus/BusHome";
 import BusSearch from "./pages/bus/BusSearch";
 import BusParks from "./pages/bus/BusParks";
@@ -45,6 +46,8 @@ export default function App() {
       <Route path="/cart" element={<Cart />} />
       <Route path="/orders" element={<MyOrders />} />
       <Route path="/services" element={<Services />} />
+      <Route path="/services/all" element={<ServiceBrowse />} />
+      <Route path="/services/c/:categoryId" element={<ServiceBrowse />} />
       <Route path="/ride" element={<Ride />} />
       <Route path="/shop" element={<Shop />} />
       <Route path="/shop/categories" element={<ShopAllCategories />} />
