@@ -1,18 +1,23 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import { IcBus, IcCheck, IcScan } from "./icons";
 
 // The navy brand side of the sign-in and onboarding screens: logo, a message, and a small
 // illustration (a route with a moving bus and a digital ticket).
 
-export const Logo = ({ light = true }) => (
-  <span className={`bop-logo ${light ? "is-light" : ""}`}>
-    <span className="bop-logo-mark"><IcBus size={22} strokeWidth={2.1} /></span>
-    <span className="bop-logo-text"><strong>Gabla Bus</strong><small>For bus companies</small></span>
-  </span>
-);
+export const Logo = ({ light = true }) => {
+  const { t } = useTranslation();
+  return (
+    <span className={`bop-logo ${light ? "is-light" : ""}`}>
+      <span className="bop-logo-mark"><IcBus size={22} strokeWidth={2.1} /></span>
+      <span className="bop-logo-text"><strong>Gabla Bus</strong><small>{t("busOp.brand.forCompanies")}</small></span>
+    </span>
+  );
+};
 
 export function ArtScene() {
+  const { t } = useTranslation();
   return (
     <div className="bop-art-scene" aria-hidden="true">
       <svg className="bop-art-route" viewBox="0 0 420 200" fill="none">
@@ -24,10 +29,10 @@ export function ArtScene() {
         <text x="392" y="22" fill="#9fb1d8" fontSize="12" fontWeight="700" textAnchor="end">MBARARA</text>
       </svg>
       <div className="bop-art-row">
-      <div className="bop-art-chip"><span><IcScan size={16} /></span><div><strong>87 tickets sold today</strong><small>+61% vs yesterday</small></div></div>
+      <div className="bop-art-chip"><span><IcScan size={16} /></span><div><strong>{t("busOp.brand.soldToday", { count: 87 })}</strong><small>{t("busOp.brand.vsYesterday", { pct: "+61%" })}</small></div></div>
       <div className="bop-art-ticket">
-        <div className="bop-art-ticket-head"><span><IcCheck size={13} strokeWidth={3.2} /> VALID</span><small>Seat 14</small></div>
-        <div className="bop-art-ticket-route"><div><small>From</small><strong>Kampala</strong></div><i /><div><small>To</small><strong>Mbarara</strong></div></div>
+        <div className="bop-art-ticket-head"><span><IcCheck size={13} strokeWidth={3.2} /> {t("busOp.brand.valid")}</span><small>{t("busOp.brand.seat", { n: 14 })}</small></div>
+        <div className="bop-art-ticket-route"><div><small>{t("busOp.brand.from")}</small><strong>Kampala</strong></div><i /><div><small>{t("busOp.brand.to")}</small><strong>Mbarara</strong></div></div>
         <div className="bop-art-perf"><i /><span /><i /></div>
         <div className="bop-art-bars">{[3, 1, 2, 1, 3, 2, 1, 1, 3, 1, 2, 3, 1, 2, 1, 3, 1, 1, 2, 3, 1, 2].map((w, i) => <b key={i} style={{ width: w * 2 }} />)}</div>
       </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
 
 import BusLayout from "../../components/bus/BusLayout";
 import useLoad from "../../components/bus/useLoad";
@@ -9,6 +10,7 @@ import { Building, Close, Search } from "../../components/bus/icons";
 import { busApi } from "../../lib/bus";
 
 export default function BusParks() {
+  const { t } = useTranslation();
   useScrollTop();
   const [q, setQ] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -35,22 +37,22 @@ export default function BusParks() {
     <BusLayout>
       <section className="bus-band bus-band-page">
         <div className="bus-wrap">
-          <nav className="bus-breadcrumb" aria-label="Breadcrumb"><Link to="/bus">Gabla Bus</Link><span>/</span><span>Bus parks</span></nav>
+          <nav className="bus-breadcrumb" aria-label={t("bus.breadcrumb")}><Link to="/bus">Gabla Bus</Link><span>/</span><span>{t("bus.layout.busParks")}</span></nav>
           <div className="bus-pagehead">
             <div>
-              <span className="bus-kicker">Where you board</span>
-              <h1 className="bus-page-title">Bus parks</h1>
-              <p className="bus-section-sub">Every company, and the park you board from.</p>
+              <span className="bus-kicker">{t("bus.home.whereBoard")}</span>
+              <h1 className="bus-page-title">{t("bus.layout.busParks")}</h1>
+              <p className="bus-section-sub">{t("bus.parks.sub")}</p>
             </div>
             <div className="bus-searchfield">
               <Search size={18} />
-              <input type="search" placeholder="Search company or park" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search bus companies or parks" />
-              {q ? <button type="button" onClick={() => setQ("")} aria-label="Clear search"><Close size={14} /></button> : null}
+              <input type="search" placeholder={t("bus.parks.searchPlaceholder")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t("bus.parks.searchAria")} />
+              {q ? <button type="button" onClick={() => setQ("")} aria-label={t("bus.parks.clearAria")}><Close size={14} /></button> : null}
             </div>
           </div>
           {districts.length > 1 ? (
-            <div className="bus-chiprow" role="group" aria-label="Filter by district">
-              <button type="button" className={`bus-pillbtn ${!district ? "is-active" : ""}`} aria-pressed={!district} onClick={() => setDistrict("")}>All districts</button>
+            <div className="bus-chiprow" role="group" aria-label={t("bus.parks.districtAria")}>
+              <button type="button" className={`bus-pillbtn ${!district ? "is-active" : ""}`} aria-pressed={!district} onClick={() => setDistrict("")}>{t("bus.parks.allDistricts")}</button>
               {districts.map(([d, n]) => (
                 <button type="button" key={d} className={`bus-pillbtn ${district === d ? "is-active" : ""}`} aria-pressed={district === d} onClick={() => setDistrict(district === d ? "" : d)}>{d} <small>{n}</small></button>
               ))}
@@ -59,23 +61,23 @@ export default function BusParks() {
         </div>
       </section>
 
-      <section className="bus-wrap bus-sec bus-sec-first" aria-label="Bus companies">
+      <section className="bus-wrap bus-sec bus-sec-first" aria-label={t("bus.parks.companiesAria")}>
         {list.loading ? (
           <CardGridSkeleton count={6} />
         ) : list.error ? (
           <ErrorBox error={list.error} onRetry={list.reload} />
         ) : items.length ? (
           <>
-            <p className="bus-count" aria-live="polite"><b>{items.length}</b> {items.length === 1 ? "company" : "companies"}{district ? ` in ${district}` : ""}</p>
+            <p className="bus-count" aria-live="polite">{district ? <Trans i18nKey="bus.parks.countIn" count={items.length} values={{ district }} components={{ b: <b /> }} /> : <Trans i18nKey="bus.parks.count" count={items.length} components={{ b: <b /> }} />}</p>
             <div className="bus-grid">{items.map((p) => <ParkCard key={p.id} park={p} />)}</div>
           </>
         ) : (
           <EmptyState
             icon={Building}
-            title={filtered ? "No bus companies match your search" : "No bus companies yet"}
-            action={filtered ? <button type="button" className="bus-btn bus-btn-navy" onClick={() => { setQ(""); setDistrict(""); }}>Clear search</button> : null}
+            title={filtered ? t("bus.parks.noMatch") : t("bus.home.noCompanies")}
+            action={filtered ? <button type="button" className="bus-btn bus-btn-navy" onClick={() => { setQ(""); setDistrict(""); }}>{t("bus.parks.clearSearch")}</button> : null}
           >
-            {filtered ? "Try a different name or district." : "Please check back soon."}
+            {filtered ? t("bus.parks.tryDifferent") : t("bus.home.checkBack")}
           </EmptyState>
         )}
       </section>

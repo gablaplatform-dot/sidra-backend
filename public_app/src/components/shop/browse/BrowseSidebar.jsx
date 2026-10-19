@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { activeFilterCount, bucketLabel, prettyKey } from "../../../lib/browseFilters";
 
@@ -12,6 +13,7 @@ function subtreeCount(node, counts) {
 }
 
 function CategoryBlock({ node, ancestors, siblings, categoryCounts, basePath, rootPath }) {
+  const { t } = useTranslation();
   const [showAll, setShowAll] = useState(false);
   const hasCounts = Boolean(categoryCounts);
   // On a "view all" page there is no current category, so the top-level categories are the list.
@@ -24,9 +26,9 @@ function CategoryBlock({ node, ancestors, siblings, categoryCounts, basePath, ro
 
   return (
     <section className="sb-block sb-block-categories">
-      <h2 className="sb-block-head">Categories</h2>
+      <h2 className="sb-block-head">{t("shop.sidebar.categories")}</h2>
       <div className="sb-block-body">
-        <Link to={rootPath} className="sb-cat-link sb-cat-root">All categories</Link>
+        <Link to={rootPath} className="sb-cat-link sb-cat-root">{t("shop.sidebar.allCategories")}</Link>
         {ancestors.map((a) => (
           <Link key={a.id} to={`${basePath}/${a.id}`} className="sb-cat-link sb-cat-anc">
             &lsaquo; {a.name}
@@ -45,7 +47,7 @@ function CategoryBlock({ node, ancestors, siblings, categoryCounts, basePath, ro
         </ul>
         {rows.length > 6 ? (
           <button type="button" className="sb-link-btn" onClick={() => setShowAll((v) => !v)}>
-            {showAll ? "Show less" : `Show all ${rows.length}`}
+            {showAll ? t("shop.sidebar.showLess") : t("shop.sidebar.showAll", { count: rows.length })}
           </button>
         ) : null}
       </div>
@@ -54,6 +56,7 @@ function CategoryBlock({ node, ancestors, siblings, categoryCounts, basePath, ro
 }
 
 function PriceBlock({ filters, facets, onChange }) {
+  const { t } = useTranslation();
   const [min, setMin] = useState(filters.min ?? "");
   const [max, setMax] = useState(filters.max ?? "");
   useEffect(() => {
@@ -71,11 +74,11 @@ function PriceBlock({ filters, facets, onChange }) {
 
   return (
     <section className="sb-block">
-      <h2 className="sb-block-head sb-block-head-plain">Price, UGX</h2>
+      <h2 className="sb-block-head sb-block-head-plain">{t("shop.sidebar.priceUgx")}</h2>
       <div className="sb-block-body">
         <div className="sb-price-inputs">
-          <input type="number" inputMode="numeric" min="0" placeholder="min" value={min} onChange={(e) => setMin(e.target.value)} onKeyDown={(e) => e.key === "Enter" && apply()} />
-          <input type="number" inputMode="numeric" min="0" placeholder="max" value={max} onChange={(e) => setMax(e.target.value)} onKeyDown={(e) => e.key === "Enter" && apply()} />
+          <input type="number" inputMode="numeric" min="0" placeholder={t("shop.sidebar.min")} value={min} onChange={(e) => setMin(e.target.value)} onKeyDown={(e) => e.key === "Enter" && apply()} />
+          <input type="number" inputMode="numeric" min="0" placeholder={t("shop.sidebar.max")} value={max} onChange={(e) => setMax(e.target.value)} onKeyDown={(e) => e.key === "Enter" && apply()} />
         </div>
         <ul className="sb-options">
           {buckets.map((b) => {
@@ -95,10 +98,10 @@ function PriceBlock({ filters, facets, onChange }) {
         </ul>
         <div className="sb-price-actions">
           <button type="button" className="sb-link-btn" onClick={() => onChange({ min: null, max: null })} disabled={!hasRange && min === "" && max === ""}>
-            Clear
+            {t("shop.sidebar.clear")}
           </button>
           <button type="button" className="sb-apply" onClick={apply}>
-            Apply
+            {t("shop.sidebar.apply")}
           </button>
         </div>
       </div>
@@ -107,6 +110,7 @@ function PriceBlock({ filters, facets, onChange }) {
 }
 
 function AttributeGroup({ group, selected, open, onToggleOpen, onToggleValue }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const isBoolean = group.type === "boolean";
   // A chosen value that now matches nothing (because of another filter) must stay visible so it can be unticked.
@@ -128,7 +132,7 @@ function AttributeGroup({ group, selected, open, onToggleOpen, onToggleValue }) 
               <li key={o.value}>
                 <label className="sb-check">
                   <input type="checkbox" checked={selected.includes(o.value)} onChange={() => onToggleValue(o.value)} />
-                  <span>{isBoolean ? "Yes" : o.value}</span>
+                  <span>{isBoolean ? t("shop.sidebar.yes") : o.value}</span>
                   <em>{o.count.toLocaleString()}</em>
                 </label>
               </li>
@@ -136,7 +140,7 @@ function AttributeGroup({ group, selected, open, onToggleOpen, onToggleValue }) 
           </ul>
           {options.length > INITIAL_OPTIONS ? (
             <button type="button" className="sb-link-btn" onClick={() => setExpanded((v) => !v)}>
-              {expanded ? "Show less" : `Show all ${options.length}`}
+              {expanded ? t("shop.sidebar.showLess") : t("shop.sidebar.showAll", { count: options.length })}
             </button>
           ) : null}
         </div>
@@ -148,6 +152,7 @@ function AttributeGroup({ group, selected, open, onToggleOpen, onToggleValue }) 
 // `categorySlot` replaces the shop's category-link block (a provider page filters in place instead of
 // navigating), and `hideLocation` drops the location block where location is meaningless.
 export default function BrowseSidebar({ node, ancestors, siblings, fieldDefs, facets, filters, onChange, onOpenLocation, locationLabel, onClearAll, categorySlot, hideLocation, basePath = "/shop", rootPath = "/shop/categories" }) {
+  const { t } = useTranslation();
   const [closed, setClosed] = useState({});
 
   const defs = fieldDefs.filter((f) => FILTERABLE.has(f.type));
@@ -184,7 +189,7 @@ export default function BrowseSidebar({ node, ancestors, siblings, fieldDefs, fa
         <section className="sb-block">
           <button type="button" className="sb-location" onClick={onOpenLocation}>
             <span>
-              <b>Location</b>
+              <b>{t("shop.sidebar.location")}</b>
               <small>{locationLabel}</small>
             </span>
             <i aria-hidden="true" />
@@ -212,7 +217,7 @@ export default function BrowseSidebar({ node, ancestors, siblings, fieldDefs, fa
           <div className="sb-block-body">
             <label className="sb-check sb-check-strong">
               <input type="checkbox" checked={filters.discount} onChange={() => onChange({ discount: !filters.discount })} />
-              <span>With discount</span>
+              <span>{t("shop.sidebar.withDiscount")}</span>
               <em>{(facets?.discountCount ?? 0).toLocaleString()}</em>
             </label>
           </div>
@@ -221,7 +226,7 @@ export default function BrowseSidebar({ node, ancestors, siblings, fieldDefs, fa
 
       {activeFilterCount(filters) > 0 ? (
         <button type="button" className="sb-clear-all" onClick={onClearAll}>
-          Clear all filters
+          {t("shop.sidebar.clearAllFilters")}
         </button>
       ) : null}
     </aside>

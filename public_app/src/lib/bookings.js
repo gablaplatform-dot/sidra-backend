@@ -1,3 +1,4 @@
+import i18n, { intlLocale } from "../i18n";
 import { request } from "./api";
 
 // Dates are plain "YYYY-MM-DD" strings in East Africa Time (UTC+3, no daylight saving), the same
@@ -18,19 +19,27 @@ export const addMonths = (date, n) => {
 };
 
 export const dateLabel = (date, opts = { weekday: "short", day: "numeric", month: "short" }) =>
-  new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined, { timeZone: "UTC", ...opts });
-export const monthLabel = (date) => new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined, { timeZone: "UTC", month: "long", year: "numeric" });
+  new Date(`${date}T12:00:00Z`).toLocaleDateString(intlLocale(), { timeZone: "UTC", ...opts });
+export const monthLabel = (date) => new Date(`${date}T12:00:00Z`).toLocaleDateString(intlLocale(), { timeZone: "UTC", month: "long", year: "numeric" });
 
+// UNIT_WORD values are translation keys (booking.units.<word>), not display text: pass them to plural()/unitLabel().
 export const UNIT_WORD = { night: "night", day: "day", hour: "hour" };
-export const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+// "3 nights", "1 guest": `word` is one of night | day | hour | guest.
+export const plural = (n, word) => i18n.t(`booking.units.${word}`, { count: n, defaultValue: `${n} ${word}` });
+// The singular word on its own ("night"), for "UGX 50,000 / night".
+export const unitLabel = (word) => i18n.t(`booking.unitSingular.${word}`, { defaultValue: word });
+// "2 rooms" for overnight stays, "2 spaces" for anything else.
+export const quantityLabel = (unit, n) => i18n.t(unit === "night" ? "booking.roomsCount" : "booking.spacesCount", { count: n });
 
+// `label` is looked up when read, so it follows the active language.
+const statusEntry = (key, tone) => ({ tone, get label() { return i18n.t(`booking.status.${key}`); } });
 export const BOOKING_STATUS = {
-  pending: { label: "Waiting for the provider", tone: "wait" },
-  confirmed: { label: "Confirmed", tone: "ok" },
-  declined: { label: "Declined", tone: "bad" },
-  cancelled: { label: "Cancelled", tone: "bad" },
-  completed: { label: "Completed", tone: "done" },
-  expired: { label: "Expired", tone: "bad" }
+  pending: statusEntry("pending", "wait"),
+  confirmed: statusEntry("confirmed", "ok"),
+  declined: statusEntry("declined", "bad"),
+  cancelled: statusEntry("cancelled", "bad"),
+  completed: statusEntry("completed", "done"),
+  expired: statusEntry("expired", "bad")
 };
 
 export const whenLabel = (b) => {

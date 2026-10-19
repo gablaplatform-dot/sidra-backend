@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { listingCover } from "../../../lib/shopMappers";
 import { cardTags } from "../../../lib/browseFilters";
@@ -9,6 +10,7 @@ import LazyImg from "../../LazyImg";
 
 // `reason` (optional) says why a recommendation was picked, e.g. "Because you looked at Laptops".
 export default function BrowseCard({ listing, reason }) {
+  const { t } = useTranslation();
   const price = Number(listing.price) || 0;
   const was = Number(listing.originalPrice) || 0;
   const tags = cardTags(listing.customFields);
@@ -21,13 +23,13 @@ export default function BrowseCard({ listing, reason }) {
       <div className="sb-card-media">
         <LazyImg src={listingCover(listing)} alt={listing.name} loading="lazy" />
         {listing.discountPercent ? <span className="sb-card-badge">-{listing.discountPercent}%</span> : null}
-        {listing.isNew ? <span className="sb-card-new">New</span> : null}
-        {bookable ? <span className="sb-card-new sb-card-book">{listing.bookingMode === "instant" ? "Book instantly" : "Bookable"}</span> : null}
+        {listing.isNew ? <span className="sb-card-new">{t("shop.listing.new")}</span> : null}
+        {bookable ? <span className="sb-card-new sb-card-book">{listing.bookingMode === "instant" ? t("shop.listing.bookInstantly") : t("shop.listing.bookable")}</span> : null}
       </div>
       <div className="sb-card-body">
         {reason ? <span className="sb-card-reason">{reason}</span> : null}
         <div className="sb-card-price">
-          <strong>{price > 0 ? `${formatUgx(price)}${bookable && listing.booking ? ` / ${listing.booking.unit}` : ""}` : "Contact for price"}</strong>
+          <strong>{price > 0 ? `${formatUgx(price)}${bookable && listing.booking ? ` / ${listing.booking.unit}` : ""}` : t("shop.listing.contactForPrice")}</strong>
           {was > price ? <s>{formatUgx(was)}</s> : null}
         </div>
         <h3 className="sb-card-name">{listing.name}</h3>
@@ -42,8 +44,8 @@ export default function BrowseCard({ listing, reason }) {
         <div className="sb-card-foot">
           <span className="sb-card-place">
             <IconPin width={14} height={14} />
-            {district || "Uganda"}
-            {distance !== null ? ` · ${distance < 1 ? "< 1" : distance} km` : ""}
+            {district || t("shop.listing.uganda")}
+            {distance !== null ? ` · ${t("shop.listing.distance", { km: distance < 1 ? "< 1" : distance })}` : ""}
           </span>
           {listing.provider?.businessName ? <span className="sb-card-seller">{listing.provider.businessName}</span> : null}
         </div>

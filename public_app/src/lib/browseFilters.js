@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 // URL <-> filter state for the Shop browse page. The URL is the single source of truth, so every
 // filtered view is shareable/bookmarkable and Back/Forward just work:
 //   ?district=Kampala | ?near=1  &min=100000 &max=900000 &discount=1 &sort=price_asc &page=2
@@ -6,13 +8,14 @@
 export const NEAR_RADIUS_KM = 15;
 export const PAGE_SIZE = 24;
 
-export const SORT_OPTIONS = [
-  { value: "featured", label: "Recommended" },
-  { value: "newest", label: "Newest" },
-  { value: "price_asc", label: "Cheapest" },
-  { value: "price_desc", label: "Most expensive" },
-  { value: "bestsellers", label: "Best selling" }
-];
+// `label` is resolved on access so it follows the active UI language.
+const sortOption = (value) => ({
+  value,
+  get label() {
+    return i18n.t(`shop.browse.sort.${value}`);
+  }
+});
+export const SORT_OPTIONS = ["featured", "newest", "price_asc", "price_desc", "bestsellers"].map(sortOption);
 
 export const readFilters = (searchParams) => {
   const attrs = {};
@@ -101,14 +104,17 @@ export const shortMoney = (n) => {
 };
 
 export const bucketLabel = ({ min, max }) => {
-  if (min === null) return `Under ${shortMoney(max)}`;
-  if (max === null) return `More than ${shortMoney(min)}`;
+  if (min === null) return i18n.t("shop.price.under", { amount: shortMoney(max) });
+  if (max === null) return i18n.t("shop.price.over", { amount: shortMoney(min) });
   return `${shortMoney(min)} - ${shortMoney(max)}`;
 };
 
 // "internalStorage" -> "Internal Storage" (fallback label when the category defines no field for a key).
-export const prettyKey = (key) =>
-  key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, (c) => c.toUpperCase());
+export const prettyKey = (key) => {
+  const pretty = key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, (c) => c.toUpperCase());
+  // Well-known keys have a translated label; anything else falls back to the prettified key.
+  return /^[A-Za-z0-9_]+$/.test(key) ? i18n.t(`shop.attr.${key}`, { defaultValue: pretty }) : pretty;
+};
 
 // A few short answers to show as chips on a card, most meaningful first.
 const CARD_TAG_KEYS = ["condition", "yearOfManufacture", "transmission", "internalStorage", "ram", "storageCapacity", "screenSize", "size", "fuel", "type", "brand"];

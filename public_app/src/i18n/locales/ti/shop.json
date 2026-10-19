@@ -1,0 +1,297 @@
+{
+  "shop": {
+    "meta": {
+      "title": "ድኳን ጋብላ — ዘመናዊ መልበሲ፡ ኤለክትሮኒክስን ናይ ዕለት ተዕለት ኣቑሑትን",
+      "allCategories": "ኩሎም ክፍልታት — ድኳን ጋብላ",
+      "browseProduct": "{{name}} ኣብ {{where}} ንሽያጥ | ድኳን ጋብላ",
+      "browseService": "{{name}} ኣብ {{where}} | ኣገልግሎት ጋብላ",
+      "collection": "{{title}} | ድኳን ጋብላ"
+    },
+    "nav": {
+      "home": "ቤት",
+      "shop": "ድኳን",
+      "newArrivals": "ሓደስቲ ኣቑሑት",
+      "bestSellers": "ብዝበዝሑ ዝሽየጡ",
+      "categories": "ክፍልታት",
+      "about": "ብዛዕባና",
+      "blog": "ብሎግ",
+      "contact": "ርኸቡና"
+    },
+    "navbar": {
+      "searchNearby": "ኣብ ጥቓኻ ድለይ",
+      "wishlist": "ዝደልዮም ዝርዝር"
+    },
+    "trust": {
+      "quality": { "title": "ልዑል ጽሬት", "subtitle": "ካብ ምርጫ ቁሳቁስ ዝተሰርሐ" },
+      "delivery": { "title": "ቅልጡፍ ኣቕሮቦት", "subtitle": "ፈጣንን ዝተኣማመነን ምጽዋዕ" },
+      "checkout": { "title": "ውሑስ ክፍሊት", "subtitle": "ሓበሬታኻ ዝተሓሎ እዩ" },
+      "satisfaction": { "title": "ዕግበት ዓሚል", "subtitle": "100% ዕግበት ዘረጋግጽ" }
+    },
+    "hero": {
+      "eyebrow": "ሕጂ ዝተፈላለየ",
+      "titleLine1": "ትፈትዎም ኣቑሑት",
+      "titleLine2": "ርኸብ",
+      "subtitle": "ንዘመናዊ ናብራ ዝተመርጹ ሓደስቲ ኣቑሑት ዕደግ።",
+      "shopNow": "ሕጂ ዕደግ",
+      "explore": "ኣቑሑት ርአ",
+      "loved": "ኣብ መላእ ዓለም ብ<b>50,000+</b> ዓማይል ዝፍተው",
+      "modelAlt": "ፍሉይ ሞደል"
+    },
+    "adsHero": {
+      "nearYou": "ኣብ ጥቓኻ · {{km}} ኪሜ ርሕቀት",
+      "featured": "ፍሉያት",
+      "showAd": "ምልክታ {{n}} ርአ",
+      "shopNow": "ሕጂ ዕደግ"
+    },
+    "promo": {
+      "flashSale": "ቅልጡፍ ቅናሽ",
+      "flashSaleAlt": "ቅልጡፍ ቅናሽ",
+      "limitedTime": "ንውሱን ግዜ ዝዓይነቱ ቅናሽ",
+      "shopNow": "ሕጂ ዕደግ",
+      "days": "መዓልቲ",
+      "hours": "ሰዓት",
+      "min": "ደቒቕ",
+      "sec": "ካልኣይ",
+      "newCollection": "ሓድሽ ስብስብ",
+      "freshSeason": "ሓድሽ ወቕቲ",
+      "discoverTrends": "ሓደስቲ ፋሽናት ርአ",
+      "explore": "ርአ"
+    },
+    "defaults": {
+      "category": "ክፍሊ",
+      "product": "ምርቲ",
+      "productDescription": "ንጽቡቕ ጥራይን ምቾትን ዝተሰርሐ ልዑል ዓይነት ምርቲ።",
+      "promoTitle": "ውሱን ሃብቲ",
+      "promoCta": "ሕጂ ዕደግ"
+    },
+    "forYou": {
+      "title": "ንዓኻ ዝጠቅም",
+      "clearConfirm": "ካብ ዕላለኻ ዝተመሃርናዮ ክንደምስስ ድዩ? ዝተመረጹ ምርጫታትካ እንደገና ክጅምር እዩ።",
+      "popularAround": "ኣብ {{district}} ዝፍተው። ዝያዳ ኣብ እትርእይ ዝያዳ ይሓይሽ።",
+      "popularNow": "ሕጂ ዝፍተው። ዝያዳ ኣብ እትርእይ ዝያዳ ይሓይሽ።",
+      "clearHistory": "ታሪኸይ ሰርዝ",
+      "continue": "ዝገደፍካዮ ቀጽል",
+      "picked": "ንዓኻ ዝተመረጸ",
+      "contactForPrice": "ንዋጋ ርኸብ"
+    },
+    "categories": {
+      "shopBy": "ብክፍሊ ዕደግ",
+      "viewAll": "ኩሎም ክፍልታት ርአ",
+      "shopNow": "ሕጂ ዕደግ",
+      "scrollLeft": "ንጸጋም ሳሓብ",
+      "scrollRight": "ንየማን ሳሓብ",
+      "breadcrumb": "ድኳን",
+      "allTitle": "ኩሎም ክፍልታት",
+      "empty": "ገና ናይ ድኳን ክፍልታት የለን።"
+    },
+    "newArrivals": {
+      "title": "ሓደስቲ ኣቑሑት",
+      "viewAll": "ኩሎም ሓደስቲ ኣቑሑት ርአ"
+    },
+    "bestSellers": {
+      "title": "ብዝበዝሑ ዝሽየጡ",
+      "viewAll": "ኩሎም ብዝበዝሑ ዝሽየጡ ርአ",
+      "badge": "ብዝበዝሐ ዝሽየጥ",
+      "quickAdd": "ቀልጢፍካ ወስኽ",
+      "added": "ተወሲኹ ✓"
+    },
+    "card": {
+      "new": "ሓድሽ",
+      "wishlist": "ናብ ዝደልዮም ዝርዝር ወስኽ",
+      "addToCart": "ናብ ዘንቢል ወስኽ",
+      "added": "ተወሲኹ"
+    },
+    "listing": {
+      "new": "ሓድሽ",
+      "bookInstantly": "ቀልጢፍካ ቦታ ሕዝ",
+      "bookable": "ቦታ ክሕዝ ዝከኣል",
+      "contactForPrice": "ንዋጋ ርኸብ",
+      "uganda": "ኡጋንዳ",
+      "distance": "{{km}} ኪሜ"
+    },
+    "nearby": {
+      "title": "ኣብ ጥቓኻ ድለይ",
+      "close": "ዕጸው",
+      "placeholder": "እንታይ ትደሊ ኣለኻ?",
+      "search": "ድለይ",
+      "searching": "ይድለ ኣሎ…",
+      "searchingLabel": "ይድለ ኣሎ",
+      "allUganda": "ኩላ ኡጋንዳ",
+      "thatDistrict": "እቲ ዞባ",
+      "noResultsDistrict": "ኣብ {{district}} ውጽኢት የለን — ኣብ ክንዲኡ ካብ ኩላ ኡጋንዳ ውጽኢት ይርአ ኣሎ።",
+      "noResultsNearby": "ኣብ ጥቓ ውጽኢት የለን — ኣብ ክንዲኡ ካብ ርሕቐት ዘለዉ ውጽኢት ይርአ ኣሎ።",
+      "noResultsAnywhere": "ንእዚ ድለያ ኣብ ዝዀነ ቦታ ውጽኢት የለን። ካልእ ቃል ፈትን።",
+      "unableSearch": "ሕጂ ምድላይ ኣይተኻእለን።",
+      "awayFrom": "{{provider}} — {{km}} ኪሜ ርሕቀት",
+      "away": "{{km}} ኪሜ ርሕቀት",
+      "notice": {
+        "denied": "ናብ ቦታኻ ምእታው ተነጺጉ — ኣብ ታሕቲ ዞባ ምረጽ፡ ወይ ኩሉ ውጽኢት ክነርኢ ኢና።",
+        "unsupported": "እዚ ብራውዘር ቦታኻ ክካፈል ኣይክእልን — ኣብ ታሕቲ ዞባ ምረጽ፡ ወይ ኩሉ ውጽኢት ክነርኢ ኢና።",
+        "timeout": "ቦታኻ ኣብ ግዜኡ ኣይረኸብናን — ኣብ ታሕቲ ዞባ ምረጽ፡ ወይ ኩሉ ውጽኢት ክነርኢ ኢና።",
+        "unavailable": "ቦታኻ ክንፈልጥ ኣይከኣልናን — ኣብ ታሕቲ ዞባ ምረጽ፡ ወይ ኩሉ ውጽኢት ክነርኢ ኢና።"
+      }
+    },
+    "browse": {
+      "breadcrumbShop": "ድኳን",
+      "breadcrumbServices": "ኣገልግሎት",
+      "geo": {
+        "denied": "ናብ ቦታኻ ምእታው ተነጺጉ፡ ስለዚ ኩላ ኡጋንዳ ይርአ ኣሎ።",
+        "unsupported": "እዚ ብራውዘር ቦታኻ ክካፈል ኣይክእልን፡ ስለዚ ኩላ ኡጋንዳ ይርአ ኣሎ።",
+        "timeout": "ቦታኻ ኣብ ግዜኡ ኣይረኸብናን፡ ስለዚ ኩላ ኡጋንዳ ይርአ ኣሎ።",
+        "unavailable": "ቦታኻ ክንፈልጥ ኣይከኣልናን፡ ስለዚ ኩላ ኡጋንዳ ይርአ ኣሎ።"
+      },
+      "collection": {
+        "new": "ሓደስቲ ኣቑሑት",
+        "bestsellers": "ብዝበዝሑ ዝሽየጡ",
+        "all": "ኩሎም ኣቑሑት"
+      },
+      "sort": {
+        "featured": "ዝተመከረ",
+        "newest": "ዝሓደሰ",
+        "price_asc": "ዝረከሰ",
+        "price_desc": "ዝዓቢ ዋጋ",
+        "bestsellers": "ብዝበዝሐ ዝሽየጥ"
+      },
+      "nearYou": "ኣብ ጥቓኻ ({{km}} ኪሜ)",
+      "around": "ኣብ ከባቢ {{district}}",
+      "allUganda": "ኩላ ኡጋንዳ",
+      "widenedNear": "ኣብ {{km}} ኪሜ ውሽጢ ዋላ ሓንቲ ኣይተረኽበን፡ ኣብ ኩላ ኡጋንዳ ዝቐረቡ ውጽኢት ይርአ ኣሎ።",
+      "widenedDistrict": "ኣብ {{district}} ዝሰማማዕ ምልክታ የለን፡ ኩላ ኡጋንዳ ይርአ ኣሎ።",
+      "arrangedProducts": "ናብ {{place}} ዝቐረቡ ኣቑሑት ቀዳማይ ይርአ ኣሎ።",
+      "arrangedServices": "ናብ {{place}} ዝቐረቡ ኣገልግሎታት ቀዳማይ ይርአ ኣሎ።",
+      "whereUganda": "ኡጋንዳ",
+      "whereYourArea": "ከባቢኻ",
+      "titleIn": "{{name}} ኣብ {{where}}",
+      "allServices": "ኩሎም ኣገልግሎታት",
+      "products": "ኣቑሑት",
+      "resultsFor": "ውጽኢት ን“{{q}}”",
+      "count_one": "{{n}} ውጽኢት",
+      "count_other": "{{n}} ውጽኢታት",
+      "searchChip": "ድለያ: {{q}}",
+      "discountChip": "ቅናሽ ዘለዎ",
+      "priceChip": "UGX {{range}}",
+      "filters": "ጸሪግ",
+      "closeFilters": "ጸሪግ ዕጸው",
+      "showResults_one": "{{n}} ውጽኢት ርአ",
+      "showResults_other": "{{n}} ውጽኢታት ርአ",
+      "location": "ቦታ",
+      "locationAria": "ቦታ: {{label}}። ቦታ ቀይር",
+      "filtersBtn": "ጸሪግ ({{count}})",
+      "sort_label": "ደርድር",
+      "clearAll": "ኩሉ ሰርዝ",
+      "noMatchProducts": "ዝሰማማዕ ኣቑሑት የለን",
+      "noMatchServices": "ዝሰማማዕ ኣገልግሎት የለን",
+      "tryRemoving": "ጸሪግ ኣልግሶ ወይ ዝሰፍሐ ቦታ ምረጽ።",
+      "clearAllFilters": "ኩሉ ጸሪግ ሰርዝ",
+      "backToServices": "ናብ ኣገልግሎት ተመለስ",
+      "backToShop": "ናብ ድኳን ተመለስ",
+      "loadErrorProducts": "ኣቑሑት ምጽዓን ኣይተኻእለን።",
+      "loadErrorServices": "ኣገልግሎታት ምጽዓን ኣይተኻእለን።"
+    },
+    "sidebar": {
+      "categories": "ክፍልታት",
+      "allCategories": "ኩሎም ክፍልታት",
+      "showLess": "ሒደት ርአ",
+      "showAll": "ኩሎም {{count}} ርአ",
+      "priceUgx": "ዋጋ፡ UGX",
+      "min": "ዝተሓተ",
+      "max": "ዝለዓለ",
+      "clear": "ሰርዝ",
+      "apply": "ተጠቐም",
+      "yes": "እወ",
+      "location": "ቦታ",
+      "withDiscount": "ቅናሽ ዘለዎ",
+      "clearAllFilters": "ኩሉ ጸሪግ ሰርዝ"
+    },
+    "price": {
+      "under": "ትሕቲ {{amount}}",
+      "over": "ልዕሊ {{amount}}"
+    },
+    "attr": {
+      "condition": "ኩነታት",
+      "brand": "ብራንድ",
+      "yearOfManufacture": "ዓመተ ምህርቲ",
+      "transmission": "ትራንስሚሽን",
+      "internalStorage": "ውሽጣዊ ቦታ ምዕቃብ",
+      "ram": "RAM",
+      "storageCapacity": "ዓቕሚ ምዕቃብ",
+      "screenSize": "ዓቐን ስክሪን",
+      "size": "ዓቐን",
+      "fuel": "ጋዝ",
+      "type": "ዓይነት",
+      "color": "ሕብሪ",
+      "make": "ሰሪሑ",
+      "model": "ሞዴል",
+      "mileage": "ዝተጓዕዘሉ ርሕቀት"
+    },
+    "location": {
+      "title": "ቦታ ምረጽ",
+      "close": "ዕጸው",
+      "search": "ዞባ ድለይ",
+      "useCurrent": "ሕጂ ዘለኽዎ ቦታ ተጠቐም",
+      "nearestFirst": "ዝቐረበ ቀዳማይ",
+      "around": "ኣብ ከባቢ {{district}}",
+      "yourAreaNearest": "ከባቢኻ፡ ዝቐረበ ቀዳማይ",
+      "allUganda": "ኩላ ኡጋንዳ",
+      "ads_one": "{{n}} ምልክታ",
+      "ads_other": "{{n}} ምልክታታት",
+      "noMatch": "ዝሰማማዕ ዞባ “{{query}}” የለን።"
+    },
+    "layout": {
+      "label": "ኣመዳድባ ኣቑሑት",
+      "grid": "ብመልከዓ ሰሌዳ",
+      "list": "ብዝርዝር"
+    }
+  },
+  "product": {
+    "notFound": "እዚ ምርቲ ኣይተረኽበን።",
+    "backToShop": "ናብ ድኳን ተመለስ",
+    "breadcrumbShop": "ድኳን",
+    "breadcrumbServices": "ኣገልግሎት",
+    "metaShop": "{{name}} - {{price}} | Gabla Shop",
+    "metaService": "{{name}} - {{price}} | Gabla Services",
+    "shareCopied": "መስመር ተቐዲሑ",
+    "shareFallback": "መስመር ካብ ኣድራሻ ባር ቅዳሕ",
+    "share": "እዚ ምልክታ ሽሩ",
+    "bookNow": "ሕጂ ቦታ ሕዝ",
+    "checkAvailability": "ክሕዝ ከም ዝከኣል ርአ",
+    "seeContact": "ዝርዝር ርክብ ርአ",
+    "unlockContact": "ዝርዝር ርክብ ክፈት",
+    "orderNow": "ሕጂ ኣዝዝ",
+    "orderPayOnDelivery": "ሕጂ ኣዝዝ · ኣብ ምቕባል ክፈል",
+    "payOnDelivery": "ኣብ ምቕባል ክፈል",
+    "addToCart": "ናብ ዘንቢል ወስኽ",
+    "added": "ተወሲኹ",
+    "description": "መግለጺ",
+    "specifications": "ፍሉይ ባህሪታት",
+    "safetyTips": "ናይ ድሕነት ምኽሪ",
+    "tips": {
+      "service1": "ስራሕ ቅድሚ ምጅማሩ ዋጋን እንታይ ከም ዝካተትን ተሰማምዑ።",
+      "service2": "ዘረባኻን ክፍሊትካን ዝስዕብ ይኹን፡ ምስ ተኻኢሉ ድሕሪ ኣገልግሎት ክፈል።",
+      "service3": "ገምጋማት ርአ፡ ተመሳሳሊ ስራሕ ኣብነት ሕተት።",
+      "product1": "ሸያጢ ኣብ ህዝባዊ ቦታ ርከብ፡ ቅድሚ ክፍሊት እቲ ኣቕሓ ፈትሽ።",
+      "product2": "ዘይረኣኻዮ ነገር ቅድሚ ግዜኡ ኣይትክፈል።",
+      "product3": "እቲ ኣቕሓ ምስ ስእልታትን መግለጺን ከም ዝሰማማዕ ኣረጋግጽ።"
+    },
+    "posted": "ዝተለጠፈ {{time}}",
+    "views_one": "{{n}} ግዜ ተራእዩ",
+    "views_other": "{{n}} ግዜ ተራእዩ",
+    "contactForPrice": "ንዋጋ ርኸብ",
+    "save": "{{amount}} ትቑጥብ",
+    "payNote": "ትዕዛዝካ ልኣክ፡ እቲ ሸያጢ ምስ ተቐበሎ ብሞባይል ገንዘብ ክፈል፡ ወይ ኣብ ምቕባል ክፈል ምረጽ።",
+    "serviceNote": "ብቐጥታ ብዛዕባ ስራሕ ንምዕላልን ዋጋ ንምስምማዕን ተሌፎንን ቦታን ናይ ሃቢ ኣገልግሎት ክፈት።",
+    "similarServices": "ተመሳሳሊ ኣገልግሎታት",
+    "similarProducts": "ተመሳሳሊ ኣቑሑት",
+    "browseMore": "ዝያዳ ርአ",
+    "moreFrom": "ተወሳኺ ካብ {{seller}}",
+    "thisSeller": "እዚ ሸያጢ",
+    "visitShop": "ድኳን ብጻሕ",
+    "gallery": {
+      "openFull": "ምሉእ ዓቐን ስእሊ ክፈት",
+      "prev": "ዝሓለፈ ስእሊ",
+      "next": "ዝቕጽል ስእሊ",
+      "showImage": "ስእሊ {{n}} ርአ",
+      "close": "ዕጸው"
+    }
+  }
+}

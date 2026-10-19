@@ -1,12 +1,16 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import ProviderCustomFields, { hasAnsweredCustomFields } from "../ProviderCustomFields";
 import { IconBox, IconChevronLeft, IconClockIcon, IconImage, IconStar } from "../icons";
+import { formatUgx } from "../../lib/format";
+import { unitLabel } from "../../lib/bookings";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
 export default function ProviderLayoutBooking({ provider, categoryId, categoryName, providerFields = [], listings, gallery, onUnlock }) {
+  const { t } = useTranslation();
   return (
     <>
       <section
@@ -14,7 +18,7 @@ export default function ProviderLayoutBooking({ provider, categoryId, categoryNa
         style={provider.media?.coverUrl ? { backgroundImage: `url("${provider.media.coverUrl}")` } : undefined}
       >
         <Link to={categoryId ? `/category/${categoryId}` : "/home"} className="banner-back">
-          <IconChevronLeft /> {categoryId ? categoryName : "Home"}
+          <IconChevronLeft /> {categoryId ? categoryName : t("nav.home")}
         </Link>
         <div className="provider-hero-label">
           {!provider.media?.coverUrl ? <span className="provider-hero-icon">{initials(provider.businessName)}</span> : null}
@@ -23,7 +27,7 @@ export default function ProviderLayoutBooking({ provider, categoryId, categoryNa
             <p className="provider-hero-meta">
               {categoryName}
               <span className="hero-trust-dot">&middot;</span>
-              <IconStar /> {provider.ratingAvg ? provider.ratingAvg.toFixed(1) : "New"}
+              <IconStar /> {provider.ratingAvg ? provider.ratingAvg.toFixed(1) : t("common.new")}
             </p>
           </div>
         </div>
@@ -32,11 +36,11 @@ export default function ProviderLayoutBooking({ provider, categoryId, categoryNa
       <div className="booking-cta-card">
         <IconClockIcon />
         <div>
-          <h2>Check availability</h2>
-          <p className="provider-meta">Contact {provider.businessName} directly to confirm dates and pricing.</p>
+          <h2>{t("layouts.checkAvailability")}</h2>
+          <p className="provider-meta">{t("layouts.contactToConfirm", { name: provider.businessName })}</p>
         </div>
         <button type="button" className="cta-button" onClick={provider.contactLocked ? onUnlock : undefined}>
-          {provider.contactLocked ? "Unlock to request booking" : "Request booking"}
+          {provider.contactLocked ? t("layouts.unlockToRequest") : t("layouts.requestBooking")}
         </button>
       </div>
 
@@ -44,14 +48,14 @@ export default function ProviderLayoutBooking({ provider, categoryId, categoryNa
         <div className="provider-detail-main">
           {provider.description || hasAnsweredCustomFields(providerFields, provider.customFields) ? (
             <section className="detail-block">
-              <h2>About</h2>
+              <h2>{t("layouts.about")}</h2>
               {provider.description ? <p className="provider-description">{provider.description}</p> : null}
               <ProviderCustomFields fields={providerFields} values={provider.customFields} />
             </section>
           ) : null}
 
           <section className="detail-block">
-            <h2>Rooms &amp; packages</h2>
+            <h2>{t("layouts.roomsPackages")}</h2>
             {listings.length ? (
               <div className="listing-grid">
                 {listings.map((item) => (
@@ -65,7 +69,7 @@ export default function ProviderLayoutBooking({ provider, categoryId, categoryNa
                     <div className="listing-body">
                       <h3>{item.name}</h3>
                       {item.description ? <p className="provider-meta">{item.description}</p> : null}
-                      {Number(item.price) > 0 ? <div className="listing-price">UGX {Number(item.price).toLocaleString()} / night</div> : null}
+                      {Number(item.price) > 0 ? <div className="listing-price">{formatUgx(item.price)} / {unitLabel("night")}</div> : null}
                     </div>
                   </div>
                 ))}
@@ -73,13 +77,13 @@ export default function ProviderLayoutBooking({ provider, categoryId, categoryNa
             ) : (
               <div className="empty-state">
                 <IconBox />
-                <p>No rooms or packages listed yet.</p>
+                <p>{t("layouts.noRooms")}</p>
               </div>
             )}
           </section>
 
           <section className="detail-block">
-            <h2>Gallery</h2>
+            <h2>{t("layouts.gallery")}</h2>
             {gallery.length ? (
               <div className="gallery-grid">
                 {gallery.map((url) => (
@@ -89,7 +93,7 @@ export default function ProviderLayoutBooking({ provider, categoryId, categoryNa
             ) : (
               <div className="empty-state">
                 <IconImage />
-                <p>No gallery photos yet.</p>
+                <p>{t("layouts.noGallery")}</p>
               </div>
             )}
           </section>

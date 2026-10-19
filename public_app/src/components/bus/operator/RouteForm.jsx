@@ -1,4 +1,7 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
+
+import i18n from "../../../i18n";
 
 import { IcBus, IcCheck, IcMinus, IcPlus } from "./icons";
 import { ALL_DAYS, DayChips, Field, digitsOnly, thousands } from "./ui";
@@ -32,28 +35,28 @@ export const routeFromApi = (r) => ({
   departures: []
 });
 
-export const routeTitle = (r) => r.name?.trim() || (r.originName && r.destinationName ? `${r.originName.trim()} → ${r.destinationName.trim()}` : "New route");
+export const routeTitle = (r) => r.name?.trim() || (r.originName && r.destinationName ? `${r.originName.trim()} → ${r.destinationName.trim()}` : i18n.t("busOp.route.newRoute"));
 
 const durationOf = (r) => (Number(r.hours) || 0) * 60 + (Number(r.minutes) || 0);
 
 export const validateRoute = (r, { full = true } = {}) => {
-  if (!r.originName.trim()) return "Where does this route start? Enter the “From” town.";
-  if (!r.destinationName.trim()) return "Where does this route go? Enter the “To” town.";
-  if (r.originName.trim().toLowerCase() === r.destinationName.trim().toLowerCase()) return "“From” and “To” must be different towns.";
-  if (durationOf(r) < 10) return "Enter how long the journey takes (at least 10 minutes).";
-  if (durationOf(r) > 4000) return "That journey is too long. Please check the duration.";
+  if (!r.originName.trim()) return i18n.t("busOp.route.vFrom");
+  if (!r.destinationName.trim()) return i18n.t("busOp.route.vTo");
+  if (r.originName.trim().toLowerCase() === r.destinationName.trim().toLowerCase()) return i18n.t("busOp.route.vDifferent");
+  if (durationOf(r) < 10) return i18n.t("busOp.route.vDurationMin");
+  if (durationOf(r) > 4000) return i18n.t("busOp.route.vDurationMax");
   if (!full) return "";
   const types = r.ticketTypes.filter((t) => t.name.trim() || t.price !== "");
-  if (!types.length) return "Add at least one ticket type with a price, for example Economy.";
+  if (!types.length) return i18n.t("busOp.route.vNoTypes");
   for (const t of types) {
-    if (!t.name.trim()) return "Every ticket type needs a name.";
-    if (t.price === "" || Number.isNaN(Number(t.price))) return `Enter a price for “${t.name}”.`;
+    if (!t.name.trim()) return i18n.t("busOp.route.vTypeName");
+    if (t.price === "" || Number.isNaN(Number(t.price))) return i18n.t("busOp.route.vPrice", { name: t.name });
   }
-  if (new Set(types.map((t) => t.name.trim().toLowerCase())).size !== types.length) return "Two ticket types share the same name.";
-  if (!r.departures.length) return "Add at least one departure time.";
+  if (new Set(types.map((t) => t.name.trim().toLowerCase())).size !== types.length) return i18n.t("busOp.route.vDupe");
+  if (!r.departures.length) return i18n.t("busOp.route.vNoDeps");
   for (const d of r.departures) {
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(d.departureTime || "")) return "Every departure needs a time.";
-    if (!d.daysOfWeek.length) return `Pick at least one day for the ${d.departureTime} departure.`;
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(d.departureTime || "")) return i18n.t("busOp.route.vDepTime");
+    if (!d.daysOfWeek.length) return i18n.t("busOp.route.vDepDays", { time: d.departureTime });
   }
   return "";
 };
@@ -86,8 +89,9 @@ export function PriceInput({ value, onChange, ...rest }) {
 }
 
 export function BusTypePicker({ busTypes = [], value, onChange }) {
+  const { t: tr } = useTranslation();
   return (
-    <div className="bop-typegrid" role="radiogroup" aria-label="Bus type">
+    <div className="bop-typegrid" role="radiogroup" aria-label={tr("busOp.route.busType")}>
       {busTypes.map((t) => {
         const on = value === t.id;
         const amenities = (Array.isArray(t.amenities) ? t.amenities : []).map((a) => (typeof a === "string" ? a : a?.name)).filter(Boolean);
@@ -96,19 +100,20 @@ export function BusTypePicker({ busTypes = [], value, onChange }) {
             <span className="bop-typecard-art">{t.imageUrl ? <img src={t.imageUrl} alt="" /> : <IcBus size={26} />}</span>
             <span className="bop-typecard-body">
               <strong>{t.name}</strong>
-              <small>{t.seats} seats</small>
+              <small>{tr("busOp.route.seatsCount", { count: Number(t.seats) || 0 })}</small>
               {amenities.length ? <em>{amenities.slice(0, 3).join(" · ")}</em> : null}
             </span>
             {on ? <span className="bop-typecard-tick"><IcCheck size={14} strokeWidth={3} /></span> : null}
           </button>
         );
       })}
-      {!busTypes.length ? <p className="bop-hint">No bus types are set up yet. You can choose one later.</p> : null}
+      {!busTypes.length ? <p className="bop-hint">{tr("busOp.route.noBusTypes")}</p> : null}
     </div>
   );
 }
 
 export default function RouteForm({ value, onChange, busTypes, full = true }) {
+  const { t: tr } = useTranslation();
   const set = (patch) => onChange({ ...value, ...patch });
   const setType = (i, patch) => set({ ticketTypes: value.ticketTypes.map((t, idx) => (idx === i ? { ...t, ...patch } : t)) });
   const setDep = (i, patch) => set({ departures: value.departures.map((d, idx) => (idx === i ? { ...d, ...patch } : d)) });
@@ -117,27 +122,27 @@ export default function RouteForm({ value, onChange, busTypes, full = true }) {
   return (
     <div className="bop-routeform">
       <div className="bop-grid2">
-        <Field label="From"><input className="bop-input" placeholder="Kampala" value={value.originName} onChange={(e) => set({ originName: e.target.value })} maxLength={80} /></Field>
-        <Field label="To"><input className="bop-input" placeholder="Mbarara" value={value.destinationName} onChange={(e) => set({ destinationName: e.target.value })} maxLength={80} /></Field>
+        <Field label={tr("busOp.route.from")}><input className="bop-input" placeholder="Kampala" value={value.originName} onChange={(e) => set({ originName: e.target.value })} maxLength={80} /></Field>
+        <Field label={tr("busOp.route.to")}><input className="bop-input" placeholder="Mbarara" value={value.destinationName} onChange={(e) => set({ destinationName: e.target.value })} maxLength={80} /></Field>
       </div>
-      <Field label="Route name" hint="Passengers see this name. Leave empty to use “From → To”.">
+      <Field label={tr("busOp.route.routeName")} hint={tr("busOp.route.routeNameHint")}>
         <input className="bop-input" placeholder={placeholderName} value={value.name} onChange={(e) => set({ name: e.target.value })} maxLength={120} />
       </Field>
       <div className="bop-grid2">
-        <Field label="Boarding point" hint="Where passengers get on, e.g. Namirembe Bus Park, Gate 3"><input className="bop-input" value={value.boardingPoint} onChange={(e) => set({ boardingPoint: e.target.value })} maxLength={160} /></Field>
-        <Field label="Drop-off point" hint="Where the bus stops at the end"><input className="bop-input" value={value.dropoffPoint} onChange={(e) => set({ dropoffPoint: e.target.value })} maxLength={160} /></Field>
+        <Field label={tr("busOp.route.boarding")} hint={tr("busOp.route.boardingHint")}><input className="bop-input" value={value.boardingPoint} onChange={(e) => set({ boardingPoint: e.target.value })} maxLength={160} /></Field>
+        <Field label={tr("busOp.route.dropoff")} hint={tr("busOp.route.dropoffHint")}><input className="bop-input" value={value.dropoffPoint} onChange={(e) => set({ dropoffPoint: e.target.value })} maxLength={160} /></Field>
       </div>
 
       <div className="bop-field">
-        <span className="bop-field-label">Journey time</span>
+        <span className="bop-field-label">{tr("busOp.route.journeyTime")}</span>
         <div className="bop-duration">
-          <label><input className="bop-input" type="number" min="0" max="60" inputMode="numeric" value={value.hours} onChange={(e) => set({ hours: e.target.value })} /> <em>hours</em></label>
-          <label><input className="bop-input" type="number" min="0" max="59" inputMode="numeric" value={value.minutes} onChange={(e) => set({ minutes: e.target.value })} /> <em>minutes</em></label>
+          <label><input className="bop-input" type="number" min="0" max="60" inputMode="numeric" value={value.hours} onChange={(e) => set({ hours: e.target.value })} /> <em>{tr("busOp.route.hours")}</em></label>
+          <label><input className="bop-input" type="number" min="0" max="59" inputMode="numeric" value={value.minutes} onChange={(e) => set({ minutes: e.target.value })} /> <em>{tr("busOp.route.minutes")}</em></label>
         </div>
       </div>
 
       <div className="bop-field">
-        <span className="bop-field-label">Bus type</span>
+        <span className="bop-field-label">{tr("busOp.route.busType")}</span>
         <BusTypePicker busTypes={busTypes} value={value.busTypeId} onChange={(id) => set({ busTypeId: id })} />
       </div>
 
@@ -145,29 +150,29 @@ export default function RouteForm({ value, onChange, busTypes, full = true }) {
         <>
           <div className="bop-subsection">
             <div className="bop-subhead">
-              <div><h3>Ticket types and prices</h3><p>For example Economy 35,000 and VIP 50,000.</p></div>
-              <button type="button" className="bop-btn bop-btn-light bop-btn-sm" onClick={() => set({ ticketTypes: [...value.ticketTypes, { name: "", price: "" }] })} disabled={value.ticketTypes.length >= 10}><IcPlus size={16} /> Add type</button>
+              <div><h3>{tr("busOp.route.typesTitle")}</h3><p>{tr("busOp.route.typesHint")}</p></div>
+              <button type="button" className="bop-btn bop-btn-light bop-btn-sm" onClick={() => set({ ticketTypes: [...value.ticketTypes, { name: "", price: "" }] })} disabled={value.ticketTypes.length >= 10}><IcPlus size={16} /> {tr("busOp.route.addType")}</button>
             </div>
             {value.ticketTypes.map((t, i) => (
               <div className="bop-rowline" key={i}>
-                <input className="bop-input" placeholder="Ticket name (Economy, VIP…)" value={t.name} onChange={(e) => setType(i, { name: e.target.value })} maxLength={60} aria-label="Ticket type name" />
-                <PriceInput value={t.price} onChange={(price) => setType(i, { price })} aria-label="Ticket price" />
-                <button type="button" className="bop-icon-btn" aria-label="Remove ticket type" onClick={() => set({ ticketTypes: value.ticketTypes.filter((_, idx) => idx !== i) })} disabled={value.ticketTypes.length <= 1}><IcMinus size={18} /></button>
+                <input className="bop-input" placeholder={tr("busOp.route.ticketNamePh")} value={t.name} onChange={(e) => setType(i, { name: e.target.value })} maxLength={60} aria-label={tr("busOp.route.ticketTypeName")} />
+                <PriceInput value={t.price} onChange={(price) => setType(i, { price })} aria-label={tr("busOp.route.ticketPrice")} />
+                <button type="button" className="bop-icon-btn" aria-label={tr("busOp.route.removeType")} onClick={() => set({ ticketTypes: value.ticketTypes.filter((_, idx) => idx !== i) })} disabled={value.ticketTypes.length <= 1}><IcMinus size={18} /></button>
               </div>
             ))}
           </div>
 
           <div className="bop-subsection">
             <div className="bop-subhead">
-              <div><h3>Departure times</h3><p>These repeat on the days you choose. You can add more later under Sessions.</p></div>
-              <button type="button" className="bop-btn bop-btn-light bop-btn-sm" onClick={() => set({ departures: [...value.departures, { departureTime: "12:00", daysOfWeek: ALL_DAYS, name: "" }] })} disabled={value.departures.length >= 20}><IcPlus size={16} /> Add time</button>
+              <div><h3>{tr("busOp.route.depsTitle")}</h3><p>{tr("busOp.route.depsHint")}</p></div>
+              <button type="button" className="bop-btn bop-btn-light bop-btn-sm" onClick={() => set({ departures: [...value.departures, { departureTime: "12:00", daysOfWeek: ALL_DAYS, name: "" }] })} disabled={value.departures.length >= 20}><IcPlus size={16} /> {tr("busOp.route.addTime")}</button>
             </div>
             {value.departures.map((d, i) => (
               <div className="bop-dep" key={i}>
                 <div className="bop-dep-top">
-                  <input className="bop-input bop-time" type="time" value={d.departureTime} onChange={(e) => setDep(i, { departureTime: e.target.value })} aria-label="Departure time" />
-                  <input className="bop-input" placeholder="Label (optional) e.g. Morning bus" value={d.name} onChange={(e) => setDep(i, { name: e.target.value })} maxLength={80} aria-label="Departure label" />
-                  <button type="button" className="bop-icon-btn" aria-label="Remove departure" onClick={() => set({ departures: value.departures.filter((_, idx) => idx !== i) })} disabled={value.departures.length <= 1}><IcMinus size={18} /></button>
+                  <input className="bop-input bop-time" type="time" value={d.departureTime} onChange={(e) => setDep(i, { departureTime: e.target.value })} aria-label={tr("busOp.route.depTime")} />
+                  <input className="bop-input" placeholder={tr("busOp.route.depLabelPh")} value={d.name} onChange={(e) => setDep(i, { name: e.target.value })} maxLength={80} aria-label={tr("busOp.route.depLabel")} />
+                  <button type="button" className="bop-icon-btn" aria-label={tr("busOp.route.removeDep")} onClick={() => set({ departures: value.departures.filter((_, idx) => idx !== i) })} disabled={value.departures.length <= 1}><IcMinus size={18} /></button>
                 </div>
                 <DayChips value={d.daysOfWeek} onChange={(days) => setDep(i, { daysOfWeek: days })} />
               </div>

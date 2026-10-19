@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
 import SiteHeader from "../components/SiteHeader";
 import { IconBox, IconSearch, IconStar } from "../components/icons";
 import { trackInterest } from "../lib/tracking";
+import { formatUgx } from "../lib/format";
 import { ListSkeleton } from "../components/Skeleton";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
 export default function SearchResults() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [session] = useState(() => getSession());
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,7 +38,7 @@ export default function SearchResults() {
         if (active) setResult(data);
       })
       .catch((loadError) => {
-        if (active) setError(loadError.message || "Search failed. Please try again.");
+        if (active) setError(loadError.message || t("services.search.failed"));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -78,29 +81,29 @@ export default function SearchResults() {
             autoFocus
             value={inputValue}
             onChange={handleInputChange}
-            placeholder="Search a service or business"
+            placeholder={t("services.search.placeholder")}
           />
-          <button type="submit" className="cta-button">Search</button>
+          <button type="submit" className="cta-button">{t("nav.search")}</button>
         </form>
       </section>
 
       {!query ? (
-        <p className="home-empty">Search for a category, service or business — e.g. &ldquo;wash my car&rdquo; or &ldquo;wedding cake&rdquo;.</p>
+        <p className="home-empty">{t("services.search.prompt")}</p>
       ) : loading ? (
         <div className="skel-page">
-          <ListSkeleton rows={5} label="Searching" />
+          <ListSkeleton rows={5} label={t("services.search.searching")} />
         </div>
       ) : error ? (
         <div className="error-message home-error">{error}</div>
       ) : !hasResults ? (
         <div className="page-empty-state">
-          <p>No matches for &ldquo;{query}&rdquo;. Try a different word or check your spelling.</p>
+          <p>{t("services.search.noMatches", { query })}</p>
         </div>
       ) : (
         <>
           {result.categories.length ? (
             <section className="home-section">
-              <h2>Categories</h2>
+              <h2>{t("services.categories")}</h2>
               <div className="category-grid">
                 {result.categories.map((c) => (
                   <Link to={`/category/${c.id}`} key={c.id} className="category-card">
@@ -116,7 +119,7 @@ export default function SearchResults() {
 
           {result.providers.length ? (
             <section className="home-section">
-              <h2>Service providers</h2>
+              <h2>{t("services.category.providers")}</h2>
               <div className="provider-grid">
                 {result.providers.map((p) => (
                   <Link to={`/provider/${p.id}`} key={p.id} className="provider-card">
@@ -125,7 +128,7 @@ export default function SearchResults() {
                     </div>
                     <div className="provider-body">
                       <h3>{p.businessName}</h3>
-                      <div className="provider-rating"><IconStar /> {p.ratingAvg ? p.ratingAvg.toFixed(1) : "New"}</div>
+                      <div className="provider-rating"><IconStar /> {p.ratingAvg ? p.ratingAvg.toFixed(1) : t("common.new")}</div>
                     </div>
                   </Link>
                 ))}
@@ -135,7 +138,7 @@ export default function SearchResults() {
 
           {result.listings.length ? (
             <section className="home-section">
-              <h2>Products &amp; services</h2>
+              <h2>{t("services.category.listings")}</h2>
               <div className="listing-grid">
                 {result.listings.map((item) => (
                   <Link to={`/provider/${item.providerId}`} key={item.id} className="listing-card">
@@ -145,7 +148,7 @@ export default function SearchResults() {
                     <div className="listing-body">
                       <h3>{item.name}</h3>
                       {item.providerName ? <p className="provider-meta">{item.providerName}</p> : null}
-                      {Number(item.price) > 0 ? <div className="listing-price">UGX {Number(item.price).toLocaleString()}</div> : null}
+                      {Number(item.price) > 0 ? <div className="listing-price">{formatUgx(item.price)}</div> : null}
                     </div>
                   </Link>
                 ))}

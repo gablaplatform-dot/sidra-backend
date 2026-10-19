@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import { IconCheck } from "../icons";
 import { ACCENT_PALETTE, LIMITS } from "./docsModel";
@@ -6,7 +7,8 @@ import { ACCENT_PALETTE, LIMITS } from "./docsModel";
 // Form controls for the quotes & receipts studio. Every control has an id + visible label, hint text and an
 // inline error that is announced to assistive tech.
 
-export function TextField({ id, label, value, onChange, path, hint, error, multiline = false, rows = 3, placeholder, type = "text", inputMode, onReset, resetLabel = "Reset to default", autoComplete = "off", suffix, className = "" }) {
+export function TextField({ id, label, value, onChange, path, hint, error, multiline = false, rows = 3, placeholder, type = "text", inputMode, onReset, resetLabel, autoComplete = "off", suffix, className = "" }) {
+  const { t } = useTranslation();
   const max = path ? LIMITS[path] : undefined;
   const length = String(value ?? "").trim().length;
   const over = max !== undefined && length > max;
@@ -26,7 +28,7 @@ export function TextField({ id, label, value, onChange, path, hint, error, multi
       <div className="docs-label-row">
         <label className="docs-label" htmlFor={id}>{label}</label>
         {onReset ? (
-          <button type="button" className="docs-link-btn" onClick={onReset}>{resetLabel}</button>
+          <button type="button" className="docs-link-btn" onClick={onReset}>{resetLabel || t("docs.fields.reset")}</button>
         ) : null}
       </div>
       {multiline ? (
@@ -66,12 +68,13 @@ export function Toggle({ id, label, hint, checked, onChange, disabled = false })
 }
 
 export function ColorPalette({ id, value, onChange, error }) {
+  const { t } = useTranslation();
   const current = String(value || "").toLowerCase();
   const isPreset = ACCENT_PALETTE.some((c) => c.value === current);
   const validHex = /^#[0-9a-f]{6}$/i.test(value || "");
   return (
     <div className="docs-field">
-      <span className="docs-label" id={`${id}-label`}>Accent colour</span>
+      <span className="docs-label" id={`${id}-label`}>{t("docs.fields.accent")}</span>
       <div className="docs-palette" role="radiogroup" aria-labelledby={`${id}-label`}>
         {ACCENT_PALETTE.map((color) => {
           const active = color.value === current;
@@ -81,8 +84,8 @@ export function ColorPalette({ id, value, onChange, error }) {
               type="button"
               role="radio"
               aria-checked={active}
-              aria-label={color.name}
-              title={color.name}
+              aria-label={t(`docs.palette.${color.key}`)}
+              title={t(`docs.palette.${color.key}`)}
               className={`docs-swatch${active ? " is-active" : ""}`}
               onClick={() => onChange(color.value)}
             >
@@ -92,13 +95,13 @@ export function ColorPalette({ id, value, onChange, error }) {
         })}
       </div>
       <div className="docs-custom-color">
-        <label className="docs-color-picker" htmlFor={`${id}-picker`} title="Pick any colour">
-          <span className="sr-only">Pick a custom colour</span>
+        <label className="docs-color-picker" htmlFor={`${id}-picker`} title={t("docs.fields.pickAny")}>
+          <span className="sr-only">{t("docs.fields.pickCustom")}</span>
           <input id={`${id}-picker`} type="color" value={validHex ? value : "#0b2046"} onChange={(event) => onChange(event.target.value)} />
           <span className={`docs-color-chip${!isPreset && validHex ? " is-active" : ""}`} style={{ background: validHex ? value : "#e2e8f0" }} />
         </label>
         <div className="docs-custom-hex">
-          <label className="docs-label" htmlFor={`${id}-hex`}>Custom colour (hex)</label>
+          <label className="docs-label" htmlFor={`${id}-hex`}>{t("docs.fields.customHex")}</label>
           <input
             id={`${id}-hex`}
             className={`docs-input${error ? " is-invalid" : ""}`}
@@ -113,12 +116,13 @@ export function ColorPalette({ id, value, onChange, error }) {
         </div>
       </div>
       {error ? <p id={`${id}-hex-err`} className="docs-error" role="alert">{error}</p> : null}
-      <p className="docs-hint">Used for the header band, table heading and total on your documents.</p>
+      <p className="docs-hint">{t("docs.fields.accentHint")}</p>
     </div>
   );
 }
 
 export function Accordion({ id, icon, title, summary, open, onToggle, errorCount = 0, children }) {
+  const { t } = useTranslation();
   return (
     <section className={`docs-acc${open ? " is-open" : ""}${errorCount ? " has-error" : ""}`}>
       <h3 className="docs-acc-heading">
@@ -128,7 +132,7 @@ export function Accordion({ id, icon, title, summary, open, onToggle, errorCount
             <strong>{title}</strong>
             <small>{summary}</small>
           </span>
-          {errorCount ? <span className="docs-acc-errors" aria-label={`${errorCount} problem${errorCount === 1 ? "" : "s"} in this section`}>{errorCount}</span> : null}
+          {errorCount ? <span className="docs-acc-errors" aria-label={t("docs.fields.problems", { count: errorCount })}>{errorCount}</span> : null}
           <svg className="docs-acc-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <polyline points="6 9 12 15 18 9" />
           </svg>

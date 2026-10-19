@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../../lib/api";
 import { getDeviceId } from "../../lib/deviceId";
@@ -15,6 +16,7 @@ import { IconSearch, IconSparkles } from "../icons";
 // viewed) and products picked for them from it. A brand-new visitor still gets something useful -
 // popular products, arranged around their district - and it sharpens as they browse.
 export default function ShopForYou() {
+  const { t } = useTranslation();
   const [data, setData] = useState(null); // null = loading
   const district = getPreferredDistrict();
 
@@ -34,7 +36,7 @@ export default function ShopForYou() {
   }, []);
 
   const clear = async () => {
-    if (!window.confirm("Clear what we've learned from your browsing? Your recommendations will start over.")) return;
+    if (!window.confirm(t("shop.forYou.clearConfirm"))) return;
     setData(null);
     await clearInterest().catch(() => {});
     load();
@@ -43,20 +45,20 @@ export default function ShopForYou() {
   if (data === null) return <ForYouSkeleton />;
   if (!data || (!data.items.length && !data.recentlyViewed.length)) return null;
 
-  const subtitle = data.headline || (district ? `Popular around ${district}. It gets better the more you browse.` : "Popular right now. It gets better the more you browse.");
+  const subtitle = data.headline || (district ? t("shop.forYou.popularAround", { district }) : t("shop.forYou.popularNow"));
 
   return (
     <section className="shop-section fy-section">
       <div className="shop-section-header fy-header">
         <div>
           <h2 className="shop-section-title fy-title">
-            <IconSparkles width={22} height={22} /> This can work for you
+            <IconSparkles width={22} height={22} /> {t("shop.forYou.title")}
           </h2>
           <p className="fy-sub">{subtitle}</p>
         </div>
         {data.personalized ? (
           <button type="button" className="sb-link-btn" onClick={clear}>
-            Clear my history
+            {t("shop.forYou.clearHistory")}
           </button>
         ) : null}
       </div>
@@ -78,14 +80,14 @@ export default function ShopForYou() {
 
       {data.recentlyViewed.length ? (
         <div className="fy-block">
-          <h3>Continue where you left off</h3>
+          <h3>{t("shop.forYou.continue")}</h3>
           <div className="fy-recent">
             {data.recentlyViewed.map((item) => (
               <Link key={item.id} to={`/shop/product/${item.id}`} className="fy-recent-card">
                 <img src={listingCover(item)} alt="" loading="lazy" />
                 <span>
                   <strong>{item.name}</strong>
-                  <small>{Number(item.price) > 0 ? formatUgx(item.price) : "Contact for price"}</small>
+                  <small>{Number(item.price) > 0 ? formatUgx(item.price) : t("shop.forYou.contactForPrice")}</small>
                 </span>
               </Link>
             ))}
@@ -95,7 +97,7 @@ export default function ShopForYou() {
 
       {data.items.length ? (
         <div className="fy-block">
-          <h3>Picked for you</h3>
+          <h3>{t("shop.forYou.picked")}</h3>
           <div className="pd-row-grid">
             {data.items.map((item) => (
               <BrowseCard key={item.id} listing={item} reason={item.reason} />

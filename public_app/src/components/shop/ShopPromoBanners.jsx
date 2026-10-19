@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { BannerSkeleton } from "../Skeleton";
 import { safeHref } from "../../lib/safeHref";
 
@@ -41,44 +42,46 @@ const TimeBox = ({ label, value }) => (
 );
 
 function FlashSaleBanner({ flash }) {
+  const { t } = useTranslation();
   const { days, hours, minutes, seconds } = useCountdown(flash?.remainingSecs ?? 0);
   const ctaHref = safeHref(flash?.ctaHref, "/shop");
   return (
     <div className="shop-promo shop-promo-flash">
       <div className="shop-promo-flash-copy">
-        <p className="shop-promo-tag">{flash?.title ?? "Flash Sale"}</p>
-        <h3 className="shop-promo-title">{flash?.subtitle ?? "Limited time offer"}</h3>
+        <p className="shop-promo-tag">{flash?.title ?? t("shop.promo.flashSale")}</p>
+        <h3 className="shop-promo-title">{flash?.subtitle ?? t("shop.promo.limitedTime")}</h3>
         <div className="shop-countdown">
-          <TimeBox label="Days" value={days} />
+          <TimeBox label={t("shop.promo.days")} value={days} />
           <span className="shop-countdown-colon">:</span>
-          <TimeBox label="Hours" value={hours} />
+          <TimeBox label={t("shop.promo.hours")} value={hours} />
           <span className="shop-countdown-colon">:</span>
-          <TimeBox label="Min" value={minutes} />
+          <TimeBox label={t("shop.promo.min")} value={minutes} />
           <span className="shop-countdown-colon">:</span>
-          <TimeBox label="Sec" value={seconds} />
+          <TimeBox label={t("shop.promo.sec")} value={seconds} />
         </div>
         <Link to={ctaHref} className="shop-promo-cta shop-promo-cta-light">
-          {flash?.cta ?? "Shop Now"} <IconArrowRight />
+          {flash?.cta ?? t("shop.promo.shopNow")} <IconArrowRight />
         </Link>
       </div>
       <div className="shop-promo-flash-img">
-        <img src={flash?.image} alt={flash?.title ?? "Flash sale"} loading="lazy" />
+        <img src={flash?.image} alt={flash?.title ?? t("shop.promo.flashSaleAlt")} loading="lazy" />
       </div>
     </div>
   );
 }
 
 function NewCollectionBanner({ collection }) {
+  const { t } = useTranslation();
   const ctaHref = safeHref(collection?.ctaHref, "/shop");
   return (
     <div className="shop-promo shop-promo-collection">
       <div className="shop-promo-collection-overlay" />
       <div className="shop-promo-collection-copy">
-        <p className="shop-promo-tag shop-promo-tag-dark">{collection?.tag ?? collection?.title ?? "New Collection"}</p>
-        <h3 className="shop-promo-title shop-promo-title-light">{collection?.title ?? "Fresh new season"}</h3>
-        <p className="shop-promo-subtitle">{collection?.subtitle ?? "Discover the latest trends"}</p>
+        <p className="shop-promo-tag shop-promo-tag-dark">{collection?.tag ?? collection?.title ?? t("shop.promo.newCollection")}</p>
+        <h3 className="shop-promo-title shop-promo-title-light">{collection?.title ?? t("shop.promo.freshSeason")}</h3>
+        <p className="shop-promo-subtitle">{collection?.subtitle ?? t("shop.promo.discoverTrends")}</p>
         <Link to={ctaHref} className="shop-promo-cta shop-promo-cta-solid">
-          {collection?.cta ?? "Explore"} <IconArrowRight />
+          {collection?.cta ?? t("shop.promo.explore")} <IconArrowRight />
         </Link>
       </div>
       <div

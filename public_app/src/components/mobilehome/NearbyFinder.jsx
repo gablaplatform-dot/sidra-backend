@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../../lib/api";
 import { getCurrentPosition } from "../../lib/geolocation";
@@ -25,6 +26,7 @@ const pinIcon = (google, { count, active }) => {
 };
 
 function NearbyMap({ items, centre, you, selectedKey, onSelect }) {
+  const { t } = useTranslation();
   const elRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef(new Map());
@@ -70,7 +72,7 @@ function NearbyMap({ items, centre, you, selectedKey, onSelect }) {
             map,
             zIndex: 2,
             icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: "#2563eb", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 3 },
-            title: "You are here"
+            title: t("nearby.youAreHere")
           });
           bounds.extend(you);
         } else if (centre) bounds.extend(centre);
@@ -82,7 +84,7 @@ function NearbyMap({ items, centre, you, selectedKey, onSelect }) {
           });
         }
       })
-      .catch((e) => active && setFailed(e.message || "The map is not available right now."));
+      .catch((e) => active && setFailed(e.message || "__default"));
     return () => {
       active = false;
     };
@@ -101,23 +103,24 @@ function NearbyMap({ items, centre, you, selectedKey, onSelect }) {
     }
   }, [selectedKey]);
 
-  if (failed) return <div className="mh-find-map is-error">{failed} The list below still works.</div>;
-  return <div ref={elRef} className="mh-find-map" role="region" aria-label="Map of results" />;
+  if (failed) return <div className="mh-find-map is-error">{failed === "__default" ? t("nearby.mapUnavailable") : failed} {t("nearby.listStillWorks")}</div>;
+  return <div ref={elRef} className="mh-find-map" role="region" aria-label={t("nearby.mapRegion")} />;
 }
 
 function ResultCard({ item, selected, onPick, innerRef }) {
+  const { t } = useTranslation();
   const price = Number(item.price) || 0;
   return (
     <Link ref={innerRef} to={`/shop/product/${item.id}`} className={`mh-find-card ${selected ? "is-selected" : ""}`} onMouseEnter={() => onPick?.(item.id)} onFocus={() => onPick?.(item.id)}>
       <span className="mh-find-thumb"><LazyImg src={listingCover(item)} alt="" loading="lazy" /></span>
       <span className="mh-find-body">
         <span className="mh-find-tags">
-          <i className={item.type === "service" ? "is-service" : ""}>{item.type === "service" ? "Service" : "Product"}</i>
-          {item.matchedBy === "related" ? <i className="is-related">Related</i> : null}
-          {item.distanceKm !== undefined ? <b>{item.distanceKm < 1 ? "< 1 km" : `${item.distanceKm} km`} away</b> : null}
+          <i className={item.type === "service" ? "is-service" : ""}>{item.type === "service" ? t("nearby.service") : t("nearby.product")}</i>
+          {item.matchedBy === "related" ? <i className="is-related">{t("nearby.related")}</i> : null}
+          {item.distanceKm !== undefined ? <b>{item.distanceKm < 1 ? t("nearby.lessThanKm") : t("nearby.kmAway", { km: item.distanceKm })}</b> : null}
         </span>
         <strong>{item.name}</strong>
-        <span className="mh-find-price">{price > 0 ? formatUgx(price) : "Contact for price"}</span>
+        <span className="mh-find-price">{price > 0 ? formatUgx(price) : t("nearby.contactForPrice")}</span>
         <small>{item.provider?.businessName}{item.provider?.district ? ` · ${item.provider.district}` : ""}</small>
       </span>
     </Link>
@@ -126,6 +129,7 @@ function ResultCard({ item, selected, onPick, innerRef }) {
 
 // The home search: type what you want and see where nearby it is, on a map or as a list ordered by distance.
 export default function NearbyFinder({ session }) {
+  const { t } = useTranslation();
   const [text, setText] = useState("");
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState("map");
@@ -169,8 +173,8 @@ export default function NearbyFinder({ session }) {
       setError("");
       return undefined;
     }
-    const t = setTimeout(() => setQuery(trimmed), 380);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setQuery(trimmed), 380);
+    return () => clearTimeout(timer);
   }, [text]);
 
   useEffect(() => {
@@ -197,7 +201,7 @@ export default function NearbyFinder({ session }) {
           trackInterest({ type: "search", query });
         }
       } catch (e) {
-        if (ticket === seq.current) setError(e.message || "We couldn't search right now.");
+        if (ticket === seq.current) setError(e.message || t("nearby.searchError"));
       } finally {
         if (ticket === seq.current) setLoading(false);
       }
@@ -219,11 +223,11 @@ export default function NearbyFinder({ session }) {
 
   const note =
     where?.source === "gps"
-      ? "Around your current location"
+      ? t("nearby.noteGps")
       : where?.source === "district"
-        ? `Around ${where.district}, from your account. Turn on location for results around you.`
+        ? t("nearby.noteDistrict", { district: where.district })
         : where
-          ? "Around Kampala. Turn on location for results around you."
+          ? t("nearby.noteDefault")
           : "";
 
   const active = text.trim().length >= MIN_CHARS;
@@ -240,9 +244,9 @@ export default function NearbyFinder({ session }) {
         }}
       >
         <IconFind />
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="What would you like to find nearby?" aria-label="Find products and services nearby" enterKeyHint="search" autoComplete="off" />
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t("nearby.placeholder")} aria-label={t("nearby.ariaLabel")} enterKeyHint="search" autoComplete="off" />
         {text ? (
-          <button type="button" className="mh-search-clear" onClick={() => setText("")} aria-label="Clear search"><IconClose width={16} height={16} /></button>
+          <button type="button" className="mh-search-clear" onClick={() => setText("")} aria-label={t("nearby.clear")}><IconClose width={16} height={16} /></button>
         ) : null}
       </form>
 
@@ -250,22 +254,22 @@ export default function NearbyFinder({ session }) {
         <section className="mh-find-panel" aria-live="polite">
           <header className="mh-find-head">
             <div>
-              <strong>{loading && !data ? "Searching nearby…" : `${data?.total ?? 0} result${data?.total === 1 ? "" : "s"} for “${query || text.trim()}”`}</strong>
+              <strong>{loading && !data ? t("nearby.searching") : t("nearby.resultsFor", { count: data?.total ?? 0, query: query || text.trim() })}</strong>
               <small>
-                {data?.interpretedAs ? `Showing: ${data.interpretedAs} · ` : ""}
-                {data?.widened ? "Nothing very close, so we widened the search · " : ""}
-                Nearest first
+                {data?.interpretedAs ? `${t("nearby.showing", { what: data.interpretedAs })} · ` : ""}
+                {data?.widened ? `${t("nearby.widened")} · ` : ""}
+                {t("nearby.nearestFirst")}
               </small>
             </div>
-            <div className="mh-find-toggle" role="group" aria-label="Results view">
-              <button type="button" className={mode === "map" ? "is-active" : ""} onClick={() => setMode("map")} aria-pressed={mode === "map"}>Map</button>
-              <button type="button" className={mode === "list" ? "is-active" : ""} onClick={() => setMode("list")} aria-pressed={mode === "list"}>List</button>
+            <div className="mh-find-toggle" role="group" aria-label={t("nearby.resultsView")}>
+              <button type="button" className={mode === "map" ? "is-active" : ""} onClick={() => setMode("map")} aria-pressed={mode === "map"}>{t("nearby.map")}</button>
+              <button type="button" className={mode === "list" ? "is-active" : ""} onClick={() => setMode("list")} aria-pressed={mode === "list"}>{t("nearby.list")}</button>
             </div>
           </header>
           {note ? (
             <p className="mh-find-note">
               {note}
-              {where?.source !== "gps" ? <button type="button" onClick={() => resolveWhere(true).then(() => setRefresh((n) => n + 1))}>Use my location</button> : null}
+              {where?.source !== "gps" ? <button type="button" onClick={() => resolveWhere(true).then(() => setRefresh((n) => n + 1))}>{t("nearby.useMyLocation")}</button> : null}
             </p>
           ) : null}
 
@@ -275,9 +279,9 @@ export default function NearbyFinder({ session }) {
             <div className="mh-find-skel"><Skel h={300} r={22} /><Skel h={96} r={18} /></div>
           ) : !error && data && !items.length ? (
             <div className="mh-find-empty">
-              <strong>Nothing found for “{query}”</strong>
-              <p>Try a shorter word, or search everything.</p>
-              <Link to={`/search?q=${encodeURIComponent(query)}`}>Search all of Gabla</Link>
+              <strong>{t("nearby.nothingFound", { query })}</strong>
+              <p>{t("nearby.tryShorter")}</p>
+              <Link to={`/search?q=${encodeURIComponent(query)}`}>{t("nearby.searchAll")}</Link>
             </div>
           ) : items.length ? (
             mode === "map" ? (

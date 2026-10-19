@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
@@ -11,12 +12,13 @@ import ShopFooterTrust from "../components/shop/ShopFooterTrust";
 import { CategoryTilesSkeleton } from "../components/Skeleton";
 
 export default function ShopAllCategories() {
+  const { t } = useTranslation();
   const [session] = useState(() => getSession());
   const [categories, setCategories] = useState(null);
 
   useEffect(() => {
-    document.title = "All Categories — Gabla Shop";
-  }, []);
+    document.title = t("shop.meta.allCategories");
+  }, [t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,14 +44,14 @@ export default function ShopAllCategories() {
       <ShopNavbar session={session} onLogout={logout} />
 
       <nav className="breadcrumb">
-        <Link to="/shop">Shop</Link>
+        <Link to="/shop">{t("shop.categories.breadcrumb")}</Link>
         <span>/</span>
-        <span className="breadcrumb-current">All Categories</span>
+        <span className="breadcrumb-current">{t("shop.categories.allTitle")}</span>
       </nav>
 
       <section className="shop-section">
         <div className="shop-section-header">
-          <h2 className="shop-section-title">All Categories</h2>
+          <h2 className="shop-section-title">{t("shop.categories.allTitle")}</h2>
         </div>
 
         {categories === null ? (
@@ -59,7 +61,7 @@ export default function ShopAllCategories() {
             {categories.map((cat) => <CategoryCard key={cat.id} category={cat} />)}
           </div>
         ) : (
-          <p className="home-empty">No shop categories yet.</p>
+          <p className="home-empty">{t("shop.categories.empty")}</p>
         )}
       </section>
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { formatUgx } from "../lib/format";
@@ -10,6 +11,7 @@ const MAX_POLLS = 20;
 // Pay for something the seller or provider has already accepted: ask for the mobile money number, wait for the
 // prompt to be approved, then say so. `endpoint` starts the charge and returns { transactionId }.
 export default function PaymentModal({ title, amount, summary, endpoint, defaultPhone = "", onClose, onPaid }) {
+  const { t } = useTranslation();
   const [phone, setPhone] = useState(defaultPhone);
   const [stage, setStage] = useState("form"); // form | waiting | succeeded | failed | timeout
   const [error, setError] = useState("");
@@ -47,7 +49,7 @@ export default function PaymentModal({ title, amount, summary, endpoint, default
   const submit = async (event) => {
     event.preventDefault();
     if (phone.replace(/\D/g, "").length < 9) {
-      setError("Enter the mobile money number to pay from.");
+      setError(t("payment.errPhone"));
       return;
     }
     setSubmitting(true);
@@ -59,7 +61,7 @@ export default function PaymentModal({ title, amount, summary, endpoint, default
       setStage("waiting");
       timerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
     } catch (submitError) {
-      setError(submitError.message || "We couldn't start the payment.");
+      setError(submitError.message || t("payment.startFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -74,7 +76,7 @@ export default function PaymentModal({ title, amount, summary, endpoint, default
   return (
     <div className="modal-overlay" onClick={stage === "waiting" ? undefined : onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+        <button type="button" className="modal-close" onClick={onClose} aria-label={t("form.close")}>
           <IconClose />
         </button>
 
@@ -86,39 +88,39 @@ export default function PaymentModal({ title, amount, summary, endpoint, default
             {error ? <div className="error-message">{error}</div> : null}
             <form onSubmit={submit} className="form-grid">
               <label className="field">
-                <span>Mobile money number</span>
-                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 0772 123 456" inputMode="tel" required autoFocus />
+                <span>{t("payment.phoneLabel")}</span>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("payment.phonePlaceholder")} inputMode="tel" required autoFocus />
               </label>
               <button type="submit" className="primary-button" disabled={submitting}>
-                {submitting ? "Starting payment…" : `Pay ${formatUgx(amount)}`}
+                {submitting ? t("payment.starting") : t("payment.pay", { amount: formatUgx(amount) })}
               </button>
             </form>
           </>
         ) : stage === "waiting" ? (
           <>
-            <h2>Approve on your phone</h2>
-            <p>We sent a mobile money prompt to {phone}. Approve it to finish paying.</p>
-            <p className="modal-hint">Waiting for confirmation…</p>
+            <h2>{t("payment.approveTitle")}</h2>
+            <p>{t("payment.approveBody", { phone })}</p>
+            <p className="modal-hint">{t("payment.waiting")}</p>
           </>
         ) : stage === "succeeded" ? (
           <>
-            <h2>Payment received</h2>
-            <p>Thank you. {summary || "The seller has been told."}</p>
-            <button type="button" className="primary-button" onClick={onClose}>Done</button>
+            <h2>{t("payment.receivedTitle")}</h2>
+            <p>{t("payment.thanks")} {summary || t("payment.sellerTold")}</p>
+            <button type="button" className="primary-button" onClick={onClose}>{t("form.done")}</button>
           </>
         ) : stage === "failed" ? (
           <>
-            <h2>Payment didn&apos;t go through</h2>
-            <p>The mobile money payment wasn&apos;t completed. Nothing was taken. You can try again.</p>
-            <button type="button" className="primary-button" onClick={() => setStage("form")}>Try again</button>
+            <h2>{t("payment.failedTitle")}</h2>
+            <p>{t("payment.failedBody")}</p>
+            <button type="button" className="primary-button" onClick={() => setStage("form")}>{t("payment.tryAgain")}</button>
           </>
         ) : (
           <>
-            <h2>Still waiting</h2>
-            <p>We haven&apos;t heard back yet. If you already approved the prompt, check again; otherwise try again.</p>
+            <h2>{t("payment.timeoutTitle")}</h2>
+            <p>{t("payment.timeoutBody")}</p>
             <div className="payment-options">
-              <button type="button" className="payment-option" onClick={checkAgain}>Check again</button>
-              <button type="button" className="payment-option" onClick={() => setStage("form")}>Try again</button>
+              <button type="button" className="payment-option" onClick={checkAgain}>{t("payment.checkAgain")}</button>
+              <button type="button" className="payment-option" onClick={() => setStage("form")}>{t("payment.tryAgain")}</button>
             </div>
           </>
         )}

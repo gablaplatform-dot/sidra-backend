@@ -1,36 +1,35 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
 
 import { getSession } from "../../lib/session";
 import { loginPath } from "../../lib/authRedirect";
 import { formatUgx } from "../../lib/format";
-import { addDays, addMonths, createBooking, dateLabel, diffDays, loadAvailability, monthStart, plural, todayEat, UNIT_WORD, whenLabel } from "../../lib/bookings";
+import { addDays, addMonths, createBooking, dateLabel, diffDays, loadAvailability, monthStart, plural, quantityLabel, todayEat, UNIT_WORD, unitLabel, whenLabel } from "../../lib/bookings";
 import AvailabilityCalendar from "./AvailabilityCalendar";
 import { IconCheck } from "../icons";
 
-const POLICY = {
-  flexible: "Free cancellation up to 24 hours before the start.",
-  moderate: "Free cancellation up to 5 days before the start; after that the provider may keep the deposit.",
-  strict: "Deposits are non-refundable once the booking is confirmed."
-};
-
-const Stepper = ({ label, value, min, max, onChange, hint }) => (
+const Stepper = ({ label, value, min, max, onChange, hint }) => {
+  const { t } = useTranslation();
+  return (
   <div className="bk-stepper">
     <div>
       <strong>{label}</strong>
       {hint ? <small>{hint}</small> : null}
     </div>
     <div className="bk-stepper-ctl">
-      <button type="button" onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min} aria-label={`Fewer ${label}`}>−</button>
+      <button type="button" onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min} aria-label={t("booking.panel.fewer", { label })}>−</button>
       <span aria-live="polite">{value}</span>
-      <button type="button" onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max} aria-label={`More ${label}`}>+</button>
+      <button type="button" onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max} aria-label={t("booking.panel.more", { label })}>+</button>
     </div>
   </div>
-);
+  );
+};
 
 // The whole booking flow for one service: pick dates (or an hourly slot), choose how many, add your
 // details, then send. Confirmed on the spot or sent to the provider, depending on how they set it up.
 export default function BookingPanel({ listing }) {
+  const { t } = useTranslation();
   const location = useLocation();
   const [session] = useState(() => getSession());
   const config = listing.booking;
@@ -62,7 +61,7 @@ export default function BookingPanel({ listing }) {
     let active = true;
     loadAvailability(listing.id, month, addDays(month, 62))
       .then((data) => active && setDays((prev) => ({ ...prev, ...data.days })))
-      .catch((e) => active && setLoadError(e.message || "We couldn't load the calendar."));
+      .catch((e) => active && setLoadError(e.message || t("booking.panel.calendarError")));
     return () => {
       active = false;
     };
@@ -164,8 +163,8 @@ export default function BookingPanel({ listing }) {
 
   const submit = async (event) => {
     event.preventDefault();
-    if (details.name.trim().length < 2) return setError("Enter your name.");
-    if (details.phone.replace(/\D/g, "").length < 7) return setError("Enter a phone number the provider can reach you on.");
+    if (details.name.trim().length < 2) return setError(t("booking.panel.nameRequired"));
+    if (details.phone.replace(/\D/g, "").length < 7) return setError(t("booking.panel.phoneRequired"));
     setSubmitting(true);
     setError("");
     try {
@@ -173,7 +172,7 @@ export default function BookingPanel({ listing }) {
       setResult(booking);
       setStep("done");
     } catch (e) {
-      setError(e.message || "We couldn't make this booking.");
+      setError(e.message || t("booking.panel.createFailed"));
       if (e.code === "NOT_AVAILABLE" || e.code === "DATES_BLOCKED") {
         setStep("dates");
         setVersion((v) => v + 1);
@@ -198,19 +197,19 @@ export default function BookingPanel({ listing }) {
   const summaryWhen = unit === "hour" && start && startTime ? `${dateLabel(start)} · ${startTime}–${hourSlots.length ? addHour(startTime, hours) : ""}` : start && effectiveEnd ? (start === effectiveEnd ? dateLabel(start) : `${dateLabel(start)} → ${dateLabel(effectiveEnd)}`) : "";
 
   return (
-    <section className="pd-card bk-panel" id="book" aria-label="Book this service">
+    <section className="pd-card bk-panel" id="book" aria-label={t("booking.panel.ariaLabel")}>
       <header className="bk-head">
         <div>
-          <h2>Book {listing.name}</h2>
-          <p>{price > 0 ? <><strong>{formatUgx(price)}</strong> / {unitWord}</> : "Price on request"}</p>
+          <h2>{t("booking.panel.title", { name: listing.name })}</h2>
+          <p>{price > 0 ? <><strong>{formatUgx(price)}</strong> / {unitLabel(unitWord)}</> : t("booking.panel.priceOnRequest")}</p>
         </div>
-        <span className={`bk-mode ${instant ? "is-instant" : ""}`}>{instant ? "Instant confirmation" : `Reply within ${config.responseHours}h`}</span>
+        <span className={`bk-mode ${instant ? "is-instant" : ""}`}>{instant ? t("booking.panel.instant") : t("booking.panel.replyWithin", { hours: config.responseHours })}</span>
       </header>
 
       {step === "dates" ? (
         <>
           <p className="bk-lead">
-            {unit === "night" ? "Pick your check-in, then your check-out." : unit === "day" ? "Pick the first day, then the last day (or just one day)." : "Pick a day, then a start time."}
+            {t(`booking.panel.lead.${unit}`)}
           </p>
           {loadError ? <div className="error-message">{loadError}</div> : null}
           <AvailabilityCalendar month={month} onMonth={setMonth} info={info} start={start} end={unit === "day" && start && !end ? null : end} onPick={pick} maxDate={addMonths(monthStart(lastDay), 1)} />
@@ -218,51 +217,51 @@ export default function BookingPanel({ listing }) {
           {unit === "hour" && start ? (
             <div className="bk-slots">
               <h3>{dateLabel(start, { weekday: "long", day: "numeric", month: "long" })}</h3>
-              {slots === null ? <p className="bk-muted">Loading times…</p> : slots.length ? (
+              {slots === null ? <p className="bk-muted">{t("booking.panel.loadingTimes")}</p> : slots.length ? (
                 <>
-                  <div className="bk-chips" role="listbox" aria-label="Start time">
+                  <div className="bk-chips" role="listbox" aria-label={t("booking.panel.startTime")}>
                     {slots.map((s) => (
                       <button key={s.time} type="button" role="option" aria-selected={startTime === s.time} disabled={s.free < 1} className={`bk-chip ${startTime === s.time ? "is-on" : ""}`} onClick={() => setStartTime(s.time)}>{s.time}</button>
                     ))}
                   </div>
                   <label className="bk-hours">
-                    <span>For how long</span>
+                    <span>{t("booking.panel.forHowLong")}</span>
                     <select value={hours} onChange={(e) => setHours(Number(e.target.value))}>
                       {Array.from({ length: Math.max(1, config.maxUnits - config.minUnits + 1) }, (_, i) => config.minUnits + i).map((h) => <option key={h} value={h}>{plural(h, "hour")}</option>)}
                     </select>
                   </label>
-                  {startTime && !hourOk ? <p className="bk-warn">Those hours aren&apos;t all free. Try a shorter time or another start.</p> : null}
+                  {startTime && !hourOk ? <p className="bk-warn">{t("booking.panel.hoursNotFree")}</p> : null}
                 </>
-              ) : <p className="bk-muted">No times are open on this day.</p>}
+              ) : <p className="bk-muted">{t("booking.panel.noTimes")}</p>}
             </div>
           ) : null}
 
           {ready && !tooShort && !tooLong ? (
             <div className="bk-summary">
               <div className="bk-when">
-                <span>{unit === "night" ? "Stay" : "When"}</span>
+                <span>{unit === "night" ? t("booking.panel.stay") : t("booking.when")}</span>
                 <strong>{summaryWhen}</strong>
-                <small>{plural(units, unitWord)}{unit === "night" ? ` · check-in from ${config.checkIn}, check-out by ${config.checkOut}` : ""}</small>
+                <small>{plural(units, unitWord)}{unit === "night" ? ` · ${t("booking.panel.checkInOut", { checkIn: config.checkIn, checkOut: config.checkOut })}` : ""}</small>
               </div>
-              {config.inventory > 1 ? <Stepper label={unit === "night" ? "Rooms" : "Spaces"} value={qty} min={1} max={maxQty} onChange={setQuantity} hint={`${maxQty} available`} /> : null}
-              <Stepper label="Guests" value={guestCount} min={1} max={maxGuests} onChange={setGuests} hint={`Up to ${maxGuests}`} />
+              {config.inventory > 1 ? <Stepper label={unit === "night" ? t("booking.rooms") : t("booking.spaces")} value={qty} min={1} max={maxQty} onChange={setQuantity} hint={t("booking.panel.available", { n: maxQty })} /> : null}
+              <Stepper label={t("booking.guests")} value={guestCount} min={1} max={maxGuests} onChange={setGuests} hint={t("booking.panel.upTo", { n: maxGuests })} />
               <div className="bk-total">
-                <span>{price > 0 ? `${formatUgx(price)} × ${plural(units, unitWord)}${qty > 1 ? ` × ${qty}` : ""}` : "Price agreed with the provider"}</span>
+                <span>{price > 0 ? `${formatUgx(price)} × ${plural(units, unitWord)}${qty > 1 ? ` × ${qty}` : ""}` : t("booking.panel.priceAgreed")}</span>
                 {price > 0 ? <strong>{formatUgx(total)}</strong> : null}
               </div>
-              {dueOnline > 0 ? <p className="bk-hint bk-pay-note">After {instant ? "booking" : "the provider confirms"} you pay <strong>{formatUgx(dueOnline)}</strong> ({onlinePct === 100 ? "the full amount" : `${onlinePct}% deposit`}) by mobile money. Nothing is charged now.</p> : null}
-              <button type="button" className="cta-button bk-go" onClick={() => { setError(""); setStep("details"); }}>Continue</button>
+              {dueOnline > 0 ? <p className="bk-hint bk-pay-note"><Trans i18nKey={instant ? "booking.panel.payNoteInstant" : "booking.panel.payNoteConfirm"} values={{ amount: formatUgx(dueOnline), kind: onlinePct === 100 ? t("booking.panel.fullAmount") : t("booking.panel.depositPct", { pct: onlinePct }) }} components={{ strong: <strong /> }} /></p> : null}
+              <button type="button" className="cta-button bk-go" onClick={() => { setError(""); setStep("details"); }}>{t("booking.panel.continue")}</button>
             </div>
           ) : (
             <p className="bk-hint">
-              {tooShort ? `The minimum is ${plural(config.minUnits, unitWord)}.` : tooLong ? `The maximum is ${plural(config.maxUnits, unitWord)}.` : start && !end && unit === "night" ? "Now pick your check-out date." : unit !== "hour" ? "Choose your dates to see the price." : ""}
+              {tooShort ? t("booking.panel.minimum", { n: plural(config.minUnits, unitWord) }) : tooLong ? t("booking.panel.maximum", { n: plural(config.maxUnits, unitWord) }) : start && !end && unit === "night" ? t("booking.panel.pickCheckout") : unit !== "hour" ? t("booking.panel.chooseDates") : ""}
             </p>
           )}
           {error ? <div className="error-message">{error}</div> : null}
           <ul className="bk-facts">
-            <li>{POLICY[config.cancellation]}</li>
+            <li>{t(`booking.panel.policy.${config.cancellation}`, { defaultValue: "" })}</li>
             {config.depositNote ? <li>{config.depositNote}</li> : null}
-            {config.leadTimeHours ? <li>Book at least {plural(config.leadTimeHours, "hour")} ahead.</li> : null}
+            {config.leadTimeHours ? <li>{t("booking.panel.leadTime", { n: plural(config.leadTimeHours, "hour") })}</li> : null}
           </ul>
         </>
       ) : null}
@@ -270,26 +269,26 @@ export default function BookingPanel({ listing }) {
       {step === "details" ? (
         !session ? (
           <div className="bk-signin">
-            <h3>Sign in to book</h3>
-            <p>You need a Gabla account so the provider and you can both see this booking.</p>
-            <Link to={loginPath(location, { resume: "book" })} className="primary-button" style={{ display: "block", textAlign: "center" }}>Sign in</Link>
-            <button type="button" className="link-button" onClick={() => setStep("dates")}>← Change dates</button>
+            <h3>{t("booking.panel.signInTitle")}</h3>
+            <p>{t("booking.panel.signInText")}</p>
+            <Link to={loginPath(location, { resume: "book" })} className="primary-button" style={{ display: "block", textAlign: "center" }}>{t("nav.signIn")}</Link>
+            <button type="button" className="link-button" onClick={() => setStep("dates")}>{t("booking.panel.changeDates")}</button>
           </div>
         ) : (
           <form className="bk-form" onSubmit={submit}>
-            <button type="button" className="link-button" onClick={() => setStep("dates")}>← Change dates</button>
+            <button type="button" className="link-button" onClick={() => setStep("dates")}>{t("booking.panel.changeDates")}</button>
             <div className="bk-recap">
               <strong>{summaryWhen}</strong>
-              <span>{plural(units, unitWord)}{qty > 1 ? ` · ${qty} ${unit === "night" ? "rooms" : "spaces"}` : ""} · {plural(guestCount, "guest")}</span>
+              <span>{plural(units, unitWord)}{qty > 1 ? ` · ${quantityLabel(unit, qty)}` : ""} · {plural(guestCount, "guest")}</span>
               {price > 0 ? <b>{formatUgx(total)}</b> : null}
             </div>
             {error ? <div className="error-message">{error}</div> : null}
-            <label className="field"><span>Your name</span><input required value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} autoComplete="name" /></label>
-            <label className="field"><span>Phone number</span><input required inputMode="tel" value={details.phone} onChange={(e) => setDetails({ ...details, phone: e.target.value })} autoComplete="tel" placeholder="0772 123 456" /></label>
-            <label className="field"><span>Email (for your confirmation)</span><input type="email" value={details.email} onChange={(e) => setDetails({ ...details, email: e.target.value })} autoComplete="email" /></label>
-            <label className="field"><span>Anything the provider should know? (optional)</span><textarea rows="3" maxLength={800} value={details.notes} onChange={(e) => setDetails({ ...details, notes: e.target.value })} /></label>
-            <p className="bk-hint">{instant ? "Your booking is confirmed straight away." : `The provider answers within ${config.responseHours} hours. The dates are held for you meanwhile, and you'll get an email either way.`} {price > 0 ? (dueOnline > 0 ? `No payment is taken now; you pay ${formatUgx(dueOnline)} once it's confirmed.` : "No payment is taken now.") : ""}</p>
-            <button type="submit" className="cta-button bk-go" disabled={submitting}>{submitting ? "Sending…" : instant ? `Confirm booking${price > 0 ? ` · ${formatUgx(total)}` : ""}` : "Send booking request"}</button>
+            <label className="field"><span>{t("booking.panel.yourName")}</span><input required value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} autoComplete="name" /></label>
+            <label className="field"><span>{t("booking.panel.phone")}</span><input required inputMode="tel" value={details.phone} onChange={(e) => setDetails({ ...details, phone: e.target.value })} autoComplete="tel" placeholder="0772 123 456" /></label>
+            <label className="field"><span>{t("booking.panel.email")}</span><input type="email" value={details.email} onChange={(e) => setDetails({ ...details, email: e.target.value })} autoComplete="email" /></label>
+            <label className="field"><span>{t("booking.panel.notes")}</span><textarea rows="3" maxLength={800} value={details.notes} onChange={(e) => setDetails({ ...details, notes: e.target.value })} /></label>
+            <p className="bk-hint">{instant ? t("booking.panel.hintInstant") : t("booking.panel.hintAwaiting", { hours: config.responseHours })} {price > 0 ? (dueOnline > 0 ? t("booking.panel.noPaymentDue", { amount: formatUgx(dueOnline) }) : t("booking.panel.noPayment")) : ""}</p>
+            <button type="submit" className="cta-button bk-go" disabled={submitting}>{submitting ? t("booking.panel.sending") : instant ? (price > 0 ? t("booking.panel.confirmTotal", { total: formatUgx(total) }) : t("booking.panel.confirm")) : t("booking.panel.sendRequest")}</button>
           </form>
         )
       ) : null}
@@ -297,28 +296,28 @@ export default function BookingPanel({ listing }) {
       {step === "done" && result ? (
         <div className="bk-done">
           <span className={`bk-done-icon ${result.status === "confirmed" ? "is-ok" : ""}`}><IconCheck /></span>
-          <h3>{result.status === "confirmed" ? "You're booked" : "Request sent"}</h3>
+          <h3>{result.status === "confirmed" ? t("booking.panel.booked") : t("booking.panel.requestSent")}</h3>
           <p>
             {result.status === "confirmed"
-              ? "Your booking is confirmed. We've emailed you the details."
-              : `${result.provider.businessName} will reply within ${config.responseHours} hours. We'll email you, and the dates are held for you until then.`}
+              ? t("booking.panel.doneConfirmed")
+              : t("booking.panel.donePending", { name: result.provider.businessName, hours: config.responseHours })}
           </p>
           <dl className="bk-ref">
-            <div><dt>Reference</dt><dd>{result.reference}</dd></div>
-            <div><dt>When</dt><dd>{whenLabel(result)}</dd></div>
-            {result.total > 0 ? <div><dt>Total</dt><dd>{formatUgx(result.total)}</dd></div> : null}
+            <div><dt>{t("booking.panel.reference")}</dt><dd>{result.reference}</dd></div>
+            <div><dt>{t("booking.when")}</dt><dd>{whenLabel(result)}</dd></div>
+            {result.total > 0 ? <div><dt>{t("booking.total")}</dt><dd>{formatUgx(result.total)}</dd></div> : null}
           </dl>
           {result.contact?.address || result.contact?.phone ? (
             <div className="bk-contact">
-              <strong>Where to find them</strong>
+              <strong>{t("booking.whereToFind")}</strong>
               {result.contact.address ? <span>{result.contact.address}</span> : null}
               {result.contact.phone ? <a href={`tel:${result.contact.phone}`}>{result.contact.phone}</a> : null}
-              {result.contact.mapsUrl ? <a href={result.contact.mapsUrl} target="_blank" rel="noreferrer">Open in Maps</a> : null}
+              {result.contact.mapsUrl ? <a href={result.contact.mapsUrl} target="_blank" rel="noreferrer">{t("booking.openInMaps")}</a> : null}
             </div>
           ) : null}
-          {result.paymentStatus === "payable" ? <p className="bk-hint bk-pay-note">Pay <strong>{formatUgx(result.amountDue)}</strong> within {config.payWithinHours} hours from My bookings to keep it.</p> : result.paymentStatus === "awaiting_approval" ? <p className="bk-hint bk-pay-note">Once confirmed you can pay {formatUgx(result.amountDue)} from My bookings.</p> : null}
-          <Link to="/orders?tab=bookings" className="primary-button" style={{ display: "block", textAlign: "center" }}>{result.paymentStatus === "payable" ? "Pay now" : "View my bookings"}</Link>
-          <button type="button" className="link-button" onClick={reset}>Book other dates</button>
+          {result.paymentStatus === "payable" ? <p className="bk-hint bk-pay-note"><Trans i18nKey="booking.panel.payWithin" values={{ amount: formatUgx(result.amountDue), hours: config.payWithinHours }} components={{ strong: <strong /> }} /></p> : result.paymentStatus === "awaiting_approval" ? <p className="bk-hint bk-pay-note">{t("booking.panel.payAfterConfirm", { amount: formatUgx(result.amountDue) })}</p> : null}
+          <Link to="/orders?tab=bookings" className="primary-button" style={{ display: "block", textAlign: "center" }}>{result.paymentStatus === "payable" ? t("booking.payNow") : t("booking.panel.viewBookings")}</Link>
+          <button type="button" className="link-button" onClick={reset}>{t("booking.panel.bookOther")}</button>
         </div>
       ) : null}
     </section>

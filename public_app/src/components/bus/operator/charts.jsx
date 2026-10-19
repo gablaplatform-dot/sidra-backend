@@ -1,7 +1,9 @@
 import React, { useId, useMemo, useState } from "react";
 
-import { dayLabel, todayEat, ugx } from "../../../lib/bus";
-import { niceScale, ugxShort, useSize } from "./util";
+import { useTranslation } from "react-i18next";
+
+import { todayEat, ugx } from "../../../lib/bus";
+import { dayLabel, niceScale, ugxShort, useSize } from "./util";
 
 // Hand-built SVG charts (no chart library). Colours come from CSS variables so they follow the theme.
 
@@ -23,6 +25,7 @@ const smooth = (pts) => {
 };
 
 export function Sparkline({ values = [], tone = "orange", width = 96, height = 38, label }) {
+  const { t } = useTranslation();
   const id = useId().replace(/:/g, "");
   const { line, area, end } = useMemo(() => {
     const vals = values.length > 1 ? values : [0, ...values, ...values];
@@ -37,7 +40,7 @@ export function Sparkline({ values = [], tone = "orange", width = 96, height = 3
     return { line: l, area: `${l} L${last[0]},${height} L${pts[0][0]},${height} Z`, end: last };
   }, [values, width, height]);
   return (
-    <svg className={`bop-spark is-${tone}`} width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label || "Trend"}>
+    <svg className={`bop-spark is-${tone}`} width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label || t("busOp.chart.trend")}>
       <defs>
         <linearGradient id={`sp${id}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="currentColor" stopOpacity="0.26" />
@@ -59,6 +62,7 @@ const roundedTop = (x, y, w, h, r) => {
 
 // Bars + line over 7 days, y axis with UGX abbreviations, hover / tap tooltip.
 export function SalesChart({ trend = [], metric = "revenue" }) {
+  const { t } = useTranslation();
   const id = useId().replace(/:/g, "");
   const [ref, { width: W, height: H }] = useSize();
   const [active, setActive] = useState(null);
@@ -87,7 +91,7 @@ export function SalesChart({ trend = [], metric = "revenue" }) {
   return (
     <div className="bop-chart" ref={ref}>
       {W > 0 && H > 0 ? (
-        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Last 7 days ${metric === "revenue" ? "sales in UGX" : "tickets sold"}`} onMouseLeave={() => setActive(null)}>
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={metric === "revenue" ? t("busOp.chart.ariaSales") : t("busOp.chart.ariaTickets")} onMouseLeave={() => setActive(null)}>
           <defs>
             <linearGradient id={`bar${id}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--bop-bar-top)" />
@@ -113,7 +117,7 @@ export function SalesChart({ trend = [], metric = "revenue" }) {
               <g key={d.date}>
                 {on ? <rect x={padL + band * i} y={padT - 6} width={band} height={innerH + 6} rx="10" className="bop-chart-hover" /> : null}
                 <path d={roundedTop(xOf(i) - bw / 2, padT + innerH - h, bw, h, 9)} fill={`url(#${isToday ? "barT" : "bar"}${id})`} opacity={active === null || on || isToday ? 1 : 0.7} />
-                <text x={xOf(i)} y={H - 9} textAnchor="middle" className={`bop-chart-lbl ${isToday ? "is-today" : ""}`}>{isToday ? "Today" : dayLabel(d.date).split(" ")[0]}</text>
+                <text x={xOf(i)} y={H - 9} textAnchor="middle" className={`bop-chart-lbl ${isToday ? "is-today" : ""}`}>{isToday ? t("busOp.cal.today") : dayLabel(d.date).split(" ")[0]}</text>
               </g>
             );
           })}
@@ -126,7 +130,7 @@ export function SalesChart({ trend = [], metric = "revenue" }) {
             </g>
           ) : null}
           {trend.map((d, i) => (
-            <rect key={`hit${d.date}`} x={padL + band * i} y={0} width={band} height={H} fill="transparent" tabIndex={0} role="img" aria-label={`${dayLabel(d.date)}: ${ugx(d.revenue)}, ${d.tickets} ticket${d.tickets === 1 ? "" : "s"}`} onMouseEnter={() => setActive(i)} onFocus={() => setActive(i)} onBlur={() => setActive(null)} onClick={() => setActive(active === i ? null : i)} style={{ outline: "none", cursor: "pointer" }} />
+            <rect key={`hit${d.date}`} x={padL + band * i} y={0} width={band} height={H} fill="transparent" tabIndex={0} role="img" aria-label={`${dayLabel(d.date)}: ${ugx(d.revenue)}, ${t("busOp.chart.tickets", { count: d.tickets })}`} onMouseEnter={() => setActive(i)} onFocus={() => setActive(i)} onBlur={() => setActive(null)} onClick={() => setActive(active === i ? null : i)} style={{ outline: "none", cursor: "pointer" }} />
           ))}
         </svg>
       ) : null}
@@ -134,7 +138,7 @@ export function SalesChart({ trend = [], metric = "revenue" }) {
         <div className="bop-chart-tip" style={{ left: tipLeft, top: Math.max(0, yOf(vals[active]) - 74) }} role="status">
           <small>{dayLabel(tip.date)}</small>
           <strong>{ugx(tip.revenue)}</strong>
-          <span>{tip.tickets} ticket{tip.tickets === 1 ? "" : "s"}</span>
+          <span>{t("busOp.chart.tickets", { count: tip.tickets })}</span>
         </div>
       ) : null}
     </div>

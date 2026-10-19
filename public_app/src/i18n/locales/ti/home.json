@@ -1,0 +1,99 @@
+{
+  "home": {
+    "eyebrow": "ኩሉ ናይ ኡጋንዳ፡ ብሓደ ኣፕ",
+    "heroTitle1": "ዘመናዊ ኣቑሑት ሸይጥ። ዝታመኑ ክኢላታት ኣዘዝ።",
+    "heroTitle2": "ኣብ ከተማ ተጓዓዝ።",
+    "heroSubtitle": "ጋብላ ንመልበሲ፡ ኤለክትሮኒክስ፡ ዝተረጋገጹ ሃበትቲ ኣገልግሎትን ኣብ ጥቓኻ ዘለዉ ሸፈርትን ብሓደ ጽቡቕ ተመክሮ የራኽበካ።",
+    "searchPlaceholder": "መልበሲ፡ ኣገልግሎት፡ ሸፈርቲ ድለይ…",
+    "tabs": {
+      "nearby": "ጥቓ",
+      "topRated": "ልዑል ደረጃ",
+      "new": "ሓድሽ",
+      "featured": "ፍሉያት"
+    },
+    "shopNow": "ሕጂ ሸይጥ",
+    "getRide": "መጓዓዝያ ረክብ",
+    "trustSellers": "ሸየጥትን ሃበትቲ ኣገልግሎትን",
+    "trustPayments": "ክፍሊት",
+    "trustRating": "ማእኸላይ ደረጃ",
+    "cards": {
+      "newArrivalsTitle": "ሓደስቲ ኣቑሑት",
+      "newArrivalsSub": "ዝዝንቶ መልበሲ",
+      "rideReadyTitle": "መጓዓዝያ ድሉው",
+      "rideReadySub": "ቦዳን መኪናን ጥቓኻ",
+      "topProsTitle": "ብልጫ ክኢላታት",
+      "topProsSub": "ዝተረጋገጹን ዝተገምገሙን",
+      "fastDeliveryTitle": "ቅልጡፍ ኣቕሮቦት",
+      "fastDeliverySub": "ኣብ ኩሉ ሃገር"
+    },
+    "trustbar": {
+      "verifiedTitle": "ዝተረጋገጹ ሃበትቲ ኣገልግሎት",
+      "verifiedSub": "ዝተፈተሹን ዝተገምገሙን",
+      "localTitle": "ኣብ ከባቢኻ",
+      "localSub": "ኣብ ጥቓኻ ዘለዉ ኣገልግሎት ረክብ",
+      "ratedTitle": "ደረጃ 4.8/5",
+      "ratedSub": "ካብ 10,000+ ዕጉባት ዓማዊል",
+      "supportTitle": "24/7 ደገፍ",
+      "supportSub": "ኣብ ዝኾነ ሰዓት ሓቱና"
+    },
+    "promo": {
+      "rideEyebrow": "Gabla Ride",
+      "rideTitle": "መጓዓዝያ ንረኽበልካ።",
+      "rideText": "ቦዳ ወይ መኪና — ጥቓኻ ዘሎ ሸፋሪ ሕተት፡ ቅድሚ ምጅማርካ ዋጋ ኣብ ሰከንዳት ርአ።",
+      "rideCta": "መጓዓዝያ ሕተት",
+      "shopEyebrow": "Gabla Shop",
+      "shopTitle": "ሕጂ ሸይጥ፡ ህያው ኮለክሽን።",
+      "shopText": "መልበሲ፡ ኤለክትሮኒክስን ናይ ህይወት ዘይቤን ካብ ኩሎም ሸየጥቲ ጋብላ ኣብ ሓደ ድኳን ርአ።",
+      "shopCta": "ድኳን ተመልከት"
+    },
+    "bus": {
+      "eyebrow": "Gabla Bus",
+      "title": "ትኬት ባስካ ኣብ ሓንቲ ደቒቕ ሕተት።",
+      "text": "መስመርካ ምረጽ፡ መዓልቲ ኣብ ካለንደር ምረጽ፡ ብ MTN MoMo ወይ Airtel Money ክፈል። ኤሌክትሮኒክ ትኬትካ ብቕልጡፍ ይበጽሓካ — ኣብ ጣብያ ሰልፊ የለን።",
+      "fromAny": "ካብ (ዝኾነ ቦታ)",
+      "toAny": "ናብ (ዝኾነ ቦታ)",
+      "travellingFrom": "ዝተበገስካሉ",
+      "travellingTo": "ዝኸድካሉ",
+      "travelDate": "ዕለት ጉዕዞ",
+      "findBuses": "ባስ ድለይ",
+      "myTickets": "ትኬታተይ"
+    },
+    "categories": {
+      "title": "ብክፍሊ ድለይ",
+      "subtitle": "ዝፈተኻ ተንከፍ፡ ንዓኻ ዝተመርጸ።",
+      "empty": "ክሳብ ሕጂ ክፍሊ የለን።",
+      "loading": "ክፍልታት ይጽዓን ኣሎ…",
+      "providersChip": "{{count}}+ ሃበትቲ ኣገልግሎት"
+    },
+    "providers": {
+      "title": "ፍሉያት ሃበትቲ ኣገልግሎት",
+      "subtitle": "ጥቓኻ ዘለዉ ዝተመርጹ ክኢላታት።",
+      "cta": "ክኢላ ሕተት",
+      "empty": "ክሳብ ሕጂ ፍሉያት ሃበትቲ ኣገልግሎት የለዉን።",
+      "fallbackCategory": "ሃቢ ኣገልግሎት"
+    },
+    "loadError": "ጋብላ ሕጂ ክጽዓን ኣይከኣለን።"
+  },
+  "mobileHome": {
+    "tiles": {
+      "shop": "ዕደግ",
+      "services": "ኣገልግሎታት",
+      "bus": "ትኬት ባስ",
+      "ride": "መጓዓዝያ ረክብ"
+    },
+    "explore": "ርአ",
+    "quickActions": "ቅልጡፍ ተግባራት",
+    "titleLead": "እንታይ",
+    "titleRest": "ሎሚ የድልየካ?",
+    "categories": "ክፍልታት",
+    "browseProviders": "ሃበትቲ ኣገልግሎት ርአ",
+    "emptyCategories": "ክፍልታት ኣገልግሎት ኣብዚ ክርከቡ እዮም።",
+    "recommended": "ዝተመከሩ ሃበትቲ ኣገልግሎት",
+    "ordersAria": "ትዕዛዛተይን ሓባሬታን",
+    "accountAria": "ሕሳብካ",
+    "menu": "ዝርዝር",
+    "busTickets": "ትኬት ባስ",
+    "myBusTickets": "ትኬት ባስ ናተይ",
+    "myBusinessProfile": "ፕሮፋይል ንግደይ"
+  }
+}

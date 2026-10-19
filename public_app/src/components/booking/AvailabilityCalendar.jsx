@@ -1,12 +1,14 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import { addDays, addMonths, monthLabel, monthStart, todayEat } from "../../lib/bookings";
 
-const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WEEK = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 // A month grid of bookable days. The parent decides what each day may do; this only draws it.
 // `info(date)` returns { free, disabled, partly } for a date, `value` is the picked { start, end }.
 export default function AvailabilityCalendar({ month, onMonth, info, start, end, onPick, minMonth, maxDate }) {
+  const { t } = useTranslation();
   const first = monthStart(month);
   const lead = (new Date(`${first}T12:00:00Z`).getUTCDay() + 6) % 7; // Monday first
   const next = addMonths(first, 1);
@@ -19,12 +21,12 @@ export default function AvailabilityCalendar({ month, onMonth, info, start, end,
   return (
     <div className="cal" role="group" aria-label={monthLabel(first)}>
       <div className="cal-head">
-        <button type="button" onClick={() => onMonth(addMonths(first, -1))} disabled={!canPrev} aria-label="Previous month">‹</button>
+        <button type="button" onClick={() => onMonth(addMonths(first, -1))} disabled={!canPrev} aria-label={t("booking.calendar.prevMonth")}>‹</button>
         <strong>{monthLabel(first)}</strong>
-        <button type="button" onClick={() => onMonth(next)} disabled={!canNext} aria-label="Next month">›</button>
+        <button type="button" onClick={() => onMonth(next)} disabled={!canNext} aria-label={t("booking.calendar.nextMonth")}>›</button>
       </div>
       <div className="cal-grid cal-week" aria-hidden="true">
-        {WEEK.map((d) => <span key={d}>{d}</span>)}
+        {WEEK.map((d) => <span key={d}>{t(`booking.calendar.weekdays.${d}`)}</span>)}
       </div>
       <div className="cal-grid">
         {cells.map((date, i) => {
@@ -39,11 +41,11 @@ export default function AvailabilityCalendar({ month, onMonth, info, start, end,
               disabled={state.disabled}
               onClick={() => onPick(date)}
               className={`cal-day ${state.disabled ? "is-off" : ""} ${picked ? "is-picked" : ""} ${inRange ? "is-range" : ""} ${date === today ? "is-today" : ""} ${state.partly ? "is-partly" : ""}`}
-              aria-label={`${date}${state.disabled ? ", not available" : ""}`}
+              aria-label={`${date}${state.disabled ? `, ${t("booking.calendar.notAvailable")}` : ""}`}
               aria-pressed={picked}
             >
               <span>{Number(date.slice(8))}</span>
-              {!state.disabled && state.free > 1 && state.showFree ? <small>{state.free} left</small> : null}
+              {!state.disabled && state.free > 1 && state.showFree ? <small>{t("booking.calendar.left", { n: state.free })}</small> : null}
             </button>
           );
         })}

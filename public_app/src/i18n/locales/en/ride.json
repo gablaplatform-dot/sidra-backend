@@ -1,0 +1,94 @@
+{
+  "ride": {
+    "back": "Back",
+    "droppedPin": "Dropped pin",
+    "pickupPlaceholder": "Pickup location",
+    "dropoffPlaceholder": "Where to?",
+    "useCurrentLocation": "Use current location",
+    "searchHint": "Search an address, or tap the map to drop a pin.",
+    "chooseRide": "Choose a ride",
+    "editLocations": "Edit pickup & drop-off",
+    "notAvailable": "Not available right now",
+    "distanceEta": "~{{km}} km · {{eta}}",
+    "requesting": "Requesting…",
+    "requestRide": "Request {{type}} • {{fare}}",
+    "chooseType": "Choose a ride type",
+    "signInToRequest": "Sign in to request a ride",
+    "yourDriver": "Your driver",
+    "estimatedFare": "Estimated fare",
+    "cancel": "Cancel",
+    "cancelRide": "Cancel ride",
+    "bookAnother": "Book another ride",
+    "callDriver": "Call driver",
+    "map": {
+      "notConfigured": "Map is not configured.",
+      "loadFailed": "Failed to load the map",
+      "unavailable": "Map is not available right now."
+    },
+    "types": {
+      "boda": {
+        "label": "Boda",
+        "description": "Quick & affordable"
+      },
+      "car": {
+        "label": "Car",
+        "description": "Comfortable ride"
+      }
+    },
+    "eta": {
+      "underMinute": "under a minute",
+      "minutes_one": "{{count}} min",
+      "minutes_other": "{{count}} min"
+    },
+    "payment": {
+      "cash": "Cash",
+      "mobileMoney": "Mobile Money",
+      "mobileMoneyNumber": "Mobile money number",
+      "phonePlaceholder": "e.g. +256 700 000000"
+    },
+    "confirm": {
+      "title": "We found you a driver",
+      "subtitle": "Review their details, then confirm to send the request.",
+      "confirming": "Confirming…",
+      "button": "Confirm this driver"
+    },
+    "noDrivers": {
+      "title": "No drivers nearby",
+      "body": "We couldn't find a driver right now. Try again in a moment.",
+      "tryAgain": "Try again"
+    },
+    "complete": {
+      "title": "Trip complete",
+      "fare": "Fare: {{fare}}",
+      "thanks": "Thanks for riding with Gabla."
+    },
+    "cancelled": {
+      "title": "Trip cancelled"
+    },
+    "status": {
+      "searching": {
+        "title": "Finding your driver…",
+        "subtitle": "This usually takes a few seconds."
+      },
+      "matched": {
+        "title": "Driver is on the way",
+        "subtitle": "Track them below."
+      },
+      "arrived": {
+        "title": "Your driver has arrived",
+        "subtitle": "Head out when you're ready."
+      },
+      "in_progress": {
+        "title": "On your way",
+        "subtitle": "Enjoy the ride."
+      }
+    },
+    "errors": {
+      "phoneRequired": "Enter the phone number to pay from.",
+      "sessionExpired": "Your session expired. Sign in again to keep tracking this ride.",
+      "requestFailed": "Unable to request a ride right now.",
+      "confirmFailed": "Unable to confirm this ride.",
+      "cancelFailed": "Unable to cancel this trip."
+    }
+  }
+}

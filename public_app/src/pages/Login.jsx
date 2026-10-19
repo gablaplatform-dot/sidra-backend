@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { getSession, setSession } from "../lib/session";
@@ -8,6 +9,7 @@ import { safeNext } from "../lib/authRedirect";
 import { claimInterest } from "../lib/tracking";
 
 export default function Login() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -43,7 +45,7 @@ export default function Login() {
       const target = result.busOperator && !searchParams.get("next") ? "/bus/operator" : destination;
       navigate(result.isNewUser ? `/welcome?next=${encodeURIComponent(destination)}` : target, { replace: true });
     } catch (submitError) {
-      setError(submitError.message || "Sign-in failed. Please try again.");
+      setError(submitError.message || t("auth.signInFailed"));
     } finally {
       setSigningIn(false);
     }
@@ -51,7 +53,7 @@ export default function Login() {
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) {
-      setError("Google sign-in is not configured yet.");
+      setError(t("auth.googleNotConfigured"));
       return;
     }
     let active = true;
@@ -71,7 +73,7 @@ export default function Login() {
         });
       })
       .catch((loadError) => {
-        if (active) setError(loadError.message || "Unable to load Google sign-in");
+        if (active) setError(loadError.message || t("auth.googleLoadFailed"));
       });
     return () => {
       active = false;
@@ -91,7 +93,7 @@ export default function Login() {
       });
       setReconnectSent(true);
     } catch (submitError) {
-      setReconnectError(submitError.message || "Unable to send a link right now.");
+      setReconnectError(submitError.message || t("auth.reconnectFailed"));
     } finally {
       setReconnectSending(false);
     }
@@ -101,35 +103,35 @@ export default function Login() {
     <main className="auth-shell">
       <div className="auth-card">
         <div className="brand"><span className="brand-mark">G</span><strong>Gabla</strong></div>
-        <p className="eyebrow">Welcome</p>
-        <h1>Sign in to continue</h1>
-        <p className="auth-subtitle">Use your Google account to access Gabla. No password needed.</p>
+        <p className="eyebrow">{t("auth.eyebrow")}</p>
+        <h1>{t("auth.title")}</h1>
+        <p className="auth-subtitle">{t("auth.subtitle")}</p>
 
         {location.state?.message ? <div className="info-message">{location.state.message}</div> : null}
         {error ? <div className="error-message">{error}</div> : null}
 
         <div className="google-button-slot" ref={buttonRef} />
-        {signingIn ? <p className="auth-hint">Signing you in…</p> : null}
+        {signingIn ? <p className="auth-hint">{t("auth.signingIn")}</p> : null}
 
         {!reconnectOpen ? (
           <button type="button" className="link-button reconnect-toggle" onClick={() => setReconnectOpen(true)}>
-            Signed in before as a service provider but don&apos;t see your profile?
+            {t("auth.reconnectToggle")}
           </button>
         ) : reconnectSent ? (
-          <p className="info-message">If that email belongs to a provider account, we&apos;ve sent a link to reconnect Google sign-in. Check your inbox.</p>
+          <p className="info-message">{t("auth.reconnectSent")}</p>
         ) : (
           <form className="reconnect-form" onSubmit={submitReconnect}>
-            <p className="auth-hint">Enter the email your business was registered with and we&apos;ll send you a link to reconnect Google sign-in.</p>
+            <p className="auth-hint">{t("auth.reconnectHelp")}</p>
             {reconnectError ? <div className="error-message">{reconnectError}</div> : null}
             <input
               type="email"
               required
               value={reconnectEmail}
               onChange={(e) => setReconnectEmail(e.target.value)}
-              placeholder="you@business.com"
+              placeholder={t("auth.reconnectEmailPlaceholder")}
             />
             <button type="submit" className="secondary-button" disabled={reconnectSending}>
-              {reconnectSending ? "Sending…" : "Send reconnect link"}
+              {reconnectSending ? t("auth.sending") : t("auth.sendReconnect")}
             </button>
           </form>
         )}

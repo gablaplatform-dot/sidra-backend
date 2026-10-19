@@ -1,12 +1,15 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import ProviderCustomFields, { hasAnsweredCustomFields } from "../ProviderCustomFields";
 import { IconChevronLeft, IconStar } from "../icons";
+import { formatUgx } from "../../lib/format";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
 export default function ProviderLayoutMenu({ provider, categoryId, categoryName, providerFields = [], listings, gallery, onUnlock }) {
+  const { t } = useTranslation();
   return (
     <>
       <section
@@ -14,7 +17,7 @@ export default function ProviderLayoutMenu({ provider, categoryId, categoryName,
         style={provider.media?.coverUrl ? { backgroundImage: `url("${provider.media.coverUrl}")` } : undefined}
       >
         <Link to={categoryId ? `/category/${categoryId}` : "/home"} className="banner-back">
-          <IconChevronLeft /> {categoryId ? categoryName : "Home"}
+          <IconChevronLeft /> {categoryId ? categoryName : t("nav.home")}
         </Link>
         <div className="provider-hero-label">
           {!provider.media?.coverUrl ? <span className="provider-hero-icon">{initials(provider.businessName)}</span> : null}
@@ -23,7 +26,7 @@ export default function ProviderLayoutMenu({ provider, categoryId, categoryName,
             <p className="provider-hero-meta">
               {categoryName}
               <span className="hero-trust-dot">&middot;</span>
-              <IconStar /> {provider.ratingAvg ? provider.ratingAvg.toFixed(1) : "New"}
+              <IconStar /> {provider.ratingAvg ? provider.ratingAvg.toFixed(1) : t("common.new")}
             </p>
           </div>
         </div>
@@ -39,7 +42,7 @@ export default function ProviderLayoutMenu({ provider, categoryId, categoryName,
           ) : null}
 
           <section className="detail-block">
-            <h2>Menu</h2>
+            <h2>{t("layouts.menu")}</h2>
             {listings.length ? (
               <div className="menu-list">
                 {listings.map((item) => (
@@ -49,19 +52,19 @@ export default function ProviderLayoutMenu({ provider, categoryId, categoryName,
                       {item.description ? <p className="provider-meta">{item.description}</p> : null}
                     </div>
                     <div className="menu-row-price">
-                      {Number(item.price) > 0 ? `UGX ${Number(item.price).toLocaleString()}` : "—"}
+                      {Number(item.price) > 0 ? formatUgx(item.price) : "—"}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="home-empty">Nothing on the menu yet.</p>
+              <p className="home-empty">{t("layouts.noMenu")}</p>
             )}
           </section>
 
           {gallery.length ? (
             <section className="detail-block">
-              <h2>Gallery</h2>
+              <h2>{t("layouts.gallery")}</h2>
               <div className="gallery-grid">
                 {gallery.map((url) => (
                   <div key={url} className="gallery-item" style={{ backgroundImage: `url("${url}")` }} />

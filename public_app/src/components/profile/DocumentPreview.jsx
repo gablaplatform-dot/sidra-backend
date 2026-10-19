@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 
 import { fetchPreviewPdf, openPdfWith } from "../../lib/documents";
 import { IconReceipt } from "../icons";
@@ -18,23 +19,24 @@ export const useMediaQuery = (query) => {
   return matches;
 };
 
-const TYPES = [
-  { key: "quotation", label: "Quotation" },
-  { key: "receipt", label: "Receipt" }
-];
+const TYPES = ["quotation", "receipt"];
 
-const TypeToggle = ({ type, onChange }) => (
-  <div className="docs-type-toggle" role="group" aria-label="Preview document type">
-    {TYPES.map((item) => (
-      <button key={item.key} type="button" className={type === item.key ? "is-active" : ""} aria-pressed={type === item.key} onClick={() => onChange(item.key)}>
-        {item.label}
-      </button>
-    ))}
-  </div>
-);
+const TypeToggle = ({ type, onChange }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="docs-type-toggle" role="group" aria-label={t("docs.preview.typeAria")}>
+      {TYPES.map((key) => (
+        <button key={key} type="button" className={type === key ? "is-active" : ""} aria-pressed={type === key} onClick={() => onChange(key)}>
+          {t(`docs.type.${key}`)}
+        </button>
+      ))}
+    </div>
+  );
+};
 
 // A tiny HTML miniature of the document so phones (which can't show PDFs inline) still get instant feedback.
 const PaperMock = ({ settings, type }) => {
+  const { t } = useTranslation();
   const { brand, quotation, receipt } = settings;
   const accent = /^#[0-9a-f]{6}$/i.test(brand.accentColor) ? brand.accentColor : "#0b2046";
   const title = type === "receipt" ? receipt.title : quotation.title;
@@ -45,16 +47,16 @@ const PaperMock = ({ settings, type }) => {
         <span className="docs-paper-logo">
           {brand.logoUrl ? <img src={brand.logoUrl} alt="" /> : monogram(brand.businessName)}
         </span>
-        <span className="docs-paper-name">{brand.businessName || "Your business"}</span>
-        <span className="docs-paper-title">{title || "Document"}</span>
+        <span className="docs-paper-name">{brand.businessName || t("docs.preview.yourBusiness")}</span>
+        <span className="docs-paper-title">{title || t("docs.type.document")}</span>
       </div>
       <div className="docs-paper-body">
         <div className="docs-paper-meta">
           <span>{String(prefix || "").toUpperCase()}-2026-0042</span>
-          <span>Prepared for Aisha N.</span>
+          <span>{t("docs.preview.preparedFor", { name: "Aisha N." })}</span>
         </div>
         <div className="docs-paper-line" /><div className="docs-paper-line" /><div className="docs-paper-line is-short" />
-        <div className="docs-paper-total" style={{ background: accent }}><span>Total</span><strong>UGX 1,250,000</strong></div>
+        <div className="docs-paper-total" style={{ background: accent }}><span>{t("docs.preview.total")}</span><strong>UGX 1,250,000</strong></div>
       </div>
     </div>
   );
@@ -63,6 +65,7 @@ const PaperMock = ({ settings, type }) => {
 // Live PDF preview of the UNSAVED draft. Desktop: an inline viewer that refreshes (debounced) while editing.
 // Phones/tablets: a preview card with an "Open PDF" button, because mobile browsers can't inline PDFs.
 export default function DocumentPreview({ draft, patch, valid, type, onTypeChange, active = true }) {
+  const { t } = useTranslation();
   const compact = useMediaQuery("(max-width: 900px), (pointer: coarse)");
   // Only the edited settings are sent; the server fills in everything else (saved settings, then profile).
   const payload = JSON.stringify(patch);
@@ -87,7 +90,7 @@ export default function DocumentPreview({ draft, patch, valid, type, onTypeChang
         if (previous) setTimeout(() => URL.revokeObjectURL(previous), 1500);
       } catch (error) {
         if (error.name === "AbortError") return;
-        setView((v) => ({ ...v, status: "error", error: error.message || "Unable to build the preview." }));
+        setView((v) => ({ ...v, status: "error", error: error.message || t("docs.preview.errBuild") }));
       }
     }, urlRef.current ? 600 : 50);
     return () => {
@@ -102,21 +105,21 @@ export default function DocumentPreview({ draft, patch, valid, type, onTypeChang
     try {
       await openPdfWith(() => fetchPreviewPdf(type, JSON.parse(payload)), `${type}-preview.pdf`);
     } catch (error) {
-      setOpenError(error.message || "Unable to build the preview.");
+      setOpenError(error.message || t("docs.preview.errBuild"));
     } finally {
       setOpening(false);
     }
   };
 
-  const label = type === "receipt" ? "receipt" : "quotation";
+  const label = t(type === "receipt" ? "docs.preview.labelReceipt" : "docs.preview.labelQuotation");
 
   return (
-    <aside className="docs-preview" aria-label="Document preview">
+    <aside className="docs-preview" aria-label={t("docs.preview.aria")}>
       <div className="docs-preview-bar">
         <TypeToggle type={type} onChange={onTypeChange} />
         {!compact ? (
           <button type="button" className="docs-open-link" onClick={openPreview} disabled={opening || !valid}>
-            {opening ? "Opening…" : "Open preview PDF ↗"}
+            {opening ? t("docs.opening") : t("docs.preview.openLink")}
           </button>
         ) : null}
       </div>
@@ -125,22 +128,22 @@ export default function DocumentPreview({ draft, patch, valid, type, onTypeChang
         <div className="docs-preview-card">
           <PaperMock settings={draft} type={type} />
           <p className="docs-preview-note">
-            Phones can&apos;t show PDFs inside the page. Tap below to see your <strong>{label}</strong> exactly as the buyer will receive it, using the changes you&apos;ve made so far.
+            <Trans i18nKey="docs.preview.note" values={{ label }} components={{ b: <strong /> }} />
           </p>
           <button type="button" className="docs-preview-cta" onClick={openPreview} disabled={opening || !valid}>
-            {opening ? "Building PDF…" : `Open preview PDF`}
+            {opening ? t("docs.preview.building") : t("docs.preview.open")}
           </button>
-          {!valid ? <p className="docs-error">Fix the highlighted fields to preview.</p> : null}
+          {!valid ? <p className="docs-error">{t("docs.preview.fixFields")}</p> : null}
           {openError ? <p className="docs-error" role="alert">{openError}</p> : null}
-          <p className="docs-hint">Sample content is used for the items and buyer.</p>
+          <p className="docs-hint">{t("docs.preview.sample")}</p>
         </div>
       ) : (
         <div className="docs-preview-stage" aria-busy={view.status === "loading" || view.status === "updating"}>
           {view.url ? (
-            <iframe title={`Live ${label} preview`} className="docs-preview-frame" src={`${view.url}#toolbar=0&navpanes=0&view=FitH`} />
+            <iframe title={t("docs.preview.liveTitle", { label })} className="docs-preview-frame" src={`${view.url}#toolbar=0&navpanes=0&view=FitH`} />
           ) : view.status === "error" ? null : (
             <div className="docs-preview-skel" role="status">
-              <span className="sr-only">Building preview…</span>
+              <span className="sr-only">{t("docs.preview.buildingPreview")}</span>
               <Skel h={64} w="100%" r={10} />
               <div className="docs-preview-skel-row"><Skel h={90} w="100%" r={10} /><Skel h={90} w="100%" r={10} /></div>
               <Skel h={26} w="100%" r={8} />
@@ -149,9 +152,9 @@ export default function DocumentPreview({ draft, patch, valid, type, onTypeChang
               <Skel h={80} w="100%" r={10} />
             </div>
           )}
-          {view.status === "updating" ? <div className="docs-preview-updating" role="status"><span className="docs-spinner" aria-hidden="true" /> Updating preview…</div> : null}
+          {view.status === "updating" ? <div className="docs-preview-updating" role="status"><span className="docs-spinner" aria-hidden="true" /> {t("docs.preview.updating")}</div> : null}
           {!valid ? (
-            <div className="docs-preview-paused" role="status">Preview paused — fix the highlighted fields to refresh it.</div>
+            <div className="docs-preview-paused" role="status">{t("docs.preview.paused")}</div>
           ) : null}
           {view.status === "error" && valid ? (
             <div className="docs-preview-error" role="alert">
@@ -161,7 +164,7 @@ export default function DocumentPreview({ draft, patch, valid, type, onTypeChang
           ) : null}
         </div>
       )}
-      <p className="docs-preview-foot">Preview uses sample items and your <strong>unsaved</strong> changes.</p>
+      <p className="docs-preview-foot"><Trans i18nKey="docs.preview.foot" components={{ b: <strong /> }} /></p>
     </aside>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
 
 import BusLayout from "../../components/bus/BusLayout";
 import TicketCard, { DelayChip } from "../../components/bus/TicketCard";
@@ -10,8 +11,8 @@ import { AmenityChips, BusLogo, EmptyState, Photo, Rating, StatusPill, asList, t
 import { ArrowRight, BusIcon, Calendar, Chat, ChevronLeft, Check, Clock, Phone, Pin, Users } from "../../components/bus/icons";
 import { Skel } from "../../components/Skeleton";
 import {
-  arrivalAt, busApi, dayDiff, dayLabel, durationLabel, eatDate, eatTime, effectiveDeparture, isUgPhone, longDayLabel, normalizeUgPhone,
-  phoneNetwork, stopOffset, stopsLabel, stopsOf, tripStatus, ugx
+  arrivalAt, busApi, dayDiff, dayLabel, durationLabel, eatDate, eatTime, effectiveDeparture, isUgPhone, normalizeUgPhone,
+  phoneNetwork, stopOffset, stopsLabel, stopsOf, tripStatus, ugx, weekdayLong
 } from "../../lib/bus";
 import { loginPath } from "../../lib/authRedirect";
 import { getSession } from "../../lib/session";
@@ -50,9 +51,10 @@ const clock = (ms) => {
 };
 
 function TripSkeleton() {
+  const { t: tr } = useTranslation();
   return (
     <div role="status" aria-busy="true" aria-live="polite">
-      <span className="sr-only">Loading trip…</span>
+      <span className="sr-only">{tr("bus.trip.loading")}</span>
       <div className="bus-triphero is-skel" aria-hidden="true" />
       <div className="bus-wrap bus-tripgrid" aria-hidden="true">
         <div className="bus-tripmain">
@@ -73,15 +75,16 @@ function TripSkeleton() {
 
 // Photo hero: the bus' own picture with the company and bus type pinned on it.
 function TripHero({ trip, onBack }) {
+  const { t: tr } = useTranslation();
   const { operator, busType, route } = trip;
   return (
-    <section className="bus-triphero" aria-label="Trip photo">
+    <section className="bus-triphero" aria-label={tr("bus.trip.photoAria")}>
       <Photo src={busType?.imageUrl} name={operator.companyName} width={1400} eager className="bus-triphero-photo" />
       <span className="bus-hero-shade is-trip" aria-hidden="true" />
       <div className="bus-wrap bus-triphero-in">
         <div className="bus-triphero-top">
-          <button type="button" className="bus-glassbtn" onClick={onBack}><ChevronLeft size={18} /> Back</button>
-          <nav className="bus-breadcrumb is-light" aria-label="Breadcrumb"><Link to="/bus">Gabla Bus</Link><span>/</span><Link to="/bus/search">Trips</Link><span>/</span><span>{route.originName} to {route.destinationName}</span></nav>
+          <button type="button" className="bus-glassbtn" onClick={onBack}><ChevronLeft size={18} /> {tr("bus.trip.back")}</button>
+          <nav className="bus-breadcrumb is-light" aria-label={tr("bus.breadcrumb")}><Link to="/bus">Gabla Bus</Link><span>/</span><Link to="/bus/search">{tr("bus.trip.trips")}</Link><span>/</span><span>{tr("bus.trip.routeTo", { from: route.originName, to: route.destinationName })}</span></nav>
           {busType ? <span className="bus-typetag">{busType.name}</span> : null}
         </div>
         <div className="bus-triphero-chips">
@@ -97,6 +100,7 @@ function TripHero({ trip, onBack }) {
 
 // The rounded sheet that overlaps the photo: route, key facts, facilities and the stop-by-stop timeline.
 function TripSheet({ trip }) {
+  const { t: tr } = useTranslation();
   const { route, operator, busType } = trip;
   const arrive = arrivalAt(trip.departureAt, route.durationMinutes);
   const plus = dayDiff(trip.departureAt, arrive);
@@ -108,10 +112,10 @@ function TripSheet({ trip }) {
   const boardAt = route.boardingPoint || operator.parkName || "-";
 
   return (
-    <section className="bus-sheetcard" aria-label="Trip details">
+    <section className="bus-sheetcard" aria-label={tr("bus.trip.detailsAria")}>
       <div className="bus-sheet-top">
         <div className="bus-sheet-title">
-          <span className="bus-kicker">{dayLabel(eatDate(trip.departureAt))} · {trip.soldOut ? "Sold out" : "Open for booking"}</span>
+          <span className="bus-kicker">{dayLabel(eatDate(trip.departureAt))} · {trip.soldOut ? tr("bus.tripStatus.soldOut") : tr("bus.trip.openForBooking")}</span>
           <h1>{route.originName} <ArrowRight size={22} /> {route.destinationName}</h1>
         </div>
         <StatusPill tone={status.tone}>{status.label}</StatusPill>
@@ -119,50 +123,50 @@ function TripSheet({ trip }) {
 
       <div className="bus-journey">
         <div className="bus-journey-leg">
-          <small className="bus-lbl">Departs</small>
+          <small className="bus-lbl">{tr("bus.trips.departs")}</small>
           <BigClock value={trip.departureAt} />
           <span className="bus-journey-town">{route.originName}</span>
         </div>
-        <div className="bus-journey-track" title={stops.length ? stops.map((s) => s.name).join(" · ") : "Direct"}>
+        <div className="bus-journey-track" title={stops.length ? stops.map((s) => s.name).join(" · ") : tr("bus.trip.direct")}>
           <span className="bus-journey-dur">{durationLabel(route.durationMinutes)}</span>
           <span className="bus-trip-track" aria-hidden="true"><i className="end" />{stops.slice(0, 6).map((s, i) => <i key={i} className="mid" />)}<i className="end" /></span>
           <span className="bus-journey-stops">{stopsLabel(route)}</span>
         </div>
         <div className="bus-journey-leg is-right">
-          <small className="bus-lbl">Arrives (est.)</small>
+          <small className="bus-lbl">{tr("bus.trip.arrivesEst")}</small>
           <BigClock value={arrive} plus={plus} />
           <span className="bus-journey-town">{route.destinationName}</span>
         </div>
       </div>
 
       {trip.note ? <p className="bus-notice">{trip.note}</p> : null}
-      {Number(trip.delayMinutes) > 0 ? <div className="bus-alert bus-alert-warn" style={{ marginTop: 14 }}><DelayChip trip={trip} /> The bus now leaves at about {eatTime(effectiveDeparture(trip))}.</div> : null}
+      {Number(trip.delayMinutes) > 0 ? <div className="bus-alert bus-alert-warn" style={{ marginTop: 14 }}><DelayChip trip={trip} /> {tr("bus.trip.nowLeaves", { time: eatTime(effectiveDeparture(trip)) })}</div> : null}
 
       <div className="bus-tiles4">
-        <div className="bus-infotile"><span className="bus-lbl"><Calendar size={14} /> Date</span><b>{dayLabel(eatDate(trip.departureAt))}</b><small>{longDayLabel(eatDate(trip.departureAt)).split(",")[0]}</small></div>
+        <div className="bus-infotile"><span className="bus-lbl"><Calendar size={14} /> {tr("bus.trip.date")}</span><b>{dayLabel(eatDate(trip.departureAt))}</b><small>{weekdayLong(eatDate(trip.departureAt))}</small></div>
         <div className="bus-infotile">
-          <span className="bus-lbl"><Users size={14} /> Remaining</span>
-          <b>{trip.soldOut ? "No seats" : `${trip.seatsLeft} seats`}</b>
+          <span className="bus-lbl"><Users size={14} /> {tr("bus.trip.remaining")}</span>
+          <b>{trip.soldOut ? tr("bus.trip.noSeats") : tr("bus.parts.seats", { count: trip.seatsLeft })}</b>
           <span className={`bus-meter ${trip.seatsLeft <= 5 ? "is-low" : ""}`} aria-hidden="true"><i style={{ width: `${trip.soldOut ? 0 : pct}%` }} /></span>
         </div>
-        <div className="bus-infotile"><span className="bus-lbl"><Pin size={14} /> Boarding</span><b>{boardAt}</b><small>{operator.parkName}{operator.parkDistrict ? `, ${operator.parkDistrict}` : ""}</small></div>
-        <div className="bus-infotile"><span className="bus-lbl"><Clock size={14} /> Drop-off</span><b>{route.dropoffPoint || route.destinationName}</b><small>{dayLabel(eatDate(arrive))}</small></div>
+        <div className="bus-infotile"><span className="bus-lbl"><Pin size={14} /> {tr("bus.trip.boarding")}</span><b>{boardAt}</b><small>{operator.parkName}{operator.parkDistrict ? `, ${operator.parkDistrict}` : ""}</small></div>
+        <div className="bus-infotile"><span className="bus-lbl"><Clock size={14} /> {tr("bus.trip.dropoff")}</span><b>{route.dropoffPoint || route.destinationName}</b><small>{dayLabel(eatDate(arrive))}</small></div>
       </div>
 
       {amenities.length ? (
         <div className="bus-block">
-          <h2 className="bus-block-title">Facilities</h2>
+          <h2 className="bus-block-title">{tr("bus.trip.facilities")}</h2>
           <AmenityChips list={amenities} max={12} tone="is-big" />
         </div>
       ) : null}
 
       <div className="bus-block">
-        <h2 className="bus-block-title">Route &amp; stops</h2>
+        <h2 className="bus-block-title">{tr("bus.trip.routeStops")}</h2>
         <ol className="bus-timeline">
           <li className="is-first">
             <time>{eatTime(trip.departureAt)}</time>
             <span className="bus-tl-dot" aria-hidden="true" />
-            <div><b>{route.originName}</b><small>Board at {boardAt}</small></div>
+            <div><b>{route.originName}</b><small>{tr("bus.trips.boardAt", { place: boardAt })}</small></div>
           </li>
           {stops.map((s, i) => {
             const off = stopOffset(s);
@@ -170,21 +174,21 @@ function TripSheet({ trip }) {
               <li key={`${s.name}-${i}`}>
                 <time>{off === null ? "" : `~${eatTime(new Date(depMs + off * 60000))}`}</time>
                 <span className="bus-tl-dot" aria-hidden="true" />
-                <div><b>{s.name}</b><small>{off === null ? "Stop on the way" : `Stop · ${durationLabel(off)} in`}</small></div>
+                <div><b>{s.name}</b><small>{off === null ? tr("bus.trip.stopOnWay") : tr("bus.trip.stopIn", { time: durationLabel(off) })}</small></div>
               </li>
             );
           })}
           <li className="is-last">
             <time>~{eatTime(arrive)}{plus > 0 ? <sup className="bus-plusday">+{plus}</sup> : null}</time>
             <span className="bus-tl-dot" aria-hidden="true" />
-            <div><b>{route.destinationName}</b><small>{route.dropoffPoint ? `Drop-off: ${route.dropoffPoint}` : "Final stop"}</small></div>
+            <div><b>{route.destinationName}</b><small>{route.dropoffPoint ? tr("bus.trip.dropoffAt", { place: route.dropoffPoint }) : tr("bus.trip.finalStop")}</small></div>
           </li>
         </ol>
       </div>
 
       {operator.contactPhone || operator.whatsapp ? (
         <div className="bus-company-actions">
-          {operator.contactPhone ? <a className="bus-btn bus-btn-light bus-btn-sm" href={telHref(operator.contactPhone)}><Phone size={16} /> Call {operator.companyName}</a> : null}
+          {operator.contactPhone ? <a className="bus-btn bus-btn-light bus-btn-sm" href={telHref(operator.contactPhone)}><Phone size={16} /> {tr("bus.trip.callCompany", { company: operator.companyName })}</a> : null}
           {operator.whatsapp ? <a className="bus-btn bus-btn-light bus-btn-sm" href={waHref(operator.whatsapp)} target="_blank" rel="noopener noreferrer"><Chat size={16} /> WhatsApp</a> : null}
         </div>
       ) : null}
@@ -199,6 +203,7 @@ export default function BusTrip() {
 }
 
 function BusTripPage({ tripId }) {
+  const { t: tr } = useTranslation();
   useScrollTop(tripId);
   const location = useLocation();
   const navigate = useNavigate();
@@ -329,13 +334,13 @@ function BusTripPage({ tripId }) {
 
   const errors = useMemo(() => {
     const e = {};
-    if (count < 1) e.tickets = "Choose at least one ticket.";
-    if (name.trim().length < 2) e.name = "Enter the passenger's full name.";
-    if (!isUgPhone(phone)) e.phone = "Enter a valid Ugandan number, e.g. 0772 123 456.";
-    if (email.trim() && !EMAIL_RE.test(email.trim())) e.email = "That email doesn't look right.";
-    if (!isUgPhone(payPhone)) e.payPhone = "Enter the MTN or Airtel number you'll pay from.";
+    if (count < 1) e.tickets = tr("bus.trip.errTickets");
+    if (name.trim().length < 2) e.name = tr("bus.trip.errName");
+    if (!isUgPhone(phone)) e.phone = tr("bus.trip.errPhone");
+    if (email.trim() && !EMAIL_RE.test(email.trim())) e.email = tr("bus.trip.errEmail");
+    if (!isUgPhone(payPhone)) e.payPhone = tr("bus.trip.errPayPhone");
     return e;
-  }, [count, name, phone, email, payPhone]);
+  }, [count, name, phone, email, payPhone, tr]);
 
   const pay = async (event) => {
     event.preventDefault();
@@ -369,7 +374,7 @@ function BusTripPage({ tripId }) {
       setPhase("waiting");
     } catch (err) {
       if (err.status === 401) { navigate(loginPath(location)); return; }
-      setFormError(err.code === "VALIDATION_ERROR" ? { message: "Some details look wrong. Check the passenger name, both phone numbers and the email, then try again." } : err);
+      setFormError(err.code === "VALIDATION_ERROR" ? { message: tr("bus.trip.errValidation") } : err);
       if (["BUS_NOT_ENOUGH_SEATS", "BUS_SALES_CLOSED", "BUS_TRIP_CANCELLED", "BUS_TRIP_NOT_FOUND"].includes(err.code)) tripQ.reload();
     } finally {
       setSubmitting(false);
@@ -394,10 +399,10 @@ function BusTripPage({ tripId }) {
   };
 
   const crumbs = (
-    <nav className="bus-breadcrumb" aria-label="Breadcrumb">
+    <nav className="bus-breadcrumb" aria-label={tr("bus.breadcrumb")}>
       <Link to="/bus">Gabla Bus</Link><span>/</span>
-      <Link to="/bus/search">Trips</Link><span>/</span>
-      <span>{trip ? `${trip.route.originName} to ${trip.route.destinationName}` : "Trip"}</span>
+      <Link to="/bus/search">{tr("bus.trip.trips")}</Link><span>/</span>
+      <span>{trip ? tr("bus.trip.routeTo", { from: trip.route.originName, to: trip.route.destinationName }) : tr("bus.trip.trip")}</span>
     </nav>
   );
 
@@ -408,13 +413,13 @@ function BusTripPage({ tripId }) {
         <div className="bus-wrap bus-sec bus-sec-first">
           {crumbs}
           <EmptyState
-            title={gone ? "This trip isn't available any more" : "Couldn't load this trip"}
+            title={gone ? tr("bus.trip.gone") : tr("bus.trip.loadFailed")}
             action={<>
-              {!gone ? <button type="button" className="bus-btn bus-btn-navy" onClick={tripQ.reload}>Try again</button> : null}
-              <Link to="/bus/search" className="bus-btn bus-btn-light">Find another trip</Link>
+              {!gone ? <button type="button" className="bus-btn bus-btn-navy" onClick={tripQ.reload}>{tr("bus.parts.tryAgain")}</button> : null}
+              <Link to="/bus/search" className="bus-btn bus-btn-light">{tr("bus.trip.findAnother")}</Link>
             </>}
           >
-            {gone ? "It may have been removed. Pick another departure." : tripQ.error.status === 429 ? "Lots of people are booking right now. Wait a few seconds and try again." : tripQ.error.message}
+            {gone ? tr("bus.trip.goneSub") : tripQ.error.status === 429 ? tr("bus.parts.busy") : tripQ.error.message}
           </EmptyState>
         </div>
       </BusLayout>
@@ -434,22 +439,22 @@ function BusTripPage({ tripId }) {
           <div className="bus-narrow">
             <div className="bus-card bus-pay-box" role="status" aria-live="polite">
               <div className="bus-pay-anim" aria-hidden="true"><span /><span /><span /><Phone size={30} /></div>
-              <h1 className="bus-page-title">Check your phone and approve the payment</h1>
-              <p>We sent a request for <b>{ugx(pending.total)}</b> to <b>{pending.payPhone ? `+${pending.payPhone}` : "your phone"}</b>{network ? ` (${network})` : ""}. Enter your PIN to approve it.</p>
-              <ol className="bus-pay-steps" aria-label="Progress">
-                <li className="is-done"><Check size={14} /> Request sent</li>
-                <li className="is-now">Waiting for your approval</li>
-                <li>Ticket issued</li>
+              <h1 className="bus-page-title">{tr("bus.trip.waitTitle")}</h1>
+              <p><Trans i18nKey="bus.trip.waitBody" values={{ amount: ugx(pending.total), phone: pending.payPhone ? `+${pending.payPhone}` : tr("bus.trip.yourPhone"), network: network ? ` (${network})` : "" }} components={{ b: <b /> }} /></p>
+              <ol className="bus-pay-steps" aria-label={tr("bus.trip.progress")}>
+                <li className="is-done"><Check size={14} /> {tr("bus.trip.stepSent")}</li>
+                <li className="is-now">{tr("bus.trip.stepWaiting")}</li>
+                <li>{tr("bus.trip.stepIssued")}</li>
               </ol>
               {left > 0 ? (
                 <>
-                  <p className="bus-hold-clock">Seats held for <b>{clock(left)}</b></p>
+                  <p className="bus-hold-clock"><Trans i18nKey="bus.trip.heldFor" values={{ time: clock(left) }} components={{ b: <b /> }} /></p>
                   <span className="bus-meter bus-hold-meter" aria-hidden="true"><i style={{ width: `${Math.min(100, (left / total) * 100)}%` }} /></span>
                 </>
-              ) : <p className="bus-hold-clock">Finishing up…</p>}
-              <p className="bus-hint" style={{ marginTop: 14 }}>Reference <b>{pending.reference}</b>. Keep this page open - your tickets appear here the moment the payment goes through.</p>
-              {pollWarn ? <div className="bus-alert bus-alert-warn" style={{ marginTop: 14 }}>We're having trouble reaching the server. We'll keep trying - your payment is not affected.</div> : null}
-              <p style={{ marginTop: 18 }}><Link to="/bus/tickets" className="bus-link">I'll check My tickets later</Link></p>
+              ) : <p className="bus-hold-clock">{tr("bus.trip.finishing")}</p>}
+              <p className="bus-hint" style={{ marginTop: 14 }}><Trans i18nKey="bus.trip.keepOpen" values={{ ref: pending.reference }} components={{ b: <b /> }} /></p>
+              {pollWarn ? <div className="bus-alert bus-alert-warn" style={{ marginTop: 14 }}>{tr("bus.trip.pollWarn")}</div> : null}
+              <p style={{ marginTop: 18 }}><Link to="/bus/tickets" className="bus-link">{tr("bus.trip.checkLater")}</Link></p>
             </div>
           </div>
         </div>
@@ -464,18 +469,18 @@ function BusTripPage({ tripId }) {
           {crumbs}
           <div className="bus-success">
             <span className="bus-success-icon"><Check size={30} /></span>
-            <h1 className="bus-page-title">You're booked!</h1>
-            <p className="bus-section-sub">Payment received. Reference <b>{finalBooking.reference}</b> · {finalBooking.tickets.length} {finalBooking.tickets.length === 1 ? "ticket" : "tickets"} · {ugx(finalBooking.total)}</p>
+            <h1 className="bus-page-title">{tr("bus.trip.booked")}</h1>
+            <p className="bus-section-sub"><Trans i18nKey="bus.trip.paidSummary" values={{ ref: finalBooking.reference, tickets: tr("bus.ticketsCount", { count: finalBooking.tickets.length }), total: ugx(finalBooking.total) }} components={{ b: <b /> }} /></p>
             <div className="bus-success-actions">
-              <Link to="/bus/tickets" className="bus-btn bus-btn-primary">View my tickets</Link>
-              <Link to="/bus" className="bus-btn bus-btn-light">Book another trip</Link>
+              <Link to="/bus/tickets" className="bus-btn bus-btn-primary">{tr("bus.trip.viewMyTickets")}</Link>
+              <Link to="/bus" className="bus-btn bus-btn-light">{tr("bus.trip.bookAnother")}</Link>
             </div>
           </div>
         </div>
         <div className="bus-ticketpage is-valid is-stack">
           <div className="bus-wrap">
             {finalBooking.tickets.map((t) => <div className="bus-pass-slide" key={t.id}><TicketCard ticket={t} booking={finalBooking} link /></div>)}
-            <p className="bus-pass-foot">Tip: take a screenshot of your QR code so you have it even without signal.</p>
+            <p className="bus-pass-foot">{tr("bus.trip.screenshotTip")}</p>
           </div>
         </div>
       </BusLayout>
@@ -491,12 +496,12 @@ function BusTripPage({ tripId }) {
           <div className="bus-narrow">
             <div className="bus-card bus-pay-box" role="alert">
               <span className="bus-success-icon is-bad" aria-hidden="true"><BusIcon size={28} /></span>
-              <h1 className="bus-page-title">{expired ? "We didn't get your payment in time" : "The payment didn't go through"}</h1>
-              <p style={{ marginTop: 10 }}>{expired ? "The approval window ran out and your seats were released." : "The payment was declined or cancelled on your phone."} No tickets were issued.</p>
-              <p className="bus-hint" style={{ marginTop: 10 }}>If money was taken from your account, contact the bus company or Gabla support and quote reference <b>{pending?.reference || finalBooking?.reference}</b>.</p>
+              <h1 className="bus-page-title">{expired ? tr("bus.trip.failedExpired") : tr("bus.trip.failedDeclined")}</h1>
+              <p style={{ marginTop: 10 }}>{expired ? tr("bus.trip.failedExpiredSub") : tr("bus.trip.failedDeclinedSub")} {tr("bus.trip.noTickets")}</p>
+              <p className="bus-hint" style={{ marginTop: 10 }}><Trans i18nKey="bus.trip.moneyTaken" values={{ ref: pending?.reference || finalBooking?.reference }} components={{ b: <b /> }} /></p>
               <div className="bus-success-actions">
-                <button type="button" className="bus-btn bus-btn-primary" onClick={startOver}>Try again</button>
-                <Link to="/bus/tickets" className="bus-btn bus-btn-light">My tickets</Link>
+                <button type="button" className="bus-btn bus-btn-primary" onClick={startOver}>{tr("bus.parts.tryAgain")}</button>
+                <Link to="/bus/tickets" className="bus-btn bus-btn-light">{tr("bus.layout.myTickets")}</Link>
               </div>
             </div>
           </div>
@@ -508,10 +513,10 @@ function BusTripPage({ tripId }) {
   // ---- the booking form
   const departed = new Date(trip.departureAt).getTime() <= Date.now();
   const cancelled = trip.status === "cancelled";
-  const blocked = cancelled ? "This trip has been cancelled." : trip.soldOut ? "This trip is sold out." : departed ? "This trip has already left." : !trip.bookable ? "Ticket sales for this trip have closed." : "";
+  const blocked = cancelled ? tr("bus.trip.blockedCancelled") : trip.soldOut ? tr("bus.trip.blockedSoldOut") : departed ? tr("bus.trip.blockedDeparted") : !trip.bookable ? tr("bus.trip.blockedClosed") : "";
   const network = phoneNetwork(payPhone);
   const show = (key) => (submitted ? errors[key] : "");
-  const payLabel = !signedIn ? "Sign in to buy" : count < 1 ? "Choose your tickets" : `Pay ${ugx(total)}`;
+  const payLabel = !signedIn ? tr("bus.trip.signInToBuy") : count < 1 ? tr("bus.trip.chooseYourTickets") : tr("bus.trip.pay", { amount: ugx(total) });
   const payDisabled = Boolean(blocked) || submitting || (signedIn && count < 1);
   const lowestFare = types.length ? Math.min(...types.map((t) => Number(t.price))) : Number(trip.priceFrom || 0);
 
@@ -525,13 +530,13 @@ function BusTripPage({ tripId }) {
           {blocked ? (
             <div className="bus-stepcard bus-blocked" role="alert">
               <strong>{blocked}</strong>
-              <p className="bus-hint">Pick another departure on the same route.</p>
-              <Link to={`/bus/search?${new URLSearchParams({ from: trip.route.originName, to: trip.route.destinationName, date: eatDate(trip.departureAt) })}`} className="bus-btn bus-btn-navy" style={{ marginTop: 12 }}>See other trips</Link>
+              <p className="bus-hint">{tr("bus.trip.pickAnother")}</p>
+              <Link to={`/bus/search?${new URLSearchParams({ from: trip.route.originName, to: trip.route.destinationName, date: eatDate(trip.departureAt) })}`} className="bus-btn bus-btn-navy" style={{ marginTop: 12 }}>{tr("bus.trip.seeOther")}</Link>
             </div>
           ) : (
             <>
               <section className="bus-stepcard" aria-labelledby="tickets-h">
-                <div className="bus-stephead"><span className="bus-stepnum">1</span><div><h2 className="bus-section-title" id="tickets-h">Choose tickets</h2><p className="bus-section-sub">Up to {cap} {cap === 1 ? "ticket" : "tickets"} in one booking.</p></div></div>
+                <div className="bus-stephead"><span className="bus-stepnum">1</span><div><h2 className="bus-section-title" id="tickets-h">{tr("bus.trip.chooseTickets")}</h2><p className="bus-section-sub">{tr("bus.trip.upTo", { count: cap })}</p></div></div>
                 <div className="bus-ticketrows">
                   {types.map((t) => (
                     <div className={`bus-ticket-row ${qty[t.id] ? "is-on" : ""}`} key={t.id}>
@@ -540,45 +545,45 @@ function BusTripPage({ tripId }) {
                         {t.description ? <p className="bus-hint">{t.description}</p> : null}
                         <div className="bus-price">{ugx(t.price)}</div>
                       </div>
-                      <div className="bus-qty" role="group" aria-label={`${t.name} quantity`}>
-                        <button type="button" onClick={() => step(t.id, -1)} disabled={!qty[t.id]} aria-label={`Fewer ${t.name} tickets`}>−</button>
+                      <div className="bus-qty" role="group" aria-label={tr("bus.trip.qtyAria", { name: t.name })}>
+                        <button type="button" onClick={() => step(t.id, -1)} disabled={!qty[t.id]} aria-label={tr("bus.trip.fewer", { name: t.name })}>−</button>
                         <output aria-live="polite">{qty[t.id] || 0}</output>
-                        <button type="button" onClick={() => step(t.id, 1)} disabled={count >= cap} aria-label={`More ${t.name} tickets`}>+</button>
+                        <button type="button" onClick={() => step(t.id, 1)} disabled={count >= cap} aria-label={tr("bus.trip.more", { name: t.name })}>+</button>
                       </div>
                     </div>
                   ))}
                 </div>
                 {show("tickets") ? <p className="bus-field-error" role="alert">{errors.tickets}</p> : null}
-                {count >= cap && cap > 0 ? <p className="bus-hint" style={{ marginTop: 10 }}>{cap === trip.seatsLeft && trip.seatsLeft < (trip.maxPerBooking || 10) ? `Only ${trip.seatsLeft} seats are left.` : `That's the most you can buy at once (${cap}).`}</p> : null}
+                {count >= cap && cap > 0 ? <p className="bus-hint" style={{ marginTop: 10 }}>{cap === trip.seatsLeft && trip.seatsLeft < (trip.maxPerBooking || 10) ? tr("bus.trip.onlySeats", { count: trip.seatsLeft }) : tr("bus.trip.mostAtOnce", { count: cap })}</p> : null}
               </section>
 
               <section className="bus-stepcard" aria-labelledby="pax-h">
-                <div className="bus-stephead"><span className="bus-stepnum">2</span><div><h2 className="bus-section-title" id="pax-h">Passenger details</h2><p className="bus-section-sub">The name printed on your tickets{count > 1 ? " (used for all seats)" : ""}.</p></div></div>
+                <div className="bus-stephead"><span className="bus-stepnum">2</span><div><h2 className="bus-section-title" id="pax-h">{tr("bus.trip.passengerDetails")}</h2><p className="bus-section-sub">{count > 1 ? tr("bus.trip.nameOnTicketsMany") : tr("bus.trip.nameOnTickets")}</p></div></div>
                 <div className="bus-form-grid">
                   <label className="bus-field bus-span-2">
-                    <span>Full name</span>
+                    <span>{tr("bus.trip.fullName")}</span>
                     <input className="bus-input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" aria-invalid={Boolean(show("name"))} />
                     {show("name") ? <em className="bus-field-error">{errors.name}</em> : null}
                   </label>
                   <label className="bus-field">
-                    <span>Phone</span>
+                    <span>{tr("bus.trip.phone")}</span>
                     <input className="bus-input" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0772 123 456" autoComplete="tel" aria-invalid={Boolean(show("phone"))} />
                     {show("phone") ? <em className="bus-field-error">{errors.phone}</em> : null}
                   </label>
                   <label className="bus-field">
-                    <span>Email <small>(optional)</small></span>
-                    <input className="bus-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={session?.user?.email ? "Defaults to your account email" : "Tickets are also emailed"} autoComplete="email" aria-invalid={Boolean(show("email"))} />
+                    <span>{tr("bus.trip.email")} <small>({tr("bus.trip.optional")})</small></span>
+                    <input className="bus-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={session?.user?.email ? tr("bus.trip.emailDefault") : tr("bus.trip.emailAlso")} autoComplete="email" aria-invalid={Boolean(show("email"))} />
                     {show("email") ? <em className="bus-field-error">{errors.email}</em> : null}
                   </label>
                 </div>
               </section>
 
               <section className="bus-stepcard" aria-labelledby="pay-h">
-                <div className="bus-stephead"><span className="bus-stepnum">3</span><div><h2 className="bus-section-title" id="pay-h">Pay with mobile money</h2><p className="bus-section-sub">We'll send an approval request to this number.</p></div></div>
+                <div className="bus-stephead"><span className="bus-stepnum">3</span><div><h2 className="bus-section-title" id="pay-h">{tr("bus.trip.payMomo")}</h2><p className="bus-section-sub">{tr("bus.trip.payMomoSub")}</p></div></div>
                 <label className="bus-field" style={{ marginTop: 14 }}>
-                  <span>Mobile money number</span>
-                  <input className="bus-input" type="tel" inputMode="tel" value={payPhone} onChange={(e) => { setPayPhone(e.target.value); setPayTouched(true); }} placeholder="0772 123 456 (MTN) or 0752 123 456 (Airtel)" aria-invalid={Boolean(show("payPhone"))} />
-                  {isUgPhone(payPhone) ? <em className="bus-field-ok"><Check size={14} /> {network || "Mobile money number"} · +{normalizeUgPhone(payPhone)}</em> : null}
+                  <span>{tr("bus.trip.momoNumber")}</span>
+                  <input className="bus-input" type="tel" inputMode="tel" value={payPhone} onChange={(e) => { setPayPhone(e.target.value); setPayTouched(true); }} placeholder={tr("bus.trip.momoPlaceholder")} aria-invalid={Boolean(show("payPhone"))} />
+                  {isUgPhone(payPhone) ? <em className="bus-field-ok"><Check size={14} /> {network || tr("bus.trip.momoNumber")} · +{normalizeUgPhone(payPhone)}</em> : null}
                   {show("payPhone") ? <em className="bus-field-error">{errors.payPhone}</em> : null}
                 </label>
               </section>
@@ -587,32 +592,32 @@ function BusTripPage({ tripId }) {
         </div>
 
         {blocked ? null : (
-        <aside className="bus-summary bus-stepcard" aria-label="Order summary">
-          <h2 className="bus-section-title">Your order</h2>
+        <aside className="bus-summary bus-stepcard" aria-label={tr("bus.trip.summaryAria")}>
+          <h2 className="bus-section-title">{tr("bus.trip.yourOrder")}</h2>
           <p className="bus-hint">{trip.route.originName} → {trip.route.destinationName} · {dayLabel(eatDate(trip.departureAt))}, {eatTime(trip.departureAt)}</p>
           <div style={{ marginTop: 14 }}>
-            {count < 1 ? <p className="bus-hint">No tickets chosen yet.</p> : types.filter((t) => qty[t.id] > 0).map((t) => (
+            {count < 1 ? <p className="bus-hint">{tr("bus.trip.noneChosen")}</p> : types.filter((t) => qty[t.id] > 0).map((t) => (
               <div className="bus-line" key={t.id}><span>{qty[t.id]} × {t.name}</span><b>{ugx(qty[t.id] * Number(t.price))}</b></div>
             ))}
-            <div className="bus-line is-total"><span>Total</span><span>{ugx(total)}</span></div>
+            <div className="bus-line is-total"><span>{tr("bus.trip.total")}</span><span>{ugx(total)}</span></div>
           </div>
-          {!signedIn && !blocked ? <div className="bus-alert bus-alert-info" style={{ marginTop: 14 }}>Sign in to buy. We'll bring you straight back here with your choices saved.</div> : null}
-          {formError ? <div className="bus-alert bus-alert-error" role="alert" style={{ marginTop: 14 }}>{formError.message || "Something went wrong. Please try again."}</div> : null}
-          {submitted && signedIn && Object.keys(errors).length && !formError ? <div className="bus-alert bus-alert-warn" role="alert" style={{ marginTop: 14 }}>Please fix the highlighted details above.</div> : null}
+          {!signedIn && !blocked ? <div className="bus-alert bus-alert-info" style={{ marginTop: 14 }}>{tr("bus.trip.signInNote")}</div> : null}
+          {formError ? <div className="bus-alert bus-alert-error" role="alert" style={{ marginTop: 14 }}>{formError.message || tr("bus.trip.genericError")}</div> : null}
+          {submitted && signedIn && Object.keys(errors).length && !formError ? <div className="bus-alert bus-alert-warn" role="alert" style={{ marginTop: 14 }}>{tr("bus.trip.fixDetails")}</div> : null}
           <button type="submit" className="bus-btn bus-btn-primary bus-btn-block bus-pay-btn" disabled={payDisabled} style={{ marginTop: 16 }}>
-            {submitting ? "Sending payment request…" : payLabel}
+            {submitting ? tr("bus.trip.sendingRequest") : payLabel}
           </button>
-          <p className="bus-hint bus-hold-note">Seats are held for {trip.holdMinutes} minutes while you pay. Sales close 10 minutes before departure.</p>
+          <p className="bus-hint bus-hold-note">{tr("bus.trip.holdNote", { minutes: trip.holdMinutes })}</p>
         </aside>
         )}
       </form>
 
       {blocked ? null : (
-        <div className="bus-buybar" role="region" aria-label="Buy tickets">
+        <div className="bus-buybar" role="region" aria-label={tr("bus.trip.buyAria")}>
           <div className="bus-buybar-price">
-            {count > 0 ? (<><small>{count} {count === 1 ? "ticket" : "tickets"}</small><b>{ugx(total)}</b></>) : (<><small>From</small><b>{ugx(lowestFare)} <em>/ person</em></b></>)}
+            {count > 0 ? (<><small>{tr("bus.ticketsCount", { count })}</small><b>{ugx(total)}</b></>) : (<><small>{tr("bus.trip.fromCap")}</small><b>{ugx(lowestFare)} <em>{tr("bus.trip.perPerson")}</em></b></>)}
           </div>
-          <button type="submit" form="bus-book-form" className="bus-btn bus-btn-primary" disabled={payDisabled}>{submitting ? "Sending…" : !signedIn ? "Sign in to buy" : count < 1 ? "Choose tickets" : "Pay now"}</button>
+          <button type="submit" form="bus-book-form" className="bus-btn bus-btn-primary" disabled={payDisabled}>{submitting ? tr("bus.trip.sending") : !signedIn ? tr("bus.trip.signInToBuy") : count < 1 ? tr("bus.trip.chooseTicketsShort") : tr("bus.trip.payNow")}</button>
         </div>
       )}
     </BusLayout>

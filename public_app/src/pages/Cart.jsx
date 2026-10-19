@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
 import { loginPath } from "../lib/authRedirect";
 
 import { request } from "../lib/api";
@@ -13,6 +14,7 @@ import { IconBox, IconClose } from "../components/icons";
 import { ListSkeleton, Skel } from "../components/Skeleton";
 
 export default function Cart() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [session] = useState(() => getSession());
@@ -86,7 +88,7 @@ export default function Cart() {
   const placeOrders = async (event) => {
     event.preventDefault();
     if (!session) {
-      navigate(loginPath(location), { state: { message: "Sign in to place an order." } });
+      navigate(loginPath(location), { state: { message: t("cart.signInToOrder") } });
       return;
     }
     const problem = validateOrderDetails(details, { delivery: true });
@@ -109,13 +111,13 @@ export default function Cart() {
         placed.push({ ...order, providerName: order.providerName || group.provider?.businessName });
         for (const i of group.items) removeFromCart(i.listingId);
       } catch (orderError) {
-        failed.push(`${group.provider?.businessName || "a seller"}: ${orderError.message || "couldn't be sent"}`);
+        failed.push(`${group.provider?.businessName || t("cart.aSeller")}: ${orderError.message || t("cart.couldntBeSent")}`);
       }
     }
     setSubmitting(false);
     setCashOrders((prev) => [...prev, ...placed]);
     if (failed.length) {
-      setError(`Some orders weren't sent - ${failed.join("; ")}. Your other orders went through; try again for the rest.`);
+      setError(t("cart.someFailed", { details: failed.join("; ") }));
       setCartVersion((v) => v + 1);
     }
     if (placed.length && !failed.length) setStage("ordered");
@@ -132,48 +134,48 @@ export default function Cart() {
 
       <div className="cart-page">
         <div className="form-heading">
-          <p className="eyebrow">Cart</p>
-          <h2>Your cart</h2>
+          <p className="eyebrow">{t("nav.cart")}</p>
+          <h2>{t("cart.title")}</h2>
         </div>
 
         {error ? <div className="error-message">{error}</div> : null}
 
         {stage === "ordered" ? (
           <div className="detail-block cart-receipt">
-            <h3>{payMethod === "online" ? "Order requests sent" : "Orders sent"}</h3>
+            <h3>{payMethod === "online" ? t("cart.sentOnlineTitle") : t("cart.sentCashTitle")}</h3>
             {payMethod === "online" ? (
-              <p>Each seller will confirm your order is available. <strong>Nothing has been charged.</strong> When a seller accepts, we&apos;ll email you and you can pay them by mobile money from <Link to="/orders">My orders</Link>.</p>
+              <p><Trans i18nKey="cart.sentOnlineBody" components={{ strong: <strong />, ordersLink: <Link to="/orders" /> }} /></p>
             ) : (
-              <p>Each seller has your order and will call you on <strong>{details.phone}</strong> to confirm. Nothing has been charged &mdash; pay in cash {details.method === "pickup" ? "when you pick up" : "on delivery"}.</p>
+              <p><Trans i18nKey={details.method === "pickup" ? "cart.sentCashBodyPickup" : "cart.sentCashBodyDelivery"} values={{ phone: details.phone }} components={{ strong: <strong /> }} /></p>
             )}
             <ul className="contact-list" style={{ marginTop: 8 }}>
               {cashOrders.map((order) => (
                 <li key={order.id}>
-                  <strong>{order.providerName || "Seller"}</strong> &mdash; {payMethod === "online" ? `${formatUgx(order.total)}, pay once accepted` : `pay ${formatUgx(order.total)} in cash`}
-                  <span className="provider-meta"> (ref #{String(order.id).slice(-6).toUpperCase()})</span>
+                  <strong>{order.providerName || t("cart.seller")}</strong> &mdash; {payMethod === "online" ? t("cart.payOnceAccepted", { amount: formatUgx(order.total) }) : t("cart.payCash", { amount: formatUgx(order.total) })}
+                  <span className="provider-meta"> ({t("cart.ref", { ref: String(order.id).slice(-6).toUpperCase() })})</span>
                 </li>
               ))}
             </ul>
-            <Link to="/home" className="cta-button" style={{ display: "inline-block", marginTop: 16 }}>Continue shopping</Link>
+            <Link to="/home" className="cta-button" style={{ display: "inline-block", marginTop: 16 }}>{t("cart.continueShopping")}</Link>
           </div>
         ) : loading ? (
           <div className="detail-block">
             <Skel h={22} w={180} />
             <div style={{ marginTop: 16 }}>
-              <ListSkeleton rows={3} label="Loading your cart" />
+              <ListSkeleton rows={3} label={t("cart.loading")} />
             </div>
           </div>
         ) : !validItems.length ? (
           <div className="empty-state">
             <IconBox />
-            <p>Your cart is empty.</p>
-            <Link to="/home" className="cta-button">Browse products</Link>
+            <p>{t("cart.empty")}</p>
+            <Link to="/home" className="cta-button">{t("cart.browse")}</Link>
           </div>
         ) : (
           <>
             {Array.from(byProvider.entries()).map(([providerId, group]) => (
               <section key={providerId} className="detail-block cart-provider-group">
-                <h3>{group.provider?.businessName || "Shop"}</h3>
+                <h3>{group.provider?.businessName || t("cart.shop")}</h3>
                 <div className="wallet-list">
                   {group.items.map((item) => (
                     <div key={item.listingId} className="wallet-list-row cart-item-row">
@@ -185,7 +187,7 @@ export default function Cart() {
                       </div>
                       <div className="cart-item-info">
                         <strong>{item.listing.name}</strong>
-                        <p className="provider-meta">{formatUgx(item.listing.price)} each</p>
+                        <p className="provider-meta">{t("cart.each", { price: formatUgx(item.listing.price) })}</p>
                       </div>
                       <div className="cart-item-controls">
                         <input
@@ -196,7 +198,7 @@ export default function Cart() {
                           onChange={(e) => updateQuantity(item.listingId, e.target.value)}
                         />
                         <span className="cart-item-subtotal">{formatUgx(Number(item.listing.price || 0) * item.quantity)}</span>
-                        <button type="button" className="icon-button" aria-label="Remove" onClick={() => remove(item.listingId)}>
+                        <button type="button" className="icon-button" aria-label={t("cart.remove")} onClick={() => remove(item.listingId)}>
                           <IconClose />
                         </button>
                       </div>
@@ -208,39 +210,39 @@ export default function Cart() {
 
             <section className="detail-block cart-checkout">
               <div className="cart-total-row">
-                <span>Total</span>
+                <span>{t("cart.total")}</span>
                 <strong>{formatUgx(grandTotal)}</strong>
               </div>
               {!session ? (
                 <>
-                  <p className="provider-meta">Sign in to check out.</p>
-                  <Link to={loginPath(location)} className="cta-button">Sign in</Link>
+                  <p className="provider-meta">{t("cart.signInToCheckout")}</p>
+                  <Link to={loginPath(location)} className="cta-button">{t("nav.signIn")}</Link>
                 </>
               ) : (
                 <>
-                  <div className="cart-paymethod" role="radiogroup" aria-label="How do you want to pay?">
+                  <div className="cart-paymethod" role="radiogroup" aria-label={t("cart.howToPay")}>
                     <button type="button" role="radio" aria-checked={payMethod === "online"} className={payMethod === "online" ? "is-active" : ""} onClick={() => setPayMethod("online")}>
-                      Pay online
-                      <small>After the seller accepts</small>
+                      {t("cart.payOnline")}
+                      <small>{t("cart.payOnlineHint")}</small>
                     </button>
                     <button type="button" role="radio" aria-checked={payMethod === "cash"} className={payMethod === "cash" ? "is-active" : ""} onClick={() => setPayMethod("cash")}>
-                      Pay on delivery
-                      <small>Cash, nothing charged now</small>
+                      {t("cart.payOnDelivery")}
+                      <small>{t("cart.payOnDeliveryHint")}</small>
                     </button>
                   </div>
 
                   <form onSubmit={placeOrders} className="form-grid">
                     <OrderDetailsFields value={details} onChange={setDetails} delivery />
                     <div className="od-payline">
-                      <span className="od-payline-title">{payMethod === "online" ? "Pay after the seller accepts" : "Pay cash on delivery"}</span>
+                      <span className="od-payline-title">{payMethod === "online" ? t("cart.payAfterAccept") : t("cart.payCashOnDelivery")}</span>
                       <span>
                         {payMethod === "online"
-                          ? `Your ${byProvider.size > 1 ? `${byProvider.size} orders go` : "order goes"} to the seller${byProvider.size > 1 ? "s" : ""} to confirm it's available. Nothing is charged now; once a seller accepts you pay them ${formatUgx(grandTotal)} by mobile money from My orders.`
-                          : `Your ${byProvider.size > 1 ? `${byProvider.size} orders go` : "order goes"} straight to the seller${byProvider.size > 1 ? "s" : ""}. You pay ${formatUgx(grandTotal)} in cash when you ${details.method === "pickup" ? "pick up" : "receive"} your order.`}
+                          ? t("cart.onlineNote", { count: byProvider.size, amount: formatUgx(grandTotal) })
+                          : t(details.method === "pickup" ? "cart.cashNotePickup" : "cart.cashNoteDelivery", { count: byProvider.size, amount: formatUgx(grandTotal) })}
                       </span>
                     </div>
                     <button type="submit" className="primary-button" disabled={submitting}>
-                      {submitting ? "Sending orders…" : payMethod === "online" ? `Send order request · ${formatUgx(grandTotal)}` : `Place order · ${formatUgx(grandTotal)}`}
+                      {submitting ? t("cart.sending") : payMethod === "online" ? t("cart.sendRequest", { amount: formatUgx(grandTotal) }) : t("cart.placeOrder", { amount: formatUgx(grandTotal) })}
                     </button>
                   </form>
                 </>

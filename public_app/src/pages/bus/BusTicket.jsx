@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import BusLayout from "../../components/bus/BusLayout";
 import TicketCard, { TicketActions, ticketState } from "../../components/bus/TicketCard";
@@ -13,9 +14,10 @@ import { loginPath } from "../../lib/authRedirect";
 import { getSession } from "../../lib/session";
 
 function PassSkeleton() {
+  const { t } = useTranslation();
   return (
     <div className="bus-ticketpage is-valid" role="status" aria-busy="true" aria-live="polite">
-      <span className="sr-only">Loading ticket…</span>
+      <span className="sr-only">{t("bus.ticket.loading")}</span>
       <div className="bus-wrap" aria-hidden="true">
         <div className="bus-pass-slide" style={{ margin: "0 auto" }}>
           <div className="bus-pass is-skel">
@@ -30,6 +32,7 @@ function PassSkeleton() {
 }
 
 export default function BusTicket() {
+  const { t: tr } = useTranslation();
   const { ticketNumber } = useParams();
   useScrollTop(ticketNumber);
   const location = useLocation();
@@ -74,7 +77,7 @@ export default function BusTicket() {
   };
 
   const crumbs = (light) => (
-    <nav className={`bus-breadcrumb bus-no-print ${light ? "is-light" : ""}`} aria-label="Breadcrumb"><Link to="/bus">Gabla Bus</Link><span>/</span><Link to="/bus/tickets">My tickets</Link><span>/</span><span>{ticketNumber}</span></nav>
+    <nav className={`bus-breadcrumb bus-no-print ${light ? "is-light" : ""}`} aria-label={tr("bus.breadcrumb")}><Link to="/bus">Gabla Bus</Link><span>/</span><Link to="/bus/tickets">{tr("bus.layout.myTickets")}</Link><span>/</span><span>{ticketNumber}</span></nav>
   );
 
   if (!signedIn || q.error?.status === 401) {
@@ -82,8 +85,8 @@ export default function BusTicket() {
       <BusLayout>
         <div className="bus-wrap bus-sec bus-sec-first">
           {crumbs()}
-          <EmptyState icon={Ticket} className="bus-signin" title="Sign in to see this ticket" action={<Link to={loginPath(location)} className="bus-btn bus-btn-primary">Sign in</Link>}>
-            Tickets are private to the person who bought them.
+          <EmptyState icon={Ticket} className="bus-signin" title={tr("bus.ticket.signInTitle")} action={<Link to={loginPath(location)} className="bus-btn bus-btn-primary">{tr("nav.signIn")}</Link>}>
+            {tr("bus.ticket.signInSub")}
           </EmptyState>
         </div>
       </BusLayout>
@@ -101,8 +104,8 @@ export default function BusTicket() {
         <div className="bus-wrap bus-sec bus-sec-first">
           {crumbs()}
           {gone ? (
-            <EmptyState icon={Ticket} title="We couldn't find that ticket" action={<Link to="/bus/tickets" className="bus-btn bus-btn-navy">My tickets</Link>}>
-              Check the number, or make sure you're signed in with the account that bought it.
+            <EmptyState icon={Ticket} title={tr("bus.ticket.notFound")} action={<Link to="/bus/tickets" className="bus-btn bus-btn-navy">{tr("bus.layout.myTickets")}</Link>}>
+              {tr("bus.ticket.notFoundSub")}
             </EmptyState>
           ) : (
             <ErrorBox error={q.error} onRetry={q.reload} />
@@ -124,12 +127,12 @@ export default function BusTicket() {
           {crumbs(true)}
           {many ? (
             <div className="bus-pager bus-no-print">
-              <button type="button" onClick={() => go(index - 1)} disabled={index <= 0} aria-label="Previous ticket"><ChevronLeft size={18} /></button>
-              <div role="tablist" aria-label="Tickets in this booking" className="bus-pager-dots">
-                {tickets.map((t, i) => <button type="button" key={t.id} role="tab" aria-selected={i === index} aria-label={`Ticket ${i + 1}, seat ${t.seatNumber ?? "-"}`} className={i === index ? "is-on" : ""} onClick={() => go(i)} />)}
+              <button type="button" onClick={() => go(index - 1)} disabled={index <= 0} aria-label={tr("bus.ticket.prev")}><ChevronLeft size={18} /></button>
+              <div role="tablist" aria-label={tr("bus.ticket.inBooking")} className="bus-pager-dots">
+                {tickets.map((t, i) => <button type="button" key={t.id} role="tab" aria-selected={i === index} aria-label={tr("bus.ticket.dotAria", { n: i + 1, seat: t.seatNumber ?? "-" })} className={i === index ? "is-on" : ""} onClick={() => go(i)} />)}
               </div>
-              <button type="button" onClick={() => go(index + 1)} disabled={index >= tickets.length - 1} aria-label="Next ticket"><ChevronRight size={18} /></button>
-              <p aria-live="polite">Ticket {index + 1} of {tickets.length} · Seat {current.seatNumber ?? "-"}</p>
+              <button type="button" onClick={() => go(index + 1)} disabled={index >= tickets.length - 1} aria-label={tr("bus.ticket.next")}><ChevronRight size={18} /></button>
+              <p aria-live="polite">{tr("bus.ticket.pager", { n: index + 1, total: tickets.length, seat: current.seatNumber ?? "-" })}</p>
             </div>
           ) : null}
 
@@ -144,8 +147,8 @@ export default function BusTicket() {
           <TicketActions ticket={current} booking={booking} />
 
           <p className="bus-pass-foot bus-no-print">
-            Booking {booking.reference} · {tickets.length} {tickets.length === 1 ? "ticket" : "tickets"} · {ugx(booking.total)}
-            <Link to="/bus/tickets">Back to all my tickets</Link>
+            {tr("bus.ticket.footer", { ref: booking.reference, tickets: tr("bus.ticketsCount", { count: tickets.length }), total: ugx(booking.total) })}
+            <Link to="/bus/tickets">{tr("bus.ticket.backAll")}</Link>
           </p>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import {
   addDays, arrivalAt, busApi, dayDiff, dayLabel, durationLabel, eatDate, eatTime, effectiveDeparture, longDayLabel, minutesUntil,
@@ -17,16 +18,18 @@ const SLOT_ICON = { morning: Sunrise, afternoon: Sun, evening: Sunset, night: Mo
 
 // "07:30 AM" as a big clock with a small AM/PM.
 export function Clock({ value, plus = 0 }) {
+  const { t: tr } = useTranslation();
   const { t, ap } = timeParts(value);
   return (
     <strong className="bus-time">
       <b>{t}</b><i>{ap}</i>
-      {plus > 0 ? <sup className="bus-plusday" title={`Arrives ${plus} day${plus > 1 ? "s" : ""} later`}>+{plus}</sup> : null}
+      {plus > 0 ? <sup className="bus-plusday" title={tr("bus.parts.arrivesLater", { count: plus })}>+{plus}</sup> : null}
     </strong>
   );
 }
 
 export function TripCard({ trip, index = 0 }) {
+  const { t } = useTranslation();
   const { route, operator, busType } = trip;
   const delay = Number(trip.delayMinutes) || 0;
   const soldOut = trip.soldOut;
@@ -46,7 +49,7 @@ export function TripCard({ trip, index = 0 }) {
     <article
       className={`bus-trip ${soldOut ? "is-soldout" : ""} ${closed ? "is-closed" : ""} ${delay ? "is-delayed" : ""}`}
       style={{ "--i": Math.min(index, 8) }}
-      aria-label={`${operator.companyName} to ${route.destinationName} at ${eatTime(trip.departureAt)}`}
+      aria-label={t("bus.trips.cardAria", { company: operator.companyName, to: route.destinationName, time: eatTime(trip.departureAt) })}
     >
       <div className="bus-trip-body">
         <div className="bus-trip-co">
@@ -59,13 +62,13 @@ export function TripCard({ trip, index = 0 }) {
         </div>
 
         <div className="bus-trip-leg">
-          <small className="bus-lbl">Departs</small>
+          <small className="bus-lbl">{t("bus.trips.departs")}</small>
           <Clock value={trip.departureAt} />
           <span className="bus-trip-place">{route.originName}</span>
           <span className="bus-trip-date">{dayLabel(depDate)}</span>
         </div>
 
-        <div className="bus-trip-track-wrap" title={stops.length ? `Stops: ${stops.map((s) => s.name).join(", ")}` : "Direct, no stops"}>
+        <div className="bus-trip-track-wrap" title={stops.length ? t("bus.trips.stopsList", { list: stops.map((s) => s.name).join(", ") }) : t("bus.trips.direct")}>
           <span className="bus-trip-dur">{durationLabel(route.durationMinutes)}</span>
           <span className="bus-trip-track" aria-hidden="true">
             <i className="end" />
@@ -76,7 +79,7 @@ export function TripCard({ trip, index = 0 }) {
         </div>
 
         <div className="bus-trip-leg is-arr">
-          <small className="bus-lbl">Arrives</small>
+          <small className="bus-lbl">{t("bus.trips.arrives")}</small>
           <Clock value={arrive} plus={plus} />
           <span className="bus-trip-place">{route.destinationName}</span>
           <span className="bus-trip-date">{dayLabel(arrDate)}</span>
@@ -84,33 +87,28 @@ export function TripCard({ trip, index = 0 }) {
 
         <div className="bus-trip-buy">
           <div className="bus-trip-price">
-            {trip.priceFrom ? <><small>from</small><b>{ugx(trip.priceFrom)}</b></> : <b>-</b>}
+            {trip.priceFrom ? <><small>{t("bus.parts.from")}</small><b>{ugx(trip.priceFrom)}</b></> : <b>-</b>}
           </div>
-          <StatusPill tone={status.tone}>{soldOut ? "No seats left" : status.tone === "green" && trip.seatsLeft > 5 ? `${trip.seatsLeft} seats left` : status.label}</StatusPill>
+          <StatusPill tone={status.tone}>{soldOut ? t("bus.trips.noSeatsLeft") : status.tone === "green" && trip.seatsLeft > 5 ? t("bus.trips.seatsLeft", { count: trip.seatsLeft }) : status.label}</StatusPill>
           {disabled ? (
-            <span className="bus-btn bus-btn-light bus-trip-cta" aria-disabled="true">{cancelled ? "Cancelled" : soldOut ? "Sold out" : "Sales closed"}</span>
+            <span className="bus-btn bus-btn-light bus-trip-cta" aria-disabled="true">{cancelled ? t("bus.tripStatus.cancelled") : soldOut ? t("bus.tripStatus.soldOut") : t("bus.tripStatus.salesClosed")}</span>
           ) : (
-            <Link to={`/bus/trip/${trip.id}`} className="bus-btn bus-btn-primary bus-trip-cta bus-stretch">Select <ArrowRight size={16} /></Link>
+            <Link to={`/bus/trip/${trip.id}`} className="bus-btn bus-btn-primary bus-trip-cta bus-stretch">{t("bus.trips.select")} <ArrowRight size={16} /></Link>
           )}
         </div>
       </div>
 
       <div className="bus-trip-foot">
-        {route.boardingPoint || operator.parkName ? <span className="bus-meta"><Pin size={14} />Board at {route.boardingPoint || operator.parkName}</span> : null}
-        {delay > 0 ? <span className="bus-meta is-warn">Delayed {delay} min · leaving about {leaving}</span> : null}
-        {!delay && !disabled && left > 0 && left <= 180 ? <span className="bus-meta is-warn">Leaves in {durationLabel(left)}</span> : null}
+        {route.boardingPoint || operator.parkName ? <span className="bus-meta"><Pin size={14} />{t("bus.trips.boardAt", { place: route.boardingPoint || operator.parkName })}</span> : null}
+        {delay > 0 ? <span className="bus-meta is-warn">{t("bus.trips.delayedLeaving", { min: delay, time: leaving })}</span> : null}
+        {!delay && !disabled && left > 0 && left <= 180 ? <span className="bus-meta is-warn">{t("bus.trips.leavesIn", { time: durationLabel(left) })}</span> : null}
         <AmenityChips list={busType?.amenities} max={3} tone="is-quiet" />
       </div>
     </article>
   );
 }
 
-const SORTS = [
-  { id: "earliest", label: "Earliest" },
-  { id: "cheapest", label: "Cheapest" },
-  { id: "fastest", label: "Fastest" },
-  { id: "seats", label: "Most seats" }
-];
+const SORTS = ["earliest", "cheapest", "fastest", "seats"];
 
 const sorters = {
   earliest: (a, b) => new Date(a.departureAt) - new Date(b.departureAt),
@@ -136,14 +134,15 @@ function FilterGroup({ title, children }) {
 }
 
 function Filters({ facets, sel, setSel, showCompanies, activeCount, onClear }) {
+  const { t: tr } = useTranslation();
   return (
     <div className="bus-filters-panel">
       <div className="bus-filters-head">
-        <h3>Filters</h3>
-        {activeCount ? <button type="button" className="bus-linkbtn" onClick={onClear}>Reset ({activeCount})</button> : null}
+        <h3>{tr("bus.trips.filters")}</h3>
+        {activeCount ? <button type="button" className="bus-linkbtn" onClick={onClear}>{tr("bus.trips.resetCount", { count: activeCount })}</button> : null}
       </div>
 
-      <FilterGroup title="Departure time">
+      <FilterGroup title={tr("bus.trips.departureTime")}>
         <div className="bus-slots">
           {TIME_SLOTS.map((s) => {
             const Icon = SLOT_ICON[s.id];
@@ -152,7 +151,7 @@ function Filters({ facets, sel, setSel, showCompanies, activeCount, onClear }) {
             return (
               <button type="button" key={s.id} className={`bus-slot ${on ? "is-on" : ""}`} aria-pressed={on} disabled={!n && !on} onClick={() => setSel((c) => ({ ...c, slots: toggle(c.slots, s.id) }))}>
                 <Icon size={18} />
-                <b>{s.label}</b>
+                <b>{tr(`bus.slots.${s.id}`)}</b>
                 <small>{s.range.split(" - ")[0]}</small>
               </button>
             );
@@ -161,7 +160,7 @@ function Filters({ facets, sel, setSel, showCompanies, activeCount, onClear }) {
       </FilterGroup>
 
       {facets.types.length > 1 || sel.types.size ? (
-        <FilterGroup title="Bus type">
+        <FilterGroup title={tr("bus.trips.busType")}>
           {facets.types.map((t) => (
             <label className="bus-check" key={t.id}>
               <input type="checkbox" checked={sel.types.has(t.id)} onChange={() => setSel((c) => ({ ...c, types: toggle(c.types, t.id) }))} />
@@ -174,7 +173,7 @@ function Filters({ facets, sel, setSel, showCompanies, activeCount, onClear }) {
       ) : null}
 
       {showCompanies && (facets.ops.length > 1 || sel.ops.size) ? (
-        <FilterGroup title="Bus company">
+        <FilterGroup title={tr("bus.trips.busCompany")}>
           {facets.ops.map((o) => (
             <label className="bus-check" key={o.slug}>
               <input type="checkbox" checked={sel.ops.has(o.slug)} onChange={() => setSel((c) => ({ ...c, ops: toggle(c.ops, o.slug) }))} />
@@ -196,6 +195,7 @@ const emptySel = () => ({ types: new Set(), ops: new Set(), slots: new Set() });
 // company's page. `date` may be empty: then the first day that has trips is shown.
 //   header(selected)  renders inside the sand band above the tabs (the search pill)
 export default function TripExplorer({ filters, date, onDate, header, emptyAction, showCompanyFilter = true, kicker }) {
+  const { t: tr } = useTranslation();
   const [sort, setSort] = useState("earliest");
   const [calOpen, setCalOpen] = useState(false);
   const [sheet, setSheet] = useState(false);
@@ -251,15 +251,15 @@ export default function TripExplorer({ filters, date, onDate, header, emptyActio
   const minPrice = items.reduce((m, t) => (t.priceFrom ? Math.min(m, Number(t.priceFrom)) : m), Infinity);
   const clear = () => setSel(emptySel());
 
-  const kick = kicker ?? (filters.from || filters.to ? `${filters.from || "Anywhere"} to ${filters.to || "Anywhere"}` : "All routes");
+  const kick = kicker ?? (filters.from || filters.to ? tr("bus.trips.routeKicker", { from: filters.from || tr("bus.search.anywhere"), to: filters.to || tr("bus.search.anywhere") }) : tr("bus.trips.allRoutes"));
 
   return (
     <>
-      <section className="bus-band bus-band-tabs" aria-label="Choose a day">
+      <section className="bus-band bus-band-tabs" aria-label={tr("bus.trips.chooseDay")}>
         <div className="bus-wrap">
           {header ? header(selected) : null}
           {cal.error ? (
-            <ErrorBox error={cal.error} onRetry={cal.reload} title="Couldn't load available days" />
+            <ErrorBox error={cal.error} onRetry={cal.reload} title={tr("bus.trips.daysFailed")} />
           ) : (
             <DateTabs days={days} loading={cal.loading} value={selected} onChange={onDate} onCalendar={() => setCalOpen(true)} />
           )}
@@ -267,7 +267,7 @@ export default function TripExplorer({ filters, date, onDate, header, emptyActio
       </section>
       <MonthCalendar open={calOpen} onClose={() => setCalOpen(false)} days={days} value={selected} onPick={onDate} horizon={WINDOW_DAYS} />
 
-      <section className="bus-panel" aria-label="Trips">
+      <section className="bus-panel" aria-label={tr("bus.trips.trips")}>
         <div className="bus-wrap">
           <div className="bus-results-head">
             <div className="bus-results-title">
@@ -276,27 +276,27 @@ export default function TripExplorer({ filters, date, onDate, header, emptyActio
                 <Skel w={150} h={30} style={{ marginTop: 6 }} />
               ) : (
                 <h2 aria-live="polite">
-                  {trips.error ? "Trips" : `${items.length}${activeCount && raw.length !== items.length ? ` of ${raw.length}` : ""} ${raw.length === 1 && !activeCount ? "trip" : "trips"}`}
-                  {!trips.error && Number.isFinite(minPrice) ? <small>from {ugx(minPrice)}</small> : null}
+                  {trips.error ? tr("bus.trips.trips") : activeCount && raw.length !== items.length ? tr("bus.trips.countOf", { count: items.length, total: raw.length }) : tr("bus.tripsCount", { count: items.length })}
+                  {!trips.error && Number.isFinite(minPrice) ? <small>{tr("bus.fromPrice", { price: ugx(minPrice) })}</small> : null}
                 </h2>
               )}
-              <p className="bus-results-sub">{longDayLabel(selected)} · times in East Africa Time</p>
+              <p className="bus-results-sub">{longDayLabel(selected)} · {tr("bus.trips.eatNote")}</p>
             </div>
             <div className="bus-sortbar">
-              <span className="bus-sortlabel">Sort by</span>
-              <div className="bus-sort" role="group" aria-label="Sort trips">
-                {SORTS.map((s) => (
-                  <button type="button" key={s.id} className={`bus-pillbtn ${sort === s.id ? "is-active" : ""}`} aria-pressed={sort === s.id} onClick={() => setSort(s.id)}>{s.label}</button>
+              <span className="bus-sortlabel">{tr("bus.trips.sortBy")}</span>
+              <div className="bus-sort" role="group" aria-label={tr("bus.trips.sortTrips")}>
+                {SORTS.map((id) => (
+                  <button type="button" key={id} className={`bus-pillbtn ${sort === id ? "is-active" : ""}`} aria-pressed={sort === id} onClick={() => setSort(id)}>{tr(`bus.trips.sort.${id}`)}</button>
                 ))}
               </div>
               <button type="button" className="bus-filterbtn" onClick={() => setSheet(true)}>
-                <Sliders size={17} /> Filters{activeCount ? <b>{activeCount}</b> : null}
+                <Sliders size={17} /> {tr("bus.trips.filters")}{activeCount ? <b>{activeCount}</b> : null}
               </button>
             </div>
           </div>
 
           <div className="bus-results-grid">
-            <aside className="bus-rail" aria-label="Filters">
+            <aside className="bus-rail" aria-label={tr("bus.trips.filters")}>
               <Filters facets={facets} sel={sel} setSel={setSel} showCompanies={showCompanyFilter} activeCount={activeCount} onClear={clear} />
             </aside>
 
@@ -304,27 +304,27 @@ export default function TripExplorer({ filters, date, onDate, header, emptyActio
               {loading ? (
                 <TripSkeletons />
               ) : trips.error ? (
-                <ErrorBox error={trips.error} onRetry={trips.reload} title="Couldn't load trips" />
+                <ErrorBox error={trips.error} onRetry={trips.reload} title={tr("bus.trips.tripsFailed")} />
               ) : items.length ? (
                 <div className="bus-trip-list">{items.map((t, i) => <TripCard key={t.id} trip={t} index={i} />)}</div>
               ) : raw.length && activeCount ? (
-                <EmptyState icon={Sliders} title="No trips match those filters" action={<button type="button" className="bus-btn bus-btn-navy" onClick={clear}>Reset filters</button>}>
-                  {raw.length} {raw.length === 1 ? "trip is" : "trips are"} available on {dayLabel(selected)} without them.
+                <EmptyState icon={Sliders} title={tr("bus.trips.noMatch")} action={<button type="button" className="bus-btn bus-btn-navy" onClick={clear}>{tr("bus.trips.resetFilters")}</button>}>
+                  {tr("bus.trips.availableWithout", { count: raw.length, date: dayLabel(selected) })}
                 </EmptyState>
               ) : (
                 <EmptyState
                   icon={Calendar}
-                  title={nothingAtAll ? "No upcoming trips match this search" : `No trips on ${dayLabel(selected)}`}
+                  title={nothingAtAll ? tr("bus.trips.noUpcoming") : tr("bus.trips.noTripsOn", { date: dayLabel(selected) })}
                   action={
                     nothingAtAll ? emptyAction : upNext ? (
                       <>
-                        <button type="button" className="bus-btn bus-btn-primary" onClick={() => onDate(upNext)}>Next trips: {dayLabel(upNext)} <ArrowRight size={16} /></button>
-                        <button type="button" className="bus-btn bus-btn-light" onClick={() => setCalOpen(true)}>Open calendar</button>
+                        <button type="button" className="bus-btn bus-btn-primary" onClick={() => onDate(upNext)}>{tr("bus.trips.nextTrips", { date: dayLabel(upNext) })} <ArrowRight size={16} /></button>
+                        <button type="button" className="bus-btn bus-btn-light" onClick={() => setCalOpen(true)}>{tr("bus.trips.openCalendar")}</button>
                       </>
-                    ) : <button type="button" className="bus-btn bus-btn-light" onClick={() => setCalOpen(true)}>Open calendar</button>
+                    ) : <button type="button" className="bus-btn bus-btn-light" onClick={() => setCalOpen(true)}>{tr("bus.trips.openCalendar")}</button>
                   }
                 >
-                  {nothingAtAll ? "Try a different route or bus type, or clear your filters." : upNext ? "Other days on this route still have seats." : "Try another day from the calendar."}
+                  {nothingAtAll ? tr("bus.trips.tryDifferent") : upNext ? tr("bus.trips.otherDays") : tr("bus.trips.tryAnotherDay")}
                 </EmptyState>
               )}
             </div>
@@ -341,6 +341,7 @@ export default function TripExplorer({ filters, date, onDate, header, emptyActio
 
 // Bottom sheet (phones) that holds the same filters as the desktop rail.
 function FilterSheet({ open, onClose, children, count, activeCount, onClear }) {
+  const { t: tr } = useTranslation();
   const closeRef = useRef(null);
   useEffect(() => {
     if (!open) return undefined;
@@ -357,16 +358,16 @@ function FilterSheet({ open, onClose, children, count, activeCount, onClear }) {
   if (!open) return null;
   return (
     <div className="bus-sheet-backdrop bus-sheet-bottom" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bus-sheet bus-filter-sheet" role="dialog" aria-modal="true" aria-label="Filter trips">
+      <div className="bus-sheet bus-filter-sheet" role="dialog" aria-modal="true" aria-label={tr("bus.trips.filterTrips")}>
         <span className="bus-sheet-grab" aria-hidden="true" />
         <div className="bus-sheet-head">
-          <h2>Filters</h2>
-          <button type="button" className="bus-icon-btn" onClick={onClose} ref={closeRef} aria-label="Close filters"><Close size={18} /></button>
+          <h2>{tr("bus.trips.filters")}</h2>
+          <button type="button" className="bus-icon-btn" onClick={onClose} ref={closeRef} aria-label={tr("bus.trips.closeFilters")}><Close size={18} /></button>
         </div>
         <div className="bus-sheet-scroll">{children}</div>
         <div className="bus-sheet-foot">
-          {activeCount ? <button type="button" className="bus-btn bus-btn-light" onClick={onClear}>Reset</button> : null}
-          <button type="button" className="bus-btn bus-btn-primary" onClick={onClose}>Show {count} {count === 1 ? "trip" : "trips"}</button>
+          {activeCount ? <button type="button" className="bus-btn bus-btn-light" onClick={onClear}>{tr("bus.trips.reset")}</button> : null}
+          <button type="button" className="bus-btn bus-btn-primary" onClick={onClose}>{tr("bus.trips.showTrips", { count })}</button>
         </div>
       </div>
     </div>

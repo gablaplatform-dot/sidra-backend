@@ -1,0 +1,99 @@
+{
+  "home": {
+    "eyebrow": "Wax kasta oo Uganda ah, hal app",
+    "heroTitle1": "Ka iibso alaab casri ah. Ka ballan qaad xirfadlayaal la aamini karo.",
+    "heroTitle2": "Ku safar magaalada.",
+    "heroSubtitle": "Gabla waxay ku xidhaa dharka, elektaroonigga, bixiyeyaal adeeg oo la hubiyey iyo darawallo kuu dhow — dhammaan hal waayo-aragnimo qurxoon.",
+    "searchPlaceholder": "Raadi dhar, adeegyo, darawallo…",
+    "tabs": {
+      "nearby": "Agagaarka",
+      "topRated": "Ugu sarreeya",
+      "new": "Cusub",
+      "featured": "La soo bandhigay"
+    },
+    "shopNow": "Iibso hadda",
+    "getRide": "Hel gaari",
+    "trustSellers": "iibiyeyaal & bixiyeyaal",
+    "trustPayments": "lacag bixin",
+    "trustRating": "celceliska qiimeynta",
+    "cards": {
+      "newArrivalsTitle": "Alaab cusub",
+      "newArrivalsSub": "Dharka caanka ah",
+      "rideReadyTitle": "Gaari diyaar ah",
+      "rideReadySub": "Boda & baabuur kuu dhow",
+      "topProsTitle": "Xirfadlayaasha ugu fiican",
+      "topProsSub": "La hubiyey & la qiimeeyey",
+      "fastDeliveryTitle": "Gaadhsiin degdeg ah",
+      "fastDeliverySub": "Dalka oo dhan"
+    },
+    "trustbar": {
+      "verifiedTitle": "Bixiyeyaal la hubiyey",
+      "verifiedSub": "La baaray & la qiimeeyey",
+      "localTitle": "Kuu dhow",
+      "localSub": "Hel adeegyo agagaarkaaga ah",
+      "ratedTitle": "Qiimeyn 4.8/5",
+      "ratedSub": "Laga helay 10,000+ macmiil faraxsan",
+      "supportTitle": "Taageero 24/7",
+      "supportSub": "Nala sheekayso markasta"
+    },
+    "promo": {
+      "rideEyebrow": "Gabla Ride",
+      "rideTitle": "Aan kuu helno gaari.",
+      "rideText": "Boda ama baabuur — codso darawal kuu dhow oo hel qiimaha hore ilbiriqsiyo gudahood.",
+      "rideCta": "Ballan gaari",
+      "shopEyebrow": "Gabla Shop",
+      "shopTitle": "Iibso hadda, ururin nool.",
+      "shopText": "Baadh dhar, elektaroonig & hab-nololeed oo ka timid iibiye kasta oo Gabla ah, hal dukaan.",
+      "shopCta": "Sahan dukaanka"
+    },
+    "bus": {
+      "eyebrow": "Gabla Bus",
+      "title": "Ka qaado tigidhka baska hal daqiiqo gudaheed.",
+      "text": "Dooro jidkaaga, dooro maalinta kalandarka, kuna bixi MTN MoMo ama Airtel Money. E-tigidhkaaga isla markiiba ayuu kuu soo gaadhayaa — safaf garaajka kuma istaagaysid.",
+      "fromAny": "Laga bilaabo (meel kasta)",
+      "toAny": "Loo socdo (meel kasta)",
+      "travellingFrom": "Halka aad ka safraysid",
+      "travellingTo": "Halka aad u safraysid",
+      "travelDate": "Taariikhda safarka",
+      "findBuses": "Raadi basas",
+      "myTickets": "Tigidhadayda"
+    },
+    "categories": {
+      "title": "Ku baadh qaybo",
+      "subtitle": "Taabo wixii aad jeceshahay, kuu diyaarsan.",
+      "empty": "Weli qayb ma jirto.",
+      "loading": "Qaybaha waa la soo rarayaa…",
+      "providersChip": "{{count}}+ bixiyeyaal"
+    },
+    "providers": {
+      "title": "Bixiyeyaasha la soo bandhigay",
+      "subtitle": "Xirfadlayaal la doortay oo kuu dhow.",
+      "cta": "Ballan qaad xirfadle",
+      "empty": "Weli bixiyeyaal la soo bandhigay ma jiraan.",
+      "fallbackCategory": "Bixiye adeeg"
+    },
+    "loadError": "Hadda ma soo rari karno Gabla."
+  },
+  "mobileHome": {
+    "tiles": {
+      "shop": "Iibso",
+      "services": "Adeegyo",
+      "bus": "Tigidhka baska",
+      "ride": "Hel gaari"
+    },
+    "explore": "Sahan",
+    "quickActions": "Ficillo degdeg ah",
+    "titleLead": "Maxaad",
+    "titleRest": "u baahan tahay maanta?",
+    "categories": "Qaybaha",
+    "browseProviders": "Baadh bixiyeyaasha",
+    "emptyCategories": "Qaybaha adeegyada halkan ayay ka muuqan doonaan.",
+    "recommended": "Bixiyeyaasha lagu talinayo",
+    "ordersAria": "Dalabyadayda iyo cusboonaysiinta",
+    "accountAria": "Akoonkaaga",
+    "menu": "Liiska",
+    "busTickets": "Tigidhada baska",
+    "myBusTickets": "Tigidhadayda baska",
+    "myBusinessProfile": "Profile-ka ganacsigayga"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "loading": {
+    "generic": "Loading",
+    "products": "Loading products",
+    "categories": "Loading categories",
+    "offers": "Loading offers",
+    "filters": "Loading filters",
+    "providers": "Loading providers",
+    "product": "Loading product",
+    "provider": "Loading provider",
+    "form": "Loading form"
+  }
+}

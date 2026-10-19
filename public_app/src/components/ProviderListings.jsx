@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
+import { formatUgx } from "../lib/format";
+import { intlLocale } from "../i18n";
+import { unitLabel } from "../lib/bookings";
 import { findCategoryPath } from "../lib/categories";
 import { SORT_OPTIONS, activeFilterCount, bucketLabel, patchParams, prettyKey, readFilters, toApiParams } from "../lib/browseFilters";
 import BrowseSidebar from "./shop/browse/BrowseSidebar";
@@ -23,14 +27,15 @@ const containsId = (node, id) => node.id === id || (node.children || []).some((c
 // Provider-page category filter: selects in place (no navigation), shows only branches that hold
 // products, and opens the branch that contains the current selection.
 function ProviderCategoryBlock({ tree, counts, selectedId, total, onSelect }) {
+  const { t } = useTranslation();
   const branches = tree.map((node) => ({ node, count: subtreeCount(node, counts) })).filter((b) => b.count > 0);
   if (!branches.length) return null;
   return (
     <section className="sb-block sb-block-categories">
-      <h2 className="sb-block-head">Categories</h2>
+      <h2 className="sb-block-head">{t("provider.listings.categories")}</h2>
       <div className="sb-block-body">
         <button type="button" className={`sb-cat-link sb-cat-btn ${!selectedId ? "is-active" : ""}`} onClick={() => onSelect(null)}>
-          <span>All products</span>
+          <span>{t("provider.listings.allProducts")}</span>
           <em>{total.toLocaleString()}</em>
         </button>
         <ul className="sb-cat-plain">
@@ -67,6 +72,7 @@ function ProviderCategoryBlock({ tree, counts, selectedId, total, onSelect }) {
 // The provider's products with the same filter sidebar as the Shop page, scoped to this provider.
 // Filters live in the URL (?cat=&min=&a.brand=...) so a filtered view can be shared.
 function ProviderProducts({ provider }) {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => readFilters(searchParams), [searchParams]);
   const cat = searchParams.get("cat") || "";
@@ -125,7 +131,7 @@ function ProviderProducts({ provider }) {
         setFacets(facetData);
         setCategoryFacets(unscoped || facetData);
       })
-      .catch((loadError) => active && setError(loadError.message || "Unable to load products."))
+      .catch((loadError) => active && setError(loadError.message || t("provider.listings.loadError")))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
@@ -164,7 +170,7 @@ function ProviderProducts({ provider }) {
       });
     }
   }
-  if (filters.discount) chips.push({ id: "discount", text: "With discount", remove: () => apply({ discount: false }) });
+  if (filters.discount) chips.push({ id: "discount", text: t("provider.listings.withDiscount"), remove: () => apply({ discount: false }) });
   const clearAll = () => setSearchParams(patchParams(searchParams, { cat: null, min: null, max: null, discount: false, attrs: {} }));
 
   const sidebar = shopTree === null || (loading && !facets) ? (
@@ -185,15 +191,15 @@ function ProviderProducts({ provider }) {
     <div className="sb-layout pl-layout">
       <div className={`sb-side-wrap ${drawerOpen ? "is-open" : ""}`}>
         <div className="sb-drawer-head">
-          <strong>Filters</strong>
-          <button type="button" className="sb-icon-btn" onClick={() => setDrawerOpen(false)} aria-label="Close filters">
+          <strong>{t("provider.listings.filters")}</strong>
+          <button type="button" className="sb-icon-btn" onClick={() => setDrawerOpen(false)} aria-label={t("provider.listings.closeFilters")}>
             <IconClose />
           </button>
         </div>
         {sidebar}
         <div className="sb-drawer-foot">
           <button type="button" className="sb-apply sb-apply-wide" onClick={() => setDrawerOpen(false)}>
-            Show {total.toLocaleString()} results
+            {t("provider.listings.showResults", { count: total, n: total.toLocaleString(intlLocale()) })}
           </button>
         </div>
       </div>
@@ -201,17 +207,17 @@ function ProviderProducts({ provider }) {
 
       <div className="sb-results">
         <header className="sb-results-head">
-          {loading && !result ? <Skel h={14} w={90} /> : <p className="sb-count">{`${total.toLocaleString()} product${total === 1 ? "" : "s"}`}</p>}
+          {loading && !result ? <Skel h={14} w={90} /> : <p className="sb-count">{t("provider.listings.productCount", { count: total, n: total.toLocaleString(intlLocale()) })}</p>}
           <div className="sb-head-actions">
             <button type="button" className="sb-filter-btn" onClick={() => setDrawerOpen(true)}>
-              Filters{filterCount ? ` (${filterCount})` : ""}
+              {t("provider.listings.filters")}{filterCount ? ` (${filterCount})` : ""}
             </button>
             <label className="sb-sort">
-              <span>Sort</span>
+              <span>{t("provider.listings.sort")}</span>
               <select value={filters.sort} onChange={(event) => apply({ sort: event.target.value === "featured" ? null : event.target.value })}>
                 {SORT_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
-                    {o.label}
+                    {t(`provider.sort.${o.value}`, { defaultValue: o.label })}
                   </option>
                 ))}
               </select>
@@ -230,7 +236,7 @@ function ProviderProducts({ provider }) {
             ))}
             {chips.length > 1 ? (
               <button type="button" className="sb-link-btn" onClick={clearAll}>
-                Clear all
+                {t("provider.listings.clearAll")}
               </button>
             ) : null}
           </div>
@@ -248,11 +254,11 @@ function ProviderProducts({ provider }) {
           </div>
         ) : !error ? (
           <div className="sb-empty">
-            <h2>No products match</h2>
-            <p>Try removing a filter.</p>
+            <h2>{t("provider.listings.noMatch")}</h2>
+            <p>{t("provider.listings.tryRemoving")}</p>
             {chips.length ? (
               <button type="button" className="sb-apply" onClick={clearAll}>
-                Clear all filters
+                {t("provider.listings.clearAllFilters")}
               </button>
             ) : null}
           </div>
@@ -265,6 +271,7 @@ function ProviderProducts({ provider }) {
 }
 
 function ServiceCards({ services }) {
+  const { t } = useTranslation();
   return (
     <div className="listing-grid">
       {services.map((item) => (
@@ -275,9 +282,9 @@ function ServiceCards({ services }) {
           <div className="listing-body">
             <h3>{item.name}</h3>
             {item.description ? <p className="provider-meta">{item.description}</p> : null}
-            {Number(item.price) > 0 ? <div className="listing-price">UGX {Number(item.price).toLocaleString()}{item.bookingMode && item.bookingMode !== "none" && item.booking ? ` / ${item.booking.unit}` : ""}</div> : null}
+            {Number(item.price) > 0 ? <div className="listing-price">{formatUgx(item.price)}{item.bookingMode && item.bookingMode !== "none" && item.booking ? ` / ${unitLabel(item.booking.unit)}` : ""}</div> : null}
             <Link to={`/shop/product/${item.id}`} className="cta-button ecommerce-order-button" style={{ display: "block", textAlign: "center" }}>
-              {item.bookingMode && item.bookingMode !== "none" ? "Check availability" : "View details"}
+              {item.bookingMode && item.bookingMode !== "none" ? t("provider.listings.checkAvailability") : t("provider.listings.viewDetails")}
             </Link>
           </div>
         </div>
@@ -290,6 +297,7 @@ function ServiceCards({ services }) {
 // separate tabs (a tab only appears when the provider has that kind), and products get the Shop
 // page's filter sidebar.
 export default function ProviderListings({ provider, listings, onOrderService, id }) {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const products = listings.filter((l) => l.type === "product");
   const services = listings.filter((l) => l.type !== "product");
@@ -309,10 +317,10 @@ export default function ProviderListings({ provider, listings, onOrderService, i
     <section className="pl-section" id={id}>
       {!listings.length ? (
         <div className="detail-block">
-          <h2>Products &amp; services</h2>
+          <h2>{t("provider.listings.productsServices")}</h2>
           <div className="empty-state">
             <IconBox />
-            <p>No products or services listed yet.</p>
+            <p>{t("provider.listings.empty")}</p>
           </div>
         </div>
       ) : (
@@ -320,14 +328,14 @@ export default function ProviderListings({ provider, listings, onOrderService, i
           {hasBoth ? (
             <div className="pl-tabs" role="tablist">
               <button type="button" role="tab" aria-selected={tab === "products"} className={tab === "products" ? "is-active" : ""} onClick={() => selectTab("products")}>
-                Products <span>{products.length}</span>
+                {t("provider.listings.products")} <span>{products.length}</span>
               </button>
               <button type="button" role="tab" aria-selected={tab === "services"} className={tab === "services" ? "is-active" : ""} onClick={() => selectTab("services")}>
-                Services <span>{services.length}</span>
+                {t("provider.listings.services")} <span>{services.length}</span>
               </button>
             </div>
           ) : (
-            <h2 className="pl-title">{tab === "products" ? "Products" : "Services"}</h2>
+            <h2 className="pl-title">{tab === "products" ? t("provider.listings.products") : t("provider.listings.services")}</h2>
           )}
           {tab === "products" ? <ProviderProducts provider={provider} /> : <ServiceCards services={services} />}
         </>

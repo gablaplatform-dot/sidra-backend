@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { loginPath } from "../lib/authRedirect";
+import { formatUgx } from "../lib/format";
 
 import { request } from "../lib/api";
 import { uploadFile } from "../lib/storage";
@@ -20,19 +22,20 @@ import { Skel, SectionSkeleton } from "../components/Skeleton";
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
 const TABS = [
-  { key: "info", label: "Profile info" },
-  { key: "analytics", label: "Analytics" },
-  { key: "listings", label: "Products & services" },
-  { key: "shopCategories", label: "Shop categories" },
-  { key: "ads", label: "Ads" },
-  { key: "orders", label: "Orders" },
-  { key: "bookings", label: "Bookings" },
-  { key: "documents", label: "Quotes & receipts" },
-  { key: "wallet", label: "Wallet" },
-  { key: "gallery", label: "Gallery" }
+  { key: "info" },
+  { key: "analytics" },
+  { key: "listings" },
+  { key: "shopCategories" },
+  { key: "ads" },
+  { key: "orders" },
+  { key: "bookings" },
+  { key: "documents" },
+  { key: "wallet" },
+  { key: "gallery" }
 ];
 
 export default function Profile() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [session] = useState(() => getSession());
@@ -81,7 +84,7 @@ export default function Profile() {
           onlinePaymentsEnabled: providerResult.onlinePaymentsEnabled !== false
         });
       })
-      .catch((loadError) => setError(loadError.message || "Unable to load your profile."))
+      .catch((loadError) => setError(loadError.message || t("profile.errLoad")))
       .finally(() => setLoading(false));
   };
 
@@ -89,7 +92,7 @@ export default function Profile() {
 
   const changeTab = (key, focusId = null) => {
     if (key === activeTab && !focusId) return;
-    if (activeTab === "documents" && docsDirty && !window.confirm("You have unsaved changes to your quotation and receipt design. Leave without saving?")) return;
+    if (activeTab === "documents" && docsDirty && !window.confirm(t("profile.confirmLeaveDocs"))) return;
     setFocusOrderId(focusId);
     setActiveTab(key);
   };
@@ -102,19 +105,19 @@ export default function Profile() {
   };
 
   const deleteListing = async (listing) => {
-    if (!window.confirm(`Remove "${listing.name}"?`)) return;
+    if (!window.confirm(t("profile.confirmRemoveListing", { name: listing.name }))) return;
     try {
       await request(`/listings/${listing.id}`, { method: "DELETE" });
       load();
     } catch (deleteError) {
-      setError(deleteError.message || "Unable to remove listing.");
+      setError(deleteError.message || t("profile.errRemoveListing"));
     }
   };
 
   const saveProfileInfo = async (event) => {
     event.preventDefault();
     if (!form.businessName.trim()) {
-      setError("Business name can't be empty.");
+      setError(t("profile.errNameEmpty"));
       return;
     }
     setSavingInfo(true);
@@ -136,9 +139,9 @@ export default function Profile() {
         })
       });
       setProvider(updated);
-      setNotice("Profile updated.");
+      setNotice(t("profile.updated"));
     } catch (saveError) {
-      setError(saveError.message || "Unable to save your profile.");
+      setError(saveError.message || t("profile.errSave"));
     } finally {
       setSavingInfo(false);
     }
@@ -156,7 +159,7 @@ export default function Profile() {
       });
       setProvider(updated);
     } catch (uploadError) {
-      setError(uploadError.message || "Unable to upload photo.");
+      setError(uploadError.message || t("profile.errUploadPhoto"));
     } finally {
       setBusy(false);
     }
@@ -176,7 +179,7 @@ export default function Profile() {
       });
       setProvider(updated);
     } catch (uploadError) {
-      setError(uploadError.message || "Unable to upload photo.");
+      setError(uploadError.message || t("profile.errUploadPhoto"));
     } finally {
       setUploadingGallery(false);
       if (galleryFileRef.current) galleryFileRef.current.value = "";
@@ -193,7 +196,7 @@ export default function Profile() {
       });
       setProvider(updated);
     } catch (removeError) {
-      setError(removeError.message || "Unable to remove photo.");
+      setError(removeError.message || t("profile.errRemovePhoto"));
     }
   };
 
@@ -205,15 +208,15 @@ export default function Profile() {
 
       {loading ? (
         <div className="skel-page" role="status" aria-busy="true">
-          <span className="sr-only">Loading your profile…</span>
+          <span className="sr-only">{t("profile.loading")}</span>
           <Skel h={190} w="100%" r={20} />
           <Skel h={44} w="70%" r={999} style={{ margin: "20px 0" }} />
-          <SectionSkeleton rows={3} label="Loading your profile" />
+          <SectionSkeleton rows={3} label={t("profile.loading")} />
         </div>
       ) : !provider ? (
         <div className="page-empty-state">
-          <p>{error || "We couldn't load your profile."}</p>
-          <Link to="/home" className="secondary-button">Back to home</Link>
+          <p>{error || t("profile.errLoadFallback")}</p>
+          <Link to="/home" className="secondary-button">{t("profile.backHome")}</Link>
         </div>
       ) : (
         <>
@@ -226,9 +229,9 @@ export default function Profile() {
               className="photo-edit-button cover-edit-button"
               onClick={() => coverFileRef.current?.click()}
               disabled={uploadingCover}
-              aria-label="Change cover photo"
+              aria-label={t("profile.changeCoverAria")}
             >
-              <IconCamera /> <span>{uploadingCover ? "Uploading…" : "Change cover"}</span>
+              <IconCamera /> <span>{uploadingCover ? t("profile.uploading") : t("profile.changeCover")}</span>
             </button>
             <input
               ref={coverFileRef}
@@ -251,7 +254,7 @@ export default function Profile() {
                   className="photo-edit-button avatar-edit-button"
                   onClick={() => avatarFileRef.current?.click()}
                   disabled={uploadingAvatar}
-                  aria-label="Change profile picture"
+                  aria-label={t("profile.changeAvatarAria")}
                 >
                   <IconCamera />
                 </button>
@@ -265,7 +268,7 @@ export default function Profile() {
               </div>
               <div className="profile-identity-text">
                 <h1>{provider.businessName}</h1>
-                <p className="provider-hero-meta">Your public profile &middot; <Link to={`/provider/${provider.id}`}>View live page</Link></p>
+                <p className="provider-hero-meta">{t("profile.publicProfile")} &middot; <Link to={`/provider/${provider.id}`}>{t("profile.viewLive")}</Link></p>
               </div>
             </div>
           </section>
@@ -281,7 +284,7 @@ export default function Profile() {
                 className={`hero-tab ${activeTab === tab.key ? "is-active" : ""}`}
                 onClick={() => changeTab(tab.key)}
               >
-                {tab.label}
+                {t(`profile.tabs.${tab.key}`)}
               </button>
             ))}
           </nav>
@@ -291,28 +294,28 @@ export default function Profile() {
               <section className="detail-block profile-info-form">
                 <form onSubmit={saveProfileInfo}>
                   <div className="form-grid two">
-                    <Field label="Business name">
+                    <Field label={t("profile.businessName")}>
                       <input
                         required
                         value={form.businessName}
                         onChange={(e) => setForm((f) => ({ ...f, businessName: e.target.value }))}
                       />
                     </Field>
-                    <Field label="Phone">
+                    <Field label={t("profile.phone")}>
                       <input
                         value={form.phone}
                         onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                        placeholder="e.g. +256 700 000000"
+                        placeholder={t("profile.phonePlaceholder")}
                       />
                     </Field>
                     <Field label="WhatsApp">
                       <input
                         value={form.whatsapp}
                         onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))}
-                        placeholder="e.g. +256 700 000000"
+                        placeholder={t("profile.phonePlaceholder")}
                       />
                     </Field>
-                    <Field label="Website (optional)">
+                    <Field label={t("profile.websiteOptional")}>
                       <input
                         value={form.website}
                         onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
@@ -320,26 +323,26 @@ export default function Profile() {
                       />
                     </Field>
                   </div>
-                  <Field label="Description" as="div">
+                  <Field label={t("profile.description")} as="div">
                     <textarea
                       rows="5"
                       value={form.description}
                       onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                      placeholder="Tell customers what you do, what makes you different, and what to expect."
+                      placeholder={t("profile.descriptionPlaceholder")}
                     />
                   </Field>
-                  <Field label="Online payments" as="div">
+                  <Field label={t("profile.onlinePayments")} as="div">
                     <label className="checkbox-row">
                       <input
                         type="checkbox"
                         checked={form.onlinePaymentsEnabled}
                         onChange={(e) => setForm((f) => ({ ...f, onlinePaymentsEnabled: e.target.checked }))}
                       />
-                      <span>Accept online mobile money payments for my products</span>
+                      <span>{t("profile.acceptOnline")}</span>
                     </label>
                   </Field>
                   <button className="primary-button profile-save-button" type="submit" disabled={savingInfo}>
-                    {savingInfo ? "Saving…" : "Save changes"}
+                    {savingInfo ? t("profile.saving") : t("profile.saveChanges")}
                   </button>
                 </form>
               </section>
@@ -350,8 +353,8 @@ export default function Profile() {
             {activeTab === "listings" ? (
               <section className="detail-block">
                 <div className="detail-block-header">
-                  <h2>Products &amp; services</h2>
-                  <Link to="/profile/listings/new" className="cta-button">+ Add</Link>
+                  <h2>{t("profile.tabs.listings")}</h2>
+                  <Link to="/profile/listings/new" className="cta-button">{t("profile.add")}</Link>
                 </div>
                 {listings.length ? (
                   <div className="listing-grid">
@@ -365,15 +368,15 @@ export default function Profile() {
                         </div>
                         <div className="listing-body">
                           <h3>{item.name}</h3>
-                          {Number(item.price) > 0 ? <div className="listing-price">UGX {Number(item.price).toLocaleString()}</div> : null}
+                          {Number(item.price) > 0 ? <div className="listing-price">{formatUgx(item.price)}</div> : null}
                           <div style={{ margin: "8px 0" }}>
                             <span className={`status-badge status-${item.status === "approved" ? "fulfilled" : "pending"}`}>
-                              {item.status === "approved" ? "Live" : "Pending review"}
+                              {item.status === "approved" ? t("profile.live") : t("profile.pendingReview")}
                             </span>
                           </div>
                           <div className="listing-actions">
-                            <Link to={`/profile/listings/${item.id}/edit`}>Edit</Link>
-                            <button type="button" onClick={() => deleteListing(item)}>Remove</button>
+                            <Link to={`/profile/listings/${item.id}/edit`}>{t("profile.edit")}</Link>
+                            <button type="button" onClick={() => deleteListing(item)}>{t("profile.remove")}</button>
                           </div>
                         </div>
                       </div>
@@ -382,8 +385,8 @@ export default function Profile() {
                 ) : (
                   <div className="empty-state">
                     <IconBox />
-                    <p>You haven&apos;t added any products or services yet.</p>
-                    <Link to="/profile/listings/new" className="cta-button">+ Add your first one</Link>
+                    <p>{t("profile.noListings")}</p>
+                    <Link to="/profile/listings/new" className="cta-button">{t("profile.addFirst")}</Link>
                   </div>
                 )}
               </section>
@@ -404,20 +407,20 @@ export default function Profile() {
             {activeTab === "gallery" ? (
               <section className="detail-block">
                 <div className="detail-block-header">
-                  <h2>Gallery</h2>
+                  <h2>{t("profile.tabs.gallery")}</h2>
                   <button type="button" className="cta-button" onClick={() => galleryFileRef.current?.click()} disabled={uploadingGallery}>
-                    {uploadingGallery ? "Uploading…" : "+ Add photo"}
+                    {uploadingGallery ? t("profile.uploading") : t("profile.addPhoto")}
                   </button>
                   <input ref={galleryFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={addGalleryPhoto} />
                 </div>
                 <p className="provider-meta profile-section-hint">
-                  General photos of your business, work, or space &mdash; separate from the photos on individual products or services.
+                  {t("profile.galleryHint")}
                 </p>
                 {provider.media?.gallery?.length ? (
                   <div className="gallery-grid">
                     {provider.media.gallery.map((url) => (
                       <div key={url} className="gallery-item" style={{ backgroundImage: `url("${url}")` }}>
-                        <button type="button" className="gallery-remove" onClick={() => removeGalleryPhoto(url)} aria-label="Remove photo">
+                        <button type="button" className="gallery-remove" onClick={() => removeGalleryPhoto(url)} aria-label={t("profile.removePhotoAria")}>
                           <IconClose />
                         </button>
                       </div>
@@ -426,7 +429,7 @@ export default function Profile() {
                 ) : (
                   <div className="empty-state">
                     <IconImage />
-                    <p>No gallery photos yet.</p>
+                    <p>{t("profile.noGallery")}</p>
                   </div>
                 )}
               </section>

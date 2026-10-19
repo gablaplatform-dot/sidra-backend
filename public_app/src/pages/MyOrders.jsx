@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { clearSession, getSession } from "../lib/session";
 import { loginPath } from "../lib/authRedirect";
 import { formatUgx } from "../lib/format";
+import { intlLocale } from "../i18n";
 import { ORDER_STATUS, openDocumentPdf } from "../lib/myOrders";
 import SiteHeader from "../components/SiteHeader";
 import MyBookings from "../components/booking/MyBookings";
@@ -13,18 +15,20 @@ import { Skel } from "../components/Skeleton";
 import { IconBox, IconCheck, IconPin, IconReceipt } from "../components/icons";
 
 const FILTERS = [
-  { key: "all", label: "All orders" },
-  { key: "open", label: "In progress" },
-  { key: "done", label: "Completed" },
-  { key: "closed", label: "Cancelled" }
+  { key: "all" },
+  { key: "open" },
+  { key: "done" },
+  { key: "closed" }
 ];
 const bucket = (order) => (order.status === "fulfilled" ? "done" : ["rejected", "canceled"].includes(order.status) ? "closed" : "open");
 
-const dateLabel = (value) => new Date(value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+const dateLabel = (value) => new Date(value).toLocaleDateString(intlLocale(), { day: "numeric", month: "short", year: "numeric" });
 const orderRef = (id) => `#${String(id).slice(-6).toUpperCase()}`;
 
 function OrderCard({ order, onPaid, phone }) {
-  const status = ORDER_STATUS[order.status] || ORDER_STATUS.pending;
+  const { t } = useTranslation();
+  const statusKey = ORDER_STATUS[order.status] ? order.status : "pending";
+  const status = ORDER_STATUS[statusKey];
   const paid = order.paymentStatus === "paid" || order.paymentStatus === "paid_cash";
   const quotes = order.documents.filter((d) => d.type === "quotation");
   const receipts = order.documents.filter((d) => d.type === "receipt");
@@ -40,13 +44,13 @@ function OrderCard({ order, onPaid, phone }) {
     try {
       await openDocumentPdf(doc.id);
     } catch (e) {
-      setError(e.message || "This document could not be opened.");
+      setError(e.message || t("orders.docOpenFailed"));
     } finally {
       setBusy("");
     }
   };
 
-  const steps = online || order.paymentMethod === "mobile_money" ? ["Placed", paid ? "Accepted & paid" : "Accepted", "Completed"] : ["Placed", "Accepted", paid && order.status === "fulfilled" ? "Delivered & paid" : "Completed"];
+  const stepKeys = online || order.paymentMethod === "mobile_money" ? ["placed", paid ? "acceptedPaid" : "accepted", "completed"] : ["placed", "accepted", paid && order.status === "fulfilled" ? "deliveredPaid" : "completed"];
 
   return (
     <article className="mo-card">
@@ -55,18 +59,18 @@ function OrderCard({ order, onPaid, phone }) {
           {order.provider.avatarUrl ? <img src={order.provider.avatarUrl} alt="" /> : <span>{order.provider.businessName.slice(0, 1).toUpperCase()}</span>}
           <div>
             <Link to={`/provider/${order.provider.id}`}>{order.provider.businessName}</Link>
-            <small>Order {orderRef(order.id)} · {dateLabel(order.createdAt)}</small>
+            <small>{t("orders.orderRef", { ref: orderRef(order.id) })} · {dateLabel(order.createdAt)}</small>
           </div>
         </div>
-        <span className={`mo-chip mo-chip-${status.tone}`}>{status.label}</span>
+        <span className={`mo-chip mo-chip-${status.tone}`}>{t(`orders.status.${statusKey}`)}</span>
       </header>
 
       {status.step >= 0 ? (
-        <ol className="mo-steps" aria-label="Order progress">
-          {steps.map((label, i) => (
-            <li key={label} className={i <= status.step ? "is-done" : ""}>
+        <ol className="mo-steps" aria-label={t("orders.progress")}>
+          {stepKeys.map((stepKey, i) => (
+            <li key={stepKey} className={i <= status.step ? "is-done" : ""}>
               <span>{i <= status.step ? <IconCheck width={12} height={12} /> : i + 1}</span>
-              {label}
+              {t(`orders.steps.${stepKey}`)}
             </li>
           ))}
         </ol>
@@ -83,59 +87,59 @@ function OrderCard({ order, onPaid, phone }) {
 
       <div className="mo-pay">
         <div>
-          <small>{paid ? "Paid" : "To pay"}</small>
+          <small>{paid ? t("orders.paid") : t("orders.toPay")}</small>
           <strong>{formatUgx(order.total)}</strong>
         </div>
         {online && order.paymentStatus === "payable" ? (
-          <button type="button" className="mo-paynow" onClick={() => setPaying(true)}>Pay now</button>
+          <button type="button" className="mo-paynow" onClick={() => setPaying(true)}>{t("orders.payNow")}</button>
         ) : (
           <span className={`mo-chip ${paid ? "mo-chip-green" : "mo-chip-amber"}`}>
             {order.paymentMethod === "mobile_money"
-              ? "Paid by mobile money"
+              ? t("orders.paidMobileMoney")
               : online
-                ? closed ? "Not charged" : "Waiting for the seller to accept"
-                : paid ? "Cash collected" : order.fulfillment.method === "pickup" ? "Pay cash on pickup" : "Pay cash on delivery"}
+                ? closed ? t("orders.notCharged") : t("orders.waitingAccept")
+                : paid ? t("orders.cashCollected") : order.fulfillment.method === "pickup" ? t("orders.cashOnPickup") : t("orders.cashOnDelivery")}
           </span>
         )}
       </div>
       {online && order.paymentStatus === "payable" ? (
-        <p className="mo-where">The seller accepted your order. Pay now to confirm it. Nothing was charged until you pay.</p>
+        <p className="mo-where">{t("orders.acceptedPayHint")}</p>
       ) : online && order.paymentStatus === "awaiting_approval" ? (
-        <p className="mo-where">You&apos;ll be able to pay as soon as the seller confirms it&apos;s available. We&apos;ll email you.</p>
+        <p className="mo-where">{t("orders.awaitingHint")}</p>
       ) : null}
       {order.fulfillment.method === "delivery" && order.fulfillment.address ? (
         <p className="mo-where"><IconPin width={15} height={15} /> {order.fulfillment.address}</p>
       ) : order.fulfillment.method === "pickup" ? (
-        <p className="mo-where"><IconPin width={15} height={15} /> You will pick this order up</p>
+        <p className="mo-where"><IconPin width={15} height={15} /> {t("orders.pickupNote")}</p>
       ) : null}
 
-      <section className="mo-docs" aria-label="Quotations and receipts">
-        <h3><IconReceipt width={16} height={16} /> Quotations &amp; receipts</h3>
+      <section className="mo-docs" aria-label={t("orders.docsTitle")}>
+        <h3><IconReceipt width={16} height={16} /> {t("orders.docsTitle")}</h3>
         {order.documents.length ? (
           <ul>
             {[...receipts, ...quotes].map((doc) => (
               <li key={doc.id} className={doc.status === "superseded" ? "is-old" : ""}>
                 <div>
-                  <strong>{doc.type === "receipt" ? "Receipt" : "Quotation"} {doc.number}{doc.revision > 1 ? ` · revision ${doc.revision}` : ""}</strong>
+                  <strong>{doc.type === "receipt" ? t("orders.receipt") : t("orders.quotation")} {doc.number}{doc.revision > 1 ? ` · ${t("orders.revision", { n: doc.revision })}` : ""}</strong>
                   <small>
                     {dateLabel(doc.issuedAt)} · {formatUgx(doc.total)}
-                    {doc.status === "superseded" ? " · replaced by a newer quotation" : doc.emailedAt ? ` · emailed to ${doc.emailedTo}` : ""}
+                    {doc.status === "superseded" ? ` · ${t("orders.replaced")}` : doc.emailedAt ? ` · ${t("orders.emailedTo", { email: doc.emailedTo })}` : ""}
                   </small>
                 </div>
-                <button type="button" onClick={() => open(doc)} disabled={busy === doc.id}>{busy === doc.id ? "Opening…" : "View PDF"}</button>
+                <button type="button" onClick={() => open(doc)} disabled={busy === doc.id}>{busy === doc.id ? t("orders.opening") : t("orders.viewPdf")}</button>
               </li>
             ))}
           </ul>
         ) : (
           <p className="mo-docs-empty">
-            {paid ? "Your receipt will show here shortly." : "The seller's quotation arrives by email and shows here within a minute of placing the order. Your receipt follows once it is paid."}
+            {paid ? t("orders.receiptSoon") : t("orders.quotationSoon")}
           </p>
         )}
         {error ? <p className="mo-error">{error}</p> : null}
       </section>
       {paying ? (
         <PaymentModal
-          title="Pay for your order"
+          title={t("orders.payForOrder")}
           summary={`${order.provider.businessName} · ${order.items.map((i) => `${i.name} × ${i.quantity}`).join(", ")}`}
           amount={Number(order.total)}
           endpoint={`/payments/orders/${encodeURIComponent(order.id)}/pay`}
@@ -160,6 +164,7 @@ function CardSkeleton() {
 }
 
 export default function MyOrders() {
+  const { t } = useTranslation();
   const location = useLocation();
   const [session, setSession] = useState(() => getSession());
   const [orders, setOrders] = useState(null);
@@ -174,12 +179,12 @@ export default function MyOrders() {
       .then((result) => setOrders(result?.items || []))
       .catch((e) => {
         setOrders([]);
-        setError(e.message || "Your orders could not be loaded.");
+        setError(e.message || t("orders.loadFailed"));
       });
   }, []);
 
   useEffect(() => {
-    document.title = "My orders | Gabla";
+    document.title = `${t("nav.myOrders")} | Gabla`;
     if (session) load();
   }, [session, load]);
 
@@ -199,27 +204,27 @@ export default function MyOrders() {
       <SiteHeader session={session} onLogout={logout} />
       <div className="mo-wrap">
         <header className="mo-title">
-          <h1>{tab === "bookings" ? "My bookings" : "My orders"}</h1>
-          <p>{tab === "bookings" ? "Your hotel, venue and appointment bookings, and what the provider has answered." : "Everything you have ordered, with the seller's quotations and your receipts attached."}</p>
+          <h1>{tab === "bookings" ? t("orders.myBookings") : t("nav.myOrders")}</h1>
+          <p>{tab === "bookings" ? t("orders.bookingsSubtitle") : t("orders.subtitle")}</p>
         </header>
 
         {!session ? (
           <div className="mo-empty">
-            <strong>Sign in to see your orders</strong>
-            <p>Your orders, quotations and receipts are kept with your account.</p>
-            <Link to={loginPath(location)} className="primary-button">Sign in</Link>
+            <strong>{t("orders.signInTitle")}</strong>
+            <p>{t("orders.signInBody")}</p>
+            <Link to={loginPath(location)} className="primary-button">{t("nav.signIn")}</Link>
           </div>
         ) : (
           <>
-            <div className="mo-tabs" role="tablist" aria-label="Orders or bookings">
-              <button type="button" role="tab" aria-selected={tab === "orders"} className={tab === "orders" ? "is-active" : ""} onClick={() => setSearchParams({})}>Orders</button>
-              <button type="button" role="tab" aria-selected={tab === "bookings"} className={tab === "bookings" ? "is-active" : ""} onClick={() => setSearchParams({ tab: "bookings" })}>Bookings</button>
+            <div className="mo-tabs" role="tablist" aria-label={t("orders.tabsLabel")}>
+              <button type="button" role="tab" aria-selected={tab === "orders"} className={tab === "orders" ? "is-active" : ""} onClick={() => setSearchParams({})}>{t("orders.tabOrders")}</button>
+              <button type="button" role="tab" aria-selected={tab === "bookings"} className={tab === "bookings" ? "is-active" : ""} onClick={() => setSearchParams({ tab: "bookings" })}>{t("orders.tabBookings")}</button>
             </div>
             {tab === "bookings" ? <MyBookings /> : <>
             <div className="mo-filters" role="tablist">
               {FILTERS.map((f) => (
                 <button key={f.key} type="button" role="tab" aria-selected={filter === f.key} className={filter === f.key ? "is-active" : ""} onClick={() => setFilter(f.key)}>
-                  {f.label} <span>{counts[f.key]}</span>
+                  {t(`orders.filters.${f.key}`)} <span>{counts[f.key]}</span>
                 </button>
               ))}
             </div>
@@ -230,9 +235,9 @@ export default function MyOrders() {
               <div className="mo-list">{shown.map((o) => <OrderCard key={o.id} order={o} onPaid={load} phone={session?.user?.phone || ""} />)}</div>
             ) : (
               <div className="mo-empty">
-                <strong>{orders.length ? "No orders here" : "You haven't ordered anything yet"}</strong>
-                <p>{orders.length ? "Try another filter." : "When you order from a seller on Gabla, it shows up here."}</p>
-                {!orders.length ? <Link to="/shop" className="primary-button">Browse the shop</Link> : null}
+                <strong>{orders.length ? t("orders.noneHere") : t("orders.noneYet")}</strong>
+                <p>{orders.length ? t("orders.tryFilter") : t("orders.noneYetHint")}</p>
+                {!orders.length ? <Link to="/shop" className="primary-button">{t("orders.browseShop")}</Link> : null}
               </div>
             )}
             </>}

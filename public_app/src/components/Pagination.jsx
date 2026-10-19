@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { IconChevronLeft } from "./icons";
 
 // Compact page-number list: always shows first/last, the current page +/-1, and "…" gaps -
@@ -11,19 +12,20 @@ const pageNumbers = (current, totalPages) => {
 };
 
 export default function Pagination({ page, limit, total, onPageChange }) {
+  const { t } = useTranslation();
   const totalPages = Math.max(1, Math.ceil(total / limit));
   if (totalPages <= 1) return null;
 
   const numbers = pageNumbers(page, totalPages);
 
   return (
-    <nav className="pagination" aria-label="Pagination">
+    <nav className="pagination" aria-label={t("pagination.label")}>
       <button
         type="button"
         className="pagination-nav"
         disabled={page <= 1}
         onClick={() => onPageChange(page - 1)}
-        aria-label="Previous page"
+        aria-label={t("pagination.previous")}
       >
         <IconChevronLeft />
       </button>
@@ -51,7 +53,7 @@ export default function Pagination({ page, limit, total, onPageChange }) {
         className="pagination-nav pagination-nav-right"
         disabled={page >= totalPages}
         onClick={() => onPageChange(page + 1)}
-        aria-label="Next page"
+        aria-label={t("pagination.next")}
       >
         <IconChevronLeft />
       </button>

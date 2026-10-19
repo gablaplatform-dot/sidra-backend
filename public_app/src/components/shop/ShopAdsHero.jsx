@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { safeHref } from "../../lib/safeHref";
 
 const IconArrowRight = (props) => (
@@ -16,6 +17,7 @@ const SLIDE_INTERVAL_MS = 6000;
 // as ShopHero (the empty-state fallback this replaces) so the two feel like one component to a
 // shopper, not a redesign.
 export default function ShopAdsHero({ ads = [] }) {
+  const { t } = useTranslation();
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -42,13 +44,13 @@ export default function ShopAdsHero({ ads = [] }) {
       <div className="shop-hero-inner">
         <div className="shop-hero-copy">
           <p className="shop-eyebrow">
-            {Number.isFinite(ad.distanceKm) ? `NEAR YOU · ${Math.round(ad.distanceKm)} KM AWAY` : "FEATURED"}
+            {Number.isFinite(ad.distanceKm) ? t("shop.adsHero.nearYou", { km: Math.round(ad.distanceKm) }) : t("shop.adsHero.featured")}
           </p>
           <h1 className="shop-hero-title">{ad.title}</h1>
           {ad.subtitle ? <p className="shop-hero-subtitle">{ad.subtitle}</p> : null}
           <div className="shop-hero-actions">
             <Link to={ctaHref} className="shop-cta-primary">
-              {ad.ctaLabel || "Shop Now"} <IconArrowRight />
+              {ad.ctaLabel || t("shop.adsHero.shopNow")} <IconArrowRight />
             </Link>
           </div>
         </div>
@@ -77,7 +79,7 @@ export default function ShopAdsHero({ ads = [] }) {
                   key={a.id}
                   type="button"
                   className={`shop-ads-hero-dot ${i === index ? "active" : ""}`}
-                  aria-label={`Show ad ${i + 1}`}
+                  aria-label={t("shop.adsHero.showAd", { n: i + 1 })}
                   onClick={() => setIndex(i)}
                 />
               ))}

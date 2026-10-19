@@ -1,0 +1,99 @@
+{
+  "home": {
+    "eyebrow": "Everything Uganda, one app",
+    "heroTitle1": "Shop trendy finds. Book trusted pros.",
+    "heroTitle2": "Ride across town.",
+    "heroSubtitle": "Gabla connects you to fashion, electronics, verified service providers and nearby drivers — all in a single, beautifully designed experience.",
+    "searchPlaceholder": "Search fashion, services, drivers…",
+    "tabs": {
+      "nearby": "Nearby",
+      "topRated": "Top rated",
+      "new": "New",
+      "featured": "Featured"
+    },
+    "shopNow": "Shop now",
+    "getRide": "Get a ride",
+    "trustSellers": "sellers & providers",
+    "trustPayments": "payments",
+    "trustRating": "avg rating",
+    "cards": {
+      "newArrivalsTitle": "New arrivals",
+      "newArrivalsSub": "Trending fashion",
+      "rideReadyTitle": "Ride ready",
+      "rideReadySub": "Boda & car nearby",
+      "topProsTitle": "Top pros",
+      "topProsSub": "Verified & reviewed",
+      "fastDeliveryTitle": "Fast delivery",
+      "fastDeliverySub": "Countrywide"
+    },
+    "trustbar": {
+      "verifiedTitle": "Verified providers",
+      "verifiedSub": "Background-checked & reviewed",
+      "localTitle": "Local & nearby",
+      "localSub": "Find services around you",
+      "ratedTitle": "Rated 4.8/5",
+      "ratedSub": "From 10,000+ happy customers",
+      "supportTitle": "24/7 support",
+      "supportSub": "Chat us anytime"
+    },
+    "promo": {
+      "rideEyebrow": "Gabla Ride",
+      "rideTitle": "Let's get you a ride.",
+      "rideText": "Boda or car — request a nearby driver and get an upfront fare in seconds.",
+      "rideCta": "Book a ride",
+      "shopEyebrow": "Gabla Shop",
+      "shopTitle": "Shop now, live collection.",
+      "shopText": "Browse fashion, electronics & lifestyle from every seller on Gabla, all in one storefront.",
+      "shopCta": "Explore shop"
+    },
+    "bus": {
+      "eyebrow": "Gabla Bus",
+      "title": "Book your bus ticket in a minute.",
+      "text": "Pick your route, choose a day on the calendar and pay with MTN MoMo or Airtel Money. Your e-ticket arrives instantly — no queues at the park.",
+      "fromAny": "From (anywhere)",
+      "toAny": "To (anywhere)",
+      "travellingFrom": "Travelling from",
+      "travellingTo": "Travelling to",
+      "travelDate": "Travel date",
+      "findBuses": "Find buses",
+      "myTickets": "My tickets"
+    },
+    "categories": {
+      "title": "Browse by category",
+      "subtitle": "Tap into what you love, curated for you.",
+      "empty": "No categories yet.",
+      "loading": "Loading categories…",
+      "providersChip": "{{count}}+ providers"
+    },
+    "providers": {
+      "title": "Featured providers",
+      "subtitle": "Handpicked professionals near you.",
+      "cta": "Book a pro",
+      "empty": "No featured providers yet.",
+      "fallbackCategory": "Service provider"
+    },
+    "loadError": "Unable to load Gabla right now."
+  },
+  "mobileHome": {
+    "tiles": {
+      "shop": "Go shopping",
+      "services": "Services",
+      "bus": "Bus ticket",
+      "ride": "Get a ride"
+    },
+    "explore": "Explore",
+    "quickActions": "Quick actions",
+    "titleLead": "What",
+    "titleRest": "do you need today?",
+    "categories": "Categories",
+    "browseProviders": "Browse providers",
+    "emptyCategories": "Service categories will show here.",
+    "recommended": "Recommended providers",
+    "ordersAria": "My orders and updates",
+    "accountAria": "Your account",
+    "menu": "Menu",
+    "busTickets": "Bus tickets",
+    "myBusTickets": "My bus tickets",
+    "myBusinessProfile": "My business profile"
+  }
+}

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { FOOTER_TRUST } from "../../data/shopData";
 
 const IconTruck = (props) => (
@@ -33,6 +34,7 @@ const IconSmile = (props) => (
 const iconMap = { shield: IconShield, truck: IconTruck, lock: IconLock, smile: IconSmile };
 
 export default function ShopFooterTrust() {
+  const { t } = useTranslation();
   return (
     <section className="shop-footer-trust">
       <div className="shop-footer-trust-inner">
@@ -42,8 +44,8 @@ export default function ShopFooterTrust() {
             <div className="shop-footer-trust-item" key={idx}>
               <div className="shop-footer-trust-icon">{Icon ? <Icon /> : null}</div>
               <div className="shop-footer-trust-copy">
-                <strong>{item.title}</strong>
-                <span>{item.subtitle}</span>
+                <strong>{t(`shop.trust.${item.key}.title`)}</strong>
+                <span>{t(`shop.trust.${item.key}.subtitle`)}</span>
               </div>
             </div>
           );

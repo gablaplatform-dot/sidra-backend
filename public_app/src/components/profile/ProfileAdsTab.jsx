@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../../lib/api";
 import { uploadFile } from "../../lib/storage";
@@ -6,6 +7,7 @@ import { IconBox, IconClose } from "../icons";
 import { SectionSkeleton } from "../Skeleton";
 
 export default function ProfileAdsTab() {
+  const { t } = useTranslation();
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -25,7 +27,7 @@ export default function ProfileAdsTab() {
     setLoading(true);
     request("/promotions/mine")
       .then((result) => setAds(result?.items || []))
-      .catch((loadError) => setError(loadError.message || "Unable to load your ads."))
+      .catch((loadError) => setError(loadError.message || t("profile.ads.errLoad")))
       .finally(() => setLoading(false));
   };
 
@@ -41,7 +43,7 @@ export default function ProfileAdsTab() {
       setMediaUrl(url);
       setMediaKind(file.type?.startsWith("video/") ? "video" : "image");
     } catch (uploadError) {
-      setError(uploadError.message || "Unable to upload this file.");
+      setError(uploadError.message || t("profile.ads.errUpload"));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -76,35 +78,34 @@ export default function ProfileAdsTab() {
         })
       });
       resetForm();
-      setNotice("Ad created — it's live now and flagged for admin review.");
+      setNotice(t("profile.ads.created"));
       load();
     } catch (submitError) {
-      setError(submitError.message || "Unable to create this ad.");
+      setError(submitError.message || t("profile.ads.errCreate"));
     } finally {
       setSaving(false);
     }
   };
 
   const remove = async (ad) => {
-    if (!window.confirm(`Delete "${ad.title}"?`)) return;
+    if (!window.confirm(t("profile.ads.confirmDelete", { title: ad.title }))) return;
     try {
       await request(`/promotions/mine/${ad.id}`, { method: "DELETE" });
       load();
     } catch (removeError) {
-      setError(removeError.message || "Unable to delete this ad.");
+      setError(removeError.message || t("profile.ads.errDelete"));
     }
   };
 
-  if (loading) return <SectionSkeleton rows={4} label="Loading your ads" />;
+  if (loading) return <SectionSkeleton rows={4} label={t("profile.ads.loading")} />;
 
   return (
     <section className="detail-block">
       <div className="detail-block-header">
-        <h2>Ads</h2>
+        <h2>{t("profile.tabs.ads")}</h2>
       </div>
       <p className="provider-meta profile-section-hint">
-        Create an image or video ad to appear in the Shop page hero, shown first to shoppers near you.
-        Your ad goes live immediately and is flagged for admin review.
+        {t("profile.ads.hint")}
       </p>
 
       {error ? <div className="error-message home-error">{error}</div> : null}
@@ -112,24 +113,24 @@ export default function ProfileAdsTab() {
 
       <form className="form-grid two" onSubmit={submitCreate} style={{ marginBottom: 24 }}>
         <label className="field">
-          <span>Title</span>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. 30% off all sneakers" required />
+          <span>{t("profile.ads.title")}</span>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("profile.ads.titlePlaceholder")} required />
         </label>
         <label className="field">
-          <span>Subtitle (optional)</span>
-          <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="e.g. This weekend only" />
+          <span>{t("profile.ads.subtitle")}</span>
+          <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder={t("profile.ads.subtitlePlaceholder")} />
         </label>
         <label className="field">
-          <span>CTA label (optional)</span>
-          <input value={ctaLabel} onChange={(e) => setCtaLabel(e.target.value)} placeholder="e.g. Shop Now" />
+          <span>{t("profile.ads.ctaLabel")}</span>
+          <input value={ctaLabel} onChange={(e) => setCtaLabel(e.target.value)} placeholder={t("profile.ads.ctaPlaceholder")} />
         </label>
         <label className="field">
-          <span>CTA link (optional)</span>
+          <span>{t("profile.ads.ctaLink")}</span>
           <input value={ctaHref} onChange={(e) => setCtaHref(e.target.value)} placeholder="/shop" />
         </label>
 
         <label className="field" style={{ gridColumn: "1 / -1" }}>
-          <span>Image or video</span>
+          <span>{t("profile.ads.media")}</span>
           <input ref={fileRef} type="file" accept="image/*,video/mp4" onChange={pickFile} disabled={uploading} />
         </label>
 
@@ -138,7 +139,7 @@ export default function ProfileAdsTab() {
             {mediaKind === "video" ? (
               <video src={mediaUrl} controls style={{ maxWidth: 240, borderRadius: 12 }} />
             ) : (
-              <img src={mediaUrl} alt="Ad preview" style={{ maxWidth: 240, borderRadius: 12 }} />
+              <img src={mediaUrl} alt={t("profile.ads.previewAlt")} style={{ maxWidth: 240, borderRadius: 12 }} />
             )}
           </div>
         ) : null}
@@ -149,7 +150,7 @@ export default function ProfileAdsTab() {
           disabled={saving || uploading || !mediaUrl}
           style={{ gridColumn: "1 / -1", width: "auto" }}
         >
-          {uploading ? "Uploading…" : saving ? "Creating…" : "+ Create ad"}
+          {uploading ? t("profile.ads.uploading") : saving ? t("profile.ads.creating") : t("profile.ads.create")}
         </button>
       </form>
 
@@ -167,14 +168,14 @@ export default function ProfileAdsTab() {
                   <strong>{ad.title}</strong>
                   <div>
                     <span className={`status-badge status-${ad.moderationStatus === "approved" ? "fulfilled" : "pending"}`}>
-                      {ad.moderationStatus === "approved" ? "Approved" : "Pending review"}
+                      {ad.moderationStatus === "approved" ? t("profile.ads.approved") : t("profile.pendingReview")}
                     </span>
                   </div>
                 </div>
               </div>
               <div className="listing-actions">
                 <button type="button" onClick={() => remove(ad)}>
-                  <IconClose /> Delete
+                  <IconClose /> {t("profile.ads.delete")}
                 </button>
               </div>
             </div>
@@ -183,7 +184,7 @@ export default function ProfileAdsTab() {
       ) : (
         <div className="empty-state">
           <IconBox />
-          <p>No ads yet. Create your first one above.</p>
+          <p>{t("profile.ads.empty")}</p>
         </div>
       )}
     </section>

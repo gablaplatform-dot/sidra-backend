@@ -1,3 +1,4 @@
+import i18n, { intlLocale } from "../i18n";
 import { API_BASE, request } from "./api";
 import { clearSession, getSession } from "./session";
 
@@ -23,7 +24,7 @@ export const fetchPdfBlob = async (path, { method = "GET", body, signal } = {}) 
       clearSession();
       window.dispatchEvent(new Event("gabla-session-expired"));
     }
-    const error = new Error(failure?.error?.message || "Unable to load this PDF.");
+    const error = new Error(failure?.error?.message || i18n.t("docs.lib.errPdf"));
     error.status = response.status;
     error.code = failure?.error?.code;
     throw error;
@@ -38,9 +39,9 @@ export const openPdfWith = async (getBlob, filename = "document.pdf") => {
   const tab = window.open("", "_blank");
   if (tab) {
     try {
-      tab.document.title = "Loading PDF…";
+      tab.document.title = i18n.t("docs.lib.loadingPdf");
       tab.document.body.style.cssText = "margin:0;display:grid;place-items:center;min-height:100vh;font:15px system-ui,sans-serif;color:#475569";
-      tab.document.body.textContent = "Preparing your PDF…";
+      tab.document.body.textContent = i18n.t("docs.lib.preparingPdf");
     } catch {
       /* cross-origin guard - ignore */
     }
@@ -89,27 +90,28 @@ export const issueOrderQuotation = (orderId, payload) =>
   request(`/documents/orders/${orderId}/quotation`, { method: "POST", body: JSON.stringify(payload) });
 
 // ---------------------------------------------------------------- presentation helpers
-export const DOC_TYPE_LABEL = { quotation: "Quotation", receipt: "Receipt" };
+export const docTypeLabel = (type) => i18n.t(`docs.type.${type}`, { defaultValue: type || i18n.t("docs.type.document") });
 
 // What an email status means, in words a seller understands. `tone` drives the chip colour.
 export const emailStatusInfo = (status, emailedTo) => {
+  const msg = (key, opts) => i18n.t(`docs.email.${key}`, opts);
   switch (status) {
     case "sent":
-      return { tone: "ok", label: "Emailed", detail: emailedTo ? `Emailed to ${emailedTo}.` : "Emailed to the buyer." };
+      return { tone: "ok", label: msg("sentLabel"), detail: emailedTo ? msg("sentTo", { email: emailedTo }) : msg("sentToBuyer") };
     case "not_configured":
-      return { tone: "warn", label: "Not sent · email not set up", short: "Email not set up", detail: "Email sending isn't set up on this server yet, so nothing was sent. You can still open the PDF and share it yourself." };
+      return { tone: "warn", label: msg("notConfiguredLabel"), short: msg("notConfiguredShort"), detail: msg("notConfiguredDetail") };
     case "no_recipient":
-      return { tone: "warn", label: "Not sent · no buyer email", short: "No buyer email", detail: "This buyer didn't leave an email address, so there was nowhere to send it. Open the PDF to share it another way." };
+      return { tone: "warn", label: msg("noRecipientLabel"), short: msg("noRecipientShort"), detail: msg("noRecipientDetail") };
     case "rejected":
-      return { tone: "bad", label: "Not sent · rejected", short: "Rejected", detail: "The email service rejected the message (usually a sender or key configuration problem). Open the PDF to share it yourself." };
+      return { tone: "bad", label: msg("rejectedLabel"), short: msg("rejectedShort"), detail: msg("rejectedDetail") };
     case "delivery_failed":
-      return { tone: "bad", label: "Not sent · failed", short: "Delivery failed", detail: "We couldn't reach the email service. Try again in a moment." };
+      return { tone: "bad", label: msg("failedLabel"), short: msg("failedShort"), detail: msg("failedDetail") };
     default:
-      return { tone: "muted", label: "Not sent", short: "Not sent", detail: "This document hasn't been emailed yet." };
+      return { tone: "muted", label: msg("notSentLabel"), short: msg("notSentShort"), detail: msg("notSentDetail") };
   }
 };
 
 export const formatDocDate = (value) => {
   const date = new Date(value);
-  return Number.isFinite(date.getTime()) ? date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "";
+  return Number.isFinite(date.getTime()) ? date.toLocaleDateString(intlLocale(), { year: "numeric", month: "short", day: "numeric" }) : "";
 };

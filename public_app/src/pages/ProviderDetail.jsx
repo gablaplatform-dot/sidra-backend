@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
@@ -28,6 +29,7 @@ const LAYOUTS = {
 };
 
 export default function ProviderDetail() {
+  const { t } = useTranslation();
   const { providerId } = useParams();
   const [session] = useState(() => getSession());
   const [provider, setProvider] = useState(null);
@@ -75,7 +77,7 @@ export default function ProviderDetail() {
         }).catch(() => {});
       })
       .catch((loadError) => {
-        if (active) setError(loadError.message || "This provider could not be found.");
+        if (active) setError(loadError.message || t("provider.detail.notFound"));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -91,7 +93,7 @@ export default function ProviderDetail() {
   };
 
   const categoryMatch = provider ? findCategoryPath(categories, provider.categoryId) : null;
-  const categoryName = categoryMatch?.node?.name || "Service provider";
+  const categoryName = categoryMatch?.node?.name || t("provider.detail.defaultCategory");
   const layoutKey = categoryMatch?.node?.settings?.layout || "default";
   const Layout = LAYOUTS[layoutKey] || ProviderLayoutDefault;
   const gallery = provider?.media?.gallery || [];
@@ -105,8 +107,8 @@ export default function ProviderDetail() {
         <ProviderPageSkeleton />
       ) : !provider ? (
         <div className="page-empty-state">
-          <p>{error || "This provider could not be found."}</p>
-          <Link to="/home" className="secondary-button">Back to home</Link>
+          <p>{error || t("provider.detail.notFound")}</p>
+          <Link to="/home" className="secondary-button">{t("services.backHome")}</Link>
         </div>
       ) : (
         <div className="pcc-page">

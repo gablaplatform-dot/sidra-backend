@@ -1,14 +1,18 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 // Shimmer placeholders that mirror the real layouts, so a page that is still waiting on data shows
 // its final shape instead of a blank screen or a bare "Loading…" line.
 
-const Busy = ({ className = "", children, label = "Loading" }) => (
-  <div className={className} role="status" aria-busy="true" aria-live="polite">
-    <span className="sr-only">{label}…</span>
-    {children}
-  </div>
-);
+const Busy = ({ className = "", children, label, labelKey = "generic" }) => {
+  const { t } = useTranslation();
+  return (
+    <div className={className} role="status" aria-busy="true" aria-live="polite">
+      <span className="sr-only">{label ?? t(`loading.${labelKey}`)}…</span>
+      {children}
+    </div>
+  );
+};
 
 export const Skel = ({ w, h, r, className = "", style }) => (
   <span className={`skel ${className}`} style={{ width: w, height: h, borderRadius: r, ...style }} aria-hidden="true" />
@@ -41,8 +45,8 @@ export const ProductCardSkeleton = () => (
   </div>
 );
 
-export const ProductGridSkeleton = ({ count = 8, className = "sb-grid", label = "Loading products" }) => (
-  <Busy className={className} label={label}>
+export const ProductGridSkeleton = ({ count = 8, className = "sb-grid", label }) => (
+  <Busy className={className} label={label} labelKey="products">
     {Array.from({ length: count }).map((_, i) => (
       <ProductCardSkeleton key={i} />
     ))}
@@ -65,7 +69,7 @@ export const ProductRowSkeleton = ({ count = 4 }) => (
 
 // Shop homepage horizontally scrolling product cards (matches .shop-product-card).
 export const ShopScrollSkeleton = ({ count = 5 }) => (
-  <Busy className="shop-product-scroll" label="Loading products">
+  <Busy className="shop-product-scroll" labelKey="products">
     {Array.from({ length: count }).map((_, i) => (
       <div key={i} className="shop-product-card" aria-hidden="true">
         <div className="shop-product-media">
@@ -83,7 +87,7 @@ export const ShopScrollSkeleton = ({ count = 5 }) => (
 );
 
 export const ShopCategoriesSkeleton = ({ count = 6 }) => (
-  <Busy className="shop-category-scroll skel-categories" label="Loading categories">
+  <Busy className="shop-category-scroll skel-categories" labelKey="categories">
     {Array.from({ length: count }).map((_, i) => (
       <div key={i} className="shop-category-card" aria-hidden="true">
         <Skel className="shop-category-img" h={120} w="100%" r={14} />
@@ -94,14 +98,14 @@ export const ShopCategoriesSkeleton = ({ count = 6 }) => (
 );
 
 export const BannerSkeleton = () => (
-  <Busy className="shop-promo-grid" label="Loading offers">
+  <Busy className="shop-promo-grid" labelKey="offers">
     <Skel h={220} w="100%" r={20} />
     <Skel h={220} w="100%" r={20} />
   </Busy>
 );
 
 export const ShopHeroSkeleton = () => (
-  <Busy className="shop-hero skel-hero" label="Loading">
+  <Busy className="shop-hero skel-hero" labelKey="generic">
     <div className="shop-hero-inner">
       <div className="shop-hero-copy">
         <Skel h={14} w={120} />
@@ -119,7 +123,7 @@ export const ShopHeroSkeleton = () => (
 
 // Filter sidebar (categories / location / price / attribute groups).
 export const SidebarSkeleton = ({ blocks = 4 }) => (
-  <Busy className="sb-sidebar" label="Loading filters">
+  <Busy className="sb-sidebar" labelKey="filters">
     {Array.from({ length: blocks }).map((_, i) => (
       <section key={i} className="sb-block" aria-hidden="true">
         <div className="sb-block-body">
@@ -136,7 +140,7 @@ export const SidebarSkeleton = ({ blocks = 4 }) => (
 );
 
 // Stacked rows (orders, wallet, ads, categories lists in the profile tabs).
-export const ListSkeleton = ({ rows = 4, label = "Loading" }) => (
+export const ListSkeleton = ({ rows = 4, label }) => (
   <Busy className="skel-list" label={label}>
     {Array.from({ length: rows }).map((_, i) => (
       <div key={i} className="skel-list-row" aria-hidden="true">
@@ -152,7 +156,7 @@ export const ListSkeleton = ({ rows = 4, label = "Loading" }) => (
 );
 
 // A tab / section body: heading + intro + a list.
-export const SectionSkeleton = ({ rows = 4, label = "Loading" }) => (
+export const SectionSkeleton = ({ rows = 4, label }) => (
   <section className="detail-block" aria-hidden="true">
     <Skel h={26} w={180} />
     <Skel h={13} w="55%" style={{ margin: "12px 0 22px" }} />
@@ -161,7 +165,7 @@ export const SectionSkeleton = ({ rows = 4, label = "Loading" }) => (
 );
 
 export const ProviderCardsSkeleton = ({ count = 4 }) => (
-  <Busy className="home-provider-grid" label="Loading providers">
+  <Busy className="home-provider-grid" labelKey="providers">
     {Array.from({ length: count }).map((_, i) => (
       <div key={i} className="skel-provider-card" aria-hidden="true">
         <Skel h={140} w="100%" r={0} />
@@ -176,7 +180,7 @@ export const ProviderCardsSkeleton = ({ count = 4 }) => (
 );
 
 export const CategoryTilesSkeleton = ({ count = 8 }) => (
-  <Busy className="shop-all-categories-grid" label="Loading categories">
+  <Busy className="shop-all-categories-grid" labelKey="categories">
     {Array.from({ length: count }).map((_, i) => (
       <div key={i} aria-hidden="true">
         <Skel h={150} w="100%" r={14} />
@@ -187,7 +191,7 @@ export const CategoryTilesSkeleton = ({ count = 8 }) => (
 );
 
 export const ProductDetailSkeleton = () => (
-  <Busy className="pd-layout" label="Loading product">
+  <Busy className="pd-layout" labelKey="product">
     <div className="pd-main" aria-hidden="true">
       <Skel h={460} w="100%" r={16} />
       <div className="skel-thumbs">
@@ -230,7 +234,7 @@ export const ProductDetailSkeleton = () => (
 );
 
 export const ProviderPageSkeleton = () => (
-  <Busy label="Loading provider">
+  <Busy labelKey="provider">
     <div className="skel-provider-hero" aria-hidden="true">
       <Skel h="100%" w="100%" r={0} />
     </div>
@@ -266,7 +270,7 @@ export const ProviderPageSkeleton = () => (
 
 // Generic page body: heading + a card grid. Used by simple pages that just wait on a list.
 export const PageSkeleton = ({ cards = 6 }) => (
-  <Busy className="skel-page" label="Loading">
+  <Busy className="skel-page" labelKey="generic">
     <div aria-hidden="true">
       <Skel h={30} w={260} />
       <Skel h={14} w={340} style={{ marginTop: 12 }} />
@@ -276,7 +280,7 @@ export const PageSkeleton = ({ cards = 6 }) => (
 );
 
 export const FormSkeleton = ({ fields = 5 }) => (
-  <Busy className="listing-form-page" label="Loading form">
+  <Busy className="listing-form-page" labelKey="form">
     <div aria-hidden="true">
       <Skel h={14} w={70} />
       <Skel h={32} w={320} style={{ marginTop: 10 }} />

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
@@ -25,17 +26,9 @@ import BookingPanel from "../components/booking/BookingPanel";
 import ProviderCustomFields, { hasAnsweredCustomFields } from "../components/ProviderCustomFields";
 import { IconCart, IconPin } from "../components/icons";
 
-const SERVICE_TIPS = [
-  "Agree the price and exactly what is included before any work starts.",
-  "Keep your conversation and payments traceable, and pay after the service where you can.",
-  "Check reviews and ask for examples of similar work."
-];
-
-const SAFETY_TIPS = [
-  "Meet the seller in a public place and inspect the item before paying.",
-  "Don't pay in advance for something you haven't seen.",
-  "Check that the item matches the photos and the description."
-];
+// Tip keys: product.tips.<key>
+const SERVICE_TIPS = ["service1", "service2", "service3"];
+const SAFETY_TIPS = ["product1", "product2", "product3"];
 
 const uniqueImages = (listing) => {
   const media = listing?.media;
@@ -51,6 +44,7 @@ const uniqueImages = (listing) => {
 };
 
 export default function ProductDetail() {
+  const { t } = useTranslation();
   const { listingId } = useParams();
   const [session] = useState(() => getSession());
   const [searchParams, setSearchParams] = useSearchParams();
@@ -106,7 +100,7 @@ export default function ProductDetail() {
           .catch(() => {});
       })
       .catch((loadError) => {
-        if (active) setError(loadError.message || "This product could not be found.");
+        if (active) setError(loadError.message || t("product.notFound"));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -123,7 +117,7 @@ export default function ProductDetail() {
   const images = useMemo(() => (listing ? uniqueImages(listing) : []), [listing]);
 
   useEffect(() => {
-    if (listing) document.title = `${listing.name} - ${formatUgx(listing.price)} | Gabla ${listing.type === "service" ? "Services" : "Shop"}`;
+    if (listing) document.title = t(listing.type === "service" ? "product.metaService" : "product.metaShop", { name: listing.name, price: formatUgx(listing.price) });
   }, [listing]);
 
   // Back from signing in via the buy / order dialog: reopen it instead of making the shopper find
@@ -161,9 +155,9 @@ export default function ProductDetail() {
         return;
       }
       await navigator.clipboard.writeText(url);
-      setShareNote("Link copied");
+      setShareNote(t("product.shareCopied"));
     } catch {
-      setShareNote("Copy the link from your address bar");
+      setShareNote(t("product.shareFallback"));
     }
     setTimeout(() => setShareNote(""), 2000);
   };
@@ -198,19 +192,19 @@ export default function ProductDetail() {
   };
   const primaryAction = bookable ? (
     <button type="button" className="cta-button ecommerce-order-button" onClick={() => document.getElementById("book")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-      {listing.bookingMode === "instant" ? "Book now" : "Check availability"}
+      {listing.bookingMode === "instant" ? t("product.bookNow") : t("product.checkAvailability")}
     </button>
   ) : isService ? (
     <button type="button" className="cta-button ecommerce-order-button" onClick={goToContact}>
-      {contactOpen ? "See contact details" : "Unlock contact details"}
+      {contactOpen ? t("product.seeContact") : t("product.unlockContact")}
     </button>
   ) : canBuyNow ? (
     <button type="button" className="cta-button ecommerce-order-button" onClick={() => setOrdering("online")}>
-      Order now
+      {t("product.orderNow")}
     </button>
   ) : (
     <button type="button" className="cta-button ecommerce-order-button" onClick={() => setOrdering("cash")}>
-      Order now · pay on delivery
+      {t("product.orderPayOnDelivery")}
     </button>
   );
   const unitWord = bookable ? ` / ${listing.booking.unit}` : "";
@@ -223,13 +217,13 @@ export default function ProductDetail() {
         <ProductDetailSkeleton />
       ) : !listing ? (
         <div className="page-empty-state">
-          <p>{error || "This product could not be found."}</p>
-          <Link to="/shop" className="secondary-button">Back to shop</Link>
+          <p>{error || t("product.notFound")}</p>
+          <Link to="/shop" className="secondary-button">{t("product.backToShop")}</Link>
         </div>
       ) : (
         <>
           <nav className="breadcrumb">
-            <Link to={isService ? "/services" : "/shop"}>{isService ? "Services" : "Shop"}</Link>
+            <Link to={isService ? "/services" : "/shop"}>{isService ? t("product.breadcrumbServices") : t("product.breadcrumbShop")}</Link>
             {(found?.ancestors || []).map((a) => (
               <React.Fragment key={a.id}>
                 <span>/</span>
@@ -252,23 +246,23 @@ export default function ProductDetail() {
 
               {listing.description ? (
                 <section className="pd-card">
-                  <h2>Description</h2>
+                  <h2>{t("product.description")}</h2>
                   <p className="pd-description">{listing.description}</p>
                 </section>
               ) : null}
 
               {hasSpecs ? (
                 <section className="pd-card pd-specs">
-                  <h2>Specifications</h2>
+                  <h2>{t("product.specifications")}</h2>
                   <ProviderCustomFields fields={specFields} values={listing.customFields} />
                 </section>
               ) : null}
 
               <section className="pd-card pd-safety">
-                <h2>Safety tips</h2>
+                <h2>{t("product.safetyTips")}</h2>
                 <ul>
                   {(isService ? SERVICE_TIPS : SAFETY_TIPS).map((tip) => (
-                    <li key={tip}>{tip}</li>
+                    <li key={tip}>{t(`product.tips.${tip}`)}</li>
                   ))}
                 </ul>
               </section>
@@ -283,16 +277,16 @@ export default function ProductDetail() {
                       <IconPin width={14} height={14} /> {district}
                     </span>
                   ) : null}
-                  <span>Posted {timeAgo(listing.createdAt)}</span>
-                  {listing.viewCount ? <span>{listing.viewCount.toLocaleString()} views</span> : null}
+                  <span>{t("product.posted", { time: timeAgo(listing.createdAt) })}</span>
+                  {listing.viewCount ? <span>{t("product.views", { count: listing.viewCount, n: listing.viewCount.toLocaleString() })}</span> : null}
                 </p>
 
                 <div className="pd-price">
-                  <strong>{price > 0 ? `${formatUgx(price)}${unitWord}` : "Contact for price"}</strong>
+                  <strong>{price > 0 ? `${formatUgx(price)}${unitWord}` : t("product.contactForPrice")}</strong>
                   {was > price ? <s>{formatUgx(was)}</s> : null}
                   {listing.discountPercent ? <span className="pd-discount">-{listing.discountPercent}%</span> : null}
                 </div>
-                {saving ? <p className="pd-saving">You save {formatUgx(saving)}</p> : null}
+                {saving ? <p className="pd-saving">{t("product.save", { amount: formatUgx(saving) })}</p> : null}
 
                 {tags.length ? (
                   <div className="sb-card-tags pd-tags">
@@ -307,19 +301,19 @@ export default function ProductDetail() {
                   {canBuyNow ? (
                     <div className="pd-actions-row">
                       <button type="button" className="secondary-button" onClick={() => setOrdering("cash")}>
-                        Pay on delivery
+                        {t("product.payOnDelivery")}
                       </button>
                       <button type="button" className="secondary-button ecommerce-cart-button" onClick={handleAddToCart}>
-                        {added ? "Added" : <><IconCart /> Add to cart</>}
+                        {added ? t("product.added") : <><IconCart /> {t("product.addToCart")}</>}
                       </button>
                     </div>
                   ) : null}
-                  {canBuyNow ? <p className="pd-pay-note">Send your order and pay by mobile money once the seller accepts it, or choose pay on delivery.</p> : null}
-                  {isService && !bookable ? <p className="pd-pay-note">Unlock the provider&apos;s phone and location to talk about the job and agree a price directly.</p> : null}
+                  {canBuyNow ? <p className="pd-pay-note">{t("product.payNote")}</p> : null}
+                  {isService && !bookable ? <p className="pd-pay-note">{t("product.serviceNote")}</p> : null}
                 </div>
 
                 <button type="button" className="pd-share" onClick={share}>
-                  {shareNote || "Share this listing"}
+                  {shareNote || t("product.share")}
                 </button>
               </div>
 
@@ -344,26 +338,26 @@ export default function ProductDetail() {
             <ProductRowSkeleton count={4} />
           ) : (
             <ProductRow
-              title={isService ? "Similar services" : "Similar products"}
+              title={isService ? t("product.similarServices") : t("product.similarProducts")}
               items={similar}
               seeAllTo={isService ? (categoryId ? `/services/c/${categoryId}` : "/services") : categoryId ? `/shop/${categoryId}` : "/shop"}
-              seeAllLabel="Browse more"
+              seeAllLabel={t("product.browseMore")}
             />
           )}
           {moreFromSeller === null ? (
             <ProductRowSkeleton count={4} />
           ) : (
             <ProductRow
-              title={`More from ${listing.provider?.businessName || "this seller"}`}
+              title={t("product.moreFrom", { seller: listing.provider?.businessName || t("product.thisSeller") })}
               items={moreFromSeller}
               seeAllTo={`/provider/${listing.providerId}`}
-              seeAllLabel="Visit shop"
+              seeAllLabel={t("product.visitShop")}
             />
           )}
 
           <div className="pd-mobilebar">
             <div>
-              <strong>{price > 0 ? `${formatUgx(price)}${unitWord}` : "Contact for price"}</strong>
+              <strong>{price > 0 ? `${formatUgx(price)}${unitWord}` : t("product.contactForPrice")}</strong>
               {was > price ? <s>{formatUgx(was)}</s> : null}
             </div>
             {primaryAction}

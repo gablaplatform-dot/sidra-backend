@@ -1,9 +1,10 @@
+import i18n from "../i18n";
 import { request } from "./api";
 
 // `register: false` skips the media-library entry (only providers and admins may create those) -
 // used for a shopper's profile photo, which just needs somewhere to live.
 export const uploadFile = async (file, folder = "provider-media", { register = true } = {}) => {
-  if (!file) throw new Error("No file selected");
+  if (!file) throw new Error(i18n.t("errors.noFile"));
 
   const upload = await request("/storage/upload-url", {
     method: "POST",
@@ -15,8 +16,8 @@ export const uploadFile = async (file, folder = "provider-media", { register = t
     headers: upload.headers || { "Content-Type": file.type },
     body: file
   });
-  if (!putRes.ok) throw new Error("Unable to upload file");
-  if (!upload.publicUrl) throw new Error("Storage is not configured");
+  if (!putRes.ok) throw new Error(i18n.t("errors.uploadFailed"));
+  if (!upload.publicUrl) throw new Error(i18n.t("errors.storageNotConfigured"));
 
   if (!register) return upload.publicUrl;
 

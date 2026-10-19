@@ -1,3 +1,4 @@
+import i18n from "../i18n";
 import { formatUgx } from "./format";
 import { safeHref } from "./safeHref";
 
@@ -15,7 +16,7 @@ export const listingCover = (listing) => {
 
 export const mapCategoryDto = (cat) => ({
   id: cat?.id ?? `cat-${Math.random().toString(36).slice(2, 8)}`,
-  name: cat?.name ?? "Category",
+  name: cat?.name ?? i18n.t("shop.defaults.category"),
   image: cat?.imageUrl || cat?.settings?.imageUrl || cat?.settings?.pictureUrl || null
 });
 
@@ -24,7 +25,7 @@ export const mapProductDto = (p, opts = {}) => {
   const syntheticReviews = Math.max(reviews + (opts.reviewOffset ?? 0), reviews);
   const base = {
     id: p?.id,
-    name: p?.name ?? "Product",
+    name: p?.name ?? i18n.t("shop.defaults.product"),
     price: formatUgx(p?.price ?? 0),
     originalPrice: p?.originalPrice && Number(p.originalPrice) > Number(p?.price ?? 0)
       ? formatUgx(p.originalPrice)
@@ -34,7 +35,7 @@ export const mapProductDto = (p, opts = {}) => {
     rating: 4.5 + Math.min(0.5, (Number(p?.soldCount ?? 0) % 10) / 20),
     reviews: syntheticReviews + Math.round(((String(p?.id ?? "0").charCodeAt(0) || 0) % 7) * 123),
     image: listingCover(p),
-    description: p?.description?.slice(0, 90) ?? "Premium product crafted for quality and comfort.",
+    description: p?.description?.slice(0, 90) ?? i18n.t("shop.defaults.productDescription"),
     distanceKm: Number.isFinite(p?.distanceKm) ? p.distanceKm : null,
     providerName: p?.provider?.businessName ?? null
   };
@@ -47,10 +48,10 @@ export const mapPromotionDto = (promo) => {
   return {
     id: promo?.id,
     type,
-    title: promo?.title ?? "Limited Offer",
+    title: promo?.title ?? i18n.t("shop.defaults.promoTitle"),
     subtitle: promo?.subtitle ?? "",
     tag: promo?.subtitle ?? promo?.title,
-    cta: promo?.ctaLabel ?? "Shop Now",
+    cta: promo?.ctaLabel ?? i18n.t("shop.defaults.promoCta"),
     ctaHref: safeHref(promo?.ctaHref, "/shop"),
     image: promo?.imageUrl ?? PLACEHOLDER_PROMO,
     remainingSecs: Number(promo?.remainingSecs ?? 0),

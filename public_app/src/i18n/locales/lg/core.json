@@ -1,0 +1,46 @@
+{
+  "lang": {
+    "label": "Olulimi"
+  },
+  "nav": {
+    "home": "Awaka",
+    "shop": "Edduuka",
+    "ride": "Entambula",
+    "busTickets": "Amatikiti ga bbaasi",
+    "categories": "Ebibinja",
+    "providers": "Abaweereza",
+    "about": "Ebitukwatako",
+    "myOrders": "Ebiragiro byange",
+    "profile": "Ebikukwatako",
+    "search": "Noonya",
+    "savedProviders": "Abaweereza abaterekeddwa",
+    "cart": "Ensawo y'okugula",
+    "logOut": "Vaamu",
+    "signIn": "Yingira",
+    "openMenu": "Ggulawo olukalala",
+    "closeMenu": "Ggalawo olukalala"
+  },
+  "common": {
+    "seeAll": "Laba byonna",
+    "new": "Kipya"
+  },
+  "time": {
+    "justNow": "kaakano",
+    "minutesAgo_one": "edakiika {{count}} emabega",
+    "minutesAgo_other": "edakiika {{count}} emabega",
+    "hoursAgo_one": "essaawa {{count}} emabega",
+    "hoursAgo_other": "essaawa {{count}} emabega",
+    "daysAgo_one": "olunaku {{count}} emabega",
+    "daysAgo_other": "ennaku {{count}} emabega",
+    "monthsAgo_one": "omwezi {{count}} emabega",
+    "monthsAgo_other": "emyezi {{count}} emabega",
+    "yearsAgo_one": "omwaka {{count}} emabega",
+    "yearsAgo_other": "emyaka {{count}} emabega"
+  },
+  "errors": {
+    "noFile": "Tewali fayiro eddiziddwa",
+    "uploadFailed": "Tetusobodde kuteeka fayiro",
+    "storageNotConfigured": "Ekifo ky'okuterekamu tekinnatuukirizibwa",
+    "requestFailed": "Okusaba kulemeddwa"
+  }
+}

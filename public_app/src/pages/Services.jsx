@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { clearSession, getSession } from "../lib/session";
@@ -14,6 +15,7 @@ const initial = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
 // Everything on Gabla that is a service: the categories, and the best-rated providers.
 export default function Services() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [session, setSession] = useState(() => getSession());
   const [categories, setCategories] = useState(null);
@@ -22,7 +24,7 @@ export default function Services() {
   const [q, setQ] = useState("");
 
   useEffect(() => {
-    document.title = "Services | Gabla";
+    document.title = `${t("services.title")} | Gabla`;
     let active = true;
     request("/service-categories")
       .then((r) => active && setCategories((r?.items || r || []).map(mapCategoryDto)))
@@ -55,8 +57,8 @@ export default function Services() {
       />
       <div className="mh sv-page">
         <h1 className="mh-title">
-          <b>Services</b>
-          <span>find a trusted pro near you</span>
+          <b>{t("services.title")}</b>
+          <span>{t("services.tagline")}</span>
         </h1>
         <form
           className="mh-search"
@@ -67,27 +69,27 @@ export default function Services() {
           }}
         >
           <IconFind />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search plumbers, tailors, mechanics…" aria-label="Search services" enterKeyHint="search" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("services.searchPlaceholder")} aria-label={t("services.searchLabel")} enterKeyHint="search" />
         </form>
 
-        <div className="mh-head"><h2>Categories</h2><Link to="/services/all">See all services</Link></div>
+        <div className="mh-head"><h2>{t("services.categories")}</h2><Link to="/services/all">{t("services.seeAllServices")}</Link></div>
         {categories === null ? (
           <div className="mh-cols"><div className="mh-col"><Skel h={250} r={26} /><Skel h={250} r={26} /></div><div className="mh-col mh-col-drop"><Skel h={250} r={26} /><Skel h={250} r={26} /></div></div>
         ) : categories.length ? (
           <div className="mh-cols">
             {columns.map((col, ci) => (
               <div key={ci} className={`mh-col ${ci ? "mh-col-drop" : ""}`}>
-                {col.map(({ c, i }) => <TallCard key={c.id} to={`/services/c/${c.id}`} name={c.name} image={c.image} caption="Browse services" tone={i + 1} />)}
+                {col.map(({ c, i }) => <TallCard key={c.id} to={`/services/c/${c.id}`} name={c.name} image={c.image} caption={t("services.browseServices")} tone={i + 1} />)}
               </div>
             ))}
           </div>
         ) : (
-          <p className="mh-empty">No service categories yet.</p>
+          <p className="mh-empty">{t("services.noCategories")}</p>
         )}
 
         {bookable && bookable.length ? (
           <>
-            <div className="mh-head"><h2>Book online</h2><Link to="/services/all?sort=featured">See all</Link></div>
+            <div className="mh-head"><h2>{t("services.bookOnline")}</h2><Link to="/services/all?sort=featured">{t("common.seeAll")}</Link></div>
             <div className="sb-grid sv-bookable">
               {bookable.map((listing) => <BrowseCard key={listing.id} listing={listing} />)}
             </div>
@@ -96,7 +98,7 @@ export default function Services() {
 
         {providers === null || providers.length ? (
           <>
-            <div className="mh-head"><h2>Top-rated providers</h2></div>
+            <div className="mh-head"><h2>{t("services.topRated")}</h2></div>
             <div className="sv-providers">
               {providers === null
                 ? Array.from({ length: 4 }).map((_, i) => <Skel key={i} h={176} r={24} />)
@@ -107,7 +109,7 @@ export default function Services() {
                       </span>
                       <strong>{p.businessName}</strong>
                       <small>
-                        <IconStarFilled /> {p.ratingCount ? `${Number(p.ratingAvg).toFixed(1)} (${p.ratingCount})` : "New"}
+                        <IconStarFilled /> {p.ratingCount ? `${Number(p.ratingAvg).toFixed(1)} (${p.ratingCount})` : t("common.new")}
                         {p.location?.city ? ` · ${p.location.city}` : ""}
                       </small>
                     </Link>

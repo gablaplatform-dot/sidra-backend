@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import ProviderListings from "../ProviderListings";
 import ProviderCustomFields, { hasAnsweredCustomFields } from "../ProviderCustomFields";
@@ -8,6 +9,7 @@ import { IconChevronLeft, IconImage, IconStar } from "../icons";
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
 export default function ProviderLayoutDefault({ provider, categoryId, categoryName, providerFields = [], listings, gallery, onUnlock }) {
+  const { t } = useTranslation();
   return (
     <>
       <section
@@ -15,7 +17,7 @@ export default function ProviderLayoutDefault({ provider, categoryId, categoryNa
         style={provider.media?.coverUrl ? { backgroundImage: `url("${provider.media.coverUrl}")` } : undefined}
       >
         <Link to={categoryId ? `/category/${categoryId}` : "/home"} className="banner-back">
-          <IconChevronLeft /> {categoryId ? categoryName : "Home"}
+          <IconChevronLeft /> {categoryId ? categoryName : t("nav.home")}
         </Link>
         <div className="provider-hero-label">
           {!provider.media?.coverUrl ? <span className="provider-hero-icon">{initials(provider.businessName)}</span> : null}
@@ -24,7 +26,7 @@ export default function ProviderLayoutDefault({ provider, categoryId, categoryNa
             <p className="provider-hero-meta">
               {categoryName}
               <span className="hero-trust-dot">&middot;</span>
-              <IconStar /> {provider.ratingAvg ? provider.ratingAvg.toFixed(1) : "New"}
+              <IconStar /> {provider.ratingAvg ? provider.ratingAvg.toFixed(1) : t("common.new")}
               {provider.ratingCount ? ` (${provider.ratingCount})` : ""}
             </p>
           </div>
@@ -37,14 +39,14 @@ export default function ProviderLayoutDefault({ provider, categoryId, categoryNa
         <div className="provider-detail-main">
           {provider.description || hasAnsweredCustomFields(providerFields, provider.customFields) ? (
             <section className="detail-block">
-              <h2>About</h2>
+              <h2>{t("layouts.about")}</h2>
               {provider.description ? <p className="provider-description">{provider.description}</p> : null}
               <ProviderCustomFields fields={providerFields} values={provider.customFields} />
             </section>
           ) : null}
 
           <section className="detail-block">
-            <h2>Gallery</h2>
+            <h2>{t("layouts.gallery")}</h2>
             {gallery.length ? (
               <div className="gallery-grid">
                 {gallery.map((url) => (
@@ -54,7 +56,7 @@ export default function ProviderLayoutDefault({ provider, categoryId, categoryNa
             ) : (
               <div className="empty-state">
                 <IconImage />
-                <p>No gallery photos yet.</p>
+                <p>{t("layouts.noGallery")}</p>
               </div>
             )}
           </section>

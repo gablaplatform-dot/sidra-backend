@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { loginPath } from "../../lib/authRedirect";
 import BackButton from "../BackButton";
 import { NAV_LINKS } from "../../data/shopData";
@@ -21,6 +22,7 @@ const IconUser = (props) => (
 );
 
 export default function ShopNavbar({ session, onLogout }) {
+  const { t } = useTranslation();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -49,38 +51,38 @@ export default function ShopNavbar({ session, onLogout }) {
 
           <nav className="shop-nav-links">
             {NAV_LINKS.map((link) => (
-              <Link key={link.label} to={link.href} className={link.label === "Shop" ? "is-active" : ""}>
-                {link.label}
+              <Link key={link.key} to={link.href} className={link.key === "shop" ? "is-active" : ""}>
+                {t(`shop.nav.${link.key}`)}
                 {link.dropdown ? <span className="shop-nav-chevron"><IconChevronLeft /></span> : null}
               </Link>
             ))}
-            {session ? <Link to="/orders">My orders</Link> : null}
-            {isProvider ? <Link to="/profile">Profile</Link> : null}
+            {session ? <Link to="/orders">{t("nav.myOrders")}</Link> : null}
+            {isProvider ? <Link to="/profile">{t("nav.profile")}</Link> : null}
           </nav>
 
           <div className="shop-nav-actions">
-            <button type="button" className="shop-icon-button" aria-label="Search nearby" onClick={() => setSearchOpen(true)}>
+            <button type="button" className="shop-icon-button" aria-label={t("shop.navbar.searchNearby")} onClick={() => setSearchOpen(true)}>
               <IconSearch />
             </button>
-            <button type="button" className="shop-icon-button" aria-label="Wishlist">
+            <button type="button" className="shop-icon-button" aria-label={t("shop.navbar.wishlist")}>
               <IconHeart />
             </button>
-            <Link to={session ? "/orders" : loginPath(location)} className="shop-icon-button" aria-label={session ? "My orders" : "Sign in"}>
+            <Link to={session ? "/orders" : loginPath(location)} className="shop-icon-button" aria-label={session ? t("nav.myOrders") : t("nav.signIn")}>
               <IconUser />
             </Link>
-            <Link to="/cart" className="shop-icon-button" aria-label="Cart">
+            <Link to="/cart" className="shop-icon-button" aria-label={t("nav.cart")}>
               <IconCart />
               {cartCount > 0 ? <span className="shop-cart-badge">{cartCount}</span> : null}
             </Link>
             {session ? (
-              <button type="button" className="shop-themed-cta shop-nav-cta" onClick={() => onLogout?.()}>Log out</button>
+              <button type="button" className="shop-themed-cta shop-nav-cta" onClick={() => onLogout?.()}>{t("nav.logOut")}</button>
             ) : (
-              <Link className="shop-themed-cta shop-nav-cta" to={loginPath(location)}>Sign in</Link>
+              <Link className="shop-themed-cta shop-nav-cta" to={loginPath(location)}>{t("nav.signIn")}</Link>
             )}
             <button
               type="button"
               className="shop-icon-button shop-hamburger"
-              aria-label="Open menu"
+              aria-label={t("nav.openMenu")}
               onClick={() => setDrawerOpen(true)}
             >
               <IconMenu />
@@ -96,22 +98,22 @@ export default function ShopNavbar({ session, onLogout }) {
             <span className="shop-brand-mark">G</span>
             <strong>Gabla</strong>
           </Link>
-          <button type="button" className="shop-icon-button" aria-label="Close menu" onClick={() => setDrawerOpen(false)}>
+          <button type="button" className="shop-icon-button" aria-label={t("nav.closeMenu")} onClick={() => setDrawerOpen(false)}>
             <IconClose />
           </button>
         </div>
         <nav className="shop-drawer-links">
           {NAV_LINKS.map((link) => (
-            <Link key={link.label} to={link.href} onClick={() => setDrawerOpen(false)}>{link.label}</Link>
+            <Link key={link.key} to={link.href} onClick={() => setDrawerOpen(false)}>{t(`shop.nav.${link.key}`)}</Link>
           ))}
-          <Link to="/cart" onClick={() => setDrawerOpen(false)}>Cart{cartCount > 0 ? ` (${cartCount})` : ""}</Link>
-          {session ? <Link to="/orders" onClick={() => setDrawerOpen(false)}>My orders</Link> : null}
-          {isProvider ? <Link to="/profile" onClick={() => setDrawerOpen(false)}>Profile</Link> : null}
+          <Link to="/cart" onClick={() => setDrawerOpen(false)}>{t("nav.cart")}{cartCount > 0 ? ` (${cartCount})` : ""}</Link>
+          {session ? <Link to="/orders" onClick={() => setDrawerOpen(false)}>{t("nav.myOrders")}</Link> : null}
+          {isProvider ? <Link to="/profile" onClick={() => setDrawerOpen(false)}>{t("nav.profile")}</Link> : null}
         </nav>
         {session ? (
-          <button type="button" className="shop-cta-button shop-drawer-cta" onClick={() => { setDrawerOpen(false); onLogout?.(); }}>Log out</button>
+          <button type="button" className="shop-cta-button shop-drawer-cta" onClick={() => { setDrawerOpen(false); onLogout?.(); }}>{t("nav.logOut")}</button>
         ) : (
-          <Link className="shop-cta-button shop-drawer-cta" to={loginPath(location)} onClick={() => setDrawerOpen(false)}>Sign in</Link>
+          <Link className="shop-cta-button shop-drawer-cta" to={loginPath(location)} onClick={() => setDrawerOpen(false)}>{t("nav.signIn")}</Link>
         )}
       </aside>
 

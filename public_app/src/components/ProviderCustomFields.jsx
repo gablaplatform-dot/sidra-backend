@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { webHref } from "../lib/safeHref";
 
 // Renders whatever a provider answered for their category's custom questions during onboarding
@@ -16,8 +17,8 @@ const isFieldAnswered = (field, value) => {
   return String(value).trim() !== "";
 };
 
-const formatValue = (field, value) => {
-  if (field.type === "boolean") return value ? "Yes" : "No";
+const formatValue = (t, field, value) => {
+  if (field.type === "boolean") return value ? t("provider.fields.yes") : t("provider.fields.no");
   if (field.type === "multi_select") return Array.isArray(value) ? value.join(", ") : "";
   if (field.type === "url") {
     return (
@@ -28,6 +29,7 @@ const formatValue = (field, value) => {
 };
 
 export default function ProviderCustomFields({ fields = [], values = {} }) {
+  const { t } = useTranslation();
   const answered = fields.filter((field) => isFieldAnswered(field, values?.[field.key]));
   if (!answered.length) return null;
 
@@ -36,7 +38,7 @@ export default function ProviderCustomFields({ fields = [], values = {} }) {
       {answered.map((field) => (
         <div key={field.key} className="provider-custom-field-row">
           <dt>{field.label}</dt>
-          <dd>{formatValue(field, values[field.key])}</dd>
+          <dd>{formatValue(t, field, values[field.key])}</dd>
         </div>
       ))}
     </dl>

@@ -1,0 +1,297 @@
+{
+  "shop": {
+    "meta": {
+      "title": "Gabla Shop — Trendy Fashion, Electronics & Lifestyle",
+      "allCategories": "All Categories — Gabla Shop",
+      "browseProduct": "{{name}} in {{where}} for sale | Gabla Shop",
+      "browseService": "{{name}} in {{where}} | Gabla Services",
+      "collection": "{{title}} | Gabla Shop"
+    },
+    "nav": {
+      "home": "Home",
+      "shop": "Shop",
+      "newArrivals": "New Arrivals",
+      "bestSellers": "Best Sellers",
+      "categories": "Categories",
+      "about": "About",
+      "blog": "Blog",
+      "contact": "Contact"
+    },
+    "navbar": {
+      "searchNearby": "Search nearby",
+      "wishlist": "Wishlist"
+    },
+    "trust": {
+      "quality": { "title": "Premium Quality", "subtitle": "Made with the finest materials" },
+      "delivery": { "title": "Fast Delivery", "subtitle": "Quick and reliable shipping" },
+      "checkout": { "title": "Secure Checkout", "subtitle": "Your data is protected" },
+      "satisfaction": { "title": "Customer Satisfaction", "subtitle": "100% satisfaction guarantee" }
+    },
+    "hero": {
+      "eyebrow": "TRENDING NOW",
+      "titleLine1": "Discover Products",
+      "titleLine2": "You’ll Love",
+      "subtitle": "Shop the latest trending products curated for modern lifestyles.",
+      "shopNow": "Shop Now",
+      "explore": "Explore Collection",
+      "loved": "Loved by <b>50,000+</b> customers worldwide",
+      "modelAlt": "Featured model"
+    },
+    "adsHero": {
+      "nearYou": "NEAR YOU · {{km}} KM AWAY",
+      "featured": "FEATURED",
+      "showAd": "Show ad {{n}}",
+      "shopNow": "Shop Now"
+    },
+    "promo": {
+      "flashSale": "Flash Sale",
+      "flashSaleAlt": "Flash sale",
+      "limitedTime": "Limited time offer",
+      "shopNow": "Shop Now",
+      "days": "Days",
+      "hours": "Hours",
+      "min": "Min",
+      "sec": "Sec",
+      "newCollection": "New Collection",
+      "freshSeason": "Fresh new season",
+      "discoverTrends": "Discover the latest trends",
+      "explore": "Explore"
+    },
+    "defaults": {
+      "category": "Category",
+      "product": "Product",
+      "productDescription": "Premium product crafted for quality and comfort.",
+      "promoTitle": "Limited Offer",
+      "promoCta": "Shop Now"
+    },
+    "forYou": {
+      "title": "This can work for you",
+      "clearConfirm": "Clear what we've learned from your browsing? Your recommendations will start over.",
+      "popularAround": "Popular around {{district}}. It gets better the more you browse.",
+      "popularNow": "Popular right now. It gets better the more you browse.",
+      "clearHistory": "Clear my history",
+      "continue": "Continue where you left off",
+      "picked": "Picked for you",
+      "contactForPrice": "Contact for price"
+    },
+    "categories": {
+      "shopBy": "Shop by Categories",
+      "viewAll": "View All Categories",
+      "shopNow": "Shop Now",
+      "scrollLeft": "Scroll left",
+      "scrollRight": "Scroll right",
+      "breadcrumb": "Shop",
+      "allTitle": "All Categories",
+      "empty": "No shop categories yet."
+    },
+    "newArrivals": {
+      "title": "New Arrivals",
+      "viewAll": "View All New Arrivals"
+    },
+    "bestSellers": {
+      "title": "Best Sellers",
+      "viewAll": "View All Best Sellers",
+      "badge": "Bestseller",
+      "quickAdd": "Quick Add",
+      "added": "Added ✓"
+    },
+    "card": {
+      "new": "New",
+      "wishlist": "Add to wishlist",
+      "addToCart": "Add to cart",
+      "added": "Added"
+    },
+    "listing": {
+      "new": "New",
+      "bookInstantly": "Book instantly",
+      "bookable": "Bookable",
+      "contactForPrice": "Contact for price",
+      "uganda": "Uganda",
+      "distance": "{{km}} km"
+    },
+    "nearby": {
+      "title": "Search nearby",
+      "close": "Close",
+      "placeholder": "What are you looking for?",
+      "search": "Search",
+      "searching": "Searching…",
+      "searchingLabel": "Searching",
+      "allUganda": "All of Uganda",
+      "thatDistrict": "that district",
+      "noResultsDistrict": "No results in {{district}} — showing results from across Uganda instead.",
+      "noResultsNearby": "No results nearby — showing results from farther away instead.",
+      "noResultsAnywhere": "No results anywhere for that search. Try a different query.",
+      "unableSearch": "Unable to search right now.",
+      "awayFrom": "{{provider}} — {{km}} km away",
+      "away": "{{km}} km away",
+      "notice": {
+        "denied": "Location access was declined — pick a district below, or we'll show all results.",
+        "unsupported": "This browser can't share your location — pick a district below, or we'll show all results.",
+        "timeout": "Couldn't get your location in time — pick a district below, or we'll show all results.",
+        "unavailable": "Couldn't determine your location — pick a district below, or we'll show all results."
+      }
+    },
+    "browse": {
+      "breadcrumbShop": "Shop",
+      "breadcrumbServices": "Services",
+      "geo": {
+        "denied": "Location access was declined, so we're showing all of Uganda.",
+        "unsupported": "This browser can't share your location, so we're showing all of Uganda.",
+        "timeout": "Couldn't get your location in time, so we're showing all of Uganda.",
+        "unavailable": "Couldn't determine your location, so we're showing all of Uganda."
+      },
+      "collection": {
+        "new": "New arrivals",
+        "bestsellers": "Best sellers",
+        "all": "All products"
+      },
+      "sort": {
+        "featured": "Recommended",
+        "newest": "Newest",
+        "price_asc": "Cheapest",
+        "price_desc": "Most expensive",
+        "bestsellers": "Best selling"
+      },
+      "nearYou": "Near you ({{km}} km)",
+      "around": "Around {{district}}",
+      "allUganda": "All Uganda",
+      "widenedNear": "Nothing within {{km}} km, showing the closest results across Uganda.",
+      "widenedDistrict": "No matching ads in {{district}}, showing all of Uganda.",
+      "arrangedProducts": "Showing the products closest to {{place}} first.",
+      "arrangedServices": "Showing the services closest to {{place}} first.",
+      "whereUganda": "Uganda",
+      "whereYourArea": "your area",
+      "titleIn": "{{name}} in {{where}}",
+      "allServices": "All services",
+      "products": "Products",
+      "resultsFor": "Results for “{{q}}”",
+      "count_one": "{{n}} result",
+      "count_other": "{{n}} results",
+      "searchChip": "Search: {{q}}",
+      "discountChip": "With discount",
+      "priceChip": "UGX {{range}}",
+      "filters": "Filters",
+      "closeFilters": "Close filters",
+      "showResults_one": "Show {{n}} result",
+      "showResults_other": "Show {{n}} results",
+      "location": "Location",
+      "locationAria": "Location: {{label}}. Change location",
+      "filtersBtn": "Filters ({{count}})",
+      "sort_label": "Sort",
+      "clearAll": "Clear all",
+      "noMatchProducts": "No products match",
+      "noMatchServices": "No services match",
+      "tryRemoving": "Try removing a filter or choosing a wider location.",
+      "clearAllFilters": "Clear all filters",
+      "backToServices": "Back to services",
+      "backToShop": "Back to shop",
+      "loadErrorProducts": "Unable to load products.",
+      "loadErrorServices": "Unable to load services."
+    },
+    "sidebar": {
+      "categories": "Categories",
+      "allCategories": "All categories",
+      "showLess": "Show less",
+      "showAll": "Show all {{count}}",
+      "priceUgx": "Price, UGX",
+      "min": "min",
+      "max": "max",
+      "clear": "Clear",
+      "apply": "Apply",
+      "yes": "Yes",
+      "location": "Location",
+      "withDiscount": "With discount",
+      "clearAllFilters": "Clear all filters"
+    },
+    "price": {
+      "under": "Under {{amount}}",
+      "over": "More than {{amount}}"
+    },
+    "attr": {
+      "condition": "Condition",
+      "brand": "Brand",
+      "yearOfManufacture": "Year of manufacture",
+      "transmission": "Transmission",
+      "internalStorage": "Internal storage",
+      "ram": "RAM",
+      "storageCapacity": "Storage capacity",
+      "screenSize": "Screen size",
+      "size": "Size",
+      "fuel": "Fuel",
+      "type": "Type",
+      "color": "Color",
+      "make": "Make",
+      "model": "Model",
+      "mileage": "Mileage"
+    },
+    "location": {
+      "title": "Select location",
+      "close": "Close",
+      "search": "Search district",
+      "useCurrent": "Use my current location",
+      "nearestFirst": "nearest first",
+      "around": "Around {{district}}",
+      "yourAreaNearest": "your area, nearest first",
+      "allUganda": "All Uganda",
+      "ads_one": "{{n}} ad",
+      "ads_other": "{{n}} ads",
+      "noMatch": "No district matches “{{query}}”."
+    },
+    "layout": {
+      "label": "Product layout",
+      "grid": "Grid view",
+      "list": "List view"
+    }
+  },
+  "product": {
+    "notFound": "This product could not be found.",
+    "backToShop": "Back to shop",
+    "breadcrumbShop": "Shop",
+    "breadcrumbServices": "Services",
+    "metaShop": "{{name}} - {{price}} | Gabla Shop",
+    "metaService": "{{name}} - {{price}} | Gabla Services",
+    "shareCopied": "Link copied",
+    "shareFallback": "Copy the link from your address bar",
+    "share": "Share this listing",
+    "bookNow": "Book now",
+    "checkAvailability": "Check availability",
+    "seeContact": "See contact details",
+    "unlockContact": "Unlock contact details",
+    "orderNow": "Order now",
+    "orderPayOnDelivery": "Order now · pay on delivery",
+    "payOnDelivery": "Pay on delivery",
+    "addToCart": "Add to cart",
+    "added": "Added",
+    "description": "Description",
+    "specifications": "Specifications",
+    "safetyTips": "Safety tips",
+    "tips": {
+      "service1": "Agree the price and exactly what is included before any work starts.",
+      "service2": "Keep your conversation and payments traceable, and pay after the service where you can.",
+      "service3": "Check reviews and ask for examples of similar work.",
+      "product1": "Meet the seller in a public place and inspect the item before paying.",
+      "product2": "Don't pay in advance for something you haven't seen.",
+      "product3": "Check that the item matches the photos and the description."
+    },
+    "posted": "Posted {{time}}",
+    "views_one": "{{n}} view",
+    "views_other": "{{n}} views",
+    "contactForPrice": "Contact for price",
+    "save": "You save {{amount}}",
+    "payNote": "Send your order and pay by mobile money once the seller accepts it, or choose pay on delivery.",
+    "serviceNote": "Unlock the provider's phone and location to talk about the job and agree a price directly.",
+    "similarServices": "Similar services",
+    "similarProducts": "Similar products",
+    "browseMore": "Browse more",
+    "moreFrom": "More from {{seller}}",
+    "thisSeller": "this seller",
+    "visitShop": "Visit shop",
+    "gallery": {
+      "openFull": "Open full-size image",
+      "prev": "Previous image",
+      "next": "Next image",
+      "showImage": "Show image {{n}}",
+      "close": "Close"
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import BusLayout from "../../components/bus/BusLayout";
 import SearchBox from "../../components/bus/SearchBox";
@@ -12,6 +13,7 @@ import { busApi } from "../../lib/bus";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function BusSearch() {
+  const { t } = useTranslation();
   useScrollTop();
   const [params, setParams] = useSearchParams();
   const from = params.get("from") || "";
@@ -38,7 +40,7 @@ export default function BusSearch() {
 
   const header = (selected) => (
     <div className="bus-searchhead">
-      <nav className="bus-breadcrumb" aria-label="Breadcrumb"><Link to="/bus">Gabla Bus</Link><span>/</span><span>Search trips</span></nav>
+      <nav className="bus-breadcrumb" aria-label={t("bus.breadcrumb")}><Link to="/bus">Gabla Bus</Link><span>/</span><span>{t("bus.searchPage.searchTrips")}</span></nav>
       <SearchBox
         collapsible
         places={places.data}
@@ -47,9 +49,9 @@ export default function BusSearch() {
         onSubmit={(v) => update({ from: v.from, to: v.to, date: v.date })}
       />
       {operatorSlug || busTypeId ? (
-        <div className="bus-filter-row" aria-label="Active filters">
-          {busTypeId ? <button type="button" className="bus-pillbtn is-active" onClick={() => update({ busTypeId: "" })}>{typeName || "Bus type"} <Close size={12} /><span className="sr-only">Remove filter</span></button> : null}
-          {operatorSlug ? <button type="button" className="bus-pillbtn is-active" onClick={() => update({ operatorSlug: "" })}>{parkName || operatorSlug} <Close size={12} /><span className="sr-only">Remove filter</span></button> : null}
+        <div className="bus-filter-row" aria-label={t("bus.searchPage.activeFilters")}>
+          {busTypeId ? <button type="button" className="bus-pillbtn is-active" onClick={() => update({ busTypeId: "" })}>{typeName || t("bus.searchPage.busType")} <Close size={12} /><span className="sr-only">{t("bus.searchPage.removeFilter")}</span></button> : null}
+          {operatorSlug ? <button type="button" className="bus-pillbtn is-active" onClick={() => update({ operatorSlug: "" })}>{parkName || operatorSlug} <Close size={12} /><span className="sr-only">{t("bus.searchPage.removeFilter")}</span></button> : null}
         </div>
       ) : null}
     </div>
@@ -62,8 +64,8 @@ export default function BusSearch() {
         date={date}
         onDate={(d) => update({ date: d })}
         header={header}
-        kicker={from || to ? undefined : operatorSlug ? parkName : busTypeId ? typeName : "All routes"}
-        emptyAction={anyFilter ? <button type="button" className="bus-btn bus-btn-navy" onClick={() => setParams({}, { replace: true })}>Clear filters</button> : null}
+        kicker={from || to ? undefined : operatorSlug ? parkName : busTypeId ? typeName : t("bus.trips.allRoutes")}
+        emptyAction={anyFilter ? <button type="button" className="bus-btn bus-btn-navy" onClick={() => setParams({}, { replace: true })}>{t("bus.searchPage.clearFilters")}</button> : null}
       />
     </BusLayout>
   );

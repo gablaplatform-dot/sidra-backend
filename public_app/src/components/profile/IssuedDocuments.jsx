@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { DOC_TYPE_LABEL, emailStatusInfo, formatDocDate, listDocuments, openDocumentPdf, resendDocument } from "../../lib/documents";
+import { docTypeLabel, emailStatusInfo, formatDocDate, listDocuments, openDocumentPdf, resendDocument } from "../../lib/documents";
 import { formatUgx } from "../../lib/format";
 import { IconReceipt } from "../icons";
 import Pagination from "../Pagination";
@@ -8,9 +9,9 @@ import { Skel } from "../Skeleton";
 
 const PAGE_SIZE = 15;
 const FILTERS = [
-  { key: "", label: "All" },
-  { key: "quotation", label: "Quotations" },
-  { key: "receipt", label: "Receipts" }
+  { key: "", labelKey: "docs.issued.filterAll" },
+  { key: "quotation", labelKey: "docs.issued.filterQuotations" },
+  { key: "receipt", labelKey: "docs.issued.filterReceipts" }
 ];
 
 export const EmailChip = ({ doc }) => {
@@ -22,17 +23,21 @@ export const EmailChip = ({ doc }) => {
   );
 };
 
-const NumberCell = ({ doc }) => (
-  <div className="docs-num">
-    <strong>{doc.number}</strong>
-    {doc.revision > 1 ? <span className="docs-chip is-rev">rev {doc.revision}</span> : null}
-    {doc.status === "superseded" ? <span className="docs-chip is-muted">Superseded</span> : null}
-  </div>
-);
+const NumberCell = ({ doc }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="docs-num">
+      <strong>{doc.number}</strong>
+      {doc.revision > 1 ? <span className="docs-chip is-rev">{t("docs.issued.rev", { n: doc.revision })}</span> : null}
+      {doc.status === "superseded" ? <span className="docs-chip is-muted">{t("docs.issued.superseded")}</span> : null}
+    </div>
+  );
+};
 
-const TypeBadge = ({ type }) => <span className={`docs-type is-${type}`}>{DOC_TYPE_LABEL[type] || type}</span>;
+const TypeBadge = ({ type }) => <span className={`docs-type is-${type}`}>{docTypeLabel(type)}</span>;
 
 function Actions({ doc, onOpenOrder, onNotice }) {
+  const { t } = useTranslation();
   const [viewing, setViewing] = useState(false);
   const [resending, setResending] = useState(false);
 
@@ -41,7 +46,7 @@ function Actions({ doc, onOpenOrder, onNotice }) {
     try {
       await openDocumentPdf(doc);
     } catch (error) {
-      onNotice({ tone: "bad", docId: doc.id, text: error.message || "Unable to open this PDF." });
+      onNotice({ tone: "bad", docId: doc.id, text: error.message || t("docs.issued.errOpen") });
     } finally {
       setViewing(false);
     }
@@ -55,11 +60,11 @@ function Actions({ doc, onOpenOrder, onNotice }) {
       onNotice({
         tone: result.sent ? "ok" : info.tone === "bad" ? "bad" : "warn",
         docId: doc.id,
-        text: result.sent ? `Emailed again${doc.customerName ? ` to ${doc.customerName}` : " to the buyer"}.` : `Not sent. ${info.detail}`,
+        text: result.sent ? (doc.customerName ? t("docs.issued.emailedAgainTo", { name: doc.customerName }) : t("docs.issued.emailedAgain")) : t("docs.issued.notSent", { detail: info.detail }),
         refresh: true
       });
     } catch (error) {
-      onNotice({ tone: "bad", docId: doc.id, text: error.message || "Unable to resend this document." });
+      onNotice({ tone: "bad", docId: doc.id, text: error.message || t("docs.issued.errResend") });
     } finally {
       setResending(false);
     }
@@ -67,18 +72,20 @@ function Actions({ doc, onOpenOrder, onNotice }) {
 
   return (
     <div className="docs-row-actions">
-      <button type="button" className="docs-btn is-small" onClick={view} disabled={viewing}>{viewing ? "Opening…" : "View PDF"}</button>
+      <button type="button" className="docs-btn is-small" onClick={view} disabled={viewing}>{viewing ? t("docs.opening") : t("docs.viewPdf")}</button>
       {doc.status !== "superseded" ? (
-        <button type="button" className="docs-btn is-small" onClick={resend} disabled={resending}>{resending ? "Sending…" : "Resend email"}</button>
+        <button type="button" className="docs-btn is-small" onClick={resend} disabled={resending}>{resending ? t("docs.issued.sending") : t("docs.issued.resend")}</button>
       ) : null}
-      <button type="button" className="docs-btn is-small is-quiet" onClick={() => onOpenOrder?.(doc.orderId)}>Open order</button>
+      <button type="button" className="docs-btn is-small is-quiet" onClick={() => onOpenOrder?.(doc.orderId)}>{t("docs.issued.openOrder")}</button>
     </div>
   );
 }
 
-const ListSkeleton = () => (
+const ListSkeleton = () => {
+  const { t } = useTranslation();
+  return (
   <div className="docs-list-skel" role="status" aria-busy="true">
-    <span className="sr-only">Loading your documents…</span>
+    <span className="sr-only">{t("docs.issued.loading")}</span>
     {Array.from({ length: 5 }).map((_, i) => (
       <div key={i} className="docs-skel-row">
         <div className="docs-skel-main"><Skel h={16} w="40%" /><Skel h={12} w="62%" /></div>
@@ -87,9 +94,11 @@ const ListSkeleton = () => (
       </div>
     ))}
   </div>
-);
+  );
+};
 
 export default function IssuedDocuments({ onOpenOrder, active = true }) {
+  const { t } = useTranslation();
   const [type, setType] = useState("");
   const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
@@ -105,7 +114,7 @@ export default function IssuedDocuments({ onOpenOrder, active = true }) {
       setError("");
       listDocuments({ type: type || undefined, page, limit: PAGE_SIZE })
         .then((result) => id === requestId.current && setData(result))
-        .catch((loadError) => id === requestId.current && setError(loadError.message || "Unable to load your documents."))
+        .catch((loadError) => id === requestId.current && setError(loadError.message || t("docs.issued.errLoad")))
         .finally(() => id === requestId.current && setLoading(false));
     },
     [type, page]
@@ -126,19 +135,19 @@ export default function IssuedDocuments({ onOpenOrder, active = true }) {
   return (
     <section className="docs-issued" hidden={!active}>
       <div className="docs-issued-head">
-        <div className="docs-filters" role="group" aria-label="Filter documents">
+        <div className="docs-filters" role="group" aria-label={t("docs.issued.filterAria")}>
           {FILTERS.map((filter) => (
             <button key={filter.key || "all"} type="button" className={`docs-filter${type === filter.key ? " is-active" : ""}`} aria-pressed={type === filter.key} onClick={() => { setType(filter.key); setPage(1); setNotice(null); }}>
-              {filter.label}
+              {t(filter.labelKey)}
             </button>
           ))}
         </div>
-        {data ? <p className="docs-count" aria-live="polite">{data.total} document{data.total === 1 ? "" : "s"}</p> : null}
+        {data ? <p className="docs-count" aria-live="polite">{t("docs.issued.count", { count: data.total })}</p> : null}
       </div>
 
       {error ? (
         <div className="error-message home-error docs-inline-error" role="alert">
-          {error} <button type="button" className="docs-link-btn" onClick={() => load()}>Try again</button>
+          {error} <button type="button" className="docs-link-btn" onClick={() => load()}>{t("docs.issued.tryAgain")}</button>
         </div>
       ) : null}
 
@@ -150,12 +159,12 @@ export default function IssuedDocuments({ onOpenOrder, active = true }) {
             <table className="docs-table">
               <thead>
                 <tr>
-                  <th scope="col">Document</th>
-                  <th scope="col">Customer</th>
-                  <th scope="col" className="is-num">Total</th>
-                  <th scope="col">Issued</th>
-                  <th scope="col">Email</th>
-                  <th scope="col"><span className="sr-only">Actions</span></th>
+                  <th scope="col">{t("docs.issued.colDocument")}</th>
+                  <th scope="col">{t("docs.issued.colCustomer")}</th>
+                  <th scope="col" className="is-num">{t("docs.issued.colTotal")}</th>
+                  <th scope="col">{t("docs.issued.colIssued")}</th>
+                  <th scope="col">{t("docs.issued.colEmail")}</th>
+                  <th scope="col"><span className="sr-only">{t("docs.issued.colActions")}</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -163,7 +172,7 @@ export default function IssuedDocuments({ onOpenOrder, active = true }) {
                   <React.Fragment key={doc.id}>
                     <tr className={doc.status === "superseded" ? "is-superseded" : undefined}>
                       <td><NumberCell doc={doc} /><TypeBadge type={doc.type} /></td>
-                      <td><span className="docs-cust">{doc.customerName || "Customer"}</span><span className="docs-sub">Order {doc.orderRef}</span></td>
+                      <td><span className="docs-cust">{doc.customerName || t("docs.issued.customer")}</span><span className="docs-sub">{t("docs.issued.order", { ref: doc.orderRef })}</span></td>
                       <td className="is-num"><strong>{formatUgx(doc.total)}</strong></td>
                       <td>{formatDocDate(doc.issuedAt)}</td>
                       <td><EmailChip doc={doc} /></td>
@@ -186,7 +195,7 @@ export default function IssuedDocuments({ onOpenOrder, active = true }) {
                   <EmailChip doc={doc} />
                 </div>
                 <NumberCell doc={doc} />
-                <p className="docs-card-cust">{doc.customerName || "Customer"} <span className="docs-sub">· Order {doc.orderRef}</span></p>
+                <p className="docs-card-cust">{doc.customerName || t("docs.issued.customer")} <span className="docs-sub">· {t("docs.issued.order", { ref: doc.orderRef })}</span></p>
                 <div className="docs-card-money">
                   <strong>{formatUgx(doc.total)}</strong>
                   <span className="docs-sub">{formatDocDate(doc.issuedAt)}</span>
@@ -202,9 +211,9 @@ export default function IssuedDocuments({ onOpenOrder, active = true }) {
       ) : !error ? (
         <div className="docs-state">
           <IconReceipt />
-          <h3>{type ? `No ${type === "receipt" ? "receipts" : "quotations"} yet` : "No documents yet"}</h3>
-          <p>Documents appear here automatically when buyers place or pay for orders.</p>
-          <p className="docs-hint">A quotation is sent when a buyer places a cash order; a receipt is sent once an order is paid.</p>
+          <h3>{type ? t(type === "receipt" ? "docs.issued.noReceipts" : "docs.issued.noQuotations") : t("docs.issued.noDocuments")}</h3>
+          <p>{t("docs.issued.emptyText")}</p>
+          <p className="docs-hint">{t("docs.issued.emptyHint")}</p>
         </div>
       ) : null}
     </section>

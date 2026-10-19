@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import BusLayout from "../../components/bus/BusLayout";
 import TripExplorer from "../../components/bus/TripList";
@@ -13,9 +14,10 @@ import { busApi, durationLabel, ugx } from "../../lib/bus";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function ParkSkeleton() {
+  const { t } = useTranslation();
   return (
     <div role="status" aria-busy="true" aria-live="polite">
-      <span className="sr-only">Loading company…</span>
+      <span className="sr-only">{t("bus.park.loading")}</span>
       <div className="bus-parkhero is-skel" aria-hidden="true">
         <div className="bus-wrap" style={{ paddingTop: 110 }}>
           <div className="bus-parkhero-main">
@@ -30,6 +32,7 @@ function ParkSkeleton() {
 }
 
 export default function BusPark() {
+  const { t } = useTranslation();
   const { slug } = useParams();
   useScrollTop(slug);
   const [params, setParams] = useSearchParams();
@@ -54,13 +57,13 @@ export default function BusPark() {
         <div className="bus-wrap bus-sec bus-sec-first">
           <EmptyState
             icon={Building}
-            title={park.error.status === 404 ? "We couldn't find that bus company" : "Couldn't load this company"}
+            title={park.error.status === 404 ? t("bus.park.notFound") : t("bus.park.loadFailed")}
             action={<>
-              {park.error.status !== 404 ? <button type="button" className="bus-btn bus-btn-navy" onClick={park.reload}>Try again</button> : null}
-              <Link to="/bus/parks" className="bus-btn bus-btn-light">All bus parks</Link>
+              {park.error.status !== 404 ? <button type="button" className="bus-btn bus-btn-navy" onClick={park.reload}>{t("bus.parts.tryAgain")}</button> : null}
+              <Link to="/bus/parks" className="bus-btn bus-btn-light">{t("bus.park.allParks")}</Link>
             </>}
           >
-            {park.error.status === 404 ? "It may have been removed or is not taking bookings." : park.error.message}
+            {park.error.status === 404 ? t("bus.park.notFoundSub") : park.error.message}
           </EmptyState>
         </div>
       </BusLayout>
@@ -81,7 +84,7 @@ export default function BusPark() {
         <Photo src={p.coverUrl} name={p.companyName} width={1800} eager className="bus-parkhero-photo" />
         <span className="bus-hero-shade is-park" aria-hidden="true" />
         <div className="bus-wrap">
-          <nav className="bus-breadcrumb is-light" aria-label="Breadcrumb"><Link to="/bus">Gabla Bus</Link><span>/</span><Link to="/bus/parks">Bus parks</Link><span>/</span><span>{p.companyName}</span></nav>
+          <nav className="bus-breadcrumb is-light" aria-label={t("bus.breadcrumb")}><Link to="/bus">Gabla Bus</Link><span>/</span><Link to="/bus/parks">{t("bus.layout.busParks")}</Link><span>/</span><span>{p.companyName}</span></nav>
           <div className="bus-parkhero-main">
             <BusLogo name={p.companyName} src={p.logoUrl} className="bus-parkhero-logo" size={96} />
             <div className="bus-parkhero-title">
@@ -92,28 +95,28 @@ export default function BusPark() {
               </div>
             </div>
             <div className="bus-parkhero-actions">
-              {p.contactPhone ? <a className="bus-btn bus-btn-primary" href={telHref(p.contactPhone)}><Phone size={18} /> Call</a> : null}
+              {p.contactPhone ? <a className="bus-btn bus-btn-primary" href={telHref(p.contactPhone)}><Phone size={18} /> {t("bus.actions.call")}</a> : null}
               {p.whatsapp ? <a className="bus-btn bus-btn-glass" href={waHref(p.whatsapp)} target="_blank" rel="noopener noreferrer"><Chat size={18} /> WhatsApp</a> : null}
             </div>
           </div>
         </div>
       </section>
 
-      <section className="bus-wrap bus-aboutrow" aria-label="About the company">
+      <section className="bus-wrap bus-aboutrow" aria-label={t("bus.park.aboutAria")}>
         {p.description ? <p className="bus-company-desc">{p.description}</p> : null}
         <dl className="bus-facts">
-          <div><dt><Building size={16} /> Bus park</dt><dd>{p.parkName}<small>{[p.parkAddress, p.parkDistrict].filter(Boolean).join(", ")}</small></dd></div>
-          {p.fleetSize ? <div><dt><BusIcon size={16} /> Fleet</dt><dd>{p.fleetSize} buses<small>on the road</small></dd></div> : null}
-          <div><dt><Clock size={16} /> Routes</dt><dd>{p.routes.length} {p.routes.length === 1 ? "route" : "routes"}<small>{minFare ? `from ${ugx(minFare)}` : "none yet"}</small></dd></div>
+          <div><dt><Building size={16} /> {t("bus.park.busPark")}</dt><dd>{p.parkName}<small>{[p.parkAddress, p.parkDistrict].filter(Boolean).join(", ")}</small></dd></div>
+          {p.fleetSize ? <div><dt><BusIcon size={16} /> {t("bus.park.fleet")}</dt><dd>{t("bus.park.buses", { count: p.fleetSize })}<small>{t("bus.park.onRoad")}</small></dd></div> : null}
+          <div><dt><Clock size={16} /> {t("bus.park.routesLabel")}</dt><dd>{t("bus.parts.routes", { count: p.routes.length })}<small>{minFare ? t("bus.fromPrice", { price: ugx(minFare) }) : t("bus.park.noneYet")}</small></dd></div>
         </dl>
       </section>
 
       <section className="bus-wrap bus-sec" aria-labelledby="park-routes-h">
         <SectionHead
-          kicker="Fares"
-          title={<span id="park-routes-h">Routes &amp; prices</span>}
-          sub="Tap a route to see only its trips below."
-          action={routeFilter ? <button type="button" className="bus-linkbtn" onClick={() => update({ from: "", to: "" })}>Show all routes</button> : null}
+          kicker={t("bus.park.fares")}
+          title={<span id="park-routes-h">{t("bus.park.routesPrices")}</span>}
+          sub={t("bus.park.routesSub")}
+          action={routeFilter ? <button type="button" className="bus-linkbtn" onClick={() => update({ from: "", to: "" })}>{t("bus.park.showAll")}</button> : null}
         />
         {p.routes.length ? (
           <div className="bus-routecards">
@@ -135,7 +138,7 @@ export default function BusPark() {
             })}
           </div>
         ) : (
-          <EmptyState title="No routes yet">This company hasn't published any routes.</EmptyState>
+          <EmptyState title={t("bus.park.noRoutes")}>{t("bus.park.noRoutesSub")}</EmptyState>
         )}
       </section>
 
@@ -144,8 +147,8 @@ export default function BusPark() {
         date={date}
         onDate={(d) => update({ date: d })}
         showCompanyFilter={false}
-        kicker={`${p.companyName} trips`}
-        emptyAction={routeFilter ? <button type="button" className="bus-btn bus-btn-navy" onClick={() => update({ from: "", to: "" })}>Show all routes</button> : null}
+        kicker={t("bus.park.companyTrips", { company: p.companyName })}
+        emptyAction={routeFilter ? <button type="button" className="bus-btn bus-btn-navy" onClick={() => update({ from: "", to: "" })}>{t("bus.park.showAll")}</button> : null}
       />
     </BusLayout>
   );

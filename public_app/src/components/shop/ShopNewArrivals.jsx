@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { addToCart } from "../../lib/cart";
 import { IconCart, IconStar } from "../icons";
 import { ShopScrollSkeleton } from "../Skeleton";
@@ -45,6 +46,7 @@ const StarRating = ({ rating, reviews }) => (
 );
 
 export const ProductCard = ({ product }) => {
+  const { t } = useTranslation();
   const [wish, setWish] = useState(false);
   const [added, setAdded] = useState(false);
   const handleAdd = () => {
@@ -56,7 +58,7 @@ export const ProductCard = ({ product }) => {
   return (
     <div className="shop-product-card">
       <Link to={`/shop/product/${product.id}`} className="shop-product-media">
-        {product.isNew ? <span className="shop-badge shop-badge-new">New</span> : null}
+        {product.isNew ? <span className="shop-badge shop-badge-new">{t("shop.card.new")}</span> : null}
         {product.discount ? <span className="shop-badge shop-badge-sale">{product.discount}</span> : null}
         <button
           type="button"
@@ -65,7 +67,7 @@ export const ProductCard = ({ product }) => {
             e.preventDefault();
             setWish((v) => !v);
           }}
-          aria-label="Add to wishlist"
+          aria-label={t("shop.card.wishlist")}
         >
           <IconHeart />
         </button>
@@ -86,9 +88,9 @@ export const ProductCard = ({ product }) => {
           type="button"
           className={`shop-add-cart ${added ? "is-added" : ""}`}
           onClick={handleAdd}
-          aria-label="Add to cart"
+          aria-label={t("shop.card.addToCart")}
         >
-          {added ? "Added" : <IconCart width={14} height={14} />}
+          {added ? t("shop.card.added") : <IconCart width={14} height={14} />}
         </button>
       </div>
     </div>
@@ -96,6 +98,7 @@ export const ProductCard = ({ product }) => {
 };
 
 export default function ShopNewArrivals({ products = [], loaded = true }) {
+  const { t } = useTranslation();
   const scrollRef = useRef(null);
   const [canScroll, setCanScroll] = useState({ left: false, right: true });
 
@@ -107,8 +110,8 @@ export default function ShopNewArrivals({ products = [], loaded = true }) {
 
   useEffect(() => {
     updateScrollState();
-    const t = setTimeout(updateScrollState, 350);
-    return () => clearTimeout(t);
+    const timer = setTimeout(updateScrollState, 350);
+    return () => clearTimeout(timer);
   }, [products?.length]);
 
   const scroll = (dir) => {
@@ -123,8 +126,8 @@ export default function ShopNewArrivals({ products = [], loaded = true }) {
   return (
     <section className="shop-section">
       <div className="shop-section-header">
-        <h2 className="shop-section-title">New Arrivals</h2>
-        <Link to="/shop/new-arrivals" className="shop-view-all">View All New Arrivals <IconArrowRight /></Link>
+        <h2 className="shop-section-title">{t("shop.newArrivals.title")}</h2>
+        <Link to="/shop/new-arrivals" className="shop-view-all">{t("shop.newArrivals.viewAll")} <IconArrowRight /></Link>
       </div>
 
       {!loaded ? (
@@ -132,7 +135,7 @@ export default function ShopNewArrivals({ products = [], loaded = true }) {
       ) : (
       <div className="shop-product-wrap">
         {canScroll.left ? (
-          <button type="button" className="shop-scroll-btn shop-scroll-left" onClick={() => scroll(-1)} aria-label="Scroll left">
+          <button type="button" className="shop-scroll-btn shop-scroll-left" onClick={() => scroll(-1)} aria-label={t("shop.categories.scrollLeft")}>
             <IconArrowLeft />
           </button>
         ) : null}
@@ -144,7 +147,7 @@ export default function ShopNewArrivals({ products = [], loaded = true }) {
         </div>
 
         {canScroll.right ? (
-          <button type="button" className="shop-scroll-btn shop-scroll-right" onClick={() => scroll(1)} aria-label="Scroll right">
+          <button type="button" className="shop-scroll-btn shop-scroll-right" onClick={() => scroll(1)} aria-label={t("shop.categories.scrollRight")}>
             <IconArrowRight />
           </button>
         ) : null}

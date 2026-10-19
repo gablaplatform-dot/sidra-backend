@@ -1,0 +1,94 @@
+{
+  "ride": {
+    "back": "Ddayo",
+    "droppedPin": "Akabonero akateereddwa",
+    "pickupPlaceholder": "Ekifo w'okukuggyirako",
+    "dropoffPlaceholder": "Ogenda wa?",
+    "useCurrentLocation": "Kozesa w'oli kati",
+    "searchHint": "Noonya endagiriro, oba ssa engalo ku maapu okuteekako akabonero.",
+    "chooseRide": "Londa entambula",
+    "editLocations": "Kyusa w'okukuggyirako n'w'ogenda",
+    "notAvailable": "Tekiriwo kati",
+    "distanceEta": "~{{km}} km · {{eta}}",
+    "requesting": "Kisaba…",
+    "requestRide": "Saba {{type}} • {{fare}}",
+    "chooseType": "Londa ekika ky'entambula",
+    "signInToRequest": "Yingira osabe entambula",
+    "yourDriver": "Omuvuzi wo",
+    "estimatedFare": "Ebbeeyi eteeberezeddwa",
+    "cancel": "Sazaamu",
+    "cancelRide": "Sazaamu entambula",
+    "bookAnother": "Saba entambula endala",
+    "callDriver": "Kubira omuvuzi essimu",
+    "map": {
+      "notConfigured": "Maapu tennaba kuteekebwa bulungi.",
+      "loadFailed": "Maapu eremereddwa okuggulwawo",
+      "unavailable": "Maapu teriwo kati."
+    },
+    "types": {
+      "boda": {
+        "label": "Boda",
+        "description": "Ya mangu era ya bbeeyi entono"
+      },
+      "car": {
+        "label": "Mmotoka",
+        "description": "Entambula ey'emirembe"
+      }
+    },
+    "eta": {
+      "underMinute": "ekitono ku ddakiika emu",
+      "minutes_one": "eddakiika {{count}}",
+      "minutes_other": "eddakiika {{count}}"
+    },
+    "payment": {
+      "cash": "Ssente enkalu",
+      "mobileMoney": "Mobile Money",
+      "mobileMoneyNumber": "Ennamba ya Mobile Money",
+      "phonePlaceholder": "okugeza: +256 700 000000"
+    },
+    "confirm": {
+      "title": "Tukufunidde omuvuzi",
+      "subtitle": "Laba ebikwata ku muvuzi, oluvannyuma kakasa okusindika okusaba.",
+      "confirming": "Kikakasibwa…",
+      "button": "Kakasa omuvuzi ono"
+    },
+    "noDrivers": {
+      "title": "Tewali muvuzi ali kumpi",
+      "body": "Tetusobodde kufuna muvuzi kati. Ddamu gezaako oluvannyuma lw'akaseera.",
+      "tryAgain": "Ddamu ogezeko"
+    },
+    "complete": {
+      "title": "Olugendo luwedde",
+      "fare": "Ebbeeyi: {{fare}}",
+      "thanks": "Weebale okutambula ne Gabla."
+    },
+    "cancelled": {
+      "title": "Olugendo lusazeemu"
+    },
+    "status": {
+      "searching": {
+        "title": "Tunoonya omuvuzi…",
+        "subtitle": "Kiseera kitono nnyo."
+      },
+      "matched": {
+        "title": "Omuvuzi ajja",
+        "subtitle": "Mukoleko wansi."
+      },
+      "arrived": {
+        "title": "Omuvuzi wo atuuse",
+        "subtitle": "Fuluma ng'osobodde."
+      },
+      "in_progress": {
+        "title": "Oli mu lugendo",
+        "subtitle": "Weesanyuse olugendo."
+      }
+    },
+    "errors": {
+      "phoneRequired": "Wandiika ennamba y'essimu gy'onoosasulirako.",
+      "sessionExpired": "Sessiyo yo ewedde. Yingira nate okweyongera okugoberera entambula eno.",
+      "requestFailed": "Tusobola butasaba ntambula kati.",
+      "confirmFailed": "Entambula eno tesobose kukakasibwa.",
+      "cancelFailed": "Olugendo luno terusobose kusazibwamu."
+    }
+  }
+}

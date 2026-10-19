@@ -1,12 +1,15 @@
 import React, { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
-import { durationLabel, operatorApi, ugx } from "../../../lib/bus";
+import { operatorApi, ugx } from "../../../lib/bus";
 import RouteForm, { PriceInput, emptyRoute, routeFromApi, routePayload, validateRoute } from "../../../components/bus/operator/RouteForm";
 import { Chip, Confirm, Empty, ErrorBox, Modal, PageHead, Skel, Switch, daysLabel, errMsg, timeLabel, useLoad, useOperator } from "../../../components/bus/operator/ui";
 import { IcBus, IcClock, IcEdit, IcPause, IcPin, IcPlay, IcPlus, IcRoute, IcTicket, IcTrash } from "../../../components/bus/operator/icons";
+import { durationLabel } from "../../../components/bus/operator/util";
 
 function RouteModal({ route, busTypes, onClose, onSaved }) {
+  const { t } = useTranslation();
   const { toast } = useOperator();
   const editing = Boolean(route);
   const [value, setValue] = useState(() => (route ? routeFromApi(route) : emptyRoute()));
@@ -21,7 +24,7 @@ function RouteModal({ route, busTypes, onClose, onSaved }) {
     try {
       if (editing) await operatorApi.patch(`/routes/${route.id}`, routePayload(value, { full: false }));
       else await operatorApi.post("/routes", routePayload(value));
-      toast(editing ? "Route updated" : "Route added. Trips are being created from its departure times.");
+      toast(editing ? t("busOp.rt.updated") : t("busOp.rt.added"));
       onSaved();
     } catch (e) {
       setError(errMsg(e));
@@ -30,8 +33,8 @@ function RouteModal({ route, busTypes, onClose, onSaved }) {
   };
 
   return (
-    <Modal title={editing ? "Edit route" : "Add a route"} subtitle={editing ? "Change prices with “Ticket prices” and departure times under Sessions." : undefined} size="lg" onClose={busy ? () => {} : onClose}
-      footer={<><button className="bop-btn bop-btn-light" onClick={onClose} disabled={busy}>Cancel</button><button className="bop-btn bop-btn-primary" onClick={save} disabled={busy}>{busy ? "Saving…" : editing ? "Save changes" : "Add route"}</button></>}>
+    <Modal title={editing ? t("busOp.rt.editTitle") : t("busOp.rt.addTitle")} subtitle={editing ? t("busOp.rt.editSub") : undefined} size="lg" onClose={busy ? () => {} : onClose}
+      footer={<><button className="bop-btn bop-btn-light" onClick={onClose} disabled={busy}>{t("busOp.common.cancel")}</button><button className="bop-btn bop-btn-primary" onClick={save} disabled={busy}>{busy ? t("busOp.td.saving") : editing ? t("busOp.common.saveChanges") : t("busOp.rt.add")}</button></>}>
       <RouteForm value={value} onChange={(v) => { setValue(v); setError(""); }} busTypes={busTypes} full={!editing} />
       {error ? <div className="bop-alert is-error bop-mt" role="alert"><span>{error}</span></div> : null}
     </Modal>
@@ -39,6 +42,7 @@ function RouteModal({ route, busTypes, onClose, onSaved }) {
 }
 
 function TicketRow({ type, onChanged, onError }) {
+  const { t } = useTranslation();
   const { toast } = useOperator();
   const [name, setName] = useState(type.name);
   const [price, setPrice] = useState(String(Math.round(Number(type.price))));
@@ -63,7 +67,7 @@ function TicketRow({ type, onChanged, onError }) {
     setBusy(true);
     try {
       await operatorApi.del(`/ticket-types/${type.id}`);
-      toast("Ticket type removed");
+      toast(t("busOp.rt.typeRemoved"));
       await onChanged();
     } catch (e) {
       onError(errMsg(e));
@@ -75,19 +79,20 @@ function TicketRow({ type, onChanged, onError }) {
 
   return (
     <div className={`bop-rowline bop-tt ${type.isActive ? "" : "is-off"}`}>
-      <input className="bop-input" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} aria-label="Ticket name" />
-      <PriceInput value={price} onChange={setPrice} aria-label="Price" />
+      <input className="bop-input" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} aria-label={t("busOp.rt.ticketName")} />
+      <PriceInput value={price} onChange={setPrice} aria-label={t("busOp.rt.price")} />
       <div className="bop-tt-actions">
-        {dirty ? <button className="bop-btn bop-btn-primary bop-btn-sm" disabled={busy || !name.trim() || price === ""} onClick={() => patch({ name: name.trim(), price: Number(price) }, "Saved")}>Save</button> : null}
-        <button className="bop-icon-btn" disabled={busy} onClick={() => patch({ isActive: !type.isActive }, type.isActive ? "Stopped selling this ticket" : "On sale again")} aria-label={type.isActive ? "Stop selling this ticket" : "Sell this ticket again"} title={type.isActive ? "On sale. Click to stop selling" : "Not on sale. Click to sell again"}>{type.isActive ? <IcPause size={18} /> : <IcPlay size={18} />}</button>
-        <button className="bop-icon-btn is-danger" disabled={busy} onClick={() => setConfirmDel(true)} aria-label="Delete ticket type"><IcTrash size={18} /></button>
+        {dirty ? <button className="bop-btn bop-btn-primary bop-btn-sm" disabled={busy || !name.trim() || price === ""} onClick={() => patch({ name: name.trim(), price: Number(price) }, t("busOp.rt.saved"))}>{t("busOp.common.save")}</button> : null}
+        <button className="bop-icon-btn" disabled={busy} onClick={() => patch({ isActive: !type.isActive }, type.isActive ? t("busOp.rt.stoppedSelling") : t("busOp.rt.onSaleAgain"))} aria-label={type.isActive ? t("busOp.rt.stopSelling") : t("busOp.rt.sellAgain")} title={type.isActive ? t("busOp.rt.onSaleTip") : t("busOp.rt.offSaleTip")}>{type.isActive ? <IcPause size={18} /> : <IcPlay size={18} />}</button>
+        <button className="bop-icon-btn is-danger" disabled={busy} onClick={() => setConfirmDel(true)} aria-label={t("busOp.rt.deleteType")}><IcTrash size={18} /></button>
       </div>
-      {confirmDel ? <Confirm title={`Delete “${type.name}”?`} danger confirmLabel="Delete" busy={busy} onCancel={() => setConfirmDel(false)} onConfirm={remove}><p>Passengers who already bought this ticket keep it. If it has been sold, you may prefer to stop selling it instead.</p></Confirm> : null}
+      {confirmDel ? <Confirm title={t("busOp.rt.deleteTitle", { name: type.name })} danger confirmLabel={t("busOp.common.delete")} busy={busy} onCancel={() => setConfirmDel(false)} onConfirm={remove}><p>{t("busOp.rt.deleteBody")}</p></Confirm> : null}
     </div>
   );
 }
 
 function PricesModal({ routeId, routes, onClose, reload }) {
+  const { t } = useTranslation();
   const { toast } = useOperator();
   const route = routes.find((r) => r.id === routeId);
   const [error, setError] = useState("");
@@ -96,12 +101,12 @@ function PricesModal({ routeId, routes, onClose, reload }) {
 
   if (!route) return null;
   const addType = async () => {
-    if (!add.name.trim() || add.price === "") return setError("Enter a name and a price for the new ticket.");
+    if (!add.name.trim() || add.price === "") return setError(t("busOp.rt.newNeedsBoth"));
     setBusy(true);
     setError("");
     try {
       await operatorApi.post(`/routes/${route.id}/ticket-types`, { name: add.name.trim(), price: Number(add.price) });
-      toast("Ticket type added");
+      toast(t("busOp.rt.typeAdded"));
       setAdd({ name: "", price: "" });
       await reload();
     } catch (e) {
@@ -111,15 +116,15 @@ function PricesModal({ routeId, routes, onClose, reload }) {
     }
   };
   return (
-    <Modal title="Ticket prices" subtitle={route.name} onClose={onClose} footer={<button className="bop-btn bop-btn-primary" onClick={onClose}>Done</button>}>
+    <Modal title={t("busOp.rt.prices")} subtitle={route.name} onClose={onClose} footer={<button className="bop-btn bop-btn-primary" onClick={onClose}>{t("busOp.common.done")}</button>}>
       <div className="bop-form">
-        {route.ticketTypes.length ? route.ticketTypes.map((t) => <TicketRow key={t.id} type={t} onChanged={reload} onError={setError} />) : <p className="bop-hint">No ticket types yet. Add your first below.</p>}
+        {route.ticketTypes.length ? route.ticketTypes.map((tt) => <TicketRow key={tt.id} type={tt} onChanged={reload} onError={setError} />) : <p className="bop-hint">{t("busOp.rt.noTypes")}</p>}
         <div className="bop-subsection">
-          <div className="bop-subhead"><div><h3>Add a ticket type</h3></div></div>
+          <div className="bop-subhead"><div><h3>{t("busOp.rt.addType")}</h3></div></div>
           <div className="bop-rowline">
-            <input className="bop-input" placeholder="e.g. VIP" value={add.name} onChange={(e) => setAdd({ ...add, name: e.target.value })} maxLength={60} aria-label="New ticket name" />
-            <PriceInput value={add.price} onChange={(price) => setAdd({ ...add, price })} aria-label="New ticket price" />
-            <button className="bop-btn bop-btn-light bop-btn-sm" onClick={addType} disabled={busy}><IcPlus size={16} /> Add</button>
+            <input className="bop-input" placeholder={t("busOp.rt.newPh")} value={add.name} onChange={(e) => setAdd({ ...add, name: e.target.value })} maxLength={60} aria-label={t("busOp.rt.newName")} />
+            <PriceInput value={add.price} onChange={(price) => setAdd({ ...add, price })} aria-label={t("busOp.rt.newPrice")} />
+            <button className="bop-btn bop-btn-light bop-btn-sm" onClick={addType} disabled={busy}><IcPlus size={16} /> {t("busOp.rt.addShort")}</button>
           </div>
         </div>
         {error ? <div className="bop-alert is-error" role="alert"><span>{error}</span></div> : null}
@@ -129,7 +134,8 @@ function PricesModal({ routeId, routes, onClose, reload }) {
 }
 
 function RouteCard({ route: r, sessions, onPrices, onEdit, onToggle }) {
-  const prices = r.ticketTypes.filter((t) => t.isActive).map((t) => Number(t.price));
+  const { t } = useTranslation();
+  const prices = r.ticketTypes.filter((tt) => tt.isActive).map((tt) => Number(tt.price));
   const from = prices.length ? Math.min(...prices) : null;
   return (
     <article className={`bop-card bop-route ${r.isActive ? "" : "is-paused"}`}>
@@ -139,46 +145,47 @@ function RouteCard({ route: r, sessions, onPrices, onEdit, onToggle }) {
           <p>{r.busType ? <><IcBus size={14} />{r.busType.name} · </> : null}{durationLabel(r.durationMinutes)}</p>
         </div>
         <label className="bop-route-switch">
-          <span className={r.isActive ? "is-live" : ""}>{r.isActive ? "Live" : "Paused"}</span>
-          <Switch checked={r.isActive} onChange={() => onToggle(r)} label={r.isActive ? `Pause ${r.name}` : `Resume ${r.name}`} />
+          <span className={r.isActive ? "is-live" : ""}>{r.isActive ? t("busOp.rt.live") : t("busOp.ui.st.paused")}</span>
+          <Switch checked={r.isActive} onChange={() => onToggle(r)} label={r.isActive ? t("busOp.rt.pauseX", { name: r.name }) : t("busOp.rt.resumeX", { name: r.name })} />
         </label>
       </header>
 
       <div className="bop-ab">
-        <div className="bop-ab-stop"><i /><small>From</small><strong>{r.originName}</strong></div>
+        <div className="bop-ab-stop"><i /><small>{t("busOp.route.from")}</small><strong>{r.originName}</strong></div>
         <div className="bop-ab-line" aria-hidden="true"><span /><b><IcBus size={15} /></b><em>{durationLabel(r.durationMinutes)}</em><span /></div>
-        <div className="bop-ab-stop is-end"><i /><small>To</small><strong>{r.destinationName}</strong></div>
+        <div className="bop-ab-stop is-end"><i /><small>{t("busOp.route.to")}</small><strong>{r.destinationName}</strong></div>
       </div>
 
       <ol className="bop-stops">
-        <li><span><IcPin size={14} /></span><div><small>Boarding point</small><strong>{r.boardingPoint || "Not set"}</strong></div></li>
-        <li><span><IcPin size={14} /></span><div><small>Drop-off</small><strong>{r.dropoffPoint || "Not set"}</strong></div></li>
+        <li><span><IcPin size={14} /></span><div><small>{t("busOp.route.boarding")}</small><strong>{r.boardingPoint || t("busOp.td.notSet")}</strong></div></li>
+        <li><span><IcPin size={14} /></span><div><small>{t("busOp.rt.dropoff")}</small><strong>{r.dropoffPoint || t("busOp.td.notSet")}</strong></div></li>
       </ol>
 
       <div className="bop-route-block">
-        <h4><IcTicket size={14} /> Tickets{from !== null ? <em>from {ugx(from)}</em> : null}</h4>
+        <h4><IcTicket size={14} /> {t("busOp.rt.tickets")}{from !== null ? <em>{t("busOp.rt.fromPrice", { price: ugx(from) })}</em> : null}</h4>
         <div className="bop-chips">
-          {r.ticketTypes.length ? r.ticketTypes.map((t) => <Chip key={t.id} tone={t.isActive ? "orange" : "outline"}>{t.name} · {ugx(t.price)}{t.isActive ? "" : " (off)"}</Chip>) : <Chip tone="red">No ticket types. Add prices</Chip>}
+          {r.ticketTypes.length ? r.ticketTypes.map((tt) => <Chip key={tt.id} tone={tt.isActive ? "orange" : "outline"}>{tt.name} · {ugx(tt.price)}{tt.isActive ? "" : ` (${t("busOp.rt.off")})`}</Chip>) : <Chip tone="red">{t("busOp.rt.noTypesChip")}</Chip>}
         </div>
       </div>
 
       <div className="bop-route-block">
-        <h4><IcClock size={14} /> Sessions</h4>
+        <h4><IcClock size={14} /> {t("busOp.nav.sessions")}</h4>
         <div className="bop-chips">
-          {sessions.length ? sessions.map((s) => <Link key={s.id} to="/bus/operator/sessions" className={`bop-chip bop-sess-chip ${s.isActive ? "" : "is-off"}`}><b>{timeLabel(s.departureTime)}</b> {daysLabel(s.daysOfWeek).toLowerCase()}</Link>) : <span className="bop-hint">No departures yet. <Link to="/bus/operator/sessions" className="bop-textlink">Add a session</Link></span>}
+          {sessions.length ? sessions.map((s) => <Link key={s.id} to="/bus/operator/sessions" className={`bop-chip bop-sess-chip ${s.isActive ? "" : "is-off"}`}><b>{timeLabel(s.departureTime)}</b> {daysLabel(s.daysOfWeek).toLowerCase()}</Link>) : <span className="bop-hint">{t("busOp.rt.noDepartures")} <Link to="/bus/operator/sessions" className="bop-textlink">{t("busOp.ses.addTitle")}</Link></span>}
         </div>
       </div>
 
       <footer className="bop-route-foot">
-        <button className="bop-btn bop-btn-light bop-btn-sm" onClick={() => onPrices(r)}><IcTicket size={16} /> Ticket prices</button>
-        <button className="bop-btn bop-btn-light bop-btn-sm" onClick={() => onEdit(r)}><IcEdit size={16} /> Edit</button>
-        <Link to="/bus/operator/sessions" className="bop-btn bop-btn-light bop-btn-sm"><IcClock size={16} /> Sessions ({r._count?.schedules ?? sessions.length})</Link>
+        <button className="bop-btn bop-btn-light bop-btn-sm" onClick={() => onPrices(r)}><IcTicket size={16} /> {t("busOp.rt.prices")}</button>
+        <button className="bop-btn bop-btn-light bop-btn-sm" onClick={() => onEdit(r)}><IcEdit size={16} /> {t("busOp.ob.edit")}</button>
+        <Link to="/bus/operator/sessions" className="bop-btn bop-btn-light bop-btn-sm"><IcClock size={16} /> {t("busOp.nav.sessions")} ({r._count?.schedules ?? sessions.length})</Link>
       </footer>
     </article>
   );
 }
 
 export default function OperatorRoutes() {
+  const { t } = useTranslation();
   const { toast } = useOperator();
   const [search, setSearch] = useSearchParams();
   const routes = useLoad(() => operatorApi.get("/routes"), []);
@@ -202,7 +209,7 @@ export default function OperatorRoutes() {
     setToggleError("");
     try {
       await operatorApi.patch(`/routes/${toggle.id}`, { isActive: !toggle.isActive });
-      toast(toggle.isActive ? "Route paused" : "Route is live again");
+      toast(toggle.isActive ? t("busOp.rt.paused") : t("busOp.rt.liveAgain"));
       setToggle(null);
       await routes.reload();
     } catch (e) {
@@ -214,23 +221,23 @@ export default function OperatorRoutes() {
 
   return (
     <>
-      <PageHead sub="Where your buses go and what tickets cost." actions={<button className="bop-btn bop-btn-primary" onClick={() => setModal({ kind: "edit", route: null })}><IcPlus size={18} /> Add route</button>} />
+      <PageHead sub={t("busOp.rt.sub")} actions={<button className="bop-btn bop-btn-primary" onClick={() => setModal({ kind: "edit", route: null })}><IcPlus size={18} /> {t("busOp.rt.add")}</button>} />
       <ErrorBox error={routes.error} onRetry={routes.refresh} />
       {routes.loading ? (
-        <div className="bop-route-grid" role="status" aria-busy="true" aria-label="Loading routes">
+        <div className="bop-route-grid" role="status" aria-busy="true" aria-label={t("busOp.rt.loading")}>
           {[0, 1, 2, 3].map((i) => <div className="bop-card bop-route" key={i}><Skel w="55%" h={18} /><Skel h={60} r={14} style={{ marginTop: 18 }} /><Skel w="80%" h={12} style={{ marginTop: 18 }} /><Skel w="60%" h={26} r={999} style={{ marginTop: 14 }} /><Skel h={38} r={10} style={{ marginTop: 20 }} /></div>)}
         </div>
       ) : items.length ? (
         <div className="bop-route-grid">
           {items.map((r) => <RouteCard key={r.id} route={r} sessions={byRoute.get(r.id) || []} onPrices={(x) => setModal({ kind: "prices", id: x.id })} onEdit={(x) => setModal({ kind: "edit", route: x })} onToggle={(x) => { setToggleError(""); setToggle(x); }} />)}
         </div>
-      ) : <Empty icon={<IcRoute size={28} />} title="No routes yet" action={<button className="bop-btn bop-btn-primary" onClick={() => setModal({ kind: "edit", route: null })}><IcPlus size={17} /> Add your first route</button>}>Add a route with ticket prices and departure times so passengers can book.</Empty>}
+      ) : <Empty icon={<IcRoute size={28} />} title={t("busOp.rt.empty")} action={<button className="bop-btn bop-btn-primary" onClick={() => setModal({ kind: "edit", route: null })}><IcPlus size={17} /> {t("busOp.rt.addFirst")}</button>}>{t("busOp.rt.emptyHint")}</Empty>}
 
       {modal?.kind === "edit" ? <RouteModal route={modal.route} busTypes={types.data?.items || []} onClose={closeModal} onSaved={() => { closeModal(); routes.reload(); sessions.reload(); }} /> : null}
       {modal?.kind === "prices" ? <PricesModal routeId={modal.id} routes={items} onClose={closeModal} reload={routes.reload} /> : null}
       {toggle ? (
-        <Confirm title={toggle.isActive ? `Pause “${toggle.name}”?` : `Resume “${toggle.name}”?`} confirmLabel={toggle.isActive ? "Pause route" : "Resume route"} danger={toggle.isActive} busy={busy} error={toggleError ? new Error(toggleError) : null} onCancel={() => setToggle(null)} onConfirm={doToggle}>
-          <p>{toggle.isActive ? "Passengers won’t be able to find this route, and future trips with no bookings are removed. Trips that already have bookings stay." : "Passengers can find and book this route again."}</p>
+        <Confirm title={toggle.isActive ? t("busOp.rt.pauseTitle", { name: toggle.name }) : t("busOp.rt.resumeTitle", { name: toggle.name })} confirmLabel={toggle.isActive ? t("busOp.rt.pauseRoute") : t("busOp.rt.resumeRoute")} danger={toggle.isActive} busy={busy} error={toggleError ? new Error(toggleError) : null} onCancel={() => setToggle(null)} onConfirm={doToggle}>
+          <p>{toggle.isActive ? t("busOp.rt.pauseBody") : t("busOp.rt.resumeBody")}</p>
         </Confirm>
       ) : null}
     </>

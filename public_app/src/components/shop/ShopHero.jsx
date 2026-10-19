@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
 import { HERO_MODEL_IMAGE } from "../../data/shopData";
 
 const IconArrowRight = (props) => (
@@ -24,6 +25,7 @@ const FloatingProductCard = ({ product, positionClass }) => (
 // Empty-state fallback for when no provider ads exist anywhere (not even nationwide) - shown by
 // Shop.jsx in place of ShopAdsHero. `products` are real listings (New Arrivals), never invented.
 export default function ShopHero({ products = [] }) {
+  const { t } = useTranslation();
   return (
     <section className="shop-hero">
       <div className="shop-hero-blob shop-hero-blob-1" />
@@ -31,19 +33,19 @@ export default function ShopHero({ products = [] }) {
 
       <div className="shop-hero-inner">
         <div className="shop-hero-copy">
-          <p className="shop-eyebrow">TRENDING NOW</p>
+          <p className="shop-eyebrow">{t("shop.hero.eyebrow")}</p>
           <h1 className="shop-hero-title">
-            Discover Products<br />You&rsquo;ll Love
+            {t("shop.hero.titleLine1")}<br />{t("shop.hero.titleLine2")}
           </h1>
           <p className="shop-hero-subtitle">
-            Shop the latest trending products curated for modern lifestyles.
+            {t("shop.hero.subtitle")}
           </p>
           <div className="shop-hero-actions">
             <Link to="/shop" className="shop-cta-primary">
-              Shop Now <IconArrowRight />
+              {t("shop.hero.shopNow")} <IconArrowRight />
             </Link>
             <button type="button" className="shop-cta-secondary">
-              Explore Collection
+              {t("shop.hero.explore")}
             </button>
           </div>
           <div className="shop-hero-trust">
@@ -53,7 +55,7 @@ export default function ShopHero({ products = [] }) {
               <span className="shop-avatar shop-avatar-3" />
               <span className="shop-avatar shop-avatar-4" />
             </div>
-            <p>Loved by <strong>50,000+</strong> customers worldwide</p>
+            <p><Trans i18nKey="shop.hero.loved" components={{ b: <strong /> }} /></p>
           </div>
         </div>
 
@@ -64,7 +66,7 @@ export default function ShopHero({ products = [] }) {
           {products[3] ? <FloatingProductCard product={products[3]} positionClass="float-br" /> : null}
           <div className="shop-hero-image-wrap">
             <div className="shop-hero-oval" />
-            <img src={HERO_MODEL_IMAGE} alt="Featured model" className="shop-hero-model" loading="lazy" />
+            <img src={HERO_MODEL_IMAGE} alt={t("shop.hero.modelAlt")} className="shop-hero-model" loading="lazy" />
           </div>
         </div>
       </div>

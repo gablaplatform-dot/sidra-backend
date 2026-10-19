@@ -1,0 +1,99 @@
+{
+  "home": {
+    "eyebrow": "Buli kimu ekya Uganda, mu app emu",
+    "heroTitle1": "Gula ebintu eby'omulembe. Kuba abakugu b'osobola okwesiga.",
+    "heroTitle2": "Tambula mu kibuga.",
+    "heroSubtitle": "Gabla ekuyunga ku byambalo, ebyuma by'amasannyalaze, abaweereza abakakasiddwa n'abavuzi abali okumpi naawe — byonna mu kifo kimu ekirabika obulungi.",
+    "searchPlaceholder": "Noonya ebyambalo, empeereza, abavuzi…",
+    "tabs": {
+      "nearby": "Okumpi",
+      "topRated": "Abasinga okwagalibwa",
+      "new": "Ebipya",
+      "featured": "Ebironde"
+    },
+    "shopNow": "Gula kati",
+    "getRide": "Funa entambula",
+    "trustSellers": "abasuubuzi n'abaweereza",
+    "trustPayments": "okusasula",
+    "trustRating": "omutindo ogwa wakati",
+    "cards": {
+      "newArrivalsTitle": "Ebipya ebituuse",
+      "newArrivalsSub": "Ebyambalo ebigenda mu maaso",
+      "rideReadyTitle": "Entambula eriwo",
+      "rideReadySub": "Bodaboda ne mmotoka okumpi",
+      "topProsTitle": "Abakugu abasinga",
+      "topProsSub": "Bakakasiddwa era bamanyiddwa",
+      "fastDeliveryTitle": "Okutuusa amangu",
+      "fastDeliverySub": "Mu ggwanga lyonna"
+    },
+    "trustbar": {
+      "verifiedTitle": "Abaweereza abakakasiddwa",
+      "verifiedSub": "Basunsuddwa era bamanyiddwa",
+      "localTitle": "Okumpi naawe",
+      "localSub": "Funa empeereza okumpi naawe",
+      "ratedTitle": "Omutindo 4.8/5",
+      "ratedSub": "Okuva ku bakasitoma 10,000+ abasanyufu",
+      "supportTitle": "Obuyambi 24/7",
+      "supportSub": "Tuwandiikire buli kiseera"
+    },
+    "promo": {
+      "rideEyebrow": "Gabla Ride",
+      "rideTitle": "Ka tukufunire entambula.",
+      "rideText": "Bodaboda oba mmotoka — saba omuvuzi ali okumpi ofune ebbeeyi nga tonnatandika mu masekondi.",
+      "rideCta": "Saba entambula",
+      "shopEyebrow": "Gabla Shop",
+      "shopTitle": "Gula kati, ebintu ebiggya.",
+      "shopText": "Noonya ebyambalo, ebyuma by'amasannyalaze n'ebirala okuva eri buli musuubuzi ku Gabla, mu dduuka limu.",
+      "shopCta": "Genda mu dduuka"
+    },
+    "bus": {
+      "eyebrow": "Gabla Bus",
+      "title": "Gula tikiti ya bbaasi mu ddakiika emu.",
+      "text": "Londa ekkubo lyo, londa olunaku ku kalenda, osasule ne MTN MoMo oba Airtel Money. Tikiti yo ey'ekyuma etuuka mangu — tewali kuyimirira mu layini ku paaka.",
+      "fromAny": "Okuva (wonna)",
+      "toAny": "Okugenda (wonna)",
+      "travellingFrom": "Gy'ova",
+      "travellingTo": "Gy'ogenda",
+      "travelDate": "Olunaku lw'olugendo",
+      "findBuses": "Noonya bbaasi",
+      "myTickets": "Amatikiti gange"
+    },
+    "categories": {
+      "title": "Noonya ng'oyita mu bibinja",
+      "subtitle": "Kwata ku by'oyagala, bikulondeddwa.",
+      "empty": "Tewali bibinja bikyaliwo.",
+      "loading": "Ebibinja bikyajja…",
+      "providersChip": "{{count}}+ abaweereza"
+    },
+    "providers": {
+      "title": "Abaweereza abasinga",
+      "subtitle": "Abakugu abalonde abali okumpi naawe.",
+      "cta": "Funa omukugu",
+      "empty": "Tewali baweereza basinga bukyaliwo.",
+      "fallbackCategory": "Omuweereza"
+    },
+    "loadError": "Tetusobodde kuzuula Gabla kati."
+  },
+  "mobileHome": {
+    "tiles": {
+      "shop": "Genda okugula",
+      "services": "Empeereza",
+      "bus": "Tikiti ya bbaasi",
+      "ride": "Funa entambula"
+    },
+    "explore": "Noonyereza",
+    "quickActions": "Eby'amangu",
+    "titleLead": "Kiki",
+    "titleRest": "ky'weetaaga leero?",
+    "categories": "Ebibinja",
+    "browseProviders": "Noonya abaweereza",
+    "emptyCategories": "Ebibinja by'empeereza bijja kulabikira wano.",
+    "recommended": "Abaweereza abatuukirizibwa",
+    "ordersAria": "Ebiragiro byange n'amawulire",
+    "accountAria": "Akawunti yo",
+    "menu": "Olukalala",
+    "busTickets": "Amatikiti ga bbaasi",
+    "myBusTickets": "Amatikiti gange aga bbaasi",
+    "myBusinessProfile": "Ebikwata ku bizinensi yange"
+  }
+}

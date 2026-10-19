@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { getDocumentSettings, saveDocumentSettings } from "../../lib/documents";
 import { uploadFile } from "../../lib/storage";
@@ -16,18 +17,20 @@ const IconMail = () => (
 );
 
 const SECTIONS = [
-  { key: "business", title: "Business details & logo", icon: <IconStore />, preview: "quotation" },
-  { key: "look", title: "Look & feel", icon: <IconSparkles />, preview: "quotation" },
-  { key: "quotation", title: "Quotation", icon: <IconReceipt />, preview: "quotation" },
-  { key: "receipt", title: "Receipt", icon: <IconCheck />, preview: "receipt" },
-  { key: "tax", title: "Tax (VAT)", icon: <IconCash />, preview: "quotation" },
-  { key: "payment", title: "Payment details", icon: <IconWallet />, preview: "quotation" },
-  { key: "email", title: "Email delivery", icon: <IconMail />, preview: null }
+  { key: "business", icon: <IconStore />, preview: "quotation" },
+  { key: "look", icon: <IconSparkles />, preview: "quotation" },
+  { key: "quotation", icon: <IconReceipt />, preview: "quotation" },
+  { key: "receipt", icon: <IconCheck />, preview: "receipt" },
+  { key: "tax", icon: <IconCash />, preview: "quotation" },
+  { key: "payment", icon: <IconWallet />, preview: "quotation" },
+  { key: "email", icon: <IconMail />, preview: null }
 ];
 
-const StudioSkeleton = () => (
+const StudioSkeleton = () => {
+  const { t } = useTranslation();
+  return (
   <div className="docs-studio-grid" role="status" aria-busy="true">
-    <span className="sr-only">Loading your document settings…</span>
+    <span className="sr-only">{t("docs.studio.loading")}</span>
     <div className="docs-form-col">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="docs-acc docs-acc-skel">
@@ -41,9 +44,11 @@ const StudioSkeleton = () => (
       <Skel h={560} w="100%" r={16} style={{ marginTop: 12 }} />
     </div>
   </div>
-);
+  );
+};
 
 function LogoField({ value, onChange, avatarUrl, businessName, error, notify }) {
+  const { t } = useTranslation();
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [typeWarning, setTypeWarning] = useState(false);
@@ -55,11 +60,11 @@ function LogoField({ value, onChange, avatarUrl, businessName, error, notify }) 
     if (fileRef.current) fileRef.current.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      notify("error", "Please choose an image file (PNG or JPEG works best).");
+      notify("error", t("docs.studio.errNotImage"));
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      notify("error", "That image is over 5 MB. Please choose a smaller logo.");
+      notify("error", t("docs.studio.errTooBig"));
       return;
     }
     setUploading(true);
@@ -68,7 +73,7 @@ function LogoField({ value, onChange, avatarUrl, businessName, error, notify }) 
       onChange(url);
       setTypeWarning(!["image/png", "image/jpeg"].includes(file.type));
     } catch (uploadError) {
-      notify("error", uploadError.message || "Unable to upload that logo.");
+      notify("error", uploadError.message || t("docs.studio.errUpload"));
     } finally {
       setUploading(false);
     }
@@ -76,7 +81,7 @@ function LogoField({ value, onChange, avatarUrl, businessName, error, notify }) 
 
   return (
     <div className="docs-field docs-logo">
-      <span className="docs-label" id="docs-logo-label">Logo</span>
+      <span className="docs-label" id="docs-logo-label">{t("docs.studio.logo")}</span>
       <div className="docs-logo-row">
         <div className="docs-logo-thumb" aria-hidden="true">
           {effective ? <img src={effective} alt="" /> : <span>{monogram(businessName)}</span>}
@@ -84,29 +89,29 @@ function LogoField({ value, onChange, avatarUrl, businessName, error, notify }) 
         <div className="docs-logo-actions">
           <div className="docs-btn-row">
             <button type="button" className="docs-btn" onClick={() => fileRef.current?.click()} disabled={uploading} aria-describedby="docs-logo-hint">
-              <IconImage /> {uploading ? "Uploading…" : value ? "Replace logo" : "Upload logo"}
+              <IconImage /> {uploading ? t("docs.studio.uploading") : value ? t("docs.studio.replaceLogo") : t("docs.studio.uploadLogo")}
             </button>
             {value ? (
-              <button type="button" className="docs-btn is-quiet" onClick={() => { onChange(""); setTypeWarning(false); }}>Remove</button>
+              <button type="button" className="docs-btn is-quiet" onClick={() => { onChange(""); setTypeWarning(false); }}>{t("docs.studio.remove")}</button>
             ) : null}
             {avatarUrl && value !== avatarUrl ? (
-              <button type="button" className="docs-btn is-quiet" onClick={() => { onChange(avatarUrl); setTypeWarning(false); }}>Use my profile photo</button>
+              <button type="button" className="docs-btn is-quiet" onClick={() => { onChange(avatarUrl); setTypeWarning(false); }}>{t("docs.studio.useProfilePhoto")}</button>
             ) : null}
           </div>
           <input ref={fileRef} id="docs-logo-file" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif" className="docs-file" onChange={pick} aria-labelledby="docs-logo-label" tabIndex={-1} />
           <p id="docs-logo-hint" className="docs-hint">
             {value
-              ? "Your uploaded logo appears in the document header."
+              ? t("docs.studio.logoHintUploaded")
               : avatarUrl
-                ? "No logo uploaded, so your profile photo is used."
-                : "No logo yet. A monogram of your business name is used instead."}{" "}
-            Use a square PNG or JPEG, ideally at least 300 px.
+                ? t("docs.studio.logoHintAvatar")
+                : t("docs.studio.logoHintNone")}{" "}
+            {t("docs.studio.logoHintSize")}
           </p>
         </div>
       </div>
       {unsupported ? (
         <p className="docs-warning" role="alert">
-          PDFs can only show PNG or JPEG logos, so this file will appear as a monogram on your documents. Upload a PNG or JPEG{avatarUrl ? ", or use your profile photo" : ""}.
+          {t(avatarUrl ? "docs.studio.logoUnsupportedAvatar" : "docs.studio.logoUnsupported")}
         </p>
       ) : null}
       {error ? <p className="docs-error" role="alert">{error}</p> : null}
@@ -115,6 +120,7 @@ function LogoField({ value, onChange, avatarUrl, businessName, error, notify }) 
 }
 
 export default function DocumentStudio({ provider, onDirtyChange, active = true }) {
+  const { t } = useTranslation();
   const [state, setState] = useState({ status: "loading", error: "" });
   const [saved, setSaved] = useState(null);
   const [draft, setDraft] = useState(null);
@@ -142,7 +148,7 @@ export default function DocumentStudio({ provider, onDirtyChange, active = true 
         setDefaults(result.defaults);
         setState({ status: "ready", error: "" });
       })
-      .catch((error) => setState({ status: "error", error: error.message || "Unable to load your document settings." }));
+      .catch((error) => setState({ status: "error", error: error.message || t("docs.studio.errLoad") }));
   }, []);
   useEffect(load, [load]);
 
@@ -200,7 +206,7 @@ export default function DocumentStudio({ provider, onDirtyChange, active = true 
   const discard = () => {
     setDraft(clone(saved));
     setServerErrors({});
-    notify("info", "Changes discarded.");
+    notify("info", t("docs.studio.discarded"));
   };
 
   const save = async () => {
@@ -210,7 +216,7 @@ export default function DocumentStudio({ provider, onDirtyChange, active = true 
         for (const path of Object.keys(liveErrors)) next[SECTION_OF(path)] = true;
         return next;
       });
-      notify("error", "Please fix the highlighted fields first.");
+      notify("error", t("docs.studio.fixFirst"));
       return;
     }
     const patch = diffSettings(saved, draft);
@@ -222,15 +228,15 @@ export default function DocumentStudio({ provider, onDirtyChange, active = true 
       setDraft(clone(result.settings));
       setDefaults(result.defaults);
       setServerErrors({});
-      notify("success", "Saved. New quotations and receipts will use this design.");
+      notify("success", t("docs.studio.saved"));
     } catch (error) {
       const parsed = parseApiError(error.message);
       if (parsed.path) {
         setServerErrors((e) => ({ ...e, [parsed.path]: parsed.message }));
         setOpen((o) => ({ ...o, [SECTION_OF(parsed.path)]: true }));
-        notify("error", `Couldn't save: ${parsed.message}`);
+        notify("error", t("docs.studio.couldntSave", { message: parsed.message }));
       } else {
-        notify("error", error.message || "Unable to save your changes.");
+        notify("error", error.message || t("docs.studio.errSave"));
       }
     } finally {
       setSaving(false);
@@ -242,128 +248,128 @@ export default function DocumentStudio({ provider, onDirtyChange, active = true 
     return (
       <div className="docs-state">
         <IconBox />
-        <h3>We couldn&apos;t load your document settings</h3>
+        <h3>{t("docs.studio.loadFailed")}</h3>
         <p>{state.error}</p>
-        <button type="button" className="docs-btn is-primary" onClick={load}>Try again</button>
+        <button type="button" className="docs-btn is-primary" onClick={load}>{t("docs.studio.tryAgain")}</button>
       </div>
     );
   }
 
   const q = draft.quotation;
   const summaries = {
-    business: draft.brand.businessName || "Name, contact details and logo",
-    look: `Accent ${draft.brand.accentColor} · ${[draft.options.showItemNumbers && "item numbers", draft.options.showAmountInWords && "amount in words", draft.options.showQrCode && "QR code"].filter(Boolean).join(", ") || "plain"}`,
-    quotation: `${q.title} · ${String(q.prefix).toUpperCase()}-… · valid ${q.validityDays} days`,
+    business: draft.brand.businessName || t("docs.studio.sum.business"),
+    look: t("docs.studio.sum.look", { color: draft.brand.accentColor, options: [draft.options.showItemNumbers && t("docs.studio.sum.itemNumbers"), draft.options.showAmountInWords && t("docs.studio.sum.amountWords"), draft.options.showQrCode && t("docs.studio.sum.qr")].filter(Boolean).join(", ") || t("docs.studio.sum.plain") }),
+    quotation: t("docs.studio.sum.quotation", { title: q.title, prefix: String(q.prefix).toUpperCase(), days: q.validityDays }),
     receipt: `${draft.receipt.title} · ${String(draft.receipt.prefix).toUpperCase()}-…`,
-    tax: draft.tax.enabled ? `${draft.tax.label || "VAT"} ${draft.tax.percent}% ${draft.tax.inclusive ? "included in prices" : "added on top"}` : "Off — no tax shown",
-    payment: draft.payment.mobileMoneyNumber || draft.payment.bankDetails || draft.payment.instructions ? "Shown on quotations" : "How buyers can pay you",
-    email: `${draft.email.sendQuotation ? "Quotations on" : "Quotations off"} · ${draft.email.sendReceipt ? "Receipts on" : "Receipts off"}`
+    tax: draft.tax.enabled ? t(draft.tax.inclusive ? "docs.studio.sum.taxIncluded" : "docs.studio.sum.taxOnTop", { label: draft.tax.label || "VAT", percent: draft.tax.percent }) : t("docs.studio.sum.taxOff"),
+    payment: draft.payment.mobileMoneyNumber || draft.payment.bankDetails || draft.payment.instructions ? t("docs.studio.sum.paymentShown") : t("docs.studio.sum.paymentHow"),
+    email: `${draft.email.sendQuotation ? t("docs.studio.sum.quotesOn") : t("docs.studio.sum.quotesOff")} · ${draft.email.sendReceipt ? t("docs.studio.sum.receiptsOn") : t("docs.studio.sum.receiptsOff")}`
   };
 
   return (
     <div className="docs-studio" hidden={!active}>
       <div className="docs-studio-grid">
         <div className="docs-form-col">
-          <Accordion id="docs-sec-business" icon={SECTIONS[0].icon} title={SECTIONS[0].title} summary={summaries.business} open={open.business} onToggle={() => toggleSection(SECTIONS[0])} errorCount={sectionErrors.business}>
-            <p className="docs-section-intro">Leave a field blank to use the details from your profile.</p>
+          <Accordion id="docs-sec-business" icon={SECTIONS[0].icon} title={t("docs.studio.sections.business")} summary={summaries.business} open={open.business} onToggle={() => toggleSection(SECTIONS[0])} errorCount={sectionErrors.business}>
+            <p className="docs-section-intro">{t("docs.studio.businessIntro")}</p>
             <LogoField value={draft.brand.logoUrl} onChange={set("brand.logoUrl")} avatarUrl={provider?.media?.avatarUrl || ""} businessName={draft.brand.businessName} error={errors["brand.logoUrl"]} notify={notify} />
             <div className="docs-grid2">
-              <TextField id="docs-businessName" label="Business name" {...f("brand.businessName")} autoComplete="organization" />
-              <TextField id="docs-tagline" label="Tagline (optional)" {...f("brand.tagline")} placeholder="e.g. Genuine phones & accessories" />
+              <TextField id="docs-businessName" label={t("docs.studio.businessName")} {...f("brand.businessName")} autoComplete="organization" />
+              <TextField id="docs-tagline" label={t("docs.studio.tagline")} {...f("brand.tagline")} placeholder={t("docs.studio.taglinePlaceholder")} />
             </div>
-            <TextField id="docs-address" label="Address" {...f("brand.address")} multiline rows={2} autoComplete="street-address" />
+            <TextField id="docs-address" label={t("docs.studio.address")} {...f("brand.address")} multiline rows={2} autoComplete="street-address" />
             <div className="docs-grid2">
-              <TextField id="docs-phone" label="Phone" {...f("brand.phone")} type="tel" autoComplete="tel" />
-              <TextField id="docs-email" label="Email" {...f("brand.email")} type="email" autoComplete="email" />
-              <TextField id="docs-website" label="Website" {...f("brand.website")} placeholder="www.mybusiness.com" autoComplete="url" />
-              <TextField id="docs-taxId" label="Tax ID / TIN (optional)" {...f("brand.taxId")} hint="Printed in the header when you add one." />
+              <TextField id="docs-phone" label={t("docs.studio.phone")} {...f("brand.phone")} type="tel" autoComplete="tel" />
+              <TextField id="docs-email" label={t("docs.studio.email")} {...f("brand.email")} type="email" autoComplete="email" />
+              <TextField id="docs-website" label={t("docs.studio.website")} {...f("brand.website")} placeholder="www.mybusiness.com" autoComplete="url" />
+              <TextField id="docs-taxId" label={t("docs.studio.taxId")} {...f("brand.taxId")} hint={t("docs.studio.taxIdHint")} />
             </div>
           </Accordion>
 
-          <Accordion id="docs-sec-look" icon={SECTIONS[1].icon} title={SECTIONS[1].title} summary={summaries.look} open={open.look} onToggle={() => toggleSection(SECTIONS[1])} errorCount={sectionErrors.look}>
+          <Accordion id="docs-sec-look" icon={SECTIONS[1].icon} title={t("docs.studio.sections.look")} summary={summaries.look} open={open.look} onToggle={() => toggleSection(SECTIONS[1])} errorCount={sectionErrors.look}>
             <ColorPalette id="docs-accent" value={draft.brand.accentColor} onChange={set("brand.accentColor")} error={errors["brand.accentColor"]} />
             <div className="docs-switch-list">
-              <Toggle id="docs-opt-numbers" label="Number the items" hint="Adds a 1, 2, 3… column to the items table." checked={draft.options.showItemNumbers} onChange={set("options.showItemNumbers")} />
-              <Toggle id="docs-opt-words" label="Show the total in words" hint="e.g. “One million two hundred fifty thousand Uganda shillings only”." checked={draft.options.showAmountInWords} onChange={set("options.showAmountInWords")} />
-              <Toggle id="docs-opt-qr" label="Show a QR code" hint="Lets the buyer scan to open the order." checked={draft.options.showQrCode} onChange={set("options.showQrCode")} />
+              <Toggle id="docs-opt-numbers" label={t("docs.studio.numberItems")} hint={t("docs.studio.numberItemsHint")} checked={draft.options.showItemNumbers} onChange={set("options.showItemNumbers")} />
+              <Toggle id="docs-opt-words" label={t("docs.studio.totalWords")} hint={t("docs.studio.totalWordsHint")} checked={draft.options.showAmountInWords} onChange={set("options.showAmountInWords")} />
+              <Toggle id="docs-opt-qr" label={t("docs.studio.qr")} hint={t("docs.studio.qrHint")} checked={draft.options.showQrCode} onChange={set("options.showQrCode")} />
             </div>
           </Accordion>
 
-          <Accordion id="docs-sec-quotation" icon={SECTIONS[2].icon} title={SECTIONS[2].title} summary={summaries.quotation} open={open.quotation} onToggle={() => toggleSection(SECTIONS[2])} errorCount={sectionErrors.quotation}>
+          <Accordion id="docs-sec-quotation" icon={SECTIONS[2].icon} title={t("docs.studio.sections.quotation")} summary={summaries.quotation} open={open.quotation} onToggle={() => toggleSection(SECTIONS[2])} errorCount={sectionErrors.quotation}>
             <div className="docs-grid2">
-              <TextField id="docs-q-title" label="Document title" {...f("quotation.title")} />
-              <TextField id="docs-q-prefix" label="Number prefix" {...f("quotation.prefix")} onChange={(v) => set("quotation.prefix")(v.toUpperCase())} hint={`Numbers look like ${String(q.prefix || "QT").toUpperCase()}-${new Date().getFullYear()}-0001.`} />
-              <TextField id="docs-q-days" label="Valid for" {...f("quotation.validityDays")} inputMode="numeric" suffix="days" />
+              <TextField id="docs-q-title" label={t("docs.studio.docTitle")} {...f("quotation.title")} />
+              <TextField id="docs-q-prefix" label={t("docs.studio.prefix")} {...f("quotation.prefix")} onChange={(v) => set("quotation.prefix")(v.toUpperCase())} hint={t("docs.studio.prefixHint", { example: `${String(q.prefix || "QT").toUpperCase()}-${new Date().getFullYear()}-0001` })} />
+              <TextField id="docs-q-days" label={t("docs.studio.validFor")} {...f("quotation.validityDays")} inputMode="numeric" suffix={t("docs.studio.days")} />
             </div>
-            <TextField id="docs-q-intro" label="Intro message" {...f("quotation.intro")} multiline rows={3} onReset={() => set("quotation.intro")(defaults.quotation.intro)} hint="A short greeting shown above the items." />
-            <TextField id="docs-q-terms" label="Terms & conditions" {...f("quotation.terms")} multiline rows={6} onReset={() => set("quotation.terms")(defaults.quotation.terms)} hint="One term per line. Printed at the bottom of every quotation." />
-            <Toggle id="docs-q-sign" label="Add a signature line" hint="Prints a signature area with your name and title." checked={q.showSignature} onChange={set("quotation.showSignature")} />
+            <TextField id="docs-q-intro" label={t("docs.studio.intro")} {...f("quotation.intro")} multiline rows={3} onReset={() => set("quotation.intro")(defaults.quotation.intro)} hint={t("docs.studio.introHint")} />
+            <TextField id="docs-q-terms" label={t("docs.studio.terms")} {...f("quotation.terms")} multiline rows={6} onReset={() => set("quotation.terms")(defaults.quotation.terms)} hint={t("docs.studio.termsHint")} />
+            <Toggle id="docs-q-sign" label={t("docs.studio.signature")} hint={t("docs.studio.signatureHint")} checked={q.showSignature} onChange={set("quotation.showSignature")} />
             {q.showSignature ? (
               <div className="docs-grid2">
-                <TextField id="docs-q-sname" label="Signatory name" {...f("quotation.signatoryName")} placeholder="e.g. Grace Akello" />
-                <TextField id="docs-q-stitle" label="Signatory title" {...f("quotation.signatoryTitle")} placeholder="e.g. Sales manager" />
+                <TextField id="docs-q-sname" label={t("docs.studio.signName")} {...f("quotation.signatoryName")} placeholder={t("docs.studio.signNamePlaceholder")} />
+                <TextField id="docs-q-stitle" label={t("docs.studio.signTitle")} {...f("quotation.signatoryTitle")} placeholder={t("docs.studio.signTitlePlaceholder")} />
               </div>
             ) : null}
           </Accordion>
 
-          <Accordion id="docs-sec-receipt" icon={SECTIONS[3].icon} title={SECTIONS[3].title} summary={summaries.receipt} open={open.receipt} onToggle={() => toggleSection(SECTIONS[3])} errorCount={sectionErrors.receipt}>
+          <Accordion id="docs-sec-receipt" icon={SECTIONS[3].icon} title={t("docs.studio.sections.receipt")} summary={summaries.receipt} open={open.receipt} onToggle={() => toggleSection(SECTIONS[3])} errorCount={sectionErrors.receipt}>
             <div className="docs-grid2">
-              <TextField id="docs-r-title" label="Document title" {...f("receipt.title")} />
-              <TextField id="docs-r-prefix" label="Number prefix" {...f("receipt.prefix")} onChange={(v) => set("receipt.prefix")(v.toUpperCase())} hint={`Numbers look like ${String(draft.receipt.prefix || "RC").toUpperCase()}-${new Date().getFullYear()}-0001.`} />
+              <TextField id="docs-r-title" label={t("docs.studio.docTitle")} {...f("receipt.title")} />
+              <TextField id="docs-r-prefix" label={t("docs.studio.prefix")} {...f("receipt.prefix")} onChange={(v) => set("receipt.prefix")(v.toUpperCase())} hint={t("docs.studio.prefixHint", { example: `${String(draft.receipt.prefix || "RC").toUpperCase()}-${new Date().getFullYear()}-0001` })} />
             </div>
-            <TextField id="docs-r-thanks" label="Thank-you message" {...f("receipt.thankYou")} multiline rows={3} onReset={() => set("receipt.thankYou")(defaults.receipt.thankYou)} />
-            <TextField id="docs-r-foot" label="Footer note (optional)" {...f("receipt.footerNote")} multiline rows={2} placeholder="e.g. Goods once sold are not returnable." />
+            <TextField id="docs-r-thanks" label={t("docs.studio.thanks")} {...f("receipt.thankYou")} multiline rows={3} onReset={() => set("receipt.thankYou")(defaults.receipt.thankYou)} />
+            <TextField id="docs-r-foot" label={t("docs.studio.footerNote")} {...f("receipt.footerNote")} multiline rows={2} placeholder={t("docs.studio.footerPlaceholder")} />
           </Accordion>
 
-          <Accordion id="docs-sec-tax" icon={SECTIONS[4].icon} title={SECTIONS[4].title} summary={summaries.tax} open={open.tax} onToggle={() => toggleSection(SECTIONS[4])} errorCount={sectionErrors.tax}>
-            <Toggle id="docs-t-on" label="Show VAT on documents" hint="Uganda’s standard VAT rate is 18%. Only turn this on if your business is VAT-registered." checked={draft.tax.enabled} onChange={set("tax.enabled")} />
+          <Accordion id="docs-sec-tax" icon={SECTIONS[4].icon} title={t("docs.studio.sections.tax")} summary={summaries.tax} open={open.tax} onToggle={() => toggleSection(SECTIONS[4])} errorCount={sectionErrors.tax}>
+            <Toggle id="docs-t-on" label={t("docs.studio.showVat")} hint={t("docs.studio.showVatHint")} checked={draft.tax.enabled} onChange={set("tax.enabled")} />
             {draft.tax.enabled ? (
               <>
                 <div className="docs-grid2">
-                  <TextField id="docs-t-label" label="Tax label" {...f("tax.label")} placeholder="VAT" />
-                  <TextField id="docs-t-pct" label="Rate" {...f("tax.percent")} inputMode="decimal" suffix="%" />
+                  <TextField id="docs-t-label" label={t("docs.studio.taxLabel")} {...f("tax.label")} placeholder="VAT" />
+                  <TextField id="docs-t-pct" label={t("docs.studio.rate")} {...f("tax.percent")} inputMode="decimal" suffix="%" />
                 </div>
-                <Toggle id="docs-t-inc" label="Prices already include tax" hint={draft.tax.inclusive ? "Your listed prices are final. The tax amount is shown as part of the total, not added to it." : "Tax is added on top of your listed prices, so the buyer pays more than the price shown."} checked={draft.tax.inclusive} onChange={set("tax.inclusive")} />
+                <Toggle id="docs-t-inc" label={t("docs.studio.pricesIncludeTax")} hint={draft.tax.inclusive ? t("docs.studio.inclusiveHint") : t("docs.studio.exclusiveHint")} checked={draft.tax.inclusive} onChange={set("tax.inclusive")} />
               </>
             ) : null}
           </Accordion>
 
-          <Accordion id="docs-sec-payment" icon={SECTIONS[5].icon} title={SECTIONS[5].title} summary={summaries.payment} open={open.payment} onToggle={() => toggleSection(SECTIONS[5])} errorCount={sectionErrors.payment}>
-            <p className="docs-section-intro">Shown on quotations so buyers know how to pay you.</p>
-            <TextField id="docs-p-instr" label="Payment instructions" {...f("payment.instructions")} multiline rows={3} placeholder="e.g. Pay on delivery, or send mobile money before pickup." />
+          <Accordion id="docs-sec-payment" icon={SECTIONS[5].icon} title={t("docs.studio.sections.payment")} summary={summaries.payment} open={open.payment} onToggle={() => toggleSection(SECTIONS[5])} errorCount={sectionErrors.payment}>
+            <p className="docs-section-intro">{t("docs.studio.paymentIntro")}</p>
+            <TextField id="docs-p-instr" label={t("docs.studio.paymentInstructions")} {...f("payment.instructions")} multiline rows={3} placeholder={t("docs.studio.paymentInstructionsPlaceholder")} />
             <div className="docs-grid2">
-              <TextField id="docs-p-mm" label="Mobile money number" {...f("payment.mobileMoneyNumber")} type="tel" placeholder="e.g. 0771 000 000" />
-              <TextField id="docs-p-mmname" label="Mobile money account name" {...f("payment.mobileMoneyName")} />
+              <TextField id="docs-p-mm" label={t("docs.studio.mmNumber")} {...f("payment.mobileMoneyNumber")} type="tel" placeholder={t("docs.studio.mmNumberPlaceholder")} />
+              <TextField id="docs-p-mmname" label={t("docs.studio.mmName")} {...f("payment.mobileMoneyName")} />
             </div>
-            <TextField id="docs-p-bank" label="Bank details" {...f("payment.bankDetails")} multiline rows={3} placeholder={"Bank, account name, account number"} />
+            <TextField id="docs-p-bank" label={t("docs.studio.bank")} {...f("payment.bankDetails")} multiline rows={3} placeholder={t("docs.studio.bankPlaceholder")} />
           </Accordion>
 
-          <Accordion id="docs-sec-email" icon={SECTIONS[6].icon} title={SECTIONS[6].title} summary={summaries.email} open={open.email} onToggle={() => toggleSection(SECTIONS[6])} errorCount={sectionErrors.email}>
+          <Accordion id="docs-sec-email" icon={SECTIONS[6].icon} title={t("docs.studio.sections.email")} summary={summaries.email} open={open.email} onToggle={() => toggleSection(SECTIONS[6])} errorCount={sectionErrors.email}>
             <div className="docs-switch-list">
-              <Toggle id="docs-e-q" label="Email the quotation automatically" hint="Sent to the buyer when they place a cash or pay-on-delivery order." checked={draft.email.sendQuotation} onChange={set("email.sendQuotation")} />
-              <Toggle id="docs-e-r" label="Email the receipt automatically" hint="Sent as soon as an order is paid (mobile money, or cash collected on delivery)." checked={draft.email.sendReceipt} onChange={set("email.sendReceipt")} />
+              <Toggle id="docs-e-q" label={t("docs.studio.emailQuote")} hint={t("docs.studio.emailQuoteHint")} checked={draft.email.sendQuotation} onChange={set("email.sendQuotation")} />
+              <Toggle id="docs-e-r" label={t("docs.studio.emailReceipt")} hint={t("docs.studio.emailReceiptHint")} checked={draft.email.sendReceipt} onChange={set("email.sendReceipt")} />
             </div>
-            <p className="docs-hint">The buyer needs an email address on their order. You can always resend a document from “Issued documents”.</p>
+            <p className="docs-hint">{t("docs.studio.emailNote")}</p>
           </Accordion>
         </div>
 
         <DocumentPreview draft={normalizedDraft} patch={previewPatch} valid={valid} active={active} type={previewType} onTypeChange={setPreviewType} />
       </div>
 
-      <div className={`docs-savebar${dirty ? " is-dirty" : ""}`} role="region" aria-label="Save changes">
+      <div className={`docs-savebar${dirty ? " is-dirty" : ""}`} role="region" aria-label={t("docs.studio.saveRegion")}>
         <p className="docs-save-status" role="status" aria-live="polite">
-          {saving ? <><span className="docs-spinner" aria-hidden="true" /> Saving…</> : dirty ? <><span className="docs-dot is-warn" aria-hidden="true" /> Unsaved changes</> : <><span className="docs-dot is-ok" aria-hidden="true" /> All changes saved</>}
+          {saving ? <><span className="docs-spinner" aria-hidden="true" /> {t("docs.studio.saving")}</> : dirty ? <><span className="docs-dot is-warn" aria-hidden="true" /> {t("docs.studio.unsaved")}</> : <><span className="docs-dot is-ok" aria-hidden="true" /> {t("docs.studio.allSaved")}</>}
         </p>
         <div className="docs-save-actions">
-          <button type="button" className="docs-btn" onClick={discard} disabled={!dirty || saving}>Discard</button>
-          <button type="button" className="docs-btn is-primary" onClick={save} disabled={!dirty || saving}>{saving ? "Saving…" : "Save changes"}</button>
+          <button type="button" className="docs-btn" onClick={discard} disabled={!dirty || saving}>{t("docs.studio.discard")}</button>
+          <button type="button" className="docs-btn is-primary" onClick={save} disabled={!dirty || saving}>{saving ? t("docs.studio.saving") : t("docs.studio.saveChanges")}</button>
         </div>
       </div>
 
       {toast ? (
         <div className={`docs-toast is-${toast.tone}`} role={toast.tone === "error" ? "alert" : "status"} key={toast.id}>
           <span>{toast.text}</span>
-          <button type="button" onClick={() => setToast(null)} aria-label="Dismiss message">×</button>
+          <button type="button" onClick={() => setToast(null)} aria-label={t("docs.studio.dismiss")}>×</button>
         </div>
       ) : null}
     </div>

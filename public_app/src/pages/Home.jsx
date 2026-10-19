@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { clearSession, getSession, setSession } from "../lib/session";
@@ -14,13 +15,14 @@ import { busApi, todayEat, ugx } from "../lib/bus";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
-const SEARCH_TABS = ["Nearby", "Top rated", "New", "Featured"];
+const SEARCH_TABS = ["nearby", "topRated", "new", "featured"];
 
 function DesktopHome() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [session, setSessionState] = useState(() => getSession());
-  const [activeTab, setActiveTab] = useState("Featured");
+  const [activeTab, setActiveTab] = useState("featured");
   const [categories, setCategories] = useState([]);
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,7 +71,7 @@ function DesktopHome() {
         setProviders(providerResult?.items || providerResult || []);
       })
       .catch((loadError) => {
-        if (active) setError(loadError.message || "Unable to load Gabla right now.");
+        if (active) setError(loadError.message || t("home.loadError"));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -123,7 +125,7 @@ function DesktopHome() {
     };
   }, [session]);
 
-  const categoryName = (categoryId) => categories.find((c) => c.id === categoryId)?.name || "Service provider";
+  const categoryName = (categoryId) => categories.find((c) => c.id === categoryId)?.name || t("home.providers.fallbackCategory");
 
   const logout = () => {
     clearSession();
@@ -144,14 +146,14 @@ function DesktopHome() {
         <div className="home-hero-inner">
           <div className="home-hero-copy">
             <span className="home-eyebrow">
-              <IconSparkles /> Everything Uganda, one app
+              <IconSparkles /> {t("home.eyebrow")}
             </span>
             <h1 className="home-hero-title">
-              Shop trendy finds. Book trusted pros.{" "}
-              <span className="home-gradient-text">Ride across town.</span>
+              {t("home.heroTitle1")}{" "}
+              <span className="home-gradient-text">{t("home.heroTitle2")}</span>
             </h1>
             <p className="home-hero-subtitle">
-              Gabla connects you to fashion, electronics, verified service providers and nearby drivers &mdash; all in a single, beautifully designed experience.
+              {t("home.heroSubtitle")}
             </p>
 
             <form
@@ -167,7 +169,7 @@ function DesktopHome() {
                 type="text"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search fashion, services, drivers…"
+                placeholder={t("home.searchPlaceholder")}
               />
               <div className="home-hero-search-tabs">
                 {SEARCH_TABS.map((tab) => (
@@ -177,7 +179,7 @@ function DesktopHome() {
                     className={`home-hero-tab ${activeTab === tab ? "is-active" : ""}`}
                     onClick={() => setActiveTab(tab)}
                   >
-                    {tab}
+                    {t(`home.tabs.${tab}`)}
                   </button>
                 ))}
               </div>
@@ -185,10 +187,10 @@ function DesktopHome() {
 
             <div className="home-hero-actions">
               <Link to="/shop" className="home-cta home-cta-primary">
-                Shop now <IconArrowRight />
+                {t("home.shopNow")} <IconArrowRight />
               </Link>
               <Link to="/ride" className="home-cta home-cta-secondary">
-                Get a ride <IconCar />
+                {t("home.getRide")} <IconCar />
               </Link>
             </div>
 
@@ -199,7 +201,7 @@ function DesktopHome() {
                 <span className="home-avatar home-avatar-3" />
                 <span className="home-avatar home-avatar-4" />
               </div>
-              <p><strong>500+</strong> sellers &amp; providers · <strong>UGX</strong> payments · <strong>4.8★</strong> avg rating</p>
+              <p><strong>500+</strong> {t("home.trustSellers")} · <strong>UGX</strong> {t("home.trustPayments")} · <strong>4.8★</strong> {t("home.trustRating")}</p>
             </div>
           </div>
 
@@ -209,29 +211,29 @@ function DesktopHome() {
               <div className="home-hero-card home-hero-card-tl home-animate-float">
                 <span className="home-hero-card-icon"><IconCart /></span>
                 <div>
-                  <strong>New arrivals</strong>
-                  <span>Trending fashion</span>
+                  <strong>{t("home.cards.newArrivalsTitle")}</strong>
+                  <span>{t("home.cards.newArrivalsSub")}</span>
                 </div>
               </div>
               <div className="home-hero-card home-hero-card-tr home-animate-float home-animate-delay-1">
                 <span className="home-hero-card-icon home-hero-card-icon-alt"><IconBike /></span>
                 <div>
-                  <strong>Ride ready</strong>
-                  <span>Boda &amp; car nearby</span>
+                  <strong>{t("home.cards.rideReadyTitle")}</strong>
+                  <span>{t("home.cards.rideReadySub")}</span>
                 </div>
               </div>
               <div className="home-hero-card home-hero-card-ml home-animate-float home-animate-delay-2">
                 <span className="home-hero-card-icon home-hero-card-icon-teal"><IconWrench /></span>
                 <div>
-                  <strong>Top pros</strong>
-                  <span>Verified &amp; reviewed</span>
+                  <strong>{t("home.cards.topProsTitle")}</strong>
+                  <span>{t("home.cards.topProsSub")}</span>
                 </div>
               </div>
               <div className="home-hero-card home-hero-card-br home-animate-float home-animate-delay-3">
                 <span className="home-hero-card-icon home-hero-card-icon-violet"><IconTruck /></span>
                 <div>
-                  <strong>Fast delivery</strong>
-                  <span>Countrywide</span>
+                  <strong>{t("home.cards.fastDeliveryTitle")}</strong>
+                  <span>{t("home.cards.fastDeliverySub")}</span>
                 </div>
               </div>
               <div className="home-hero-center">
@@ -264,29 +266,29 @@ function DesktopHome() {
           <div className="home-trust-item">
             <span className="home-trust-icon"><IconShield /></span>
             <div className="home-trust-copy">
-              <strong>Verified providers</strong>
-              <span>Background-checked &amp; reviewed</span>
+              <strong>{t("home.trustbar.verifiedTitle")}</strong>
+              <span>{t("home.trustbar.verifiedSub")}</span>
             </div>
           </div>
           <div className="home-trust-item">
             <span className="home-trust-icon"><IconPin /></span>
             <div className="home-trust-copy">
-              <strong>Local &amp; nearby</strong>
-              <span>Find services around you</span>
+              <strong>{t("home.trustbar.localTitle")}</strong>
+              <span>{t("home.trustbar.localSub")}</span>
             </div>
           </div>
           <div className="home-trust-item">
             <span className="home-trust-icon"><IconStar /></span>
             <div className="home-trust-copy">
-              <strong>Rated 4.8/5</strong>
-              <span>From 10,000+ happy customers</span>
+              <strong>{t("home.trustbar.ratedTitle")}</strong>
+              <span>{t("home.trustbar.ratedSub")}</span>
             </div>
           </div>
           <div className="home-trust-item">
             <span className="home-trust-icon"><IconClockIcon /></span>
             <div className="home-trust-copy">
-              <strong>24/7 support</strong>
-              <span>Chat us anytime</span>
+              <strong>{t("home.trustbar.supportTitle")}</strong>
+              <span>{t("home.trustbar.supportSub")}</span>
             </div>
           </div>
         </div>
@@ -297,10 +299,10 @@ function DesktopHome() {
         <div className="home-promo-duo">
           <Link to="/ride" className="home-promo home-promo-ride">
             <div>
-              <span className="home-promo-eyebrow">Gabla Ride</span>
-              <h2>Let&apos;s get you a ride.</h2>
-              <p>Boda or car &mdash; request a nearby driver and get an upfront fare in seconds.</p>
-              <span className="home-promo-cta">Book a ride <IconArrowRight /></span>
+              <span className="home-promo-eyebrow">{t("home.promo.rideEyebrow")}</span>
+              <h2>{t("home.promo.rideTitle")}</h2>
+              <p>{t("home.promo.rideText")}</p>
+              <span className="home-promo-cta">{t("home.promo.rideCta")} <IconArrowRight /></span>
             </div>
             <div className="home-promo-icons">
               <span className="home-promo-icon home-promo-icon-a"><IconBike /></span>
@@ -310,10 +312,10 @@ function DesktopHome() {
 
           <Link to="/shop" className="home-promo home-promo-shop">
             <div>
-              <span className="home-promo-eyebrow">Gabla Shop</span>
-              <h2>Shop now, live collection.</h2>
-              <p>Browse fashion, electronics &amp; lifestyle from every seller on Gabla, all in one storefront.</p>
-              <span className="home-promo-cta">Explore shop <IconArrowRight /></span>
+              <span className="home-promo-eyebrow">{t("home.promo.shopEyebrow")}</span>
+              <h2>{t("home.promo.shopTitle")}</h2>
+              <p>{t("home.promo.shopText")}</p>
+              <span className="home-promo-cta">{t("home.promo.shopCta")} <IconArrowRight /></span>
             </div>
             <div className="home-promo-icons">
               <span className="home-promo-icon home-promo-icon-a"><IconCart /></span>
@@ -327,9 +329,9 @@ function DesktopHome() {
       <section className="home-section">
         <div className="bus-promo">
           <div>
-            <span className="bus-promo-eyebrow"><IconBus width={16} height={16} /> Gabla Bus</span>
-            <h2>Book your bus ticket in a minute.</h2>
-            <p>Pick your route, choose a day on the calendar and pay with MTN MoMo or Airtel Money. Your e-ticket arrives instantly &mdash; no queues at the park.</p>
+            <span className="bus-promo-eyebrow"><IconBus width={16} height={16} /> {t("home.bus.eyebrow")}</span>
+            <h2>{t("home.bus.title")}</h2>
+            <p>{t("home.bus.text")}</p>
             {busRoutes.length ? (
               <div className="bus-promo-routes">
                 {busRoutes.map((r) => (
@@ -342,18 +344,18 @@ function DesktopHome() {
           </div>
           <form className="bus-promo-form" onSubmit={searchBuses}>
             <div className="bus-promo-form-row">
-              <select value={busFrom} onChange={(e) => setBusFrom(e.target.value)} aria-label="Travelling from">
-                <option value="">From (anywhere)</option>
+              <select value={busFrom} onChange={(e) => setBusFrom(e.target.value)} aria-label={t("home.bus.travellingFrom")}>
+                <option value="">{t("home.bus.fromAny")}</option>
                 {busPlaces.origins.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
-              <select value={busTo} onChange={(e) => setBusTo(e.target.value)} aria-label="Travelling to">
-                <option value="">To (anywhere)</option>
+              <select value={busTo} onChange={(e) => setBusTo(e.target.value)} aria-label={t("home.bus.travellingTo")}>
+                <option value="">{t("home.bus.toAny")}</option>
                 {busPlaces.destinations.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
-            <input type="date" value={busDate} min={todayEat()} onChange={(e) => setBusDate(e.target.value)} aria-label="Travel date" />
-            <button type="submit" className="bus-promo-btn"><IconBus width={18} height={18} /> Find buses</button>
-            <Link to="/bus/tickets" className="bus-link" style={{ textAlign: "center" }}><IconTicket width={14} height={14} /> My tickets</Link>
+            <input type="date" value={busDate} min={todayEat()} onChange={(e) => setBusDate(e.target.value)} aria-label={t("home.bus.travelDate")} />
+            <button type="submit" className="bus-promo-btn"><IconBus width={18} height={18} /> {t("home.bus.findBuses")}</button>
+            <Link to="/bus/tickets" className="bus-link" style={{ textAlign: "center" }}><IconTicket width={14} height={14} /> {t("home.bus.myTickets")}</Link>
           </form>
         </div>
       </section>
@@ -364,15 +366,15 @@ function DesktopHome() {
       <section id="categories" className="home-section">
         <div className="home-section-header">
           <div>
-            <h2 className="home-section-title">Browse by category</h2>
-            <p className="home-section-subtitle">Tap into what you love, curated for you.</p>
+            <h2 className="home-section-title">{t("home.categories.title")}</h2>
+            <p className="home-section-subtitle">{t("home.categories.subtitle")}</p>
           </div>
         </div>
 
-        {!loading && !categories.length ? <p className="home-empty">No categories yet.</p> : null}
+        {!loading && !categories.length ? <p className="home-empty">{t("home.categories.empty")}</p> : null}
         {loading ? (
           <div className="home-category-grid" role="status" aria-busy="true">
-            <span className="sr-only">Loading categories…</span>
+            <span className="sr-only">{t("home.categories.loading")}</span>
             {Array.from({ length: 8 }).map((_, i) => (
               <Skel key={i} h={230} w="100%" r={18} />
             ))}
@@ -393,7 +395,7 @@ function DesktopHome() {
                   <span className="home-category-fallback-mark">{initials(c.name)}</span>
                 )}
                 <div className="home-category-overlay" />
-                <span className="home-category-chip">{Math.max(40, 18 + ((idx + 1) * 7))}+ providers</span>
+                <span className="home-category-chip">{t("home.categories.providersChip", { count: Math.max(40, 18 + ((idx + 1) * 7)) })}</span>
               </div>
               <div className="home-category-body">
                 <span className="home-category-initials">{initials(c.name)}</span>
@@ -411,11 +413,11 @@ function DesktopHome() {
       <section id="providers" className="home-section home-section-last">
         <div className="home-section-header">
           <div>
-            <h2 className="home-section-title">Featured providers</h2>
-            <p className="home-section-subtitle">Handpicked professionals near you.</p>
+            <h2 className="home-section-title">{t("home.providers.title")}</h2>
+            <p className="home-section-subtitle">{t("home.providers.subtitle")}</p>
           </div>
           <Link to="/home#providers" className="home-view-all">
-            Book a pro <IconArrowRight />
+            {t("home.providers.cta")} <IconArrowRight />
           </Link>
         </div>
 
@@ -428,7 +430,7 @@ function DesktopHome() {
             ))}
           </div>
         ) : (
-          <p className="home-empty">No featured providers yet.</p>
+          <p className="home-empty">{t("home.providers.empty")}</p>
         )}
       </section>
     </main>

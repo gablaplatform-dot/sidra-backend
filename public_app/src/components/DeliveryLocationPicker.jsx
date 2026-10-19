@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 
 import { getCurrentPosition } from "../lib/geolocation";
 import { CLEAN_MAP_STYLE, KAMPALA, loadGoogleMaps, reverseGeocode, tidyAddress } from "../lib/maps";
@@ -12,13 +13,14 @@ import { IconClose, IconPin, IconSearch, IconTarget } from "./icons";
 //   - "Type it in": a search box that suggests real places to pick from.
 // Either way the chosen place is { address, lat, lng, source: "map" | "search" }.
 export default function DeliveryLocationPicker({ value, onChange }) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState(value?.source === "search" ? "search" : "map");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [mapsError, setMapsError] = useState("");
 
   useEffect(() => {
     let active = true;
-    loadGoogleMaps().catch((e) => active && setMapsError(e.message || "Maps are not available right now."));
+    loadGoogleMaps().catch((e) => active && setMapsError(e.message || t("delivery.mapsUnavailable")));
     return () => {
       active = false;
     };
@@ -28,12 +30,12 @@ export default function DeliveryLocationPicker({ value, onChange }) {
 
   return (
     <div className="dlp">
-      <div className="dlp-modes" role="tablist" aria-label="How do you want to set the delivery location?">
+      <div className="dlp-modes" role="tablist" aria-label={t("delivery.modesLabel")}>
         <button type="button" role="tab" aria-selected={mode === "map"} className={mode === "map" ? "is-active" : ""} onClick={() => setMode("map")}>
-          <IconPin width={18} height={18} /> Pick on map
+          <IconPin width={18} height={18} /> {t("delivery.pickOnMap")}
         </button>
         <button type="button" role="tab" aria-selected={mode === "search"} className={mode === "search" ? "is-active" : ""} onClick={() => setMode("search")}>
-          <IconSearch width={18} height={18} /> Enter location
+          <IconSearch width={18} height={18} /> {t("delivery.enterLocation")}
         </button>
       </div>
 
@@ -44,8 +46,8 @@ export default function DeliveryLocationPicker({ value, onChange }) {
           <button type="button" className="dlp-open" onClick={() => setSheetOpen(true)} disabled={Boolean(mapsError)}>
             <span className="dlp-open-icon"><IconTarget /></span>
             <span>
-              <strong>Choose on the map</strong>
-              <small>{mapsError ? "The map isn't available - type your address instead" : "Opens at your location so you can drop a pin"}</small>
+              <strong>{t("delivery.chooseOnMap")}</strong>
+              <small>{mapsError ? t("delivery.mapUnavailableHint") : t("delivery.mapOpensHint")}</small>
             </span>
           </button>
         )
@@ -68,16 +70,17 @@ export default function DeliveryLocationPicker({ value, onChange }) {
 }
 
 function SelectedPlace({ place, onChange, onClear }) {
+  const { t } = useTranslation();
   return (
     <div className="dlp-selected">
       <span className="dlp-selected-icon"><IconPin /></span>
       <div className="dlp-selected-text">
-        <small>Deliver to</small>
+        <small>{t("delivery.deliverTo")}</small>
         <strong>{place.address}</strong>
       </div>
       <div className="dlp-selected-actions">
-        <button type="button" onClick={onChange}>Change</button>
-        <button type="button" onClick={onClear} aria-label="Remove location"><IconClose width={16} height={16} /></button>
+        <button type="button" onClick={onChange}>{t("delivery.change")}</button>
+        <button type="button" onClick={onClear} aria-label={t("delivery.removeLocation")}><IconClose width={16} height={16} /></button>
       </div>
     </div>
   );
@@ -86,6 +89,7 @@ function SelectedPlace({ place, onChange, onClear }) {
 // Typing narrows suggestions down to real places; choosing one saves its name and position. Typing again
 // after choosing drops the old position, so a name and a position can never disagree.
 function SearchBox({ value, onChange, mapsError }) {
+  const { t } = useTranslation();
   const inputRef = useRef(null);
   const [text, setText] = useState(value?.address || "");
   const [ready, setReady] = useState(false);
@@ -135,18 +139,18 @@ function SearchBox({ value, onChange, mapsError }) {
           ref={inputRef}
           value={text}
           onChange={(e) => edit(e.target.value)}
-          placeholder="Search a place, area or street"
+          placeholder={t("delivery.searchPlaceholder")}
           autoComplete="off"
-          aria-label="Delivery location"
+          aria-label={t("delivery.locationLabel")}
         />
-        {value ? <span className="dlp-search-ok" title="Location saved">✓</span> : null}
+        {value ? <span className="dlp-search-ok" title={t("delivery.savedTitle")}>✓</span> : null}
       </label>
       {mapsError ? (
-        <p className="dlp-hint">The place search isn&apos;t available right now. Type your address and the seller will call you to confirm it.</p>
+        <p className="dlp-hint">{t("delivery.searchUnavailable")}</p>
       ) : value ? (
-        <p className="dlp-hint is-ok">Location saved. The seller will get directions to this spot.</p>
+        <p className="dlp-hint is-ok">{t("delivery.savedHint")}</p>
       ) : (
-        <p className="dlp-hint">{ready ? "Pick one of the suggestions so the seller can find you." : "Loading suggestions…"}</p>
+        <p className="dlp-hint">{ready ? t("delivery.pickSuggestion") : t("delivery.loadingSuggestions")}</p>
       )}
     </div>
   );
@@ -154,6 +158,7 @@ function SearchBox({ value, onChange, mapsError }) {
 
 // The map itself. The pin stays in the middle; the map moves under it.
 function MapSheet({ initial, onClose, onConfirm }) {
+  const { t } = useTranslation();
   const mapElRef = useRef(null);
   const mapRef = useRef(null);
   const lookupRef = useRef(0);
@@ -225,11 +230,11 @@ function MapSheet({ initial, onClose, onConfirm }) {
             map.setZoom(17);
           } catch (e) {
             if (!active) return;
-            setNotice(e.message === "denied" ? "Location is off, so we started in Kampala. Move the map to your spot." : "We couldn't find you, so we started in Kampala. Move the map to your spot.");
+            setNotice(e.message === "denied" ? t("delivery.noticeOff") : t("delivery.noticeNotFound"));
           }
         }
       })
-      .catch((e) => active && setError(e.message || "The map could not be loaded."));
+      .catch((e) => active && setError(e.message || t("delivery.mapLoadFailed")));
     return () => {
       active = false;
       clearTimeout(idleTimer);
@@ -246,7 +251,7 @@ function MapSheet({ initial, onClose, onConfirm }) {
       mapRef.current.panTo(here);
       mapRef.current.setZoom(17);
     } catch (e) {
-      setNotice(e.message === "denied" ? "Allow location access in your browser to jump to where you are." : "We couldn't find your location. Move the map to your spot.");
+      setNotice(e.message === "denied" ? t("delivery.allowLocation") : t("delivery.locateFailed"));
     } finally {
       setLocating(false);
     }
@@ -255,13 +260,13 @@ function MapSheet({ initial, onClose, onConfirm }) {
   const zoom = (delta) => mapRef.current && mapRef.current.setZoom((mapRef.current.getZoom() || 15) + delta);
 
   return createPortal(
-    <div className="dlp-sheet" role="dialog" aria-modal="true" aria-label="Pick the delivery location">
+    <div className="dlp-sheet" role="dialog" aria-modal="true" aria-label={t("delivery.sheetLabel")}>
       <div className="dlp-sheet-panel">
         <header className="dlp-sheet-head">
-          <button type="button" className="dlp-circle" onClick={onClose} aria-label="Close map"><IconClose /></button>
+          <button type="button" className="dlp-circle" onClick={onClose} aria-label={t("delivery.closeMap")}><IconClose /></button>
           <div>
-            <strong>Delivery location</strong>
-            <small>Move the map to put the pin on your door</small>
+            <strong>{t("delivery.sheetTitle")}</strong>
+            <small>{t("delivery.sheetHint")}</small>
           </div>
         </header>
 
@@ -273,9 +278,9 @@ function MapSheet({ initial, onClose, onConfirm }) {
             <span className="dlp-pin-shadow" />
           </div>
           <div className="dlp-map-tools">
-            <button type="button" className="dlp-circle" onClick={() => zoom(1)} aria-label="Zoom in">+</button>
-            <button type="button" className="dlp-circle" onClick={() => zoom(-1)} aria-label="Zoom out">&minus;</button>
-            <button type="button" className={`dlp-circle dlp-locate ${locating ? "is-busy" : ""}`} onClick={locateMe} aria-label="Use my current location"><IconTarget /></button>
+            <button type="button" className="dlp-circle" onClick={() => zoom(1)} aria-label={t("delivery.zoomIn")}>+</button>
+            <button type="button" className="dlp-circle" onClick={() => zoom(-1)} aria-label={t("delivery.zoomOut")}>&minus;</button>
+            <button type="button" className={`dlp-circle dlp-locate ${locating ? "is-busy" : ""}`} onClick={locateMe} aria-label={t("delivery.useMyLocation")}><IconTarget /></button>
           </div>
           {notice ? <div className="dlp-notice" role="status">{notice}</div> : null}
         </div>
@@ -284,12 +289,12 @@ function MapSheet({ initial, onClose, onConfirm }) {
           <div className="dlp-place">
             <span className="dlp-place-icon"><IconPin /></span>
             <div>
-              <small>Delivering to</small>
-              {resolving || !place ? <span className="skel dlp-place-skel" aria-label="Finding the place name" /> : <strong>{place.address}</strong>}
+              <small>{t("delivery.deliveringTo")}</small>
+              {resolving || !place ? <span className="skel dlp-place-skel" aria-label={t("delivery.findingPlace")} /> : <strong>{place.address}</strong>}
             </div>
           </div>
           <button type="button" className="primary-button dlp-confirm" disabled={resolving || !place || Boolean(error)} onClick={() => onConfirm(place)}>
-            Confirm location
+            {t("delivery.confirm")}
           </button>
         </footer>
       </div>

@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import { IconChevronLeft, IconClose } from "../icons";
-import { addDays, dateParts, todayEat, weekdayOf } from "../../lib/bus";
+import { useTranslation } from "react-i18next";
 
-const DOW = ["S", "M", "T", "W", "T", "F", "S"];
+import { IconChevronLeft, IconClose } from "../icons";
+import { addDays, dateParts, dayLabel, todayEat, weekdayName, weekdayOf } from "../../lib/bus";
+
 const pad = (n) => String(n).padStart(2, "0");
 const shortPrice = (n) => {
   const v = Number(n);
@@ -14,6 +15,7 @@ const daysInMonth = (y, m) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
 
 // Month grid inside a sheet. Only the booking window (today -> `horizon` days) is selectable.
 export default function MonthCalendar({ open, onClose, days, value, onPick, horizon = 62 }) {
+  const { t } = useTranslation();
   const today = todayEat();
   const last = addDays(today, horizon - 1);
   const anchor = value || today;
@@ -59,19 +61,19 @@ export default function MonthCalendar({ open, onClose, days, value, onPick, hori
 
   return (
     <div className="bus-sheet-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bus-sheet" role="dialog" aria-modal="true" aria-label="Pick a travel date">
+      <div className="bus-sheet" role="dialog" aria-modal="true" aria-label={t("bus.cal.pickDate")}>
         <div className="bus-sheet-head">
-          <h2>Pick a date</h2>
-          <button type="button" className="bus-icon-btn" onClick={onClose} ref={closeRef} aria-label="Close calendar"><IconClose width={20} height={20} /></button>
+          <h2>{t("bus.cal.title")}</h2>
+          <button type="button" className="bus-icon-btn" onClick={onClose} ref={closeRef} aria-label={t("bus.cal.close")}><IconClose width={20} height={20} /></button>
         </div>
         <div className="bus-cal">
           <div className="bus-cal-head">
-            <button type="button" className="bus-icon-btn" onClick={() => shift(-1)} disabled={idx <= minIdx} aria-label="Previous month"><IconChevronLeft width={20} height={20} /></button>
+            <button type="button" className="bus-icon-btn" onClick={() => shift(-1)} disabled={idx <= minIdx} aria-label={t("bus.cal.prevMonth")}><IconChevronLeft width={20} height={20} /></button>
             <strong>{monthName} {view.y}</strong>
-            <button type="button" className="bus-icon-btn bus-flip" onClick={() => shift(1)} disabled={idx >= maxIdx} aria-label="Next month"><IconChevronLeft width={20} height={20} /></button>
+            <button type="button" className="bus-icon-btn bus-flip" onClick={() => shift(1)} disabled={idx >= maxIdx} aria-label={t("bus.cal.nextMonth")}><IconChevronLeft width={20} height={20} /></button>
           </div>
           <div className="bus-cal-grid">
-            {DOW.map((d, i) => <div key={i} className="bus-cal-dow" aria-hidden="true">{d}</div>)}
+            {[0, 1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="bus-cal-dow" aria-hidden="true">{weekdayName(i, "narrow")}</div>)}
             {cells.map((d, i) => {
               if (!d) return <div key={`b${i}`} />;
               const info = days?.[d];
@@ -85,7 +87,7 @@ export default function MonthCalendar({ open, onClose, days, value, onPick, hori
                   className={cls}
                   disabled={!has}
                   onClick={() => { onPick(d); onClose(); }}
-                  aria-label={`${d}${has ? `, ${info.trips} trips` : ", no trips"}`}
+                  aria-label={has ? t("bus.cal.dayTrips", { date: dayLabel(d), count: info.trips }) : t("bus.cal.dayNone", { date: dayLabel(d) })}
                   aria-pressed={d === value}
                 >
                   {Number(d.slice(8))}
@@ -94,7 +96,7 @@ export default function MonthCalendar({ open, onClose, days, value, onPick, hori
               );
             })}
           </div>
-          <p className="bus-hint bus-cal-legend">The small number is the cheapest fare that day, in thousands of UGX. Greyed days have no trips.</p>
+          <p className="bus-hint bus-cal-legend">{t("bus.cal.legend")}</p>
         </div>
       </div>
     </div>

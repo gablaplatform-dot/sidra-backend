@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../../lib/api";
 import { getCurrentPosition } from "../../lib/geolocation";
@@ -13,14 +14,11 @@ import { ProductGridSkeleton } from "../Skeleton";
 const RADIUS_KM = 15;
 const PAGE_LIMIT = 12;
 
-const LOCATION_NOTICES = {
-  denied: "Location access was declined — pick a district below, or we'll show all results.",
-  unsupported: "This browser can't share your location — pick a district below, or we'll show all results.",
-  timeout: "Couldn't get your location in time — pick a district below, or we'll show all results.",
-  unavailable: "Couldn't determine your location — pick a district below, or we'll show all results."
-};
+// Geolocation error codes (from lib/geolocation); shown as shop.nearby.notice.<code>.
+const LOCATION_NOTICE_CODES = ["denied", "unsupported", "timeout", "unavailable"];
 
 export default function NearbySearchModal({ onClose }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [district, setDistrict] = useState("");
   const [districts, setDistricts] = useState([]);
@@ -77,7 +75,7 @@ export default function NearbySearchModal({ onClose }) {
         district: scope.lat == null ? (data.effectiveDistrict !== undefined ? data.effectiveDistrict : scope.district) : null
       });
     } catch (submitError) {
-      setError(submitError.message || "Unable to search right now.");
+      setError(submitError.message || t("shop.nearby.unableSearch"));
     } finally {
       setLoading(false);
     }
@@ -93,7 +91,7 @@ export default function NearbySearchModal({ onClose }) {
       setShowDistrictPicker(false);
       await searchWithScope({ lat: coords.lat, lng: coords.lng, radiusKm: RADIUS_KM });
     } catch (geoError) {
-      setLocationNotice(LOCATION_NOTICES[geoError.message] || LOCATION_NOTICES.unavailable);
+      setLocationNotice(t(`shop.nearby.notice.${LOCATION_NOTICE_CODES.includes(geoError.message) ? geoError.message : "unavailable"}`));
       setShowDistrictPicker(true);
       // No position to go on: fall back to the district they chose when they joined / last picked.
       await searchWithScope({ district: district || getPreferredDistrict() || undefined });
@@ -115,11 +113,11 @@ export default function NearbySearchModal({ onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card is-wide" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+        <button type="button" className="modal-close" onClick={onClose} aria-label={t("shop.nearby.close")}>
           <IconClose />
         </button>
 
-        <h2>Search nearby</h2>
+        <h2>{t("shop.nearby.title")}</h2>
         <form className="nearby-search-form" onSubmit={submit}>
           <div className="nearby-search-input">
             <IconSearch />
@@ -127,12 +125,12 @@ export default function NearbySearchModal({ onClose }) {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="What are you looking for?"
+              placeholder={t("shop.nearby.placeholder")}
               autoFocus
             />
           </div>
           <button type="submit" className="primary-button" disabled={loading}>
-            {loading ? "Searching…" : "Search"}
+            {loading ? t("shop.nearby.searching") : t("shop.nearby.search")}
           </button>
         </form>
 
@@ -144,7 +142,7 @@ export default function NearbySearchModal({ onClose }) {
             onChange={(e) => changeDistrict(e.target.value)}
             disabled={loading}
           >
-            <option value="">All of Uganda</option>
+            <option value="">{t("shop.nearby.allUganda")}</option>
             {districts.map((d) => (
               <option key={d} value={d}>{d}</option>
             ))}
@@ -153,16 +151,16 @@ export default function NearbySearchModal({ onClose }) {
         {result?.widened ? (
           <p className="modal-hint">
             {activeScope?.lat == null
-              ? `No results in ${district || "that district"} — showing results from across Uganda instead.`
-              : "No results nearby — showing results from farther away instead."}
+              ? t("shop.nearby.noResultsDistrict", { district: district || t("shop.nearby.thatDistrict") })
+              : t("shop.nearby.noResultsNearby")}
           </p>
         ) : null}
         {error ? <div className="error-message">{error}</div> : null}
 
         {loading && !result ? (
-          <ProductGridSkeleton count={4} className="shop-category-product-grid" label="Searching" />
+          <ProductGridSkeleton count={4} className="shop-category-product-grid" label={t("shop.nearby.searchingLabel")} />
         ) : searched && items.length === 0 ? (
-          <p className="home-empty">No results anywhere for that search. Try a different query.</p>
+          <p className="home-empty">{t("shop.nearby.noResultsAnywhere")}</p>
         ) : items.length ? (
           <>
             <div className="shop-nearby-grid">
@@ -171,8 +169,9 @@ export default function NearbySearchModal({ onClose }) {
                   <ProductCard product={product} />
                   {product.distanceKm != null ? (
                     <p className="shop-nearby-distance">
-                      {product.providerName ? `${product.providerName} — ` : ""}
-                      {product.distanceKm} km away
+                      {product.providerName
+                        ? t("shop.nearby.awayFrom", { provider: product.providerName, km: product.distanceKm })
+                        : t("shop.nearby.away", { km: product.distanceKm })}
                     </p>
                   ) : null}
                 </div>

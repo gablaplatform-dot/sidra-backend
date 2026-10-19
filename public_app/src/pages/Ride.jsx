@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { loginPath } from "../lib/authRedirect";
 
 import { request } from "../lib/api";
 import { getSession } from "../lib/session";
 import { loadGoogleMaps } from "../lib/maps";
+import { formatUgx } from "../lib/format";
 import { getActiveTripId, setActiveTripId, clearActiveTripId } from "../lib/activeRide";
 import { IconBike, IconCar, IconCash, IconChevronLeft, IconPhone, IconTarget, IconWallet } from "../components/icons";
 
@@ -14,22 +16,16 @@ const POLL_INTERVAL_MS = 4000;
 const TERMINAL_STATUSES = ["completed", "cancelled_by_rider", "cancelled_by_driver", "no_drivers_found"];
 const CANCELLABLE_STATUSES = ["searching", "matched", "arrived"];
 
+// Labels/descriptions come from ride.types.<value>.* at render time.
 const RIDE_TYPES = [
-  { value: "boda", label: "Boda", description: "Quick & affordable", Icon: IconBike },
-  { value: "car", label: "Car", description: "Comfortable ride", Icon: IconCar }
+  { value: "boda", Icon: IconBike },
+  { value: "car", Icon: IconCar }
 ];
 
-const formatUgx = (value) => `UGX ${Number(value || 0).toLocaleString()}`;
-const formatEta = (min) => (min < 1 ? "under a minute" : `${Math.round(min)} min`);
-
-const STATUS_COPY = {
-  searching: { title: "Finding your driver…", subtitle: "This usually takes a few seconds." },
-  matched: { title: "Driver is on the way", subtitle: "Track them below." },
-  arrived: { title: "Your driver has arrived", subtitle: "Head out when you're ready." },
-  in_progress: { title: "On your way", subtitle: "Enjoy the ride." }
-};
+const STATUS_COPY_KEYS = ["searching", "matched", "arrived", "in_progress"];
 
 export default function Ride() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [session] = useState(() => getSession());
@@ -128,7 +124,7 @@ export default function Ride() {
         resumeActiveTrip();
       })
       .catch((e) => {
-        if (active) setMapsError(e.message || "Map is not available right now.");
+        if (active) setMapsError(e.message || t("ride.map.unavailable"));
       });
     return () => {
       active = false;
@@ -209,7 +205,7 @@ export default function Ride() {
 
   const setPickupPoint = (point) => {
     setPickup({ lat: point.lat, lng: point.lng, address: point.address || null });
-    setPickupText(point.address || "Dropped pin");
+    setPickupText(point.address || t("ride.droppedPin"));
     placeMarker(pickupMarkerRef, point, "#0b2046");
     if (!point.address) {
       reverseGeocode(point.lat, point.lng).then((address) => {
@@ -227,7 +223,7 @@ export default function Ride() {
 
   const setDropoffPoint = (point) => {
     setDropoff({ lat: point.lat, lng: point.lng, address: point.address || null });
-    setDropoffText(point.address || "Dropped pin");
+    setDropoffText(point.address || t("ride.droppedPin"));
     placeMarker(dropoffMarkerRef, point, "#e11d48");
     if (!point.address) {
       reverseGeocode(point.lat, point.lng).then((address) => {
@@ -279,11 +275,11 @@ export default function Ride() {
     let active = true;
     setEstimating(true);
     Promise.allSettled(
-      RIDE_TYPES.map((t) =>
+      RIDE_TYPES.map((rt) =>
         request("/rides/estimate", {
           method: "POST",
-          body: JSON.stringify({ vehicleType: t.value, pickup, dropoff })
-        }).then((result) => [t.value, result])
+          body: JSON.stringify({ vehicleType: rt.value, pickup, dropoff })
+        }).then((result) => [rt.value, result])
       )
     ).then((results) => {
       if (!active) return;
@@ -293,7 +289,7 @@ export default function Ride() {
       }
       setEstimates(next);
       if (!next[vehicleType]) {
-        const firstAvailable = RIDE_TYPES.find((t) => next[t.value]);
+        const firstAvailable = RIDE_TYPES.find((rt) => next[rt.value]);
         if (firstAvailable) setVehicleType(firstAvailable.value);
       }
       setEstimating(false);
@@ -324,7 +320,7 @@ export default function Ride() {
       }
     } catch (pollError) {
       if (pollError.status === 401) {
-        setError("Your session expired. Sign in again to keep tracking this ride.");
+        setError(t("ride.errors.sessionExpired"));
         return;
       }
       // Otherwise assume a transient network hiccup — keep polling.
@@ -368,7 +364,7 @@ export default function Ride() {
       return;
     }
     if (paymentMethod === "mobile_money" && !phone.trim()) {
-      setError("Enter the phone number to pay from.");
+      setError(t("ride.errors.phoneRequired"));
       return;
     }
     setSubmitting(true);
@@ -394,7 +390,7 @@ export default function Ride() {
       // The rider reviews the auto-matched driver before the driver is ever notified.
       setStage("confirm");
     } catch (submitError) {
-      setError(submitError.message || "Unable to request a ride right now.");
+      setError(submitError.message || t("ride.errors.requestFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -410,7 +406,7 @@ export default function Ride() {
       setStage("live");
       if (!TERMINAL_STATUSES.includes(result.status)) pollTrip();
     } catch (confirmError) {
-      setError(confirmError.message || "Unable to confirm this ride.");
+      setError(confirmError.message || t("ride.errors.confirmFailed"));
     } finally {
       setConfirming(false);
     }
@@ -425,7 +421,7 @@ export default function Ride() {
       clearActiveTripId();
       clearTimeout(pollTimerRef.current);
     } catch (cancelError) {
-      setError(cancelError.message || "Unable to cancel this trip.");
+      setError(cancelError.message || t("ride.errors.cancelFailed"));
     }
   };
 
@@ -453,12 +449,14 @@ export default function Ride() {
   };
 
   const selectedEstimate = estimates[vehicleType];
-  const statusCopy = trip ? STATUS_COPY[trip.status] : null;
+  const hasStatusCopy = trip ? STATUS_COPY_KEYS.includes(trip.status) : false;
+  const rideTypeLabel = (value) => t(`ride.types.${value}.label`, { defaultValue: value });
+  const formatEta = (min) => (min < 1 ? t("ride.eta.underMinute") : t("ride.eta.minutes", { count: Math.round(min) }));
 
   return (
     <main className="ride-shell">
       <div className="ride-topbar">
-        <button type="button" className="icon-button" aria-label="Back" onClick={() => navigate("/home")}>
+        <button type="button" className="icon-button" aria-label={t("ride.back")} onClick={() => navigate("/home")}>
           <IconChevronLeft />
         </button>
         <strong>Gabla Ride</strong>
@@ -481,11 +479,11 @@ export default function Ride() {
                 <input
                   ref={pickupInputRef}
                   value={pickupText}
-                  placeholder="Pickup location"
+                  placeholder={t("ride.pickupPlaceholder")}
                   onFocus={() => (activeFieldRef.current = "pickup")}
                   onChange={(e) => setPickupText(e.target.value)}
                 />
-                <button type="button" className="icon-button" aria-label="Use current location" onClick={() => useMyLocation()} disabled={locating}>
+                <button type="button" className="icon-button" aria-label={t("ride.useCurrentLocation")} onClick={() => useMyLocation()} disabled={locating}>
                   <IconTarget />
                 </button>
               </div>
@@ -494,15 +492,15 @@ export default function Ride() {
                 <input
                   ref={dropoffInputRef}
                   value={dropoffText}
-                  placeholder="Where to?"
+                  placeholder={t("ride.dropoffPlaceholder")}
                   onFocus={() => (activeFieldRef.current = "dropoff")}
                   onChange={(e) => setDropoffText(e.target.value)}
                 />
               </div>
             </div>
-            <p className="ride-hint">Search an address, or tap the map to drop a pin.</p>
+            <p className="ride-hint">{t("ride.searchHint")}</p>
             <button type="button" className="primary-button" disabled={!pickup || !dropoff} onClick={chooseRide}>
-              Choose a ride
+              {t("ride.chooseRide")}
             </button>
           </>
         ) : null}
@@ -510,25 +508,25 @@ export default function Ride() {
         {stage === "choose" ? (
           <>
             <button type="button" className="ride-edit-link" onClick={() => setStage("setup")}>
-              &larr; Edit pickup &amp; drop-off
+              &larr; {t("ride.editLocations")}
             </button>
 
             <div className="ride-type-list">
-              {RIDE_TYPES.map((t) => {
-                const est = estimates[t.value];
+              {RIDE_TYPES.map((rt) => {
+                const est = estimates[rt.value];
                 const disabled = !estimating && !est;
                 return (
                   <button
-                    key={t.value}
+                    key={rt.value}
                     type="button"
-                    className={`ride-type-card ${vehicleType === t.value ? "is-active" : ""} ${disabled ? "is-disabled" : ""}`}
-                    onClick={() => est && setVehicleType(t.value)}
+                    className={`ride-type-card ${vehicleType === rt.value ? "is-active" : ""} ${disabled ? "is-disabled" : ""}`}
+                    onClick={() => est && setVehicleType(rt.value)}
                     disabled={disabled}
                   >
-                    <span className="ride-type-icon"><t.Icon /></span>
+                    <span className="ride-type-icon"><rt.Icon /></span>
                     <span className="ride-type-copy">
-                      <strong>{t.label}</strong>
-                      <span>{disabled ? "Not available right now" : t.description}</span>
+                      <strong>{rideTypeLabel(rt.value)}</strong>
+                      <span>{disabled ? t("ride.notAvailable") : t(`ride.types.${rt.value}.description`)}</span>
                     </span>
                     <span className="ride-type-fare">
                       {estimating ? "…" : est ? formatUgx(est.fare) : "—"}
@@ -540,7 +538,7 @@ export default function Ride() {
 
             {selectedEstimate ? (
               <p className="ride-hint">
-                ~{selectedEstimate.distanceKm.toFixed(1)} km &middot; {formatEta(selectedEstimate.durationMin)}
+                {t("ride.distanceEta", { km: selectedEstimate.distanceKm.toFixed(1), eta: formatEta(selectedEstimate.durationMin) })}
               </p>
             ) : null}
 
@@ -550,30 +548,30 @@ export default function Ride() {
                 className={`ride-payment-pill ${paymentMethod === "cash" ? "is-active" : ""}`}
                 onClick={() => setPaymentMethod("cash")}
               >
-                <IconCash /> Cash
+                <IconCash /> {t("ride.payment.cash")}
               </button>
               <button
                 type="button"
                 className={`ride-payment-pill ${paymentMethod === "mobile_money" ? "is-active" : ""}`}
                 onClick={() => setPaymentMethod("mobile_money")}
               >
-                <IconWallet /> Mobile Money
+                <IconWallet /> {t("ride.payment.mobileMoney")}
               </button>
             </div>
             {paymentMethod === "mobile_money" ? (
               <label className="field">
-                <span>Mobile money number</span>
-                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. +256 700 000000" />
+                <span>{t("ride.payment.mobileMoneyNumber")}</span>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("ride.payment.phonePlaceholder")} />
               </label>
             ) : null}
 
             {!session ? (
               <Link to={loginPath(location)} className="primary-button" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
-                Sign in to request a ride
+                {t("ride.signInToRequest")}
               </Link>
             ) : (
               <button type="button" className="primary-button" disabled={submitting || !selectedEstimate} onClick={requestRide}>
-                {submitting ? "Requesting…" : selectedEstimate ? `Request ${RIDE_TYPES.find((t) => t.value === vehicleType)?.label} • ${formatUgx(selectedEstimate.fare)}` : "Choose a ride type"}
+                {submitting ? t("ride.requesting") : selectedEstimate ? t("ride.requestRide", { type: rideTypeLabel(vehicleType), fare: formatUgx(selectedEstimate.fare) }) : t("ride.chooseType")}
               </button>
             )}
           </>
@@ -581,73 +579,73 @@ export default function Ride() {
 
         {stage === "confirm" && trip ? (
           <div className="ride-status-panel">
-            <h3>We found you a driver</h3>
-            <p>Review their details, then confirm to send the request.</p>
+            <h3>{t("ride.confirm.title")}</h3>
+            <p>{t("ride.confirm.subtitle")}</p>
 
             {trip.driver ? (
               <div className="ride-driver-card">
                 <span className="ride-driver-avatar">{(trip.driver.contact?.name || "D").slice(0, 1).toUpperCase()}</span>
                 <div className="ride-driver-info">
-                  <strong>{trip.driver.contact?.name || "Your driver"}</strong>
-                  <span>{trip.driver.vehicleModel || trip.vehicleType} {trip.driver.licensePlate ? `• ${trip.driver.licensePlate}` : ""}</span>
+                  <strong>{trip.driver.contact?.name || t("ride.yourDriver")}</strong>
+                  <span>{trip.driver.vehicleModel || rideTypeLabel(trip.vehicleType)} {trip.driver.licensePlate ? `• ${trip.driver.licensePlate}` : ""}</span>
                   {trip.driver.ratingAvg ? <span>★ {Number(trip.driver.ratingAvg).toFixed(1)}</span> : null}
                 </div>
               </div>
             ) : null}
 
             <div className="ride-fare-row">
-              <span>Estimated fare</span>
+              <span>{t("ride.estimatedFare")}</span>
               <strong>{formatUgx(trip.estimatedFare)}</strong>
             </div>
             <p className="ride-hint">
-              ~{trip.estimatedDistanceKm.toFixed(1)} km &middot; {formatEta(trip.estimatedDurationMin)}
+              {t("ride.distanceEta", { km: trip.estimatedDistanceKm.toFixed(1), eta: formatEta(trip.estimatedDurationMin) })}
             </p>
 
             <button type="button" className="primary-button" disabled={confirming} onClick={confirmRide}>
-              {confirming ? "Confirming…" : "Confirm this driver"}
+              {confirming ? t("ride.confirm.confirming") : t("ride.confirm.button")}
             </button>
-            <button type="button" className="secondary-button" disabled={confirming} onClick={cancelTrip}>Cancel</button>
+            <button type="button" className="secondary-button" disabled={confirming} onClick={cancelTrip}>{t("ride.cancel")}</button>
           </div>
         ) : null}
 
         {stage === "live" && trip?.status === "no_drivers_found" ? (
           <div className="ride-status-panel">
-            <h3>No drivers nearby</h3>
-            <p>We couldn&apos;t find a driver right now. Try again in a moment.</p>
-            <button type="button" className="primary-button" onClick={() => setStage("choose")}>Try again</button>
+            <h3>{t("ride.noDrivers.title")}</h3>
+            <p>{t("ride.noDrivers.body")}</p>
+            <button type="button" className="primary-button" onClick={() => setStage("choose")}>{t("ride.noDrivers.tryAgain")}</button>
           </div>
         ) : null}
 
         {stage === "live" && trip && ["completed"].includes(trip.status) ? (
           <div className="ride-status-panel">
-            <h3>Trip complete</h3>
-            <p>Fare: {formatUgx(trip.finalFare)}</p>
-            <p className="modal-hint">Thanks for riding with Gabla.</p>
-            <button type="button" className="primary-button" onClick={bookAnother}>Book another ride</button>
+            <h3>{t("ride.complete.title")}</h3>
+            <p>{t("ride.complete.fare", { fare: formatUgx(trip.finalFare) })}</p>
+            <p className="modal-hint">{t("ride.complete.thanks")}</p>
+            <button type="button" className="primary-button" onClick={bookAnother}>{t("ride.bookAnother")}</button>
           </div>
         ) : null}
 
         {stage === "live" && trip && ["cancelled_by_rider", "cancelled_by_driver"].includes(trip.status) ? (
           <div className="ride-status-panel">
-            <h3>Trip cancelled</h3>
-            <button type="button" className="primary-button" onClick={bookAnother}>Book another ride</button>
+            <h3>{t("ride.cancelled.title")}</h3>
+            <button type="button" className="primary-button" onClick={bookAnother}>{t("ride.bookAnother")}</button>
           </div>
         ) : null}
 
-        {stage === "live" && trip && statusCopy ? (
+        {stage === "live" && trip && hasStatusCopy ? (
           <div className="ride-status-panel">
-            <h3>{statusCopy.title}</h3>
-            <p>{statusCopy.subtitle}</p>
+            <h3>{t(`ride.status.${trip.status}.title`)}</h3>
+            <p>{t(`ride.status.${trip.status}.subtitle`)}</p>
 
             {trip.driver ? (
               <div className="ride-driver-card">
                 <span className="ride-driver-avatar">{(trip.driver.contact?.name || "D").slice(0, 1).toUpperCase()}</span>
                 <div className="ride-driver-info">
-                  <strong>{trip.driver.contact?.name || "Your driver"}</strong>
-                  <span>{trip.driver.vehicleModel || trip.vehicleType} {trip.driver.licensePlate ? `• ${trip.driver.licensePlate}` : ""}</span>
+                  <strong>{trip.driver.contact?.name || t("ride.yourDriver")}</strong>
+                  <span>{trip.driver.vehicleModel || rideTypeLabel(trip.vehicleType)} {trip.driver.licensePlate ? `• ${trip.driver.licensePlate}` : ""}</span>
                 </div>
                 {trip.driver.contact?.phone ? (
-                  <a className="icon-button" href={`tel:${trip.driver.contact.phone}`} aria-label="Call driver">
+                  <a className="icon-button" href={`tel:${trip.driver.contact.phone}`} aria-label={t("ride.callDriver")}>
                     <IconPhone />
                   </a>
                 ) : null}
@@ -655,12 +653,12 @@ export default function Ride() {
             ) : null}
 
             <div className="ride-fare-row">
-              <span>Estimated fare</span>
+              <span>{t("ride.estimatedFare")}</span>
               <strong>{formatUgx(trip.estimatedFare)}</strong>
             </div>
 
             {CANCELLABLE_STATUSES.includes(trip.status) ? (
-              <button type="button" className="secondary-button" onClick={cancelTrip}>Cancel ride</button>
+              <button type="button" className="secondary-button" onClick={cancelTrip}>{t("ride.cancelRide")}</button>
             ) : null}
           </div>
         ) : null}

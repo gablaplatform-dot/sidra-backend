@@ -1,9 +1,11 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 const toggleInArray = (arr = [], value) =>
   arr.includes(value) ? arr.filter((item) => item !== value) : [...arr, value];
 
 export const DynamicField = ({ field, value, onChange }) => {
+  const { t } = useTranslation();
   // Deliberately no native `required` attribute anywhere in this component: the caller (e.g.
   // ListingForm's submit()) already does its own required-field check with a friendly, specific
   // "Please fill in X" message. A native `required` on a select/number/text input makes the
@@ -19,7 +21,7 @@ export const DynamicField = ({ field, value, onChange }) => {
     return (
       <label className="checkbox-row">
         <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />
-        <span>Yes</span>
+        <span>{t("provider.fields.yes")}</span>
       </label>
     );
   }
@@ -27,7 +29,7 @@ export const DynamicField = ({ field, value, onChange }) => {
   if (field.type === "select") {
     return (
       <select value={value || ""} onChange={(e) => onChange(e.target.value)}>
-        <option value="">Select an option</option>
+        <option value="">{t("provider.fields.selectOption")}</option>
         {(field.options || []).map((option) => (
           <option key={option} value={option}>{option}</option>
         ))}

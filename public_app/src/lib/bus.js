@@ -1,12 +1,32 @@
+import i18n, { intlLocale } from "../i18n";
 import { request } from "./api";
+import { formatUgx } from "./format";
 
 // Everything the bus screens share: the API calls customers use, plus Uganda-specific formatting
 // (UGX, East Africa Time). All departure times are shown in EAT regardless of the viewer's device.
 
 const EAT_OFFSET_MS = 3 * 60 * 60 * 1000;
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Weekday / month names come from Intl in the active UI language (dates are plain calendar days, so UTC).
+const formatters = new Map();
+const nameFormat = (opts) => {
+  const locale = intlLocale();
+  const key = `${locale}|${JSON.stringify(opts)}`;
+  if (!formatters.has(key)) {
+    let f;
+    try {
+      f = new Intl.DateTimeFormat(locale, { ...opts, timeZone: "UTC" });
+    } catch {
+      f = new Intl.DateTimeFormat("en-GB", { ...opts, timeZone: "UTC" });
+    }
+    formatters.set(key, f);
+  }
+  return formatters.get(key);
+};
+// wd: 0 = Sunday. style: "short" | "long" | "narrow"
+export const weekdayName = (wd, style = "short") => nameFormat({ weekday: style }).format(Date.UTC(2024, 0, 7 + wd));
+// m: 0 = January
+export const monthName = (m, style = "short") => nameFormat({ month: style }).format(Date.UTC(2024, m, 1));
 
 const pad = (n) => String(n).padStart(2, "0");
 const eatParts = (value) => {
@@ -14,7 +34,7 @@ const eatParts = (value) => {
   return { y: d.getUTCFullYear(), m: d.getUTCMonth(), d: d.getUTCDate(), wd: d.getUTCDay(), h: d.getUTCHours(), min: d.getUTCMinutes() };
 };
 
-export const ugx = (value) => `UGX ${Number(value || 0).toLocaleString("en-US")}`;
+export const ugx = formatUgx;
 
 // "YYYY-MM-DD" for a moment, as seen in Kampala.
 export const eatDate = (value = Date.now()) => {
@@ -35,8 +55,17 @@ export const weekdayOf = (dateStr) => {
 
 export const dateParts = (dateStr) => {
   const [y, m, d] = dateStr.split("-").map(Number);
-  return { y, m: m - 1, d, weekday: WEEKDAYS[weekdayOf(dateStr)], month: MONTHS[m - 1], monthLong: MONTHS_LONG[m - 1] };
+  return { y, m: m - 1, d, weekday: weekdayName(weekdayOf(dateStr)), month: monthName(m - 1), monthLong: monthName(m - 1, "long") };
 };
+
+// "7 Oct"
+export const dayMonthLabel = (dateStr) => {
+  const p = dateParts(dateStr);
+  return `${p.d} ${p.month}`;
+};
+
+// "Friday"
+export const weekdayLong = (dateStr) => weekdayName(weekdayOf(dateStr), "long");
 
 // "Fri 7 Oct"
 export const dayLabel = (dateStr) => {
@@ -47,14 +76,14 @@ export const dayLabel = (dateStr) => {
 // "Friday, 7 October 2026"
 export const longDayLabel = (dateStr) => {
   const p = dateParts(dateStr);
-  return `${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][weekdayOf(dateStr)]}, ${p.d} ${p.monthLong} ${p.y}`;
+  return `${weekdayLong(dateStr)}, ${p.d} ${p.monthLong} ${p.y}`;
 };
 
 // "07:30 AM"
 export const eatTime = (value) => {
   const p = eatParts(value);
   const h12 = p.h % 12 || 12;
-  return `${pad(h12)}:${pad(p.min)} ${p.h < 12 ? "AM" : "PM"}`;
+  return `${pad(h12)}:${pad(p.min)} ${i18n.t(p.h < 12 ? "bus.time.am" : "bus.time.pm")}`;
 };
 
 export const eatDateOf = (value) => eatDate(value);
@@ -68,8 +97,8 @@ export const durationLabel = (minutes) => {
   const m = Number(minutes) || 0;
   const h = Math.floor(m / 60);
   const r = m % 60;
-  if (!h) return `${r} min`;
-  return r ? `${h}h ${pad(r)}m` : `${h}h`;
+  if (!h) return i18n.t("bus.dur.m", { m: r });
+  return r ? i18n.t("bus.dur.hm", { h, m: pad(r) }) : i18n.t("bus.dur.h", { h });
 };
 
 // Ugandan mobile numbers: accept 07XXXXXXXX, 7XXXXXXXX, +2567XXXXXXXX and normalise to 2567XXXXXXXX.
@@ -131,14 +160,13 @@ export const operatorApi = {
   del: (path) => request(`/bus/operator${path}`, { method: "DELETE" })
 };
 
-export const BUS_STATUS_LABEL = {
-  pending_payment: "Awaiting payment",
-  confirmed: "Confirmed",
-  failed: "Payment failed",
-  expired: "Expired",
-  cancelled: "Cancelled",
-  refund_due: "Refund pending"
-};
+// Getters so the label is looked up in the active language each time it is read.
+export const BUS_STATUS_LABEL = Object.fromEntries(
+  ["pending_payment", "confirmed", "failed", "expired", "cancelled", "refund_due"].map((k) => [k, undefined])
+);
+Object.keys(BUS_STATUS_LABEL).forEach((k) => {
+  Object.defineProperty(BUS_STATUS_LABEL, k, { enumerable: true, get: () => i18n.t(`bus.status.${k}`) });
+});
 
 // ---------------------------------------------------------------------------------------------
 // Presentation helpers for the redesigned customer screens (append-only; nothing above changes).
@@ -147,7 +175,7 @@ export const BUS_STATUS_LABEL = {
 // { t: "07:30", ap: "AM" } so screens can set the AM/PM smaller than the clock.
 export const timeParts = (value) => {
   const p = eatParts(value);
-  return { t: `${pad(p.h % 12 || 12)}:${pad(p.min)}`, ap: p.h < 12 ? "AM" : "PM" };
+  return { t: `${pad(p.h % 12 || 12)}:${pad(p.min)}`, ap: i18n.t(p.h < 12 ? "bus.time.am" : "bus.time.pm") };
 };
 
 export const arrivalAt = (departureAt, minutes) => new Date(new Date(departureAt).getTime() + (Number(minutes) || 0) * 60000);
@@ -185,10 +213,10 @@ export const hueOf = (name) => {
 };
 
 export const TIME_SLOTS = [
-  { id: "morning", label: "Morning", range: "05:00 - 11:59" },
-  { id: "afternoon", label: "Afternoon", range: "12:00 - 16:59" },
-  { id: "evening", label: "Evening", range: "17:00 - 20:59" },
-  { id: "night", label: "Night", range: "21:00 - 04:59" }
+  { id: "morning", get label() { return i18n.t("bus.slots.morning"); }, range: "05:00 - 11:59" },
+  { id: "afternoon", get label() { return i18n.t("bus.slots.afternoon"); }, range: "12:00 - 16:59" },
+  { id: "evening", get label() { return i18n.t("bus.slots.evening"); }, range: "17:00 - 20:59" },
+  { id: "night", get label() { return i18n.t("bus.slots.night"); }, range: "21:00 - 04:59" }
 ];
 export const timeOfDay = (value) => {
   const h = eatParts(value).h;
@@ -203,24 +231,24 @@ export const effectiveDeparture = (trip) => new Date(new Date(trip.departureAt).
 export const minutesUntil = (value, now = Date.now()) => Math.round((new Date(value).getTime() - now) / 60000);
 export const untilLabel = (mins) => {
   const m = Math.max(0, Math.round(mins));
-  if (m < 60) return `${m} min`;
+  if (m < 60) return i18n.t("bus.dur.m", { m });
   const h = Math.floor(m / 60);
-  if (h < 24) return m % 60 ? `${h}h ${pad(m % 60)}m` : `${h}h`;
+  if (h < 24) return m % 60 ? i18n.t("bus.dur.hm", { h, m: pad(m % 60) }) : i18n.t("bus.dur.h", { h });
   const d = Math.floor(h / 24);
-  return `${d}d ${h % 24}h`;
+  return i18n.t("bus.dur.dh", { d, h: h % 24 });
 };
 
 // One short status for a departure: { tone: green|amber|red|muted|navy, label }.
 export const tripStatus = (trip, now = Date.now()) => {
   const delay = Number(trip.delayMinutes) || 0;
   const left = minutesUntil(effectiveDeparture(trip), now);
-  if (trip.status === "cancelled") return { tone: "red", label: "Cancelled" };
-  if (trip.soldOut) return { tone: "red", label: "Sold out" };
-  if (!trip.bookable) return { tone: "muted", label: left <= 0 ? "Departed" : "Sales closed" };
-  if (delay > 0) return { tone: "amber", label: `Delayed ${delay} min` };
-  if (left <= 45 && left > 0) return { tone: "amber", label: `Boarding in ${untilLabel(left)}` };
-  if (trip.seatsLeft <= 5) return { tone: "red", label: `Only ${trip.seatsLeft} left` };
-  return { tone: "green", label: left < 24 * 60 ? `Departs in ${untilLabel(left)}` : "On time" };
+  if (trip.status === "cancelled") return { tone: "red", label: i18n.t("bus.tripStatus.cancelled") };
+  if (trip.soldOut) return { tone: "red", label: i18n.t("bus.tripStatus.soldOut") };
+  if (!trip.bookable) return { tone: "muted", label: i18n.t(left <= 0 ? "bus.tripStatus.departed" : "bus.tripStatus.salesClosed") };
+  if (delay > 0) return { tone: "amber", label: i18n.t("bus.tripStatus.delayed", { min: delay }) };
+  if (left <= 45 && left > 0) return { tone: "amber", label: i18n.t("bus.tripStatus.boarding", { time: untilLabel(left) }) };
+  if (trip.seatsLeft <= 5) return { tone: "red", label: i18n.t("bus.tripStatus.onlyLeft", { count: trip.seatsLeft }) };
+  return { tone: "green", label: left < 24 * 60 ? i18n.t("bus.tripStatus.departsIn", { time: untilLabel(left) }) : i18n.t("bus.tripStatus.onTime") };
 };
 
 // Stops are stored as [{ name, offsetMinutes }]; older rows may use minutesFromStart.
@@ -231,7 +259,7 @@ export const stopOffset = (stop) => {
 };
 export const stopsLabel = (route) => {
   const n = stopsOf(route).length;
-  return n ? `${n} ${n === 1 ? "stop" : "stops"}` : "Non-stop";
+  return n ? i18n.t("bus.stops", { count: n }) : i18n.t("bus.nonStop");
 };
 
 // Unsplash photos come at a fixed width; ask for a bigger crop where we show them large.
@@ -249,14 +277,14 @@ export const buildTripIcs = ({ ticket, booking }) => {
   const { trip, operator } = booking;
   const start = effectiveDeparture(trip);
   const end = new Date(start.getTime() + (Number(trip.route.durationMinutes) || 60) * 60000);
-  const title = `Bus to ${trip.route.destinationName} - ${operator?.companyName || "Gabla Bus"}`;
+  const title = i18n.t("bus.ics.title", { destination: trip.route.destinationName, company: operator?.companyName || "Gabla Bus" });
   const bp = trip.route.boardingPoint || "";
   const where = [bp, operator?.parkName && !bp.toLowerCase().includes(operator.parkName.toLowerCase()) ? operator.parkName : ""].filter(Boolean).join(", ");
   const lines = [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Gabla Bus//Ticket//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "BEGIN:VEVENT",
     `UID:${ticket.ticketNumber}@gabla.bus`, `DTSTAMP:${icsStamp(Date.now())}`, `DTSTART:${icsStamp(start)}`, `DTEND:${icsStamp(end)}`,
     `SUMMARY:${icsEscape(title)}`, `LOCATION:${icsEscape(where)}`,
-    `DESCRIPTION:${icsEscape(`Ticket ${ticket.ticketNumber}, seat ${ticket.seatNumber ?? "-"}. Passenger ${ticket.passengerName}. Board 30 minutes early. Times are East Africa Time.`)}`,
+    `DESCRIPTION:${icsEscape(i18n.t("bus.ics.description", { ticket: ticket.ticketNumber, seat: ticket.seatNumber ?? "-", passenger: ticket.passengerName }))}`,
     "BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", `DESCRIPTION:${icsEscape(title)}`, "END:VALARM", "END:VEVENT", "END:VCALENDAR"
   ];
   return lines.join("\r\n");

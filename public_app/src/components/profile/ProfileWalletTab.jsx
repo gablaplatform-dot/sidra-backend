@@ -1,32 +1,17 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../../lib/api";
+import { formatUgx } from "../../lib/format";
+import { intlLocale } from "../../i18n";
 import { IconReceipt, IconWallet } from "../icons";
 import SubscriptionModal from "../SubscriptionModal";
 import { SectionSkeleton } from "../Skeleton";
 
-const TYPE_LABELS = {
-  purchase: "Product purchase",
-  contact_unlock: "Contact unlock",
-  subscription: "Subscription",
-  withdrawal: "Withdrawal"
-};
-
-const STATUS_LABELS = {
-  requested: "Requested",
-  approved: "Approved",
-  rejected: "Rejected",
-  paid: "Paid",
-  pending: "Pending",
-  completed: "Completed",
-  failed: "Failed",
-  canceled: "Canceled"
-};
-
-const formatUgx = (value) => `UGX ${Number(value || 0).toLocaleString()}`;
-const formatDate = (value) => new Date(value).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+const formatDate = (value) => new Date(value).toLocaleDateString(intlLocale(), { year: "numeric", month: "short", day: "numeric" });
 
 export default function ProfileWalletTab() {
+  const { t } = useTranslation();
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
@@ -54,7 +39,7 @@ export default function ProfileWalletTab() {
         setWithdrawals(withdrawalResult?.items || []);
         setSubscription(subscriptionResult);
       })
-      .catch((loadError) => setError(loadError.message || "Unable to load your wallet."))
+      .catch((loadError) => setError(loadError.message || t("profile.wallet.errLoad")))
       .finally(() => setLoading(false));
   };
 
@@ -64,7 +49,7 @@ export default function ProfileWalletTab() {
     event.preventDefault();
     const amountValue = Number(amount);
     if (!amountValue || amountValue <= 0) {
-      setError("Enter a valid amount.");
+      setError(t("profile.wallet.errAmount"));
       return;
     }
     setSubmitting(true);
@@ -75,19 +60,19 @@ export default function ProfileWalletTab() {
         method: "POST",
         body: JSON.stringify({ amount: amountValue, note: note.trim() || undefined })
       });
-      setNotice("Withdrawal requested. You'll be notified once it's reviewed.");
+      setNotice(t("profile.wallet.requested"));
       setAmount("");
       setNote("");
       setFormOpen(false);
       load();
     } catch (submitError) {
-      setError(submitError.message || "Unable to request a withdrawal.");
+      setError(submitError.message || t("profile.wallet.errWithdraw"));
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <SectionSkeleton rows={4} label="Loading your wallet" />;
+  if (loading) return <SectionSkeleton rows={4} label={t("profile.wallet.loading")} />;
 
   return (
     <section className="detail-block">
@@ -97,27 +82,27 @@ export default function ProfileWalletTab() {
       <div className="wallet-balance-card">
         <div className="wallet-balance-icon"><IconWallet /></div>
         <div>
-          <p className="provider-meta">Available balance</p>
+          <p className="provider-meta">{t("profile.wallet.balance")}</p>
           <h2 className="wallet-balance-amount">{formatUgx(wallet?.balance)}</h2>
         </div>
         <button type="button" className="cta-button wallet-withdraw-button" onClick={() => setFormOpen((open) => !open)}>
-          Request withdrawal
+          {t("profile.wallet.requestWithdrawal")}
         </button>
       </div>
 
       {subscription ? (
         <div className="wallet-list-row">
           <div>
-            <strong>Subscription</strong>
+            <strong>{t("profile.wallet.subscription")}</strong>
             <p className="provider-meta">
               {subscription.status === "active" && subscription.expiresAt
-                ? `Active until ${formatDate(subscription.expiresAt)}`
-                : "Not active"}
+                ? t("profile.wallet.activeUntil", { date: formatDate(subscription.expiresAt) })
+                : t("profile.wallet.notActive")}
             </p>
           </div>
           {subscription.enabled ? (
             <button type="button" className="cta-button" onClick={() => setSubscriptionModalOpen(true)}>
-              {subscription.status === "active" ? "Renew" : "Activate"}
+              {subscription.status === "active" ? t("profile.wallet.renew") : t("profile.wallet.activate")}
             </button>
           ) : null}
         </div>
@@ -127,21 +112,21 @@ export default function ProfileWalletTab() {
         <form className="wallet-withdraw-form" onSubmit={submitWithdrawal}>
           <div className="form-grid two">
             <label className="field">
-              <span>Amount (UGX)</span>
+              <span>{t("profile.wallet.amount")}</span>
               <input type="number" min="0" required value={amount} onChange={(e) => setAmount(e.target.value)} />
             </label>
             <label className="field">
-              <span>Note (optional)</span>
-              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. mobile money number" />
+              <span>{t("profile.wallet.noteOptional")}</span>
+              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("profile.wallet.notePlaceholder")} />
             </label>
           </div>
           <button className="primary-button" type="submit" disabled={submitting} style={{ width: "auto", padding: "10px 24px" }}>
-            {submitting ? "Submitting…" : "Submit request"}
+            {submitting ? t("profile.wallet.submitting") : t("profile.wallet.submit")}
           </button>
         </form>
       ) : null}
 
-      <h2 className="wallet-section-title">Withdrawal history</h2>
+      <h2 className="wallet-section-title">{t("profile.wallet.withdrawalHistory")}</h2>
       {withdrawals.length ? (
         <div className="wallet-list">
           {withdrawals.map((w) => (
@@ -150,34 +135,34 @@ export default function ProfileWalletTab() {
                 <strong>{formatUgx(w.netAmount)}</strong>
                 <p className="provider-meta">{formatDate(w.createdAt)}{w.note ? ` · ${w.note}` : ""}</p>
               </div>
-              <span className={`status-badge status-${w.status}`}>{STATUS_LABELS[w.status] || w.status}</span>
+              <span className={`status-badge status-${w.status}`}>{t(`profile.wallet.status.${w.status}`, { defaultValue: w.status })}</span>
             </div>
           ))}
         </div>
       ) : (
         <div className="empty-state">
           <IconWallet />
-          <p>No withdrawal requests yet.</p>
+          <p>{t("profile.wallet.noWithdrawals")}</p>
         </div>
       )}
 
-      <h2 className="wallet-section-title">Transaction history</h2>
+      <h2 className="wallet-section-title">{t("profile.wallet.transactionHistory")}</h2>
       {transactions.length ? (
         <div className="wallet-list">
           {transactions.map((tx) => (
             <div key={tx.id} className="wallet-list-row">
               <div>
-                <strong>{TYPE_LABELS[tx.type] || tx.type}</strong>
-                <p className="provider-meta">{formatDate(tx.createdAt)} &middot; net {formatUgx(tx.netAmount)}</p>
+                <strong>{t(`profile.wallet.type.${tx.type}`, { defaultValue: tx.type })}</strong>
+                <p className="provider-meta">{formatDate(tx.createdAt)} &middot; {t("profile.wallet.net", { amount: formatUgx(tx.netAmount) })}</p>
               </div>
-              <span className={`status-badge status-${tx.status}`}>{STATUS_LABELS[tx.status] || tx.status}</span>
+              <span className={`status-badge status-${tx.status}`}>{t(`profile.wallet.status.${tx.status}`, { defaultValue: tx.status })}</span>
             </div>
           ))}
         </div>
       ) : (
         <div className="empty-state">
           <IconReceipt />
-          <p>No transactions yet.</p>
+          <p>{t("profile.wallet.noTransactions")}</p>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans Ethiopic", sans-serif;
   color: #0f172a;
   background: #f5f7fa;
   font-synthesis: none;
@@ -4448,3 +4448,21 @@ textarea.docs-input { min-height: 84px; }
 }
 .google-native-button:active { background: #f1f3f4; }
 .google-native-button:disabled { opacity: 0.6; }
+
+/* ---- Language switcher ---- */
+.lang-switch {
+  height: 38px; padding: 0 10px; border-radius: 999px; border: 1px solid rgba(15, 23, 42, 0.16);
+  background: #fff; color: #0b2046; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.shop-themed-header .lang-switch { background: transparent; color: inherit; border-color: currentColor; }
+.shop-themed-header .lang-switch option, .drawer .lang-switch option { color: #0b2046; }
+.drawer .lang-switch, .mh-menu .lang-switch { width: 100%; height: 44px; border-radius: 14px; padding: 0 14px; background: #fff; color: #0b2046; border-color: #cbd5e1; }
+@media (max-width: 760px) { .header-actions > .lang-switch { display: none; } }
+
+/* Translated nav labels run longer than English: never wrap, and fall back to the drawer sooner. */
+.site-nav a, .shop-themed-header .site-nav a { white-space: nowrap; }
+.site-nav { min-width: 0; }
+@media (max-width: 1240px) {
+  html:not([lang="en"]) .site-nav { display: none; }
+  html:not([lang="en"]) .hamburger { display: inline-flex; }
+}

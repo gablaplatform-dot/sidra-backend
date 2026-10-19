@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { IconClose, IconChevronLeft } from "../icons";
 import LazyImg from "../LazyImg";
 
 // Main image + thumbnails, with a full-screen lightbox (arrow keys / Esc / swipe-free buttons).
 export default function ProductGallery({ images, alt }) {
+  const { t } = useTranslation();
   const [index, setIndex] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   const count = images.length;
@@ -34,15 +36,15 @@ export default function ProductGallery({ images, alt }) {
   return (
     <div className="pd-gallery">
       <div className="pd-stage">
-        <button type="button" className="pd-stage-img" onClick={() => setLightbox(true)} aria-label="Open full-size image">
+        <button type="button" className="pd-stage-img" onClick={() => setLightbox(true)} aria-label={t("product.gallery.openFull")}>
           <LazyImg key={images[index]} src={images[index]} alt={alt} />
         </button>
         {count > 1 ? (
           <>
-            <button type="button" className="pd-nav pd-nav-prev" onClick={() => go(-1)} aria-label="Previous image">
+            <button type="button" className="pd-nav pd-nav-prev" onClick={() => go(-1)} aria-label={t("product.gallery.prev")}>
               <IconChevronLeft />
             </button>
-            <button type="button" className="pd-nav pd-nav-next" onClick={() => go(1)} aria-label="Next image">
+            <button type="button" className="pd-nav pd-nav-next" onClick={() => go(1)} aria-label={t("product.gallery.next")}>
               <IconChevronLeft />
             </button>
             <span className="pd-counter">
@@ -55,7 +57,7 @@ export default function ProductGallery({ images, alt }) {
       {count > 1 ? (
         <div className="pd-thumbs">
           {images.map((src, i) => (
-            <button key={src} type="button" className={i === index ? "is-active" : ""} onClick={() => setIndex(i)} aria-label={`Show image ${i + 1}`}>
+            <button key={src} type="button" className={i === index ? "is-active" : ""} onClick={() => setIndex(i)} aria-label={t("product.gallery.showImage", { n: i + 1 })}>
               <LazyImg src={src} alt="" loading="lazy" />
             </button>
           ))}
@@ -64,7 +66,7 @@ export default function ProductGallery({ images, alt }) {
 
       {lightbox ? (
         <div className="pd-lightbox" onClick={() => setLightbox(false)}>
-          <button type="button" className="pd-lightbox-close" onClick={() => setLightbox(false)} aria-label="Close">
+          <button type="button" className="pd-lightbox-close" onClick={() => setLightbox(false)} aria-label={t("product.gallery.close")}>
             <IconClose />
           </button>
           {count > 1 ? (
@@ -75,7 +77,7 @@ export default function ProductGallery({ images, alt }) {
                 event.stopPropagation();
                 go(-1);
               }}
-              aria-label="Previous image"
+              aria-label={t("product.gallery.prev")}
             >
               <IconChevronLeft />
             </button>
@@ -89,7 +91,7 @@ export default function ProductGallery({ images, alt }) {
                 event.stopPropagation();
                 go(1);
               }}
-              aria-label="Next image"
+              aria-label={t("product.gallery.next")}
             >
               <IconChevronLeft />
             </button>

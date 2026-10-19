@@ -1,3 +1,4 @@
+import i18n from "../i18n";
 import { clearSession, getSession } from "./session";
 
 export const API_BASE = (import.meta.env.VITE_API_URL || "/api/v1").replace(/\/$/, "");
@@ -20,7 +21,7 @@ export const request = async (path, options = {}) => {
       clearSession();
       window.dispatchEvent(new Event("gabla-session-expired"));
     }
-    const error = new Error(body?.error?.message || "Request failed");
+    const error = new Error(body?.error?.message || i18n.t("errors.requestFailed"));
     error.status = response.status;
     error.code = body?.error?.code;
     throw error;

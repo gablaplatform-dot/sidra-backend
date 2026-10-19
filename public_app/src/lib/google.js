@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 let googleIdentityLoadPromise;
@@ -11,7 +13,7 @@ export const loadGoogleIdentity = () => {
     script.async = true;
     script.defer = true;
     script.onload = () => resolve(window.google);
-    script.onerror = () => reject(new Error("Failed to load Google sign-in"));
+    script.onerror = () => reject(new Error(i18n.t("auth.googleLoadFailed")));
     document.head.appendChild(script);
   });
   return googleIdentityLoadPromise;
@@ -52,7 +54,7 @@ export const nativeGoogleIdToken = async () => {
   const SocialLogin = await initNativeGoogle();
   // No `scopes` option: passing one switches the plugin to an authorisation flow that needs extra MainActivity code. The ID token already carries email and profile.
   const { result } = await SocialLogin.login({ provider: "google" });
-  if (!result?.idToken) throw new Error("Google did not return a sign-in token. Please try again.");
+  if (!result?.idToken) throw new Error(i18n.t("auth.googleNoToken"));
   return result.idToken;
 };
 
@@ -68,7 +70,7 @@ const nativeGoogleShim = () => {
         initialize: (config) => { callback = config.callback || callback; },
         prompt: () => {}, // no one-tap sheet in the app
         renderButton: (el, options = {}) => {
-          const label = options.text === "signin_with" ? "Sign in with Google" : "Continue with Google";
+          const label = options.text === "signin_with" ? i18n.t("auth.signInWithGoogle") : i18n.t("auth.continueWithGoogle");
           el.innerHTML = "";
           const button = document.createElement("button");
           button.type = "button";
@@ -83,7 +85,7 @@ const nativeGoogleShim = () => {
               const message = String(error?.message || "");
               // Closing the Google sheet is not an error worth showing.
               if (!/cancel|dismiss|\[16\]|12501/i.test(message)) {
-                window.alert(`Google sign-in failed: ${message || "please try again."}`);
+                window.alert(i18n.t("auth.googleFailedAlert", { message: message || i18n.t("auth.tryAgainLower") }));
               }
             } finally {
               button.disabled = false;

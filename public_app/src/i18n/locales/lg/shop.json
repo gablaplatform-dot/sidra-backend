@@ -1,0 +1,297 @@
+{
+  "shop": {
+    "meta": {
+      "title": "Edduuka lya Gabla — Engoye, Ebyuma by'amasannyalaze n'Obulamu bw'Ennaku Zino",
+      "allCategories": "Ebibinja Byonna — Edduuka lya Gabla",
+      "browseProduct": "{{name}} mu {{where}} ebyokutunda | Edduuka lya Gabla",
+      "browseService": "{{name}} mu {{where}} | Empeereza za Gabla",
+      "collection": "{{title}} | Edduuka lya Gabla"
+    },
+    "nav": {
+      "home": "Awaka",
+      "shop": "Edduuka",
+      "newArrivals": "Ebipya Ebizze",
+      "bestSellers": "Ebitundwa Ennyo",
+      "categories": "Ebibinja",
+      "about": "Ebitukwatako",
+      "blog": "Blog",
+      "contact": "Tukwate"
+    },
+    "navbar": {
+      "searchNearby": "Noonya okumpi",
+      "wishlist": "Ebyo by'oyagala"
+    },
+    "trust": {
+      "quality": { "title": "Omutindo Ogwa Waggulu", "subtitle": "Bikoleddwa mu bintu ebisinga obulungi" },
+      "delivery": { "title": "Okutuusa Mangu", "subtitle": "Okutuusa okwangu era okwesigika" },
+      "checkout": { "title": "Okusasula Okukuumibwa", "subtitle": "Amawulire go gakuumibwa" },
+      "satisfaction": { "title": "Essanyu ly'Omuguzi", "subtitle": "Ekakasa essanyu lya 100%" }
+    },
+    "hero": {
+      "eyebrow": "EBYETTANIRWA KATI",
+      "titleLine1": "Kizuula Ebintu",
+      "titleLine2": "By'Ojja Okwagala",
+      "subtitle": "Gula ebintu ebisembye ebisinga okwettanirwa eby'obulamu obwa kati.",
+      "shopNow": "Gula Kati",
+      "explore": "Laba Ebiriwo",
+      "loved": "Baagalwa abaguzi <b>50,000+</b> mu nsi yonna",
+      "modelAlt": "Ekifaananyi ekiraga"
+    },
+    "adsHero": {
+      "nearYou": "OKUMPI NAWE · KM {{km}}",
+      "featured": "EBITUNDIBWA",
+      "showAd": "Laga ekirango {{n}}",
+      "shopNow": "Gula Kati"
+    },
+    "promo": {
+      "flashSale": "Okutunda Okw'amangu",
+      "flashSaleAlt": "Okutunda okw'amangu",
+      "limitedTime": "Ekiweebwa mu kiseera ekitono",
+      "shopNow": "Gula Kati",
+      "days": "Ennaku",
+      "hours": "Essaawa",
+      "min": "Eddakiika",
+      "sec": "Obutikitiki",
+      "newCollection": "Ebipya Ebikuŋŋaanyiziddwa",
+      "freshSeason": "Ekiseera ekipya",
+      "discoverTrends": "Zuula ebisembyeyo",
+      "explore": "Laba"
+    },
+    "defaults": {
+      "category": "Ekibinja",
+      "product": "Ekintu",
+      "productDescription": "Ekintu eky'omutindo ogwa waggulu ekikoleddwa olw'obulungi n'okuwulira obulungi.",
+      "promoTitle": "Ekiweebwa Ekitono",
+      "promoCta": "Gula Kati"
+    },
+    "forYou": {
+      "title": "Kino kiyinza okukugasa",
+      "clearConfirm": "Ggyawo bye tuyize ku by'onoonya? Ebikuweebwa bijja kutandika buggya.",
+      "popularAround": "Byettanirwa okumpi ne {{district}}. Kisinga okulongooka nga bw'ofuba okulaba.",
+      "popularNow": "Byettanirwa kati. Kisinga okulongooka nga bw'ofuba okulaba.",
+      "clearHistory": "Ggyawo ebyange ebyayita",
+      "continue": "Weyongereyo w'oyimiridde",
+      "picked": "Bikulondeddwa",
+      "contactForPrice": "Kuba essimu okumanya ebbeeyi"
+    },
+    "categories": {
+      "shopBy": "Gula ng'oyita mu Bibinja",
+      "viewAll": "Laba Ebibinja Byonna",
+      "shopNow": "Gula Kati",
+      "scrollLeft": "Genda ku kkono",
+      "scrollRight": "Genda ku ddyo",
+      "breadcrumb": "Edduuka",
+      "allTitle": "Ebibinja Byonna",
+      "empty": "Tewannabaawo bibinja bya dduuka."
+    },
+    "newArrivals": {
+      "title": "Ebipya Ebizze",
+      "viewAll": "Laba Ebipya Ebizze Byonna"
+    },
+    "bestSellers": {
+      "title": "Ebitundwa Ennyo",
+      "viewAll": "Laba Ebitundwa Ennyo Byonna",
+      "badge": "Kitundwa nnyo",
+      "quickAdd": "Gattako mangu",
+      "added": "Kissiddwamu ✓"
+    },
+    "card": {
+      "new": "Kipya",
+      "wishlist": "Gattako ku by'oyagala",
+      "addToCart": "Gattako mu nsawo y'okugula",
+      "added": "Kissiddwamu"
+    },
+    "listing": {
+      "new": "Kipya",
+      "bookInstantly": "Booka kati",
+      "bookable": "Kiyinza okubookebwa",
+      "contactForPrice": "Kuba essimu okumanya ebbeeyi",
+      "uganda": "Uganda",
+      "distance": "km {{km}}"
+    },
+    "nearby": {
+      "title": "Noonya okumpi",
+      "close": "Ggalawo",
+      "placeholder": "Onoonya ki?",
+      "search": "Noonya",
+      "searching": "Kinoonya…",
+      "searchingLabel": "Kinoonya",
+      "allUganda": "Uganda yonna",
+      "thatDistrict": "disitulikiti eyo",
+      "noResultsDistrict": "Tewali bivudde mu {{district}} — mu kifo kyakyo tulaga ebivudde mu Uganda yonna.",
+      "noResultsNearby": "Tewali bivudde okumpi — mu kifo kyakyo tulaga ebivudde wala.",
+      "noResultsAnywhere": "Tewali bivudde mu kunoonya okwo mu kifo kyonna. Gezaako ekirala.",
+      "unableSearch": "Tetusobola kunoonya kati.",
+      "awayFrom": "{{provider}} — km {{km}} okuva wano",
+      "away": "km {{km}} okuva wano",
+      "notice": {
+        "denied": "Okukozesa ekifo kyo kugaaniddwa — londa disitulikiti wansi, oba tujja kulaga ebivudde byonna.",
+        "unsupported": "Brawuza eno teyinza kugabana kifo kyo — londa disitulikiti wansi, oba tujja kulaga ebivudde byonna.",
+        "timeout": "Tetusobodde kufuna kifo kyo mu budde — londa disitulikiti wansi, oba tujja kulaga ebivudde byonna.",
+        "unavailable": "Tetusobodde kumanya kifo kyo — londa disitulikiti wansi, oba tujja kulaga ebivudde byonna."
+      }
+    },
+    "browse": {
+      "breadcrumbShop": "Edduuka",
+      "breadcrumbServices": "Empeereza",
+      "geo": {
+        "denied": "Okukozesa ekifo kyo kugaaniddwa, kale tulaga Uganda yonna.",
+        "unsupported": "Brawuza eno teyinza kugabana kifo kyo, kale tulaga Uganda yonna.",
+        "timeout": "Tetusobodde kufuna kifo kyo mu budde, kale tulaga Uganda yonna.",
+        "unavailable": "Tetusobodde kumanya kifo kyo, kale tulaga Uganda yonna."
+      },
+      "collection": {
+        "new": "Ebipya ebizze",
+        "bestsellers": "Ebitundwa ennyo",
+        "all": "Ebintu byonna"
+      },
+      "sort": {
+        "featured": "Ebiragiddwa",
+        "newest": "Ebisinga obupya",
+        "price_asc": "Ebisinga okuba eby'ebbeeyi entono",
+        "price_desc": "Ebisinga okuba eby'ebbeeyi ennene",
+        "bestsellers": "Ebitundwa ennyo"
+      },
+      "nearYou": "Okumpi naawe (km {{km}})",
+      "around": "Okumpi ne {{district}}",
+      "allUganda": "Uganda yonna",
+      "widenedNear": "Tewali kintu mu km {{km}}, tulaga ebivudde ebisinga okuba okumpi mu Uganda yonna.",
+      "widenedDistrict": "Tewali bibuuzo bikwatagana mu {{district}}, tulaga Uganda yonna.",
+      "arrangedProducts": "Tulaga ebintu ebisinga okuba okumpi ne {{place}} okusooka.",
+      "arrangedServices": "Tulaga empeereza ezisinga okuba okumpi ne {{place}} okusooka.",
+      "whereUganda": "Uganda",
+      "whereYourArea": "ekitundu kyo",
+      "titleIn": "{{name}} mu {{where}}",
+      "allServices": "Empeereza zonna",
+      "products": "Ebintu",
+      "resultsFor": "Ebivudde mu “{{q}}”",
+      "count_one": "{{n}} ekivuddemu",
+      "count_other": "{{n}} ebivuddemu",
+      "searchChip": "Okunoonya: {{q}}",
+      "discountChip": "Ebikendeezeddwako ebbeeyi",
+      "priceChip": "UGX {{range}}",
+      "filters": "Okusengejja",
+      "closeFilters": "Ggalawo okusengejja",
+      "showResults_one": "Laga {{n}} ekivuddemu",
+      "showResults_other": "Laga {{n}} ebivuddemu",
+      "location": "Ekifo",
+      "locationAria": "Ekifo: {{label}}. Kyusa ekifo",
+      "filtersBtn": "Okusengejja ({{count}})",
+      "sort_label": "Teekateeka",
+      "clearAll": "Ggyawo byonna",
+      "noMatchProducts": "Tewali bintu bikwatagana",
+      "noMatchServices": "Tewali mpeereza ekwatagana",
+      "tryRemoving": "Gezaako okuggyawo okusengejja oba olonde ekifo ekigazi.",
+      "clearAllFilters": "Ggyawo okusengejja kwonna",
+      "backToServices": "Ddayo ku mpeereza",
+      "backToShop": "Ddayo mu dduuka",
+      "loadErrorProducts": "Tetusobodde kuleeta bintu.",
+      "loadErrorServices": "Tetusobodde kuleeta mpeereza."
+    },
+    "sidebar": {
+      "categories": "Ebibinja",
+      "allCategories": "Ebibinja byonna",
+      "showLess": "Laga bitono",
+      "showAll": "Laga byonna {{count}}",
+      "priceUgx": "Ebbeeyi, UGX",
+      "min": "ekitono",
+      "max": "ekisinga",
+      "clear": "Ggyawo",
+      "apply": "Kozesa",
+      "yes": "Yee",
+      "location": "Ekifo",
+      "withDiscount": "Ebikendeezeddwako ebbeeyi",
+      "clearAllFilters": "Ggyawo okusengejja kwonna"
+    },
+    "price": {
+      "under": "Wansi wa {{amount}}",
+      "over": "Okusinga {{amount}}"
+    },
+    "attr": {
+      "condition": "Embeera",
+      "brand": "Ekika (Brand)",
+      "yearOfManufacture": "Omwaka gwe kyakolebwamu",
+      "transmission": "Giya",
+      "internalStorage": "Ekifo eky'omunda eky'okuterekamu",
+      "ram": "RAM",
+      "storageCapacity": "Obusobozi bw'okuterekamu",
+      "screenSize": "Obunene bwa sikulini",
+      "size": "Obunene",
+      "fuel": "Amafuta",
+      "type": "Ekika",
+      "color": "Langi",
+      "make": "Omukozi",
+      "model": "Model",
+      "mileage": "Olugendo olutambuddwa"
+    },
+    "location": {
+      "title": "Londa ekifo",
+      "close": "Ggalawo",
+      "search": "Noonya disitulikiti",
+      "useCurrent": "Kozesa ekifo kyange kati",
+      "nearestFirst": "ekisinga okuba okumpi kisooke",
+      "around": "Okumpi ne {{district}}",
+      "yourAreaNearest": "ekitundu kyo, ekisinga okuba okumpi kisooke",
+      "allUganda": "Uganda yonna",
+      "ads_one": "{{n}} ekirango",
+      "ads_other": "{{n}} ebirango",
+      "noMatch": "Tewali disitulikiti ekwatagana ne “{{query}}”."
+    },
+    "layout": {
+      "label": "Engeri y'okulaga ebintu",
+      "grid": "Okulaba nga gridi",
+      "list": "Okulaba nga lisiti"
+    }
+  },
+  "product": {
+    "notFound": "Ekintu kino tekizuuliddwa.",
+    "backToShop": "Ddayo mu dduuka",
+    "breadcrumbShop": "Edduuka",
+    "breadcrumbServices": "Empeereza",
+    "metaShop": "{{name}} - {{price}} | Gabla Shop",
+    "metaService": "{{name}} - {{price}} | Gabla Services",
+    "shareCopied": "Link ekoppeddwa",
+    "shareFallback": "Koppa link okuva mu ddaala ly'endagiriro",
+    "share": "Gabana ku kino",
+    "bookNow": "Booka kati",
+    "checkAvailability": "Kebera oba kiriwo",
+    "seeContact": "Laba bye bakwatako",
+    "unlockContact": "Ggulawo bye bakwatako",
+    "orderNow": "Tuma ekiragiro kati",
+    "orderPayOnDelivery": "Tuma ekiragiro kati · sasula nga bakituusizza",
+    "payOnDelivery": "Sasula nga bakituusizza",
+    "addToCart": "Gattako mu nsawo y'okugula",
+    "added": "Kissiddwamu",
+    "description": "Ennyonyola",
+    "specifications": "Ebikikwatako",
+    "safetyTips": "Amagezi g'obukuumi",
+    "tips": {
+      "service1": "Mukkaanyize ku bbeeyi n'ebirimu bulungi nga tonnatandika mulimu.",
+      "service2": "Kuuma okwogera kwammwe n'okusasula nga bisobola okuzuulibwa, era sasula oluvannyuma lw'omulimu bw'oba osobola.",
+      "service3": "Kebera ebiwandiikiddwa abaguzi era saba ebyokulabirako by'emirimu egifaanagana.",
+      "product1": "Tuukirira omusuubuzi mu kifo ky'olukale era kebera ekintu nga tonnasasula.",
+      "product2": "Tosasula nga tonnalaba kintu.",
+      "product3": "Kakasa nti ekintu kifaanagana n'ebifaananyi n'ennyonyola."
+    },
+    "posted": "Kyateekebwawo {{time}}",
+    "views_one": "{{n}} okulaba",
+    "views_other": "{{n}} okulaba",
+    "contactForPrice": "Kuba essimu okumanya ebbeeyi",
+    "save": "Okendeezebwako {{amount}}",
+    "payNote": "Weereza ekiragiro kyo osasule ne mobile money omusuubuzi bw'amala okukikkiriza, oba londa okusasula nga bakituusizza.",
+    "serviceNote": "Ggulawo essimu n'ekifo ky'omuweereza okwogera ku mulimu mukkaanye ku bbeeyi butereevu.",
+    "similarServices": "Empeereza ezifaanagana",
+    "similarProducts": "Ebintu ebifaanagana",
+    "browseMore": "Laba ebisingawo",
+    "moreFrom": "Ebisingawo okuva ku {{seller}}",
+    "thisSeller": "omusuubuzi ono",
+    "visitShop": "Genda mu dduuka",
+    "gallery": {
+      "openFull": "Ggulawo ekifaananyi mu bunene bwakyo",
+      "prev": "Ekifaananyi ekiyise",
+      "next": "Ekifaananyi ekiddako",
+      "showImage": "Laga ekifaananyi {{n}}",
+      "close": "Ggalawo"
+    }
+  }
+}

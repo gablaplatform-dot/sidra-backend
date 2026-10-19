@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
@@ -43,6 +44,7 @@ const pickCollectionBanner = (promos) => {
 };
 
 export default function Shop() {
+  const { t } = useTranslation();
   const { categoryId } = useParams();
   const [session] = useState(() => getSession());
   const [categories, setCategories] = useState(null);
@@ -54,8 +56,8 @@ export default function Shop() {
   const [ads, setAds] = useState(null);
 
   useEffect(() => {
-    document.title = "Gabla Shop — Trendy Fashion, Electronics & Lifestyle";
-  }, []);
+    document.title = t("shop.meta.title");
+  }, [t]);
 
   const ADS_RADIUS_KM = 15;
 

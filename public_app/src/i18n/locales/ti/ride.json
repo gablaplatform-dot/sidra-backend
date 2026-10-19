@@ -1,0 +1,94 @@
+{
+  "ride": {
+    "back": "ተመለስ",
+    "droppedPin": "ዝተሰቅለ ምልክት",
+    "pickupPlaceholder": "ዝስከመሉ ቦታ",
+    "dropoffPlaceholder": "ናበይ?",
+    "useCurrentLocation": "ሕጂ ዘለኻዮ ቦታ ተጠቐም",
+    "searchHint": "ኣድራሻ ድለዩ፡ ወይ ምልክት ንምቕማጥ ኣብ ካርታ ጠውቑ።",
+    "chooseRide": "መጓዓዝያ ምረጽ",
+    "editLocations": "ዝስከመሉን ዝወርደሉን ቦታ ኣርምም",
+    "notAvailable": "ሕጂ የለን",
+    "distanceEta": "~{{km}} ኪ.ሜ · {{eta}}",
+    "requesting": "ይሓትት ኣሎ…",
+    "requestRide": "{{type}} ሕተት • {{fare}}",
+    "chooseType": "ዓይነት መጓዓዝያ ምረጽ",
+    "signInToRequest": "መጓዓዝያ ንምሕታት እተው",
+    "yourDriver": "ሸፋሪኹም",
+    "estimatedFare": "ዝተገመተ ክፍሊት",
+    "cancel": "ሰርዝ",
+    "cancelRide": "መጓዓዝያ ሰርዝ",
+    "bookAnother": "ካልእ መጓዓዝያ ሕዝ",
+    "callDriver": "ንሸፋሪ ደውል",
+    "map": {
+      "notConfigured": "ካርታ ኣይተዳለወን።",
+      "loadFailed": "ካርታ ምጽዓን ኣይተኻኣለን",
+      "unavailable": "ካርታ ሕጂ የለን።"
+    },
+    "types": {
+      "boda": {
+        "label": "ቦዳ",
+        "description": "ቅልጡፍን ርሱንን"
+      },
+      "car": {
+        "label": "መኪና",
+        "description": "ምቹእ መጓዓዝያ"
+      }
+    },
+    "eta": {
+      "underMinute": "ካብ ሓንቲ ደቒቕ ትሕት",
+      "minutes_one": "{{count}} ደቒቕ",
+      "minutes_other": "{{count}} ደቒቕ"
+    },
+    "payment": {
+      "cash": "ጥረ ገንዘብ",
+      "mobileMoney": "Mobile Money",
+      "mobileMoneyNumber": "ቁጽሪ Mobile Money",
+      "phonePlaceholder": "ንኣብነት: +256 700 000000"
+    },
+    "confirm": {
+      "title": "ሸፋሪ ረኺብናልካ",
+      "subtitle": "ዝርዝሩ ርአዩ፡ ድሕሪኡ ሕቶኹም ንምስዳድ ኣረጋግጹ።",
+      "confirming": "የረጋግጽ ኣሎ…",
+      "button": "እዚ ሸፋሪ ኣረጋግጽ"
+    },
+    "noDrivers": {
+      "title": "ኣብ ጥቓኻ ሸፋሪ የለን",
+      "body": "ሕጂ ሸፋሪ ኣይረኸብናን። ቀስ ኢልኩም ደጊምኩም ፈትኑ።",
+      "tryAgain": "ደጊምካ ፈትን"
+    },
+    "complete": {
+      "title": "ጉዕዞ ተወዲኡ",
+      "fare": "ክፍሊት: {{fare}}",
+      "thanks": "ምስ Gabla ስለ ዝተጓዕዝኩም የቐንየልና።"
+    },
+    "cancelled": {
+      "title": "ጉዕዞ ተሰሪዙ"
+    },
+    "status": {
+      "searching": {
+        "title": "ሸፋሪ ይደሊ ኣሎ…",
+        "subtitle": "ብዙሕ ግዜ ኣይወስድን፡ ውሑድ ሰኮንዳት እዩ።"
+      },
+      "matched": {
+        "title": "ሸፋሪ ናብኻ ይመጽእ ኣሎ",
+        "subtitle": "ኣብ ታሕቲ ተኸታተሉዎ።"
+      },
+      "arrived": {
+        "title": "ሸፋሪኹም በጺሑ",
+        "subtitle": "ምስ ተዳለኹም ወጹ።"
+      },
+      "in_progress": {
+        "title": "ኣብ መገዲ ኢኹም",
+        "subtitle": "ጽቡቕ ጉዕዞ።"
+      }
+    },
+    "errors": {
+      "phoneRequired": "ክፍሊት ዝኸፍሉሉ ቁጽሪ ተሌፎን ኣእትዉ።",
+      "sessionExpired": "ግዜ ኣተዉ ኣብቂዑ። እዚ ጉዕዞ ክትከታተሉ ዳግማይ እተዉ።",
+      "requestFailed": "ሕጂ መጓዓዝያ ምሕታት ኣይተኻኣለን።",
+      "confirmFailed": "እዚ መጓዓዝያ ምርግጋጽ ኣይተኻኣለን።",
+      "cancelFailed": "እዚ ጉዕዞ ምስራዝ ኣይተኻኣለን።"
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { IconClose, IconPin, IconSearch } from "../../icons";
 
@@ -6,6 +7,7 @@ import { IconClose, IconPin, IconSearch } from "../../icons";
 // automatically on the server when nothing is close), then districts that actually have listings,
 // each with its count for the current category and filters.
 export default function LocationPicker({ districts, current, preferred, onSelect, onClose }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
 
   useEffect(() => {
@@ -23,33 +25,33 @@ export default function LocationPicker({ districts, current, preferred, onSelect
 
   return (
     <div className="sb-modal-backdrop" onClick={onClose}>
-      <div className="sb-modal" role="dialog" aria-label="Select location" onClick={(event) => event.stopPropagation()}>
+      <div className="sb-modal" role="dialog" aria-label={t("shop.location.title")} onClick={(event) => event.stopPropagation()}>
         <div className="sb-modal-head">
-          <h2>Select location</h2>
-          <button type="button" className="sb-icon-btn" onClick={onClose} aria-label="Close">
+          <h2>{t("shop.location.title")}</h2>
+          <button type="button" className="sb-icon-btn" onClick={onClose} aria-label={t("shop.location.close")}>
             <IconClose />
           </button>
         </div>
 
         <label className="sb-modal-search">
           <IconSearch width={16} height={16} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search district" autoFocus />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("shop.location.search")} autoFocus />
         </label>
 
         <div className="sb-modal-list">
           <button type="button" className={`sb-loc-row sb-loc-near ${current.near ? "is-active" : ""}`} onClick={() => onSelect({ near: true })}>
             <IconPin width={16} height={16} />
-            <span>Use my current location</span>
-            <em>nearest first</em>
+            <span>{t("shop.location.useCurrent")}</span>
+            <em>{t("shop.location.nearestFirst")}</em>
           </button>
           {preferred ? (
             <button type="button" className={`sb-loc-row ${isAround ? "is-active" : ""}`} onClick={() => onSelect({})}>
-              <span>Around {preferred}</span>
-              <em>your area, nearest first</em>
+              <span>{t("shop.location.around", { district: preferred })}</span>
+              <em>{t("shop.location.yourAreaNearest")}</em>
             </button>
           ) : null}
           <button type="button" className={`sb-loc-row ${current.everywhere || (!preferred && isAround) ? "is-active" : ""}`} onClick={() => onSelect({ everywhere: true })}>
-            <span>All Uganda</span>
+            <span>{t("shop.location.allUganda")}</span>
           </button>
           {visible.map((d) => (
             <button
@@ -59,10 +61,10 @@ export default function LocationPicker({ districts, current, preferred, onSelect
               onClick={() => onSelect({ district: d.name })}
             >
               <span>{d.name}</span>
-              <em>{d.count.toLocaleString()} {d.count === 1 ? "ad" : "ads"}</em>
+              <em>{t("shop.location.ads", { count: d.count, n: d.count.toLocaleString() })}</em>
             </button>
           ))}
-          {!visible.length ? <p className="sb-modal-empty">No district matches &ldquo;{query}&rdquo;.</p> : null}
+          {!visible.length ? <p className="sb-modal-empty">{t("shop.location.noMatch", { query })}</p> : null}
         </div>
       </div>
     </div>

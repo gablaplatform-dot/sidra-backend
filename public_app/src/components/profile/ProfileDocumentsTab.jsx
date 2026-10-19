@@ -1,16 +1,18 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import DocumentStudio from "./DocumentStudio";
 import IssuedDocuments from "./IssuedDocuments";
 
 const VIEWS = [
-  { key: "design", label: "Design" },
-  { key: "issued", label: "Issued documents" }
+  { key: "design" },
+  { key: "issued" }
 ];
 
 // Provider "Quotes & receipts": a studio to design how quotations and receipts look, and the list of everything
 // issued to buyers. Both views stay mounted once opened so an unsaved design isn't lost when you peek at the list.
 export default function ProfileDocumentsTab({ provider, onOpenOrder, onDirtyChange }) {
+  const { t } = useTranslation();
   const [view, setView] = useState("design");
   const [visitedIssued, setVisitedIssued] = useState(false);
 
@@ -23,10 +25,10 @@ export default function ProfileDocumentsTab({ provider, onOpenOrder, onDirtyChan
     <section className="docs-tab detail-block">
       <header className="docs-head">
         <div>
-          <h2>Quotes &amp; receipts</h2>
-          <p className="docs-head-sub">Design the quotations and receipts your buyers get by email, and track everything you&apos;ve issued.</p>
+          <h2>{t("profile.tabs.documents")}</h2>
+          <p className="docs-head-sub">{t("docs.tab.sub")}</p>
         </div>
-        <div className="docs-seg" role="tablist" aria-label="Quotes and receipts views">
+        <div className="docs-seg" role="tablist" aria-label={t("docs.tab.viewsAria")}>
           {VIEWS.map((item) => (
             <button
               key={item.key}
@@ -38,7 +40,7 @@ export default function ProfileDocumentsTab({ provider, onOpenOrder, onDirtyChan
               className={view === item.key ? "is-active" : ""}
               onClick={() => show(item.key)}
             >
-              {item.label}
+              {t(`docs.tab.${item.key}`)}
             </button>
           ))}
         </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { loginPath } from "../lib/authRedirect";
 
 import { request } from "../lib/api";
@@ -49,10 +50,9 @@ const defaultBooking = (unit = "night") => ({
   blockedDates: []
 });
 
-const UNIT_LABEL = { night: "night", day: "day", hour: "hour" };
-
 // The provider's booking set-up for a service: how it is booked, what is on offer, and the house rules.
 function BookingSection({ form, setForm, blockDate, setBlockDate }) {
+  const { t } = useTranslation();
   const b = form.booking;
   const unit = b.unit;
   const set = (patch) => setForm((current) => ({ ...current, booking: { ...current.booking, ...patch } }));
@@ -65,21 +65,21 @@ function BookingSection({ form, setForm, blockDate, setBlockDate }) {
   };
   return (
     <section className="booking-setup">
-      <h3>Bookings</h3>
+      <h3>{t("listing.booking.title")}</h3>
       <label className="booking-toggle">
         <input type="checkbox" checked={on} onChange={(e) => setForm((current) => ({ ...current, bookingMode: e.target.checked ? "request" : "none" }))} />
         <span>
-          <strong>This is a booking service</strong>
-          <small>Guests pick dates or a time and book it here, like hotel rooms, venues or appointments. Leave it off if customers just unlock your contact and call.</small>
+          <strong>{t("listing.booking.isBooking")}</strong>
+          <small>{t("listing.booking.isBookingHint")}</small>
         </span>
       </label>
 
       {on ? (
         <div className="booking-grid">
-          <div className="booking-modes" role="radiogroup" aria-label="How bookings are accepted">
+          <div className="booking-modes" role="radiogroup" aria-label={t("listing.booking.howAccepted")}>
             {[
-              { id: "request", title: "I approve each booking", text: "Guests send a request. You accept or decline within the time you set; dates are held meanwhile." },
-              { id: "instant", title: "Confirm instantly", text: "Open dates are confirmed straight away, no waiting. Best when you're rarely unavailable." }
+              { id: "request", title: t("listing.booking.modeRequestTitle"), text: t("listing.booking.modeRequestText") },
+              { id: "instant", title: t("listing.booking.modeInstantTitle"), text: t("listing.booking.modeInstantText") }
             ].map((m) => (
               <button key={m.id} type="button" role="radio" aria-checked={form.bookingMode === m.id} className={`booking-mode ${form.bookingMode === m.id ? "is-on" : ""}`} onClick={() => setForm((current) => ({ ...current, bookingMode: m.id }))}>
                 <strong>{m.title}</strong>
@@ -89,86 +89,86 @@ function BookingSection({ form, setForm, blockDate, setBlockDate }) {
           </div>
 
           <div className="form-grid two">
-            <Field label="Guests book by the">
+            <Field label={t("listing.booking.bookBy")}>
               <select value={unit} onChange={(e) => set({ unit: e.target.value, maxUnits: e.target.value === "night" ? 30 : e.target.value === "day" ? 14 : 12 })}>
-                <option value="night">Night (rooms, stays)</option>
-                <option value="day">Day (venues, car hire)</option>
-                <option value="hour">Hour (appointments, studios)</option>
+                <option value="night">{t("listing.booking.unitNight")}</option>
+                <option value="day">{t("listing.booking.unitDay")}</option>
+                <option value="hour">{t("listing.booking.unitHour")}</option>
               </select>
             </Field>
-            <Field label={unit === "hour" ? "How many can be booked at once" : "How many do you have"} hint={unit === "night" ? "Rooms of this type" : "Identical rooms, spaces or vehicles"}>
+            <Field label={unit === "hour" ? t("listing.booking.inventoryHour") : t("listing.booking.inventory")} hint={unit === "night" ? t("listing.booking.inventoryHintNight") : t("listing.booking.inventoryHint")}>
               <input type="number" min="1" value={b.inventory} onChange={num("inventory")} />
             </Field>
-            <Field label="Guests per unit" hint="Most people one room or space holds">
+            <Field label={t("listing.booking.capacity")} hint={t("listing.booking.capacityHint")}>
               <input type="number" min="1" value={b.capacity} onChange={num("capacity")} />
             </Field>
-            <Field label={`Minimum ${UNIT_LABEL[unit]}s`}>
+            <Field label={t(`listing.booking.min.${unit}`)}>
               <input type="number" min="1" value={b.minUnits} onChange={num("minUnits")} />
             </Field>
-            <Field label={`Maximum ${UNIT_LABEL[unit]}s`}>
+            <Field label={t(`listing.booking.max.${unit}`)}>
               <input type="number" min="1" value={b.maxUnits} onChange={num("maxUnits")} />
             </Field>
-            <Field label="Notice needed (hours)" hint="Stops last-minute bookings; 0 for none">
+            <Field label={t("listing.booking.notice")} hint={t("listing.booking.noticeHint")}>
               <input type="number" min="0" value={b.leadTimeHours} onChange={num("leadTimeHours")} />
             </Field>
             {unit === "night" ? (
               <>
-                <Field label="Check-in from"><input type="time" value={b.checkIn} onChange={(e) => set({ checkIn: e.target.value })} /></Field>
-                <Field label="Check-out by"><input type="time" value={b.checkOut} onChange={(e) => set({ checkOut: e.target.value })} /></Field>
+                <Field label={t("listing.booking.checkIn")}><input type="time" value={b.checkIn} onChange={(e) => set({ checkIn: e.target.value })} /></Field>
+                <Field label={t("listing.booking.checkOut")}><input type="time" value={b.checkOut} onChange={(e) => set({ checkOut: e.target.value })} /></Field>
               </>
             ) : null}
             {unit === "hour" ? (
               <>
-                <Field label="Open from"><input type="time" step="3600" value={b.openFrom} onChange={(e) => set({ openFrom: e.target.value })} /></Field>
-                <Field label="Closes at"><input type="time" step="3600" value={b.openTo} onChange={(e) => set({ openTo: e.target.value })} /></Field>
+                <Field label={t("listing.booking.openFrom")}><input type="time" step="3600" value={b.openFrom} onChange={(e) => set({ openFrom: e.target.value })} /></Field>
+                <Field label={t("listing.booking.closesAt")}><input type="time" step="3600" value={b.openTo} onChange={(e) => set({ openTo: e.target.value })} /></Field>
               </>
             ) : null}
             {form.bookingMode === "request" ? (
-              <Field label="Answer within (hours)" hint="Unanswered requests expire and free the dates">
+              <Field label={t("listing.booking.answerWithin")} hint={t("listing.booking.answerHint")}>
                 <input type="number" min="2" max="72" value={b.responseHours} onChange={num("responseHours")} />
               </Field>
             ) : null}
-            <Field label="Cancellation policy">
+            <Field label={t("listing.booking.cancellation")}>
               <select value={b.cancellation} onChange={(e) => set({ cancellation: e.target.value })}>
-                <option value="flexible">Flexible: free up to 24 hours before</option>
-                <option value="moderate">Moderate: free up to 5 days before</option>
-                <option value="strict">Strict: deposit is non-refundable</option>
+                <option value="flexible">{t("listing.booking.cancelFlexible")}</option>
+                <option value="moderate">{t("listing.booking.cancelModerate")}</option>
+                <option value="strict">{t("listing.booking.cancelStrict")}</option>
               </select>
             </Field>
           </div>
 
           <div className="form-grid two">
-            <Field label="Take payment online" hint="Guests pay this share by mobile money only after you confirm the booking. Nothing is charged before.">
+            <Field label={t("listing.booking.takePayment")} hint={t("listing.booking.takePaymentHint")}>
               <select value={b.depositPercent} onChange={(e) => set({ depositPercent: Number(e.target.value) })}>
-                <option value={0}>No, guests pay me directly</option>
-                <option value={20}>20% deposit</option>
-                <option value={30}>30% deposit</option>
-                <option value={50}>50% deposit</option>
-                <option value={100}>Full amount</option>
+                <option value={0}>{t("listing.booking.payDirect")}</option>
+                <option value={20}>{t("listing.booking.deposit", { percent: 20 })}</option>
+                <option value={30}>{t("listing.booking.deposit", { percent: 30 })}</option>
+                <option value={50}>{t("listing.booking.deposit", { percent: 50 })}</option>
+                <option value={100}>{t("listing.booking.fullAmount")}</option>
               </select>
             </Field>
             {b.depositPercent > 0 ? (
-              <Field label="Guest must pay within (hours)" hint="After you confirm. Unpaid bookings expire and free the dates.">
+              <Field label={t("listing.booking.payWithin")} hint={t("listing.booking.payWithinHint")}>
                 <input type="number" min="1" max="72" value={b.payWithinHours} onChange={num("payWithinHours")} />
               </Field>
             ) : null}
           </div>
-          <Field label="Payment note (optional)" hint="Shown to guests, e.g. balance due on arrival">
+          <Field label={t("listing.booking.paymentNote")} hint={t("listing.booking.paymentNoteHint")}>
             <input maxLength={200} value={b.depositNote} onChange={(e) => set({ depositNote: e.target.value })} />
           </Field>
-          <Field label="House rules & instructions (optional)" hint="Guests see this once the booking is confirmed" as="div">
+          <Field label={t("listing.booking.houseRules")} hint={t("listing.booking.houseRulesHint")} as="div">
             <textarea rows="3" maxLength={600} value={b.instructions} onChange={(e) => set({ instructions: e.target.value })} />
           </Field>
 
-          <Field label="Dates you're not available" as="div">
+          <Field label={t("listing.booking.unavailable")} as="div">
             <div className="booking-block-row">
               <input type="date" value={blockDate} onChange={(e) => setBlockDate(e.target.value)} />
-              <button type="button" className="secondary-button" onClick={addBlocked}>Block date</button>
+              <button type="button" className="secondary-button" onClick={addBlocked}>{t("listing.booking.blockDate")}</button>
             </div>
             {b.blockedDates.length ? (
               <div className="booking-chips">
                 {b.blockedDates.map((d) => (
-                  <span key={d} className="booking-chip">{d}<button type="button" aria-label={`Unblock ${d}`} onClick={() => set({ blockedDates: b.blockedDates.filter((x) => x !== d) })}>×</button></span>
+                  <span key={d} className="booking-chip">{d}<button type="button" aria-label={t("listing.booking.unblock", { date: d })} onClick={() => set({ blockedDates: b.blockedDates.filter((x) => x !== d) })}>×</button></span>
                 ))}
               </div>
             ) : null}
@@ -180,6 +180,7 @@ function BookingSection({ form, setForm, blockDate, setBlockDate }) {
 }
 
 export default function ListingForm() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { listingId } = useParams();
@@ -255,7 +256,7 @@ export default function ListingForm() {
         if (isEditing) {
           const listing = (listingResult?.items || []).find((item) => item.id === listingId);
           if (!listing) {
-            setError("This listing could not be found.");
+            setError(t("listing.errNotFound"));
             return;
           }
           setForm({
@@ -293,7 +294,7 @@ export default function ListingForm() {
           setForm((current) => ({ ...current, categoryId: providerResult?.categoryId || "" }));
         }
       })
-      .catch((loadError) => setError(loadError.message || "Unable to load this page."))
+      .catch((loadError) => setError(loadError.message || t("listing.errLoad")))
       .finally(() => {
         if (active) setLoading(false);
       });
@@ -372,7 +373,7 @@ export default function ListingForm() {
       setForm((current) => ({ ...current, [categoryIdKey]: created.id, customFields: {} }));
       cancelNewCategory();
     } catch (createError) {
-      setError(createError.message || "Unable to create this subcategory.");
+      setError(createError.message || t("listing.errCreateSub"));
     } finally {
       setCreatingCategory(false);
     }
@@ -387,7 +388,7 @@ export default function ListingForm() {
       const url = await uploadFile(file, "provider-listings");
       setForm((current) => ({ ...current, imageUrl: url }));
     } catch (uploadError) {
-      setError(uploadError.message || "Unable to upload photo.");
+      setError(uploadError.message || t("listing.errUpload"));
     } finally {
       setUploadingCover(false);
     }
@@ -402,7 +403,7 @@ export default function ListingForm() {
       const url = await uploadFile(file, "provider-listings");
       setForm((current) => ({ ...current, gallery: [...current.gallery, url] }));
     } catch (uploadError) {
-      setError(uploadError.message || "Unable to upload photo.");
+      setError(uploadError.message || t("listing.errUpload"));
     } finally {
       setUploadingGallery(false);
       if (galleryFileRef.current) galleryFileRef.current.value = "";
@@ -417,26 +418,26 @@ export default function ListingForm() {
     event.preventDefault();
     setError("");
     if (!form.name.trim()) {
-      setError("Give it a name.");
+      setError(t("listing.errName"));
       return;
     }
     if (!categoryPath[0]) {
-      setError(`Choose a category for this ${form.type}.`);
+      setError(t(`listing.errCategory.${form.type}`));
       return;
     }
     if (!form[categoryIdKey]) {
-      setError(`Choose a more specific subcategory for this ${form.type}.`);
+      setError(t(`listing.errSubcategory.${form.type}`));
       return;
     }
     if (isService && form.bookingMode !== "none" && !(Number(form.price) > 0)) {
-      setError(`Set a price per ${UNIT_LABEL[form.booking.unit]} so guests can book.`);
+      setError(t(`listing.errPricePer.${form.booking.unit}`));
       return;
     }
     const missingField = listingFields.find(
       (field) => field.required && !isCustomFieldFilled(field, form.customFields[field.key])
     );
     if (missingField) {
-      setError(`Please fill in "${missingField.label}".`);
+      setError(t("listing.errFillField", { field: missingField.label }));
       return;
     }
     const priceNum = form.price === "" ? 0 : Number(form.price);
@@ -444,15 +445,15 @@ export default function ListingForm() {
     const discountPercentNum = form.discountPercent === "" ? null : Number(form.discountPercent);
     if (discountPercentNum !== null) {
       if (!Number.isInteger(discountPercentNum) || discountPercentNum < 1 || discountPercentNum > 100) {
-        setError("Discount percent must be a whole number between 1 and 100.");
+        setError(t("listing.errDiscount"));
         return;
       }
       if (!originalPriceNum || originalPriceNum <= 0) {
-        setError("Original price must be set to use a discount.");
+        setError(t("listing.errOriginalRequired"));
         return;
       }
       if (originalPriceNum < priceNum) {
-        setError("Original price cannot be lower than the current price.");
+        setError(t("listing.errOriginalLower"));
         return;
       }
     }
@@ -485,7 +486,7 @@ export default function ListingForm() {
       }
       navigate("/profile", { replace: true });
     } catch (submitError) {
-      setError(submitError.message || "Unable to save this listing.");
+      setError(submitError.message || t("listing.errSave"));
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSaving(false);
@@ -508,44 +509,44 @@ export default function ListingForm() {
       ) : (
         <div className="listing-form-page">
           <div className="form-heading">
-            <p className="eyebrow">{isEditing ? "Edit" : "Add"}</p>
-            <h2>{isEditing ? "Edit product or service" : "Add a product or service"}</h2>
+            <p className="eyebrow">{isEditing ? t("listing.edit") : t("listing.add")}</p>
+            <h2>{isEditing ? t("listing.editTitle") : t("listing.addTitle")}</h2>
           </div>
 
           {error ? <div className="error-message">{error}</div> : null}
 
           <form className="registration-form listing-form-standalone" onSubmit={submit}>
             <section>
-              <h3>Details</h3>
+              <h3>{t("listing.details")}</h3>
               <div className="form-grid two">
-                <Field label="Type">
+                <Field label={t("listing.type")}>
                   <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value, customFields: {} })}>
-                    <option value="service">Service</option>
-                    <option value="product">Product</option>
+                    <option value="service">{t("listing.service")}</option>
+                    <option value="product">{t("listing.product")}</option>
                   </select>
                 </Field>
                 {productLevels.map((level) => (
-                  <Field key={level.depth} label={level.depth === 0 ? "Category *" : "Subcategory *"}>
+                  <Field key={level.depth} label={level.depth === 0 ? t("listing.categoryReq") : t("listing.subcategoryReq")}>
                     <select value={level.selectedId} onChange={(e) => selectProductCategoryAtDepth(level.depth, e.target.value)}>
-                      <option value="">{level.depth === 0 ? "Choose a category" : "Choose a subcategory"}</option>
+                      <option value="">{level.depth === 0 ? t("listing.chooseCategory") : t("listing.chooseSubcategory")}</option>
                       {level.options.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>
                   </Field>
                 ))}
-                <Field label="Name">
+                <Field label={t("listing.name")}>
                   <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </Field>
-                <Field label={isService && form.bookingMode !== "none" ? `Price per ${UNIT_LABEL[form.booking.unit]} (UGX)` : "Price (UGX)"}>
+                <Field label={isService && form.bookingMode !== "none" ? t(`listing.pricePer.${form.booking.unit}`) : t("listing.price")}>
                   <input type="number" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
                 </Field>
                 {form.type === "product" ? (
                   <>
-                    <Field label="Original price (UGX)" hint="Before discount — leave blank if none">
+                    <Field label={t("listing.originalPrice")} hint={t("listing.originalPriceHint")}>
                       <input type="number" min="0" value={form.originalPrice} onChange={(e) => setForm({ ...form, originalPrice: e.target.value })} />
                     </Field>
-                    <Field label="Discount %" hint="1-100 whole number. Requires original price.">
+                    <Field label={t("listing.discount")} hint={t("listing.discountHint")}>
                       <input
                         type="number"
                         min="1"
@@ -553,32 +554,32 @@ export default function ListingForm() {
                         step="1"
                         value={form.discountPercent}
                         onChange={(e) => setForm({ ...form, discountPercent: e.target.value })}
-                        placeholder="e.g. 30"
+                        placeholder={t("listing.discountPlaceholder")}
                       />
                     </Field>
-                    <Field label="SKU (optional)" hint="Internal stock keeping unit code">
+                    <Field label={t("listing.sku")} hint={t("listing.skuHint")}>
                       <input
                         value={form.sku}
                         onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                        placeholder="e.g. SHOE-MEN-042"
+                        placeholder={t("listing.skuPlaceholder")}
                         maxLength={120}
                       />
                     </Field>
-                    <Field label="Inventory (optional)" hint="Number of units in stock — leave blank for unlimited">
+                    <Field label={t("listing.inventory")} hint={t("listing.inventoryHint")}>
                       <input
                         type="number"
                         min="0"
                         step="1"
                         value={form.inventory}
                         onChange={(e) => setForm({ ...form, inventory: e.target.value })}
-                        placeholder="e.g. 50"
+                        placeholder={t("listing.inventoryPlaceholder")}
                       />
                     </Field>
                   </>
                 ) : null}
-                <Field label="Shop category (optional)" hint="Manage these under Profile → Shop categories">
+                <Field label={t("listing.shopCategory")} hint={t("listing.shopCategoryHint")}>
                   <select value={form.shopCategoryId} onChange={(e) => setForm({ ...form, shopCategoryId: e.target.value })}>
-                    <option value="">No shop category</option>
+                    <option value="">{t("listing.noShopCategory")}</option>
                     {flatShopCategoryOptions.map((c) => (
                       <option key={c.id} value={c.id}>{c.path}</option>
                     ))}
@@ -588,7 +589,7 @@ export default function ListingForm() {
 
               {!tree.length ? (
                 <p className="provider-meta">
-                  No {isService ? "service" : "shop"} categories exist yet — ask an admin to create one before you can add a {form.type}.
+                  {t(`listing.noCategories.${form.type}`)}
                 </p>
               ) : null}
 
@@ -596,71 +597,71 @@ export default function ListingForm() {
                 <div className="new-category-panel">
                   {newCategoryDraft ? (
                     <div className="form-grid two">
-                      <Field label="New subcategory name">
+                      <Field label={t("listing.newSubName")}>
                         <input
                           value={newCategoryName}
                           onChange={(e) => setNewCategoryName(e.target.value)}
-                          placeholder="e.g. Drones"
+                          placeholder={t("listing.newSubPlaceholder")}
                           autoFocus
                         />
                       </Field>
                       <div className="checkbox-row" style={{ alignItems: "center", gap: 8 }}>
                         <button type="button" className="cta-button" disabled={creatingCategory || !newCategoryName.trim()} onClick={createSubcategory}>
-                          {creatingCategory ? "Creating…" : "Create"}
+                          {creatingCategory ? t("listing.creating") : t("listing.create")}
                         </button>
-                        <button type="button" className="secondary-button" onClick={cancelNewCategory}>Cancel</button>
+                        <button type="button" className="secondary-button" onClick={cancelNewCategory}>{t("listing.cancel")}</button>
                       </div>
                     </div>
                   ) : (
                     <div className="checkbox-row" style={{ gap: 12 }}>
-                      <button type="button" className="secondary-button" onClick={startNewSubcategory}>+ Add new subcategory</button>
+                      <button type="button" className="secondary-button" onClick={startNewSubcategory}>{t("listing.addSub")}</button>
                     </div>
                   )}
                   <p className="provider-meta" style={{ marginTop: 8 }}>
-                    Can&apos;t find the right subcategory? Add one — it goes live immediately and is queued for admin review.
+                    {t("listing.addSubHint")}
                   </p>
                 </div>
               ) : null}
 
-              <Field label="Description" as="div">
+              <Field label={t("listing.description")} as="div">
                 <textarea rows="8" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </Field>
               {isService ? (
                 <p className="provider-meta listing-guard-note">
-                  Describe the service itself. Don&apos;t put phone numbers, WhatsApp, emails, links or addresses in the text or the photos &mdash; customers get your contact details when they unlock them, and listings that include them are rejected.
+                  {t("listing.guardNote")}
                 </p>
               ) : null}
-              <Field label="Highlight this listing" as="div">
+              <Field label={t("listing.highlight")} as="div">
                 <label className="checkbox-row">
                   <input
                     type="checkbox"
                     checked={form.featured}
                     onChange={(e) => setForm({ ...form, featured: e.target.checked })}
                   />
-                  <span>Feature it as a best seller on your storefront</span>
+                  <span>{t("listing.featureBest")}</span>
                 </label>
               </Field>
               {form.type === "product" ? (
-                <Field label="New arrival" as="div">
+                <Field label={t("listing.newArrival")} as="div">
                   <label className="checkbox-row">
                     <input
                       type="checkbox"
                       checked={form.isNew}
                       onChange={(e) => setForm({ ...form, isNew: e.target.checked })}
                     />
-                    <span>Mark this product as a new arrival for 30 days</span>
+                    <span>{t("listing.markNew")}</span>
                   </label>
                 </Field>
               ) : null}
               {form.type === "product" ? (
-                <Field label="Online purchase" as="div">
+                <Field label={t("listing.onlinePurchase")} as="div">
                   <label className="checkbox-row">
                     <input
                       type="checkbox"
                       checked={form.onlinePaymentEnabled}
                       onChange={(e) => setForm({ ...form, onlinePaymentEnabled: e.target.checked })}
                     />
-                    <span>Let customers pay online with mobile money after you accept their order</span>
+                    <span>{t("listing.letPayOnline")}</span>
                   </label>
                 </Field>
               ) : null}
@@ -672,7 +673,7 @@ export default function ListingForm() {
 
             {listingFields.length ? (
               <section>
-                <h3>More about this {activeFieldsCategory?.name?.toLowerCase() || "listing"}</h3>
+                <h3>{activeFieldsCategory?.name ? t("listing.moreAbout", { name: activeFieldsCategory.name.toLowerCase() }) : t("listing.moreAboutListing")}</h3>
                 <div className="form-grid two">
                   {listingFields.map((field) => (
                     <Field
@@ -698,42 +699,42 @@ export default function ListingForm() {
             ) : null}
 
             <section>
-              <h3>Cover photo</h3>
+              <h3>{t("listing.coverPhoto")}</h3>
               {form.imageUrl ? <div className="listing-cover" style={{ backgroundImage: `url("${form.imageUrl}")`, height: 160 }} /> : null}
               <input type="file" accept="image/*" onChange={pickCoverImage} disabled={uploadingCover} />
-              {uploadingCover ? <small>Uploading…</small> : null}
+              {uploadingCover ? <small>{t("listing.uploading")}</small> : null}
             </section>
 
             <section>
               <div className="detail-block-header">
-                <h3>Additional photos</h3>
+                <h3>{t("listing.additionalPhotos")}</h3>
                 <button type="button" className="cta-button" onClick={() => galleryFileRef.current?.click()} disabled={uploadingGallery}>
-                  {uploadingGallery ? "Uploading…" : "+ Add photo"}
+                  {uploadingGallery ? t("listing.uploading") : t("listing.addPhoto")}
                 </button>
                 <input ref={galleryFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={addGalleryPhoto} />
               </div>
               <p className="provider-meta" style={{ marginTop: -8, marginBottom: 12 }}>
-                Extra angles or details for this specific {form.type === "product" ? "product" : "service"} &mdash; not your business gallery.
+                {t(`listing.galleryHint.${form.type === "product" ? "product" : "service"}`)}
               </p>
               {form.gallery.length ? (
                 <div className="gallery-grid">
                   {form.gallery.map((url) => (
                     <div key={url} className="gallery-item" style={{ backgroundImage: `url("${url}")` }}>
-                      <button type="button" className="gallery-remove" onClick={() => removeGalleryPhoto(url)} aria-label="Remove photo">
+                      <button type="button" className="gallery-remove" onClick={() => removeGalleryPhoto(url)} aria-label={t("listing.removePhoto")}>
                         <IconClose />
                       </button>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="provider-meta">No gallery photos yet.</p>
+                <p className="provider-meta">{t("listing.noGallery")}</p>
               )}
             </section>
 
             <button className="primary-button" type="submit" disabled={saving}>
-              {saving ? "Saving…" : isEditing ? "Save changes" : "Add listing"}
+              {saving ? t("listing.saving") : isEditing ? t("listing.saveChanges") : t("listing.addListing")}
             </button>
-            <Link to="/profile" className="secondary-button" style={{ display: "block", textAlign: "center" }}>Cancel</Link>
+            <Link to="/profile" className="secondary-button" style={{ display: "block", textAlign: "center" }}>{t("listing.cancel")}</Link>
           </form>
         </div>
       )}

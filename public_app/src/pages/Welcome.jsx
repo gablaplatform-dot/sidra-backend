@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { getSession, setSession } from "../lib/session";
@@ -15,6 +16,7 @@ const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 // phone and profile photo, and the district used to arrange products around them whenever they
 // don't share their exact location. Everything but the name is optional, and it can be skipped.
 export default function Welcome() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const destination = safeNext(searchParams.get("next")) || "/shop";
@@ -56,11 +58,11 @@ export default function Welcome() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) {
-      setError("Choose a JPG, PNG, WebP or GIF image.");
+      setError(t("welcome.errImageType"));
       return;
     }
     if (file.size > MAX_PHOTO_BYTES) {
-      setError("That photo is over 5 MB - choose a smaller one.");
+      setError(t("welcome.errPhotoSize"));
       return;
     }
     setError("");
@@ -82,11 +84,11 @@ export default function Welcome() {
   const submit = async (event) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Tell us what to call you.");
+      setError(t("welcome.errName"));
       return;
     }
     if (phone.trim() && phone.replace(/\D/g, "").length < 7) {
-      setError("That phone number looks too short.");
+      setError(t("welcome.errPhone"));
       return;
     }
     setSaving(true);
@@ -97,7 +99,7 @@ export default function Welcome() {
         try {
           avatarUrl = await uploadFile(photoFile, "user-avatars", { register: false });
         } catch {
-          setError("We couldn't upload your photo. Remove it to continue - you can add one later.");
+          setError(t("welcome.errUpload"));
           return;
         }
       }
@@ -110,7 +112,7 @@ export default function Welcome() {
       if (district) await savePreferredDistrict(district, { sync: false });
       navigate(destination, { replace: true });
     } catch (submitError) {
-      setError(submitError.message || "We couldn't save that. Please try again.");
+      setError(submitError.message || t("welcome.errSave"));
     } finally {
       setSaving(false);
     }
@@ -138,14 +140,14 @@ export default function Welcome() {
           <span className="brand-mark">G</span>
           <strong>Gabla</strong>
         </div>
-        <p className="eyebrow">Welcome</p>
-        <h1>Let&apos;s set you up</h1>
-        <p className="auth-subtitle">It takes a few seconds, and helps us show you what&apos;s near you.</p>
+        <p className="eyebrow">{t("welcome.eyebrow")}</p>
+        <h1>{t("welcome.title")}</h1>
+        <p className="auth-subtitle">{t("welcome.subtitle")}</p>
 
         <div className="wel-avatar">
-          <button type="button" className="wel-avatar-btn" onClick={() => fileRef.current?.click()} aria-label="Choose a profile photo">
+          <button type="button" className="wel-avatar-btn" onClick={() => fileRef.current?.click()} aria-label={t("welcome.choosePhoto")}>
             {photoPreview ? (
-              <img src={photoPreview} alt="Your profile" />
+              <img src={photoPreview} alt={t("welcome.yourProfile")} />
             ) : (
               <span className="wel-avatar-initial">{(name || user?.email || "G").trim().slice(0, 1).toUpperCase()}</span>
             )}
@@ -155,11 +157,11 @@ export default function Welcome() {
           </button>
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={pickPhoto} />
           <div className="wel-avatar-text">
-            <strong>Profile photo</strong>
-            <small>Optional</small>
+            <strong>{t("welcome.profilePhoto")}</strong>
+            <small>{t("welcome.optional")}</small>
             {photoPreview ? (
               <button type="button" className="link-button" onClick={removePhoto}>
-                Remove
+                {t("welcome.remove")}
               </button>
             ) : null}
           </div>
@@ -169,21 +171,21 @@ export default function Welcome() {
 
         <div className="wel-fields">
           <label className="field">
-            <span>Your name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder="e.g. Amina Nakato" />
+            <span>{t("welcome.yourName")}</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder={t("welcome.namePlaceholder")} />
           </label>
           <label className="field">
             <span>
-              Phone number <small>(optional)</small>
+              {t("welcome.phone")} <small>({t("welcome.optionalLower")})</small>
             </span>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="e.g. +256 700 000000" />
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" placeholder={t("welcome.phonePlaceholder")} />
           </label>
           <label className="field">
-            <span>Your area</span>
+            <span>{t("welcome.yourArea")}</span>
             <select value={district} onChange={(e) => setDistrict(e.target.value)} disabled={districts === null}>
-              <option value="">{districts === null ? "Loading districts…" : "Choose your district"}</option>
+              <option value="">{districts === null ? t("welcome.loadingDistricts") : t("welcome.chooseDistrict")}</option>
               {metro.length ? (
-                <optgroup label="Greater Kampala">
+                <optgroup label={t("welcome.greaterKampala")}>
                   {metro.map((d) => (
                     <option key={d} value={d}>
                       {d}
@@ -191,7 +193,7 @@ export default function Welcome() {
                   ))}
                 </optgroup>
               ) : null}
-              <optgroup label="All districts">
+              <optgroup label={t("welcome.allDistricts")}>
                 {rest.map((d) => (
                   <option key={d} value={d}>
                     {d}
@@ -199,15 +201,15 @@ export default function Welcome() {
                 ))}
               </optgroup>
             </select>
-            <small>If you don&apos;t share your location, we&apos;ll show products closest to this district first.</small>
+            <small>{t("welcome.areaHelp")}</small>
           </label>
         </div>
 
         <button type="submit" className="cta-button wel-submit" disabled={saving}>
-          {saving ? "Saving…" : "Continue"}
+          {saving ? t("welcome.saving") : t("welcome.continue")}
         </button>
         <button type="button" className="link-button wel-skip" onClick={skip} disabled={saving}>
-          Skip for now
+          {t("welcome.skip")}
         </button>
       </form>
     </main>

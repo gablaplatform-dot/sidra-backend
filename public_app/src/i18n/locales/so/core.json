@@ -1,0 +1,46 @@
+{
+  "lang": {
+    "label": "Luqad"
+  },
+  "nav": {
+    "home": "Hoyga",
+    "shop": "Dukaan",
+    "ride": "Safar",
+    "busTickets": "Tigidhada baska",
+    "categories": "Qaybaha",
+    "providers": "Bixiyeyaasha adeegga",
+    "about": "Nagu saabsan",
+    "myOrders": "Dalabyadayda",
+    "profile": "Profile-ka",
+    "search": "Raadi",
+    "savedProviders": "Bixiyeyaasha la keydiyey",
+    "cart": "Dambiisha",
+    "logOut": "Ka bax",
+    "signIn": "Soo gal",
+    "openMenu": "Fur liiska",
+    "closeMenu": "Xir liiska"
+  },
+  "common": {
+    "seeAll": "Arag dhammaan",
+    "new": "Cusub"
+  },
+  "time": {
+    "justNow": "hadda",
+    "minutesAgo_one": "{{count}} daqiiqo ka hor",
+    "minutesAgo_other": "{{count}} daqiiqo ka hor",
+    "hoursAgo_one": "{{count}} saac ka hor",
+    "hoursAgo_other": "{{count}} saacadood ka hor",
+    "daysAgo_one": "{{count}} maalin ka hor",
+    "daysAgo_other": "{{count}} maalmood ka hor",
+    "monthsAgo_one": "{{count}} bil ka hor",
+    "monthsAgo_other": "{{count}} bilood ka hor",
+    "yearsAgo_one": "{{count}} sano ka hor",
+    "yearsAgo_other": "{{count}} sano ka hor"
+  },
+  "errors": {
+    "noFile": "Fayl lama dooran",
+    "uploadFailed": "Faylka lama soo gelin karo",
+    "storageNotConfigured": "Kaydinta lama habeeyn",
+    "requestFailed": "Codsigu wuu fashilmay"
+  }
+}

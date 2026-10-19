@@ -1,18 +1,22 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { formatUgx } from "../../lib/format";
-import { BOOKING_STATUS, plural, providerBookings, respondToBooking, UNIT_WORD, whenLabel } from "../../lib/bookings";
+import { BOOKING_STATUS, providerBookings, respondToBooking, whenLabel } from "../../lib/bookings";
 import { Skel } from "../Skeleton";
 
-const timeLeft = (iso) => {
+const timeLeft = (iso, t) => {
   const ms = new Date(iso).getTime() - Date.now();
-  if (ms <= 0) return "expiring";
+  if (ms <= 0) return t("profile.bookings.expiring");
   const h = Math.floor(ms / 3600000);
-  return h >= 1 ? `${h}h ${Math.floor((ms % 3600000) / 60000)}m left` : `${Math.max(1, Math.floor(ms / 60000))}m left`;
+  return h >= 1
+    ? t("profile.bookings.hoursMinsLeft", { h, m: Math.floor((ms % 3600000) / 60000) })
+    : t("profile.bookings.minsLeft", { m: Math.max(1, Math.floor(ms / 60000)) });
 };
 
 function Row({ booking, onChanged }) {
+  const { t } = useTranslation();
   const status = BOOKING_STATUS[booking.status] || BOOKING_STATUS.pending;
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState("");
@@ -28,7 +32,7 @@ function Row({ booking, onChanged }) {
       setNote("");
       onChanged();
     } catch (e) {
-      setError(e.message || "That didn't work. Please try again.");
+      setError(e.message || t("profile.bookings.errAction"));
     } finally {
       setBusy("");
     }
@@ -39,9 +43,9 @@ function Row({ booking, onChanged }) {
       <div className="pbk-main">
         <div className="pbk-top">
           <strong>{booking.listing.name}</strong>
-          <span className={`mo-chip bk-status bk-status-${status.tone}`}>{booking.status === "pending" ? `Needs your answer · ${timeLeft(booking.expiresAt)}` : status.label}</span>
+          <span className={`mo-chip bk-status bk-status-${status.tone}`}>{booking.status === "pending" ? t("profile.bookings.needsAnswerLeft", { time: timeLeft(booking.expiresAt, t) }) : t(`profile.bookings.status.${booking.status}`, { defaultValue: status.label })}</span>
         </div>
-        <p className="pbk-when">{whenLabel(booking)} · {plural(booking.units, UNIT_WORD[booking.unit])}{booking.quantity > 1 ? ` · ${booking.quantity} ${booking.unit === "night" ? "rooms" : "spaces"}` : ""} · {plural(booking.guests, "guest")}{booking.total > 0 ? ` · ${formatUgx(booking.total)}` : ""}</p>
+        <p className="pbk-when">{whenLabel(booking)} · {t(`profile.bookings.unit.${booking.unit}`, { count: booking.units })}{booking.quantity > 1 ? ` · ${t(booking.unit === "night" ? "profile.bookings.rooms" : "profile.bookings.spaces", { count: booking.quantity })}` : ""} · {t("profile.bookings.guests", { count: booking.guests })}{booking.total > 0 ? ` · ${formatUgx(booking.total)}` : ""}</p>
         <p className="pbk-guest">
           <b>{booking.customer?.name}</b> · <a href={`tel:${booking.customer?.phone}`}>{booking.customer?.phone}</a>
           {booking.customer?.email ? <> · <a href={`mailto:${booking.customer.email}`}>{booking.customer.email}</a></> : null}
@@ -50,39 +54,39 @@ function Row({ booking, onChanged }) {
         {booking.amountDue > 0 && !["declined", "cancelled", "expired"].includes(booking.status) ? (
           <p className="pbk-pay">
             {booking.paymentStatus === "paid"
-              ? `Paid online: ${formatUgx(booking.amountPaid)}`
+              ? t("profile.bookings.paidOnline", { amount: formatUgx(booking.amountPaid) })
               : booking.paymentStatus === "payable"
-                ? `Waiting for the guest to pay ${formatUgx(booking.amountDue)}`
-                : `Guest will pay ${formatUgx(booking.amountDue)} online once you accept`}
+                ? t("profile.bookings.waitingPay", { amount: formatUgx(booking.amountDue) })
+                : t("profile.bookings.willPay", { amount: formatUgx(booking.amountDue) })}
           </p>
         ) : null}
-        <small className="pbk-ref">Ref {booking.reference}{booking.mode === "instant" ? " · booked instantly" : ""}</small>
+        <small className="pbk-ref">{t("profile.bookings.ref")} {booking.reference}{booking.mode === "instant" ? ` · ${t("profile.bookings.bookedInstantly")}` : ""}</small>
       </div>
 
       {error ? <p className="mo-error">{error}</p> : null}
       {asking ? (
         <div className="pbk-ask">
           <label className="field">
-            <span>{asking === "decline" ? "Tell the guest why (optional)" : "Tell the guest why you're cancelling (optional)"}</span>
-            <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="e.g. We're fully booked that weekend" />
+            <span>{asking === "decline" ? t("profile.bookings.whyDecline") : t("profile.bookings.whyCancel")}</span>
+            <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder={t("profile.bookings.notePlaceholder")} />
           </label>
           <div className="pbk-actions">
-            <button type="button" className="secondary-button" onClick={() => setAsking(null)}>Back</button>
-            <button type="button" className="bkc-danger" disabled={Boolean(busy)} onClick={() => act(asking)}>{busy ? "Sending…" : asking === "decline" ? "Decline request" : "Cancel booking"}</button>
+            <button type="button" className="secondary-button" onClick={() => setAsking(null)}>{t("profile.bookings.back")}</button>
+            <button type="button" className="bkc-danger" disabled={Boolean(busy)} onClick={() => act(asking)}>{busy ? t("profile.bookings.sending") : asking === "decline" ? t("profile.bookings.declineRequest") : t("profile.bookings.cancelBooking")}</button>
           </div>
         </div>
       ) : (
         <div className="pbk-actions">
           {booking.status === "pending" ? (
             <>
-              <button type="button" className="secondary-button" onClick={() => setAsking("decline")}>Decline</button>
-              <button type="button" className="cta-button" disabled={Boolean(busy)} onClick={() => act("accept")}>{busy === "accept" ? "Accepting…" : "Accept booking"}</button>
+              <button type="button" className="secondary-button" onClick={() => setAsking("decline")}>{t("profile.bookings.decline")}</button>
+              <button type="button" className="cta-button" disabled={Boolean(busy)} onClick={() => act("accept")}>{busy === "accept" ? t("profile.bookings.accepting") : t("profile.bookings.accept")}</button>
             </>
           ) : null}
           {booking.status === "confirmed" ? (
             <>
-              <button type="button" className="secondary-button" onClick={() => setAsking("cancel")}>Cancel</button>
-              {booking.canComplete ? <button type="button" className="cta-button" disabled={Boolean(busy)} onClick={() => act("complete")}>{busy === "complete" ? "Saving…" : "Mark completed"}</button> : null}
+              <button type="button" className="secondary-button" onClick={() => setAsking("cancel")}>{t("profile.bookings.cancel")}</button>
+              {booking.canComplete ? <button type="button" className="cta-button" disabled={Boolean(busy)} onClick={() => act("complete")}>{busy === "complete" ? t("profile.bookings.saving") : t("profile.bookings.markCompleted")}</button> : null}
             </>
           ) : null}
         </div>
@@ -92,6 +96,7 @@ function Row({ booking, onChanged }) {
 }
 
 export default function ProfileBookingsTab() {
+  const { t } = useTranslation();
   const [items, setItems] = useState(null);
   const [error, setError] = useState("");
 
@@ -101,7 +106,7 @@ export default function ProfileBookingsTab() {
       .then((r) => setItems(r?.items || []))
       .catch((e) => {
         setItems([]);
-        setError(e.message || "Your bookings could not be loaded.");
+        setError(e.message || t("profile.bookings.errLoad"));
       });
   }, []);
   useEffect(load, [load]);
@@ -114,29 +119,29 @@ export default function ProfileBookingsTab() {
   return (
     <section className="pbk">
       <header className="detail-block-header">
-        <h3>Bookings</h3>
-        <Link to="/profile/listings/new" className="secondary-button">+ New bookable service</Link>
+        <h3>{t("profile.tabs.bookings")}</h3>
+        <Link to="/profile/listings/new" className="secondary-button">{t("profile.bookings.newService")}</Link>
       </header>
-      <p className="provider-meta">Guests book the services you've set up for bookings. Answer requests quickly: unanswered ones expire and free the dates.</p>
+      <p className="provider-meta">{t("profile.bookings.intro")}</p>
       {error ? <div className="error-message">{error}</div> : null}
 
       {items === null ? (
         <><Skel h={96} r={16} /><Skel h={96} r={16} style={{ marginTop: 12 }} /></>
       ) : !items.length ? (
         <div className="mo-empty">
-          <strong>No bookings yet</strong>
-          <p>Open a service, switch on &ldquo;This is a booking service&rdquo; under Bookings, and guests can reserve it.</p>
+          <strong>{t("profile.bookings.emptyTitle")}</strong>
+          <p>{t("profile.bookings.emptyText")}</p>
         </div>
       ) : (
         <>
           <div className="pbk-stats">
-            <div><b>{pending.length}</b><span>need an answer</span></div>
-            <div><b>{upcoming.length}</b><span>upcoming</span></div>
-            <div><b>{items.filter((b) => b.status === "completed").length}</b><span>completed</span></div>
+            <div><b>{pending.length}</b><span>{t("profile.bookings.statNeedAnswer")}</span></div>
+            <div><b>{upcoming.length}</b><span>{t("profile.bookings.statUpcoming")}</span></div>
+            <div><b>{items.filter((b) => b.status === "completed").length}</b><span>{t("profile.bookings.statCompleted")}</span></div>
           </div>
-          {pending.length ? <><h4 className="pbk-h">Needs your answer</h4>{pending.map((b) => <Row key={b.id} booking={b} onChanged={load} />)}</> : null}
-          {upcoming.length ? <><h4 className="pbk-h">Upcoming</h4>{upcoming.map((b) => <Row key={b.id} booking={b} onChanged={load} />)}</> : null}
-          {history.length ? <><h4 className="pbk-h">History</h4>{history.map((b) => <Row key={b.id} booking={b} onChanged={load} />)}</> : null}
+          {pending.length ? <><h4 className="pbk-h">{t("profile.bookings.needsAnswer")}</h4>{pending.map((b) => <Row key={b.id} booking={b} onChanged={load} />)}</> : null}
+          {upcoming.length ? <><h4 className="pbk-h">{t("profile.bookings.upcoming")}</h4>{upcoming.map((b) => <Row key={b.id} booking={b} onChanged={load} />)}</> : null}
+          {history.length ? <><h4 className="pbk-h">{t("profile.bookings.history")}</h4>{history.map((b) => <Row key={b.id} booking={b} onChanged={load} />)}</> : null}
         </>
       )}
     </section>

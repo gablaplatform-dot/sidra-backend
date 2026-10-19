@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { emailStatusInfo, getDocumentSettings, issueOrderQuotation, listDocuments, openDocumentPdf } from "../../lib/documents";
 import { formatUgx } from "../../lib/format";
@@ -24,6 +25,7 @@ export const computeQuoteTotals = ({ subtotal, discount, deliveryFee, tax }) => 
 // "Edit & send quotation" for an unpaid cash order: adjust delivery, discount, note and validity, then issue a
 // new revision of the quotation and email it to the buyer.
 export default function QuotationModal({ order, onClose, onIssued }) {
+  const { t } = useTranslation();
   const subtotal = useMemo(() => (order.items || []).reduce((sum, item) => sum + (Number(item.total) || 0), 0), [order.items]);
   const [deliveryFee, setDeliveryFee] = useState("");
   const [discount, setDiscount] = useState("");
@@ -120,8 +122,8 @@ export default function QuotationModal({ order, onClose, onIssued }) {
     } catch (submitError) {
       setError(
         submitError.code === "ORDER_ALREADY_PAID"
-          ? "This order has already been paid, so it now gets a receipt instead of a quotation."
-          : submitError.message || "Unable to send this quotation."
+          ? t("docs.quote.errAlreadyPaid")
+          : submitError.message || t("docs.quote.errSend")
       );
       if (submitError.code === "ORDER_ALREADY_PAID") onIssued?.(null);
     } finally {
@@ -134,100 +136,100 @@ export default function QuotationModal({ order, onClose, onIssued }) {
     try {
       await openDocumentPdf(result.doc);
     } catch (viewError) {
-      setError(viewError.message || "Unable to open the PDF.");
+      setError(viewError.message || t("docs.quote.errOpenPdf"));
     } finally {
       setOpening(false);
     }
   };
 
   const resultInfo = result ? emailStatusInfo(result.status, result.emailedTo) : null;
-  const revLabel = result ? `${result.doc.number}${result.doc.revision > 1 ? ` rev ${result.doc.revision}` : ""}` : "";
+  const revLabel = result ? `${result.doc.number}${result.doc.revision > 1 ? ` ${t("docs.quote.rev", { n: result.doc.revision })}` : ""}` : "";
 
   return (
     <div className="modal-overlay docs-modal-overlay" onMouseDown={(event) => event.target === event.currentTarget && !submitting && onClose()}>
       <div className="docs-modal" role="dialog" aria-modal="true" aria-labelledby="docs-modal-title" ref={dialogRef}>
-        <button type="button" className="docs-modal-close" onClick={onClose} aria-label="Close" disabled={submitting}><IconClose /></button>
+        <button type="button" className="docs-modal-close" onClick={onClose} aria-label={t("docs.quote.close")} disabled={submitting}><IconClose /></button>
 
         {result ? (
           <div className="docs-modal-done">
             <span className={`docs-done-mark is-${result.status === "sent" ? "ok" : "warn"}`} aria-hidden="true">{result.status === "sent" ? "✓" : "!"}</span>
-            <h2 id="docs-modal-title">{result.status === "sent" ? `Quotation ${revLabel} sent to buyer` : `Quotation ${revLabel} saved`}</h2>
+            <h2 id="docs-modal-title">{result.status === "sent" ? t("docs.quote.sentTitle", { label: revLabel }) : t("docs.quote.savedTitle", { label: revLabel })}</h2>
             <p>
               {result.status === "sent"
-                ? `${resultInfo.detail} The previous version is now marked superseded.`
+                ? t("docs.quote.sentBody", { detail: resultInfo.detail })
                 : result.requested
-                  ? `It wasn't emailed. ${resultInfo.detail}`
-                  : "You chose not to email it. You can send it later from Issued documents."}
+                  ? t("docs.quote.notEmailed", { detail: resultInfo.detail })
+                  : t("docs.quote.choseNoEmail")}
             </p>
             <div className="docs-modal-actions">
-              <button type="button" className="docs-btn" onClick={view} disabled={opening}>{opening ? "Opening…" : "View PDF"}</button>
-              <button type="button" className="docs-btn is-primary" onClick={onClose}>Done</button>
+              <button type="button" className="docs-btn" onClick={view} disabled={opening}>{opening ? t("docs.opening") : t("docs.viewPdf")}</button>
+              <button type="button" className="docs-btn is-primary" onClick={onClose}>{t("docs.quote.done")}</button>
             </div>
             {error ? <p className="docs-error" role="alert">{error}</p> : null}
           </div>
         ) : (
           <form onSubmit={submit} noValidate>
-            <h2 id="docs-modal-title">Edit &amp; send quotation</h2>
-            <p className="docs-modal-sub">Add delivery, a discount or a note. The buyer receives a new revision of their quotation with the updated total.</p>
+            <h2 id="docs-modal-title">{t("docs.quote.title")}</h2>
+            <p className="docs-modal-sub">{t("docs.quote.sub")}</p>
 
             <div className="docs-grid2">
               <div className="docs-field">
-                <label className="docs-label" htmlFor="docs-m-fee">Delivery fee</label>
+                <label className="docs-label" htmlFor="docs-m-fee">{t("docs.quote.deliveryFee")}</label>
                 <div className="docs-input-wrap">
                   <input id="docs-m-fee" ref={firstRef} className="docs-input" inputMode="numeric" value={deliveryFee} onChange={(e) => setDeliveryFee(e.target.value.replace(/[^\d.]/g, ""))} placeholder="0" />
                   <span className="docs-input-suffix" aria-hidden="true">UGX</span>
                 </div>
               </div>
               <div className="docs-field">
-                <label className="docs-label" htmlFor="docs-m-discount">Discount</label>
+                <label className="docs-label" htmlFor="docs-m-discount">{t("docs.quote.discount")}</label>
                 <div className="docs-input-wrap">
                   <input id="docs-m-discount" className={`docs-input${discountTooBig ? " is-invalid" : ""}`} inputMode="numeric" value={discount} onChange={(e) => setDiscount(e.target.value.replace(/[^\d.]/g, ""))} placeholder="0" aria-invalid={discountTooBig ? "true" : undefined} aria-describedby={discountTooBig ? "docs-m-discount-err" : undefined} />
                   <span className="docs-input-suffix" aria-hidden="true">UGX</span>
                 </div>
-                {discountTooBig ? <p id="docs-m-discount-err" className="docs-error" role="alert">The discount can&apos;t be more than the items total ({formatUgx(subtotal)}).</p> : null}
+                {discountTooBig ? <p id="docs-m-discount-err" className="docs-error" role="alert">{t("docs.quote.discountTooBig", { amount: formatUgx(subtotal) })}</p> : null}
               </div>
               <div className="docs-field">
-                <label className="docs-label" htmlFor="docs-m-days">Valid for</label>
+                <label className="docs-label" htmlFor="docs-m-days">{t("docs.quote.validFor")}</label>
                 <div className="docs-input-wrap">
                   <input id="docs-m-days" className={`docs-input${daysInvalid ? " is-invalid" : ""}`} inputMode="numeric" value={validityDays} onChange={(e) => setValidityDays(e.target.value.replace(/\D/g, ""))} placeholder={settings ? String(settings.quotation.validityDays) : "14"} aria-invalid={daysInvalid ? "true" : undefined} aria-describedby={daysInvalid ? "docs-m-days-err" : undefined} />
-                  <span className="docs-input-suffix" aria-hidden="true">days</span>
+                  <span className="docs-input-suffix" aria-hidden="true">{t("docs.quote.days")}</span>
                 </div>
-                {daysInvalid ? <p id="docs-m-days-err" className="docs-error" role="alert">Enter a whole number of days from 1 to 365.</p> : null}
+                {daysInvalid ? <p id="docs-m-days-err" className="docs-error" role="alert">{t("docs.quote.daysInvalid")}</p> : null}
               </div>
             </div>
 
             <div className="docs-field">
-              <div className="docs-label-row"><label className="docs-label" htmlFor="docs-m-note">Note to the buyer (optional)</label></div>
-              <textarea id="docs-m-note" className={`docs-input${noteOver ? " is-invalid" : ""}`} rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Delivery to Kampala takes 2 days. Price valid while stock lasts." />
+              <div className="docs-label-row"><label className="docs-label" htmlFor="docs-m-note">{t("docs.quote.note")}</label></div>
+              <textarea id="docs-m-note" className={`docs-input${noteOver ? " is-invalid" : ""}`} rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("docs.quote.notePlaceholder")} />
               <div className="docs-field-foot"><span /><span className={`docs-counter${noteOver ? " is-over" : ""}`}>{note.trim().length}/{NOTE_MAX}</span></div>
             </div>
 
-            <div className="docs-totals" aria-live="polite" aria-label="Quotation total preview">
-              <div className="docs-totals-row"><span>Items ({(order.items || []).length})</span><span>{formatUgx(subtotal)}</span></div>
-              {totals.discount > 0 ? <div className="docs-totals-row is-minus"><span>Discount</span><span>− {formatUgx(totals.discount)}</span></div> : null}
-              {totals.deliveryFee > 0 ? <div className="docs-totals-row"><span>Delivery fee</span><span>{formatUgx(totals.deliveryFee)}</span></div> : null}
+            <div className="docs-totals" aria-live="polite" aria-label={t("docs.quote.totalPreview")}>
+              <div className="docs-totals-row"><span>{t("docs.quote.items", { count: (order.items || []).length })}</span><span>{formatUgx(subtotal)}</span></div>
+              {totals.discount > 0 ? <div className="docs-totals-row is-minus"><span>{t("docs.quote.discount")}</span><span>− {formatUgx(totals.discount)}</span></div> : null}
+              {totals.deliveryFee > 0 ? <div className="docs-totals-row"><span>{t("docs.quote.deliveryFee")}</span><span>{formatUgx(totals.deliveryFee)}</span></div> : null}
               {!settings && !settingsError ? (
                 <div className="docs-totals-row"><Skel h={12} w={120} /><Skel h={12} w={70} /></div>
               ) : totals.tax ? (
-                <div className="docs-totals-row is-muted"><span>{totals.tax.label} {totals.tax.percent}% {totals.tax.inclusive ? "(included)" : ""}</span><span>{totals.tax.inclusive ? "" : "+ "}{formatUgx(totals.tax.amount)}</span></div>
+                <div className="docs-totals-row is-muted"><span>{totals.tax.label} {totals.tax.percent}% {totals.tax.inclusive ? t("docs.quote.included") : ""}</span><span>{totals.tax.inclusive ? "" : "+ "}{formatUgx(totals.tax.amount)}</span></div>
               ) : null}
-              <div className="docs-totals-row is-total"><span>Total the buyer will see</span><strong>{formatUgx(totals.total)}</strong></div>
-              {settingsError ? <p className="docs-hint">Tax settings couldn&apos;t be loaded, so any VAT isn&apos;t reflected here. The PDF will still be correct.</p> : null}
+              <div className="docs-totals-row is-total"><span>{t("docs.quote.totalBuyer")}</span><strong>{formatUgx(totals.total)}</strong></div>
+              {settingsError ? <p className="docs-hint">{t("docs.quote.taxLoadFailed")}</p> : null}
             </div>
 
             <label className="docs-check" htmlFor="docs-m-send">
               <input id="docs-m-send" type="checkbox" checked={send} onChange={(e) => setSend(e.target.checked)} />
-              <span>Email this quotation to the buyer now</span>
+              <span>{t("docs.quote.emailNow")}</span>
             </label>
             {settings && settings.email.sendQuotation === false && send ? (
-              <p className="docs-hint">Automatic quotation emails are switched off in your design settings, so this will be saved but not emailed. Turn them on under Email delivery.</p>
+              <p className="docs-hint">{t("docs.quote.autoOff")}</p>
             ) : null}
 
             {error ? <p className="docs-error docs-modal-error" role="alert">{error}</p> : null}
 
             <div className="docs-modal-actions">
-              <button type="button" className="docs-btn" onClick={onClose} disabled={submitting}>Cancel</button>
-              <button type="submit" className="docs-btn is-primary" disabled={submitting || blocked}>{submitting ? "Sending…" : "Send revised quotation"}</button>
+              <button type="button" className="docs-btn" onClick={onClose} disabled={submitting}>{t("docs.quote.cancel")}</button>
+              <button type="submit" className="docs-btn is-primary" disabled={submitting || blocked}>{submitting ? t("docs.quote.sending") : t("docs.quote.send")}</button>
             </div>
           </form>
         )}

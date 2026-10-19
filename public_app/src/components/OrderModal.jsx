@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
 
 import { getSession } from "../lib/session";
 import { loginPath } from "../lib/authRedirect";
@@ -12,6 +13,7 @@ import { IconClose } from "./icons";
 // cash on delivery / pickup. For services there is no delivery step and the price is agreed with
 // the provider directly.
 export default function OrderModal({ listing, providerId, onClose, payOnline = false }) {
+  const { t } = useTranslation();
   const location = useLocation();
   const [session] = useState(() => getSession());
   const [details, setDetails] = useState(() => initialOrderDetails(session));
@@ -44,7 +46,7 @@ export default function OrderModal({ listing, providerId, onClose, payOnline = f
       });
       setPlaced(order);
     } catch (submitError) {
-      setError(submitError.message || "Unable to place this order.");
+      setError(submitError.message || t("orders.modal.placeFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -53,62 +55,73 @@ export default function OrderModal({ listing, providerId, onClose, payOnline = f
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+        <button type="button" className="modal-close" onClick={onClose} aria-label={t("form.close")}>
           <IconClose />
         </button>
 
         {!session ? (
           <>
-            <h2>Sign in to order</h2>
-            <p>You&apos;ll need a Gabla account to place an order with {listing.name}.</p>
-            <Link to={loginPath(location, { resume: payOnline ? "buy" : "order" })} className="primary-button" style={{ display: "block", textAlign: "center" }}>Sign in</Link>
+            <h2>{t("orders.modal.signInTitle")}</h2>
+            <p>{t("orders.modal.signInBody", { name: listing.name })}</p>
+            <Link to={loginPath(location, { resume: payOnline ? "buy" : "order" })} className="primary-button" style={{ display: "block", textAlign: "center" }}>{t("nav.signIn")}</Link>
           </>
         ) : placed ? (
           <div className="od-done">
-            <h2>{payOnline ? "Order request sent" : "Order sent"}</h2>
+            <h2>{payOnline ? t("orders.modal.requestSent") : t("orders.modal.sent")}</h2>
             <p>
-              {placed.providerName ? <strong>{placed.providerName}</strong> : "The seller"} has your order for &ldquo;{listing.name}&rdquo;
-              and will {payOnline ? "confirm it's available" : <>call you on <strong>{details.phone}</strong> to confirm</>}.
+              <Trans
+                i18nKey={payOnline ? "orders.modal.placedOnline" : "orders.modal.placedCash"}
+                values={{ seller: placed.providerName || t("orders.modal.theSeller"), name: listing.name, phone: details.phone }}
+                components={{ strong: <strong /> }}
+              />
             </p>
             {payOnline ? (
               <p className="od-pay">
-                <strong>Nothing has been charged.</strong> Once the seller accepts, we&apos;ll email you and you can pay {formatUgx(placed.total)} by mobile money from <Link to="/orders" onClick={onClose}>My orders</Link>.
+                <Trans
+                  i18nKey="orders.modal.onlineReceipt"
+                  values={{ amount: formatUgx(placed.total) }}
+                  components={{ strong: <strong />, ordersLink: <Link to="/orders" onClick={onClose} /> }}
+                />
               </p>
             ) : !isService && placed.total > 0 ? (
               <p className="od-pay">
-                Pay <strong>{formatUgx(placed.total)}</strong> in cash {details.method === "pickup" ? "when you pick it up" : "when it's delivered"}. Nothing has been charged.
+                <Trans
+                  i18nKey={details.method === "pickup" ? "orders.modal.cashReceiptPickup" : "orders.modal.cashReceiptDelivery"}
+                  values={{ amount: formatUgx(placed.total) }}
+                  components={{ strong: <strong /> }}
+                />
               </p>
             ) : null}
-            <p className="modal-hint">Order reference #{String(placed.id).slice(-6).toUpperCase()}</p>
-            <button type="button" className="primary-button" onClick={onClose}>Done</button>
+            <p className="modal-hint">{t("orders.modal.reference", { ref: String(placed.id).slice(-6).toUpperCase() })}</p>
+            <button type="button" className="primary-button" onClick={onClose}>{t("form.done")}</button>
           </div>
         ) : (
           <>
-            <h2>{payOnline ? "Order" : isService ? "Request" : "Order"} &ldquo;{listing.name}&rdquo;</h2>
-            {unitPrice > 0 ? <p className="modal-hint">{formatUgx(unitPrice)}{isService ? "" : " each"}</p> : null}
+            <h2>{t(!payOnline && isService ? "orders.modal.titleRequest" : "orders.modal.titleOrder", { name: listing.name })}</h2>
+            {unitPrice > 0 ? <p className="modal-hint">{isService ? formatUgx(unitPrice) : t("orders.modal.priceEach", { price: formatUgx(unitPrice) })}</p> : null}
             {error ? <div className="error-message">{error}</div> : null}
             <form onSubmit={submit} className="form-grid">
               {!isService ? (
                 <label className="field">
-                  <span>Quantity</span>
+                  <span>{t("orders.modal.quantity")}</span>
                   <input type="number" min="1" max="99" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
                 </label>
               ) : null}
               <OrderDetailsFields value={details} onChange={setDetails} delivery={!isService} />
 
               <div className="od-payline">
-                <span className="od-payline-title">{payOnline ? "Pay after the seller accepts" : isService ? "No payment now" : "Pay cash on delivery"}</span>
+                <span className="od-payline-title">{payOnline ? t("orders.modal.payAfterAccept") : isService ? t("orders.modal.noPaymentNow") : t("orders.modal.payCashOnDelivery")}</span>
                 <span>
                   {payOnline
-                    ? `Nothing is charged now. When the seller confirms it's available, you pay ${total > 0 ? formatUgx(total) : "the total"} by mobile money from My orders.`
+                    ? t(total > 0 ? "orders.modal.onlineNote" : "orders.modal.onlineNoteNoTotal", { amount: formatUgx(total) })
                     : isService
-                      ? "Agree the final price with the provider and pay them directly."
-                      : `Nothing is charged online. You pay ${total > 0 ? formatUgx(total) : "the seller"} in cash when you ${details.method === "pickup" ? "pick up" : "receive"} your order.`}
+                      ? t("orders.modal.serviceNote")
+                      : t(`orders.modal.${details.method === "pickup" ? "cashNotePickup" : "cashNoteDelivery"}${total > 0 ? "" : "NoTotal"}`, { amount: formatUgx(total) })}
                 </span>
               </div>
 
               <button type="submit" className="primary-button" disabled={submitting}>
-                {submitting ? "Sending…" : payOnline ? `Send order request${total > 0 ? ` · ${formatUgx(total)}` : ""}` : isService ? "Send request" : `Place order${total > 0 ? ` · ${formatUgx(total)}` : ""}`}
+                {submitting ? t("orders.modal.sending") : payOnline ? t(total > 0 ? "orders.modal.sendRequestAmount" : "orders.modal.sendRequest", { amount: formatUgx(total) }) : isService ? t("orders.modal.sendServiceRequest") : t(total > 0 ? "orders.modal.placeOrderAmount" : "orders.modal.placeOrder", { amount: formatUgx(total) })}
               </button>
             </form>
           </>

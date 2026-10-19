@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
+import { formatUgx } from "../lib/format";
 import { IconClose } from "./icons";
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLLS = 20;
 
 export default function SubscriptionModal({ fee, onClose, onActivated }) {
+  const { t } = useTranslation();
   const [phone, setPhone] = useState("");
   const [stage, setStage] = useState("form"); // form | waiting | succeeded | failed | timeout
   const [error, setError] = useState("");
@@ -44,7 +47,7 @@ export default function SubscriptionModal({ fee, onClose, onActivated }) {
   const submit = async (event) => {
     event.preventDefault();
     if (!phone.trim()) {
-      setError("Enter the phone number to pay from.");
+      setError(t("unlock.errPhone"));
       return;
     }
     setSubmitting(true);
@@ -59,7 +62,7 @@ export default function SubscriptionModal({ fee, onClose, onActivated }) {
       setStage("waiting");
       timerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
     } catch (submitError) {
-      setError(submitError.message || "Unable to start the payment.");
+      setError(submitError.message || t("unlock.startFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -74,50 +77,50 @@ export default function SubscriptionModal({ fee, onClose, onActivated }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+        <button type="button" className="modal-close" onClick={onClose} aria-label={t("form.close")}>
           <IconClose />
         </button>
 
         {stage === "form" ? (
           <>
-            <h2>Renew your subscription</h2>
-            {Number(fee) > 0 ? <p className="modal-hint">UGX {Number(fee).toLocaleString()} for 30 days</p> : null}
+            <h2>{t("subscription.title")}</h2>
+            {Number(fee) > 0 ? <p className="modal-hint">{t("subscription.fee", { amount: formatUgx(fee) })}</p> : null}
             {error ? <div className="error-message">{error}</div> : null}
             <form onSubmit={submit} className="form-grid">
               <label className="field">
-                <span>Mobile money number</span>
-                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. +256 700 000000" required />
+                <span>{t("payment.phoneLabel")}</span>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("form.phonePlaceholder")} required />
               </label>
               <button type="submit" className="primary-button" disabled={submitting}>
-                {submitting ? "Starting payment…" : "Pay with Mobile Money"}
+                {submitting ? t("payment.starting") : t("payment.payWithMomo")}
               </button>
             </form>
           </>
         ) : stage === "waiting" ? (
           <>
-            <h2>Approve on your phone</h2>
-            <p>We sent a mobile money prompt to {phone}. Approve it to activate your subscription.</p>
-            <p className="modal-hint">Waiting for confirmation…</p>
+            <h2>{t("payment.approveTitle")}</h2>
+            <p>{t("subscription.approveBody", { phone })}</p>
+            <p className="modal-hint">{t("payment.waiting")}</p>
           </>
         ) : stage === "succeeded" ? (
           <>
-            <h2>Subscription active</h2>
-            <p>Your payment was confirmed and your subscription has been renewed.</p>
-            <button type="button" className="primary-button" onClick={onClose}>Done</button>
+            <h2>{t("subscription.activeTitle")}</h2>
+            <p>{t("subscription.activeBody")}</p>
+            <button type="button" className="primary-button" onClick={onClose}>{t("form.done")}</button>
           </>
         ) : stage === "failed" ? (
           <>
-            <h2>Payment failed</h2>
-            <p>The mobile money payment wasn&apos;t completed. You can try again.</p>
-            <button type="button" className="primary-button" onClick={() => setStage("form")}>Try again</button>
+            <h2>{t("payment.failedShort")}</h2>
+            <p>{t("unlock.failedBody")}</p>
+            <button type="button" className="primary-button" onClick={() => setStage("form")}>{t("payment.tryAgain")}</button>
           </>
         ) : (
           <>
-            <h2>Still waiting</h2>
-            <p>We haven&apos;t heard back yet. If you already approved the prompt, check again — otherwise try again.</p>
+            <h2>{t("payment.timeoutTitle")}</h2>
+            <p>{t("payment.timeoutBody")}</p>
             <div className="payment-options">
-              <button type="button" className="payment-option" onClick={checkAgain}>Check again</button>
-              <button type="button" className="payment-option" onClick={() => setStage("form")}>Try again</button>
+              <button type="button" className="payment-option" onClick={checkAgain}>{t("payment.checkAgain")}</button>
+              <button type="button" className="payment-option" onClick={() => setStage("form")}>{t("payment.tryAgain")}</button>
             </div>
           </>
         )}

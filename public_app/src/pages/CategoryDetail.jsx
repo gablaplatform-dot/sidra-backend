@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { getSession, clearSession } from "../lib/session";
 import { findCategoryPath } from "../lib/categories";
+import { formatUgx } from "../lib/format";
 import SiteHeader from "../components/SiteHeader";
 import ProviderCard from "../components/ProviderCard";
 import { IconBox, IconChevronLeft } from "../components/icons";
@@ -12,6 +14,7 @@ import { ProviderCardsSkeleton, Skel } from "../components/Skeleton";
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
 export default function CategoryDetail() {
+  const { t } = useTranslation();
   const { categoryId } = useParams();
   const [session] = useState(() => getSession());
   const [categories, setCategories] = useState([]);
@@ -35,7 +38,7 @@ export default function CategoryDetail() {
         setListings(listingResult?.items || listingResult || []);
       })
       .catch((loadError) => {
-        if (active) setError(loadError.message || "Unable to load this category right now.");
+        if (active) setError(loadError.message || t("services.category.loadError"));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -68,13 +71,13 @@ export default function CategoryDetail() {
         </div>
       ) : !category ? (
         <div className="page-empty-state">
-          <p>This category could not be found.</p>
-          <Link to="/home" className="secondary-button">Back to home</Link>
+          <p>{t("services.category.notFound")}</p>
+          <Link to="/home" className="secondary-button">{t("services.backHome")}</Link>
         </div>
       ) : (
         <>
           <nav className="breadcrumb">
-            <Link to="/home">Home</Link>
+            <Link to="/home">{t("nav.home")}</Link>
             {ancestors.map((a) => (
               <React.Fragment key={a.id}>
                 <span>/</span>
@@ -95,7 +98,7 @@ export default function CategoryDetail() {
               </Link>
             ) : (
               <Link to="/home" className="banner-back">
-                <IconChevronLeft /> Home
+                <IconChevronLeft /> {t("nav.home")}
               </Link>
             )}
             <div className="category-banner-label">
@@ -108,7 +111,7 @@ export default function CategoryDetail() {
 
           {children.length ? (
             <section className="home-section">
-              <h2>Browse subcategories</h2>
+              <h2>{t("services.category.subcategories")}</h2>
               <div className="category-grid">
                 {children.map((c) => {
                   const childImage = c.settings?.imageUrl || c.settings?.pictureUrl || "";
@@ -131,7 +134,7 @@ export default function CategoryDetail() {
           ) : null}
 
           <section className="home-section">
-            <h2>Service providers</h2>
+            <h2>{t("services.category.providers")}</h2>
             {providers.length ? (
               <div className="provider-grid">
                 {providers.map((p) => (
@@ -139,12 +142,12 @@ export default function CategoryDetail() {
                 ))}
               </div>
             ) : (
-              <p className="home-empty">No providers in {category.name} yet.</p>
+              <p className="home-empty">{t("services.category.noProviders", { name: category.name })}</p>
             )}
           </section>
 
           <section className="home-section">
-            <h2>Products &amp; services</h2>
+            <h2>{t("services.category.listings")}</h2>
             {listings.length ? (
               <div className="listing-grid">
                 {listings.map((item) => (
@@ -158,13 +161,13 @@ export default function CategoryDetail() {
                     <div className="listing-body">
                       <h3>{item.name}</h3>
                       {item.provider?.businessName ? <p className="provider-meta">{item.provider.businessName}</p> : null}
-                      {Number(item.price) > 0 ? <div className="listing-price">UGX {Number(item.price).toLocaleString()}</div> : null}
+                      {Number(item.price) > 0 ? <div className="listing-price">{formatUgx(item.price)}</div> : null}
                     </div>
                   </Link>
                 ))}
               </div>
             ) : (
-              <p className="home-empty">No products or services in {category.name} yet.</p>
+              <p className="home-empty">{t("services.category.noListings", { name: category.name })}</p>
             )}
           </section>
         </>

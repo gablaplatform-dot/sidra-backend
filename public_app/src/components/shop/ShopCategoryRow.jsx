@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ShopCategoriesSkeleton } from "../Skeleton";
 import LazyImg from "../LazyImg";
 
@@ -17,7 +18,9 @@ const IconArrowRight = (props) => (
   </svg>
 );
 
-export const CategoryCard = ({ category }) => (
+export const CategoryCard = ({ category }) => {
+  const { t } = useTranslation();
+  return (
   <Link to={`/shop/${category.id}`} className="shop-category-card">
     <div className={`shop-category-img ${category.image ? "" : "shop-category-img-fallback"}`}>
       {category.image ? (
@@ -29,13 +32,15 @@ export const CategoryCard = ({ category }) => (
     <div className="shop-category-info">
       <h3>{category.name}</h3>
       <span className="shop-category-cta">
-        Shop Now <IconArrowRight />
+        {t("shop.categories.shopNow")} <IconArrowRight />
       </span>
     </div>
   </Link>
-);
+  );
+};
 
 export default function ShopCategoryRow({ categories = [], loaded = true }) {
+  const { t } = useTranslation();
   const scrollRef = useRef(null);
   const [canScroll, setCanScroll] = useState({ left: false, right: true });
 
@@ -47,8 +52,8 @@ export default function ShopCategoryRow({ categories = [], loaded = true }) {
 
   useEffect(() => {
     updateScrollState();
-    const t = setTimeout(updateScrollState, 350);
-    return () => clearTimeout(t);
+    const timer = setTimeout(updateScrollState, 350);
+    return () => clearTimeout(timer);
   }, [categories?.length]);
 
   const scroll = (dir) => {
@@ -63,8 +68,8 @@ export default function ShopCategoryRow({ categories = [], loaded = true }) {
   return (
     <section className="shop-section">
       <div className="shop-section-header">
-        <h2 className="shop-section-title">Shop by Categories</h2>
-        <Link to="/shop/categories" className="shop-view-all">View All Categories <IconArrowRight /></Link>
+        <h2 className="shop-section-title">{t("shop.categories.shopBy")}</h2>
+        <Link to="/shop/categories" className="shop-view-all">{t("shop.categories.viewAll")} <IconArrowRight /></Link>
       </div>
 
       {!loaded ? (
@@ -72,7 +77,7 @@ export default function ShopCategoryRow({ categories = [], loaded = true }) {
       ) : (
       <div className="shop-category-wrap">
         {canScroll.left ? (
-          <button type="button" className="shop-scroll-btn shop-scroll-left" onClick={() => scroll(-1)} aria-label="Scroll left">
+          <button type="button" className="shop-scroll-btn shop-scroll-left" onClick={() => scroll(-1)} aria-label={t("shop.categories.scrollLeft")}>
             <IconArrowLeft />
           </button>
         ) : null}
@@ -86,7 +91,7 @@ export default function ShopCategoryRow({ categories = [], loaded = true }) {
         </div>
 
         {canScroll.right ? (
-          <button type="button" className="shop-scroll-btn shop-scroll-right" onClick={() => scroll(1)} aria-label="Scroll right">
+          <button type="button" className="shop-scroll-btn shop-scroll-right" onClick={() => scroll(1)} aria-label={t("shop.categories.scrollRight")}>
             <IconArrowRight />
           </button>
         ) : null}

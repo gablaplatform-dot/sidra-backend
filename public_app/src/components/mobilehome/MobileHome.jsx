@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../../lib/api";
 import { mapCategoryDto } from "../../lib/shopMappers";
@@ -9,18 +10,20 @@ import LazyImg from "../LazyImg";
 import NearbyFinder from "./NearbyFinder";
 import { IconBell, IconBusTicket, IconMenuLines, IconRideCar, IconServicesWrench, IconShopBag, IconArrowUpRight, IconStarFilled } from "./HomeIcons";
 import { IconClose } from "../icons";
+import LanguageSwitcher from "../LanguageSwitcher";
 
 const TILES = [
-  { key: "shop", label: "Go shopping", to: "/shop", Icon: IconShopBag, tone: "orange" },
-  { key: "services", label: "Services", to: "/services", Icon: IconServicesWrench, tone: "navy" },
-  { key: "bus", label: "Bus ticket", to: "/bus", Icon: IconBusTicket, tone: "orange" },
-  { key: "ride", label: "Get a ride", to: "/ride", Icon: IconRideCar, tone: "navy" }
+  { key: "shop", to: "/shop", Icon: IconShopBag, tone: "orange" },
+  { key: "services", to: "/services", Icon: IconServicesWrench, tone: "navy" },
+  { key: "bus", to: "/bus", Icon: IconBusTicket, tone: "orange" },
+  { key: "ride", to: "/ride", Icon: IconRideCar, tone: "navy" }
 ];
 
 const initial = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
 // A tall category card: photo (or a tinted fallback), name at the bottom and a small arrow.
-export function TallCard({ to, name, image, caption = "Explore", tone = 0 }) {
+export function TallCard({ to, name, image, caption, tone = 0 }) {
+  const { t } = useTranslation();
   return (
     <Link to={to} className={`mh-tall mh-tone-${tone % 4}`}>
       {image ? <LazyImg src={image} alt="" loading="lazy" /> : <span className="mh-tall-mark">{initial(name)}</span>}
@@ -28,22 +31,24 @@ export function TallCard({ to, name, image, caption = "Explore", tone = 0 }) {
       <span className="mh-tall-go" aria-hidden="true"><IconArrowUpRight /></span>
       <span className="mh-tall-text">
         <strong>{name}</strong>
-        <small>{caption}</small>
+        <small>{caption ?? t("mobileHome.explore")}</small>
       </span>
     </Link>
   );
 }
 
-function SectionHead({ title, to, label = "See all" }) {
+function SectionHead({ title, to, label }) {
+  const { t } = useTranslation();
   return (
     <div className="mh-head">
       <h2>{title}</h2>
-      {to ? <Link to={to}>{label}</Link> : null}
+      {to ? <Link to={to}>{label ?? t("common.seeAll")}</Link> : null}
     </div>
   );
 }
 
 export default function MobileHome({ session, onLogout }) {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [serviceCats, setServiceCats] = useState(null);
   const [providers, setProviders] = useState(null);
@@ -75,56 +80,56 @@ export default function MobileHome({ session, onLogout }) {
   return (
     <div className="mh">
       <header className="mh-bar">
-        <button type="button" className="mh-round" onClick={() => setMenuOpen(true)} aria-label="Open menu"><IconMenuLines /></button>
+        <button type="button" className="mh-round" onClick={() => setMenuOpen(true)} aria-label={t("nav.openMenu")}><IconMenuLines /></button>
         <div className="mh-bar-right">
-          <Link to={session ? "/orders" : loginPath({ pathname: "/home", search: "", hash: "" })} className="mh-round mh-bell" aria-label="My orders and updates">
+          <Link to={session ? "/orders" : loginPath({ pathname: "/home", search: "", hash: "" })} className="mh-round mh-bell" aria-label={t("mobileHome.ordersAria")}>
             <IconBell />
             {session ? <i aria-hidden="true" /> : null}
           </Link>
           {session ? (
-            <Link to={isProvider ? "/profile" : "/orders"} className="mh-avatar" aria-label="Your account">
+            <Link to={isProvider ? "/profile" : "/orders"} className="mh-avatar" aria-label={t("mobileHome.accountAria")}>
               {user?.avatarUrl ? <img src={user.avatarUrl} alt="" /> : <span>{initial(user?.name)}</span>}
             </Link>
           ) : (
-            <Link to="/login?next=%2Fhome" className="mh-signin">Sign in</Link>
+            <Link to="/login?next=%2Fhome" className="mh-signin">{t("nav.signIn")}</Link>
           )}
         </div>
       </header>
 
       <h1 className="mh-title">
-        <b>What</b>
-        <span>do you need today?</span>
+        <b>{t("mobileHome.titleLead")}</b>
+        <span>{t("mobileHome.titleRest")}</span>
       </h1>
 
       <NearbyFinder session={session} />
 
-      <nav className="mh-tiles" aria-label="Quick actions">
-        {TILES.map(({ key, label, to, Icon, tone }) => (
+      <nav className="mh-tiles" aria-label={t("mobileHome.quickActions")}>
+        {TILES.map(({ key, to, Icon, tone }) => (
           <Link key={key} to={to} className={`mh-tile mh-tile-${tone}`}>
             <span className="mh-tile-icon"><Icon /></span>
-            <span className="mh-tile-label">{label}</span>
+            <span className="mh-tile-label">{t(`mobileHome.tiles.${key}`)}</span>
           </Link>
         ))}
       </nav>
 
-      <SectionHead title="Categories" to="/services" />
+      <SectionHead title={t("mobileHome.categories")} to="/services" />
       {serviceCats === null ? (
         <div className="mh-cols"><div className="mh-col"><Skel h={250} r={26} /><Skel h={250} r={26} /></div><div className="mh-col mh-col-drop"><Skel h={250} r={26} /><Skel h={250} r={26} /></div></div>
       ) : serviceCats.length ? (
         <div className="mh-cols">
           {columns.map((col, ci) => (
             <div key={ci} className={`mh-col ${ci ? "mh-col-drop" : ""}`}>
-              {col.map(({ c, i }) => <TallCard key={c.id} to={`/category/${c.id}`} name={c.name} image={c.image} caption="Browse providers" tone={i + 1} />)}
+              {col.map(({ c, i }) => <TallCard key={c.id} to={`/category/${c.id}`} name={c.name} image={c.image} caption={t("mobileHome.browseProviders")} tone={i + 1} />)}
             </div>
           ))}
         </div>
       ) : (
-        <p className="mh-empty">Service categories will show here.</p>
+        <p className="mh-empty">{t("mobileHome.emptyCategories")}</p>
       )}
 
       {providers === null || providers.length ? (
         <>
-          <SectionHead title="Recommended providers" to="/services" />
+          <SectionHead title={t("mobileHome.recommended")} to="/services" />
           <div className="mh-rail">
             {providers === null
               ? Array.from({ length: 3 }).map((_, i) => <Skel key={i} w={220} h={176} r={24} style={{ flex: "none" }} />)
@@ -135,7 +140,7 @@ export default function MobileHome({ session, onLogout }) {
                     </span>
                     <strong>{p.businessName}</strong>
                     <small>
-                      <IconStarFilled /> {p.ratingCount ? `${Number(p.ratingAvg).toFixed(1)} (${p.ratingCount})` : "New"}
+                      <IconStarFilled /> {p.ratingCount ? `${Number(p.ratingAvg).toFixed(1)} (${p.ratingCount})` : t("common.new")}
                       {p.location?.city ? ` · ${p.location.city}` : ""}
                     </small>
                   </Link>
@@ -147,27 +152,28 @@ export default function MobileHome({ session, onLogout }) {
       <div className="mh-end" />
 
       {menuOpen ? (
-        <div className="mh-menu" role="dialog" aria-modal="true" aria-label="Menu">
+        <div className="mh-menu" role="dialog" aria-modal="true" aria-label={t("mobileHome.menu")}>
           <div className="mh-menu-scrim" onClick={() => setMenuOpen(false)} />
           <aside>
             <div className="mh-menu-top">
               <span className="mh-brand"><b>G</b> Gabla</span>
-              <button type="button" className="mh-round" onClick={() => setMenuOpen(false)} aria-label="Close menu"><IconClose /></button>
+              <button type="button" className="mh-round" onClick={() => setMenuOpen(false)} aria-label={t("nav.closeMenu")}><IconClose /></button>
             </div>
             <nav onClick={() => setMenuOpen(false)}>
-              <Link to="/shop">Go shopping</Link>
-              <Link to="/services">Services</Link>
-              <Link to="/bus">Bus tickets</Link>
-              <Link to="/ride">Get a ride</Link>
-              {session ? <Link to="/orders">My orders</Link> : null}
-              {session ? <Link to="/bus/tickets">My bus tickets</Link> : null}
-              {isProvider ? <Link to="/profile">My business profile</Link> : null}
-              <Link to="/cart">Cart</Link>
+              <Link to="/shop">{t("mobileHome.tiles.shop")}</Link>
+              <Link to="/services">{t("mobileHome.tiles.services")}</Link>
+              <Link to="/bus">{t("mobileHome.busTickets")}</Link>
+              <Link to="/ride">{t("mobileHome.tiles.ride")}</Link>
+              {session ? <Link to="/orders">{t("nav.myOrders")}</Link> : null}
+              {session ? <Link to="/bus/tickets">{t("mobileHome.myBusTickets")}</Link> : null}
+              {isProvider ? <Link to="/profile">{t("mobileHome.myBusinessProfile")}</Link> : null}
+              <Link to="/cart">{t("nav.cart")}</Link>
             </nav>
+            <LanguageSwitcher />
             {session ? (
-              <button type="button" className="mh-menu-out" onClick={onLogout}>Log out</button>
+              <button type="button" className="mh-menu-out" onClick={onLogout}>{t("nav.logOut")}</button>
             ) : (
-              <Link to="/login?next=%2Fhome" className="mh-menu-in">Sign in</Link>
+              <Link to="/login?next=%2Fhome" className="mh-menu-in">{t("nav.signIn")}</Link>
             )}
           </aside>
         </div>

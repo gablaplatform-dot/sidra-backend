@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
-import { monthYear } from "../lib/format";
+import { formatUgx, monthYear } from "../lib/format";
 import { CLEAN_MAP_STYLE, loadGoogleMaps } from "../lib/maps";
 import { trackContactEvent } from "../lib/providerContact";
 import { IconChat, IconCheck, IconClose, IconGlobe, IconLock, IconPhone, IconPin, IconShield, IconStar } from "./icons";
 import { webHref } from "../lib/safeHref";
 
-const ugx = (value) => `UGX ${Number(value || 0).toLocaleString("en-US")}`;
 const waLink = (whatsapp, text) => `https://wa.me/${String(whatsapp).replace(/[^\d]/g, "")}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
 const directionsUrl = (location) => {
   const c = location?.geo?.coordinates;
@@ -18,6 +18,7 @@ const directionsUrl = (location) => {
 
 // A small read-only map with the exact pin, shown once the location is unlocked.
 function PinMap({ location }) {
+  const { t } = useTranslation();
   const ref = useRef(null);
   const [failed, setFailed] = useState(false);
   const coords = location?.geo?.coordinates;
@@ -43,12 +44,13 @@ function PinMap({ location }) {
   }, [coords?.[0], coords?.[1]]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!Array.isArray(coords) || coords.length !== 2 || failed) return null;
-  return <div ref={ref} className="pcc-map" aria-label="Map showing the exact location" />;
+  return <div ref={ref} className="pcc-map" aria-label={t("provider.contact.mapLabel")} />;
 }
 
 // One line of contact info. Locked rows show what exists (so the buyer knows what they are paying for)
 // next to a blurred placeholder bar, never invented digits.
 function Row({ icon, label, locked, children, hint, action }) {
+  const { t } = useTranslation();
   return (
     <li className={`pcc-row ${locked ? "is-locked" : ""}`}>
       <span className="pcc-row-icon">{icon}</span>
@@ -57,7 +59,7 @@ function Row({ icon, label, locked, children, hint, action }) {
         {locked ? (
           <>
             <span className="pcc-blur" aria-hidden="true" />
-            <span className="sr-only">Hidden until you unlock</span>
+            <span className="sr-only">{t("provider.contact.hiddenUntilUnlock")}</span>
           </>
         ) : (
           children
@@ -70,6 +72,7 @@ function Row({ icon, label, locked, children, hint, action }) {
 }
 
 function CopyButton({ value }) {
+  const { t } = useTranslation();
   const [done, setDone] = useState(false);
   const copy = async () => {
     try {
@@ -82,7 +85,7 @@ function CopyButton({ value }) {
   };
   return (
     <button type="button" className="pcc-copy" onClick={copy}>
-      {done ? "Copied" : "Copy"}
+      {done ? t("provider.contact.copied") : t("provider.contact.copy")}
     </button>
   );
 }
@@ -92,9 +95,10 @@ function CopyButton({ value }) {
 // WhatsApp and directions card. `variant="sidebar"` is sticky beside the page on desktop and a bottom bar +
 // sheet on phones; `variant="inline"` just sits where it is placed (the product page).
 export default function ProviderContactCard({ provider, fallback, pending, categoryName, listingName, onUnlock, variant = "sidebar" }) {
+  const { t } = useTranslation();
   const p = provider || {};
   const base = fallback || {};
-  const name = p.businessName || base.businessName || "Seller";
+  const name = p.businessName || base.businessName || t("provider.contact.seller");
   const locked = Boolean(p.contactLocked);
   const contact = p.contact || {};
   const location = p.location || {};
@@ -112,20 +116,20 @@ export default function ProviderContactCard({ provider, fallback, pending, categ
 
   const track = (type, value) => p.id && trackContactEvent(p.id, type, value);
   const unlockedHasAnything = Boolean(contact.phone || contact.whatsapp || contact.website || contact.email || location.address);
-  const fee = ugx(p.contactFee);
+  const fee = formatUgx(p.contactFee);
 
   // What the buyer would be paying for, from what this provider has actually filled in.
   const perks = [];
-  if (avail.phone || avail.whatsapp) perks.push(`${avail.phone && avail.whatsapp ? "Phone and WhatsApp" : avail.phone ? "Phone number" : "WhatsApp"} for a direct line to the owner`);
-  if (avail.address || avail.pin) perks.push(`${avail.address ? "Exact address" : "Location"}${avail.pin ? " with a map pin and directions" : ""}`);
-  if (avail.website || avail.email) perks.push(`${avail.website && avail.email ? "Website and email" : avail.website ? "Website" : "Email"} details`);
-  perks.push("Pay once and it stays unlocked on this device or your account");
+  if (avail.phone || avail.whatsapp) perks.push(t(`provider.contact.perks.line.${avail.phone && avail.whatsapp ? "both" : avail.phone ? "phone" : "whatsapp"}`));
+  if (avail.address || avail.pin) perks.push(t(`provider.contact.perks.place.${avail.address ? "address" : "location"}${avail.pin ? "Pin" : ""}`));
+  if (avail.website || avail.email) perks.push(t(`provider.contact.perks.web.${avail.website && avail.email ? "both" : avail.website ? "website" : "email"}`));
+  perks.push(t("provider.contact.perks.payOnce"));
 
   const card = (
     <div className={`pcc ${variant === "inline" ? "pcc-inline" : ""}`}>
       <div className="pcc-cover">
-        <span className="pcc-verified"><IconShield width={14} height={14} /> Approved on Gabla</span>
-        {variant === "sidebar" ? <button type="button" className="pcc-close" onClick={() => setOpen(false)} aria-label="Close"><IconClose width={18} height={18} /></button> : null}
+        <span className="pcc-verified"><IconShield width={14} height={14} /> {t("provider.contact.approved")}</span>
+        {variant === "sidebar" ? <button type="button" className="pcc-close" onClick={() => setOpen(false)} aria-label={t("provider.contact.close")}><IconClose width={18} height={18} /></button> : null}
       </div>
 
       <div className="pcc-head">
@@ -135,28 +139,28 @@ export default function ProviderContactCard({ provider, fallback, pending, categ
           <p>{[categoryName, area].filter(Boolean).join(" · ")}</p>
           <span className="pcc-rating">
             <IconStar width={14} height={14} />
-            {ratingCount ? <><strong>{Number(rating).toFixed(1)}</strong> <span>({ratingCount} reviews)</span></> : <span>New on Gabla</span>}
+            {ratingCount ? <><strong>{Number(rating).toFixed(1)}</strong> <span>({t("provider.contact.reviews", { count: ratingCount })})</span></> : <span>{t("provider.contact.newOnGabla")}</span>}
           </span>
         </div>
       </div>
 
       <div className="pcc-stats">
-        <div><strong>{joined ? monthYear(joined) : "-"}</strong><small>Member since</small></div>
-        <div><strong>{stats.listingCount ?? base.productCount ?? 0}</strong><small>Listings</small></div>
+        <div><strong>{joined ? monthYear(joined) : "-"}</strong><small>{t("provider.contact.memberSince")}</small></div>
+        <div><strong>{stats.listingCount ?? base.productCount ?? 0}</strong><small>{t("provider.contact.listings")}</small></div>
         <div>
           <strong>{stats.unlockCount >= 3 ? stats.unlockCount : <IconCheck width={18} height={18} />}</strong>
-          <small>{stats.unlockCount >= 3 ? "Buyers reached out" : "Gabla approved"}</small>
+          <small>{stats.unlockCount >= 3 ? t("provider.contact.buyersReached") : t("provider.contact.gablaApproved")}</small>
         </div>
       </div>
 
       <div className="pcc-contact">
-        <h3>Contact details</h3>
+        <h3>{t("provider.contact.title")}</h3>
         {pending ? (
           <div className="pcc-pending"><span className="skel" /><span className="skel" /><span className="skel" /></div>
         ) : (
           <ul className="pcc-rows">
             {(locked ? avail.phone : contact.phone) ? (
-              <Row icon={<IconPhone width={18} height={18} />} label="Phone number" locked={locked} action={contact.phone ? <CopyButton value={contact.phone} /> : null}>
+              <Row icon={<IconPhone width={18} height={18} />} label={t("provider.contact.phone")} locked={locked} action={contact.phone ? <CopyButton value={contact.phone} /> : null}>
                 <a href={`tel:${contact.phone}`} onClick={() => track("call", contact.phone)}>{contact.phone}</a>
               </Row>
             ) : null}
@@ -166,16 +170,16 @@ export default function ProviderContactCard({ provider, fallback, pending, categ
               </Row>
             ) : null}
             {(locked ? avail.website : contact.website) ? (
-              <Row icon={<IconGlobe width={18} height={18} />} label="Website" locked={locked}>
+              <Row icon={<IconGlobe width={18} height={18} />} label={t("provider.contact.website")} locked={locked}>
                 <a href={webHref(contact.website) || undefined} target="_blank" rel="noreferrer" onClick={() => track("website", contact.website)}>{String(contact.website).replace(/^https?:\/\//, "")}</a>
               </Row>
             ) : null}
             {(locked ? avail.address || avail.pin : location.address) ? (
-              <Row icon={<IconPin width={18} height={18} />} label="Exact address" locked={locked} hint={area ? `Somewhere in ${area}` : undefined}>
+              <Row icon={<IconPin width={18} height={18} />} label={t("provider.contact.address")} locked={locked} hint={area ? t("provider.contact.somewhereIn", { area }) : undefined}>
                 <span>{location.address}</span>
               </Row>
             ) : null}
-            {!locked && !unlockedHasAnything ? <li className="pcc-empty">This provider hasn&apos;t added contact details yet.</li> : null}
+            {!locked && !unlockedHasAnything ? <li className="pcc-empty">{t("provider.contact.noDetails")}</li> : null}
           </ul>
         )}
         {!locked && !pending ? <PinMap location={location} /> : null}
@@ -190,17 +194,17 @@ export default function ProviderContactCard({ provider, fallback, pending, categ
           </ul>
           <button type="button" className="pcc-cta" onClick={onUnlock}>
             <IconLock width={18} height={18} />
-            <span>Unlock contact</span>
+            <span>{t("provider.contact.unlock")}</span>
             <strong>{fee}</strong>
           </button>
-          <p className="pcc-fine">One-time fee · pay with mobile money · no account needed</p>
+          <p className="pcc-fine">{t("provider.contact.fine")}</p>
         </div>
       ) : null}
 
       {!locked && !pending && unlockedHasAnything ? (
         <div className="pcc-actions">
           {contact.phone ? (
-            <a className="pcc-btn pcc-btn-call" href={`tel:${contact.phone}`} onClick={() => track("call", contact.phone)}><IconPhone width={18} height={18} /> Call now</a>
+            <a className="pcc-btn pcc-btn-call" href={`tel:${contact.phone}`} onClick={() => track("call", contact.phone)}><IconPhone width={18} height={18} /> {t("provider.contact.callNow")}</a>
           ) : null}
           {contact.whatsapp ? (
             <a
@@ -214,26 +218,26 @@ export default function ProviderContactCard({ provider, fallback, pending, categ
             </a>
           ) : null}
           {directionsUrl(location) && (location.address || location.geo) ? (
-            <a className="pcc-btn pcc-btn-dir" href={directionsUrl(location)} target="_blank" rel="noreferrer" onClick={() => track("directions")}><IconPin width={18} height={18} /> Get directions</a>
+            <a className="pcc-btn pcc-btn-dir" href={directionsUrl(location)} target="_blank" rel="noreferrer" onClick={() => track("directions")}><IconPin width={18} height={18} /> {t("provider.contact.directions")}</a>
           ) : null}
         </div>
       ) : null}
       {description ? (
         <div className="pcc-about">
-          <h3>About</h3>
+          <h3>{t("provider.contact.about")}</h3>
           <p className={aboutOpen ? "" : "is-clamped"}>{description}</p>
-          {longAbout ? <button type="button" onClick={() => setAboutOpen((v) => !v)}>{aboutOpen ? "Show less" : "Read more"}</button> : null}
+          {longAbout ? <button type="button" onClick={() => setAboutOpen((v) => !v)}>{aboutOpen ? t("provider.contact.showLess") : t("provider.contact.readMore")}</button> : null}
         </div>
       ) : null}
 
     </div>
   );
 
-  if (variant === "inline") return <section className="pcc-wrap pcc-wrap-inline" aria-label={`Contact ${name}`}>{card}</section>;
+  if (variant === "inline") return <section className="pcc-wrap pcc-wrap-inline" aria-label={t("provider.contact.contactName", { name })}>{card}</section>;
 
   return (
     <>
-      <aside className={`pcc-wrap ${open ? "is-open" : ""}`} aria-label={`Contact ${name}`}>
+      <aside className={`pcc-wrap ${open ? "is-open" : ""}`} aria-label={t("provider.contact.contactName", { name })}>
         <div className="pcc-scrim" onClick={() => setOpen(false)} />
         {card}
       </aside>
@@ -244,14 +248,14 @@ export default function ProviderContactCard({ provider, fallback, pending, categ
           {avatar ? <img src={avatar} alt="" /> : <span>{name.trim().slice(0, 1).toUpperCase()}</span>}
           <div>
             <strong>{name}</strong>
-            <small>{locked ? `${fee} · one-time` : "Contact unlocked"}</small>
+            <small>{locked ? t("provider.contact.feeOneTime", { fee }) : t("provider.contact.unlocked")}</small>
           </div>
         </div>
         {!locked && contact.phone ? (
-          <a className="pcc-bar-btn" href={`tel:${contact.phone}`} onClick={() => track("call", contact.phone)}><IconPhone width={18} height={18} /> Call</a>
+          <a className="pcc-bar-btn" href={`tel:${contact.phone}`} onClick={() => track("call", contact.phone)}><IconPhone width={18} height={18} /> {t("provider.contact.call")}</a>
         ) : null}
         <button type="button" className="pcc-bar-btn is-primary" onClick={() => setOpen(true)} disabled={pending}>
-          {locked ? <><IconLock width={16} height={16} /> Unlock</> : "Details"}
+          {locked ? <><IconLock width={16} height={16} /> {t("provider.contact.unlockShort")}</> : t("provider.contact.details")}
         </button>
       </div>
     </>

@@ -1,12 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { Skel } from "../Skeleton";
-import { addDays, dateParts, shortPrice, todayEat } from "../../lib/bus";
+import { addDays, dateParts, shortPrice, todayEat, ugx } from "../../lib/bus";
 import { Calendar, ChevronLeft, ChevronRight } from "./icons";
 
 // eGoTickets-style weekday tabs. The selected tab is white and fuses into the white results panel
 // directly below it; the others sit on the sand band. `days` is the /bus/calendar map.
 export default function DateTabs({ days, loading, value, onChange, onCalendar, count = 30 }) {
+  const { t } = useTranslation();
   const start = todayEat();
   const dates = useMemo(() => Array.from({ length: count }, (_, i) => addDays(start, i)), [start, count]);
   const scroller = useRef(null);
@@ -39,14 +42,14 @@ export default function DateTabs({ days, loading, value, onChange, onCalendar, c
 
   return (
     <div className="bus-tabs-row">
-      <button type="button" className="bus-tabs-arrow" onClick={() => nudge(-1)} disabled={edges.start} aria-label="Earlier days"><ChevronLeft size={18} /></button>
+      <button type="button" className="bus-tabs-arrow" onClick={() => nudge(-1)} disabled={edges.start} aria-label={t("bus.dateTabs.earlier")}><ChevronLeft size={18} /></button>
       {loading ? (
         <div className="bus-tabs-scroll" role="status" aria-busy="true" aria-live="polite">
-          <span className="sr-only">Loading dates…</span>
+          <span className="sr-only">{t("bus.dateTabs.loading")}</span>
           {Array.from({ length: 9 }).map((_, i) => <span key={i} className="bus-tab-day is-skel"><Skel w={34} h={11} /><Skel w={30} h={26} /><Skel w={54} h={10} /></span>)}
         </div>
       ) : (
-        <div className={`bus-tabs-scroll ${edges.end ? "" : "has-more"}`} ref={scroller} onScroll={measure} role="tablist" aria-label="Choose a travel day">
+        <div className={`bus-tabs-scroll ${edges.end ? "" : "has-more"}`} ref={scroller} onScroll={measure} role="tablist" aria-label={t("bus.dateTabs.chooseDay")}>
           {dates.map((d) => {
             const info = days?.[d];
             const p = dateParts(d);
@@ -62,20 +65,20 @@ export default function DateTabs({ days, loading, value, onChange, onCalendar, c
                 disabled={empty && !active}
                 className={`bus-tab-day ${active ? "is-active" : ""} ${empty ? "is-empty" : ""}`}
                 onClick={() => onChange(d)}
-                aria-label={`${p.weekday} ${p.d} ${p.month}, ${empty ? "no trips" : `${info.trips} ${info.trips === 1 ? "trip" : "trips"}${info.minPrice ? ` from UGX ${Number(info.minPrice).toLocaleString("en-US")}` : ""}`}`}
+                aria-label={`${p.weekday} ${p.d} ${p.month}, ${empty ? t("bus.dateTabs.noTrips") : `${t("bus.tripsCount", { count: info.trips })}${info.minPrice ? ` ${t("bus.fromPrice", { price: ugx(info.minPrice) })}` : ""}`}`}
               >
-                <small>{d === start ? "Today" : p.weekday}{newMonth ? <i> · {p.month}</i> : null}</small>
+                <small>{d === start ? t("bus.dateTabs.today") : p.weekday}{newMonth ? <i> · {p.month}</i> : null}</small>
                 <strong>{p.d}</strong>
-                <span>{empty ? "No trips" : `${info.trips} ${info.trips === 1 ? "trip" : "trips"}`}</span>
+                <span>{empty ? t("bus.dateTabs.noTrips") : t("bus.tripsCount", { count: info.trips })}</span>
                 {!empty && info.minPrice ? <b>{shortPrice(info.minPrice)}</b> : null}
               </button>
             );
           })}
         </div>
       )}
-      <button type="button" className="bus-tabs-arrow" onClick={() => nudge(1)} disabled={edges.end} aria-label="Later days"><ChevronRight size={18} /></button>
+      <button type="button" className="bus-tabs-arrow" onClick={() => nudge(1)} disabled={edges.end} aria-label={t("bus.dateTabs.later")}><ChevronRight size={18} /></button>
       {onCalendar ? (
-        <button type="button" className="bus-tabs-cal" onClick={onCalendar} disabled={loading}><Calendar size={17} /><span>Calendar</span></button>
+        <button type="button" className="bus-tabs-cal" onClick={onCalendar} disabled={loading}><Calendar size={17} /><span>{t("bus.dateTabs.calendar")}</span></button>
       ) : null}
     </div>
   );

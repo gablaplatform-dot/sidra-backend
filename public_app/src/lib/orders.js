@@ -1,5 +1,6 @@
 import { request } from "./api";
 import { trackInterest } from "./tracking";
+import i18n from "../i18n";
 
 // Cash orders: nothing is charged online, the order goes straight to the seller and the buyer pays
 // them on delivery or pickup. (Online orders use the same call with paymentMethod "online": the seller accepts first, then the buyer pays from My orders.)
@@ -15,9 +16,9 @@ export const initialOrderDetails = (session) => ({
 
 // `delivery` is false for services, which have no delivery or pickup choice.
 export const validateOrderDetails = (details, { delivery = true } = {}) => {
-  if (!details.name.trim()) return "Enter your name.";
-  if (details.phone.replace(/\D/g, "").length < 7) return "Enter a phone number the seller can reach you on.";
-  if (delivery && details.method === "delivery" && !details.address.trim()) return "Choose where to deliver: pick it on the map or search for the place.";
+  if (!details.name.trim()) return i18n.t("orders.errName");
+  if (details.phone.replace(/\D/g, "").length < 7) return i18n.t("orders.errPhone");
+  if (delivery && details.method === "delivery" && !details.address.trim()) return i18n.t("orders.errAddress");
   return "";
 };
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../../lib/api";
 import { IconBox, IconClose } from "../icons";
@@ -10,6 +11,7 @@ const flatten = (nodes, depth = 0) =>
   nodes.flatMap((node) => [{ ...node, depth }, ...flatten(node.children || [], depth + 1)]);
 
 export default function ProfileShopCategoriesTab() {
+  const { t } = useTranslation();
   const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -24,7 +26,7 @@ export default function ProfileShopCategoriesTab() {
     setLoading(true);
     request("/shop-categories/mine")
       .then((result) => setTree(result?.items || []))
-      .catch((loadError) => setError(loadError.message || "Unable to load your shop categories."))
+      .catch((loadError) => setError(loadError.message || t("profile.shopCats.errLoad")))
       .finally(() => setLoading(false));
   };
 
@@ -45,10 +47,10 @@ export default function ProfileShopCategoriesTab() {
       });
       setName("");
       setParentId("");
-      setNotice("Category added.");
+      setNotice(t("profile.shopCats.added"));
       load();
     } catch (submitError) {
-      setError(submitError.message || "Unable to add this category.");
+      setError(submitError.message || t("profile.shopCats.errAdd"));
     } finally {
       setSaving(false);
     }
@@ -69,30 +71,29 @@ export default function ProfileShopCategoriesTab() {
       setEditingId(null);
       load();
     } catch (renameError) {
-      setError(renameError.message || "Unable to rename this category.");
+      setError(renameError.message || t("profile.shopCats.errRename"));
     }
   };
 
   const remove = async (row) => {
-    if (!window.confirm(`Delete "${row.name}"?`)) return;
+    if (!window.confirm(t("profile.shopCats.confirmDelete", { name: row.name }))) return;
     try {
       await request(`/shop-categories/${row.id}`, { method: "DELETE" });
       load();
     } catch (removeError) {
-      setError(removeError.message || "Unable to delete this category.");
+      setError(removeError.message || t("profile.shopCats.errDelete"));
     }
   };
 
-  if (loading) return <SectionSkeleton rows={4} label="Loading your shop categories" />;
+  if (loading) return <SectionSkeleton rows={4} label={t("profile.shopCats.loading")} />;
 
   return (
     <section className="detail-block">
       <div className="detail-block-header">
-        <h2>Shop categories</h2>
+        <h2>{t("profile.tabs.shopCategories")}</h2>
       </div>
       <p className="provider-meta profile-section-hint">
-        Organize your products and services the way a real store would &mdash; e.g. &ldquo;Electronics&rdquo; with
-        &ldquo;TVs&rdquo; and &ldquo;Speakers&rdquo; inside it. These are yours alone; customers browse them on your shop page.
+        {t("profile.shopCats.hint")}
       </p>
 
       {error ? <div className="error-message home-error">{error}</div> : null}
@@ -100,20 +101,20 @@ export default function ProfileShopCategoriesTab() {
 
       <form className="form-grid two" onSubmit={submitCreate} style={{ marginBottom: 24 }}>
         <label className="field">
-          <span>New category name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Electronics" required />
+          <span>{t("profile.shopCats.newName")}</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("profile.shopCats.namePlaceholder")} required />
         </label>
         <label className="field">
-          <span>Parent (optional)</span>
+          <span>{t("profile.shopCats.parent")}</span>
           <select value={parentId} onChange={(e) => setParentId(e.target.value)}>
-            <option value="">No parent (top level)</option>
+            <option value="">{t("profile.shopCats.noParent")}</option>
             {rows.map((row) => (
               <option key={row.id} value={row.id}>{"— ".repeat(row.depth)}{row.name}</option>
             ))}
           </select>
         </label>
         <button type="submit" className="cta-button" disabled={saving} style={{ gridColumn: "1 / -1", width: "auto" }}>
-          {saving ? "Adding…" : "+ Add category"}
+          {saving ? t("profile.shopCats.adding") : t("profile.shopCats.add")}
         </button>
       </form>
 
@@ -130,17 +131,17 @@ export default function ProfileShopCategoriesTab() {
                     autoFocus
                   />
                   <div className="listing-actions">
-                    <button type="button" onClick={() => submitRename(row.id)}>Save</button>
-                    <button type="button" onClick={() => setEditingId(null)}>Cancel</button>
+                    <button type="button" onClick={() => submitRename(row.id)}>{t("profile.shopCats.save")}</button>
+                    <button type="button" onClick={() => setEditingId(null)}>{t("profile.shopCats.cancel")}</button>
                   </div>
                 </>
               ) : (
                 <>
                   <strong>{row.name}</strong>
                   <div className="listing-actions">
-                    <button type="button" onClick={() => startRename(row)}>Rename</button>
+                    <button type="button" onClick={() => startRename(row)}>{t("profile.shopCats.rename")}</button>
                     <button type="button" onClick={() => remove(row)}>
-                      <IconClose /> Delete
+                      <IconClose /> {t("profile.shopCats.delete")}
                     </button>
                   </div>
                 </>
@@ -151,7 +152,7 @@ export default function ProfileShopCategoriesTab() {
       ) : (
         <div className="empty-state">
           <IconBox />
-          <p>No shop categories yet. Add your first one above.</p>
+          <p>{t("profile.shopCats.empty")}</p>
         </div>
       )}
     </section>

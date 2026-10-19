@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { setSession } from "../lib/session";
@@ -41,6 +42,7 @@ const ReadOnlyMap = ({ lat, lng }) => {
 };
 
 export default function ProviderOnboarding() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") || "";
@@ -79,7 +81,7 @@ export default function ProviderOnboarding() {
     let active = true;
     const load = async () => {
       if (!token) {
-        setError("This invitation link is incomplete.");
+        setError(t("onboarding.errIncomplete"));
         setLoading(false);
         return;
       }
@@ -123,7 +125,7 @@ export default function ProviderOnboarding() {
           setStage("link-google");
         }
       } catch (loadError) {
-        if (active) setError(loadError.message || "This invitation could not be opened.");
+        if (active) setError(loadError.message || t("onboarding.errOpen"));
       } finally {
         if (active) setLoading(false);
       }
@@ -148,7 +150,7 @@ export default function ProviderOnboarding() {
       (field) => field.required && !isCustomFieldFilled(field, form.customFields[field.key])
     );
     if (missingField) {
-      setError(`Please fill in "${missingField.label}".`);
+      setError(t("onboarding.errFillField", { field: missingField.label }));
       return;
     }
     setSaving(true);
@@ -179,7 +181,7 @@ export default function ProviderOnboarding() {
       });
       setStage("link-google");
     } catch (submitError) {
-      setError(submitError.message || "Registration could not be completed.");
+      setError(submitError.message || t("onboarding.errComplete"));
     } finally {
       setSaving(false);
     }
@@ -188,7 +190,7 @@ export default function ProviderOnboarding() {
   useEffect(() => {
     if (stage !== "link-google") return;
     if (!GOOGLE_CLIENT_ID) {
-      setLinkError("Google sign-in is not configured yet.");
+      setLinkError(t("onboarding.googleNotConfigured"));
       return;
     }
     let active = true;
@@ -203,7 +205,7 @@ export default function ProviderOnboarding() {
         setSession(result);
         navigate("/profile", { replace: true });
       } catch (linkErr) {
-        if (active) setLinkError(linkErr.message || "Unable to link your Google account.");
+        if (active) setLinkError(linkErr.message || t("onboarding.errLink"));
       } finally {
         if (active) setLinking(false);
       }
@@ -221,7 +223,7 @@ export default function ProviderOnboarding() {
         });
       })
       .catch((loadError) => {
-        if (active) setLinkError(loadError.message || "Unable to load Google sign-in");
+        if (active) setLinkError(loadError.message || t("onboarding.errGoogleLoad"));
       });
     return () => {
       active = false;
@@ -232,8 +234,8 @@ export default function ProviderOnboarding() {
     return (
       <main className="center-state">
         <div className="spinner" />
-        <h1>Opening your invitation</h1>
-        <p>We are preparing your Gabla provider profile.</p>
+        <h1>{t("onboarding.opening")}</h1>
+        <p>{t("onboarding.preparing")}</p>
       </main>
     );
   }
@@ -242,11 +244,11 @@ export default function ProviderOnboarding() {
     return (
       <main className="center-state">
         <div className="brand-mark">G</div>
-        <h1>Your profile is live!</h1>
-        <p>Sign in with Google now to link it to your account and reach your dashboard, wallet, and orders.</p>
+        <h1>{t("onboarding.liveTitle")}</h1>
+        <p>{t("onboarding.liveBody")}</p>
         {linkError ? <div className="error-message">{linkError}</div> : null}
-        {linking ? <p>Linking your account…</p> : <div ref={googleButtonRef} />}
-        <a className="secondary-button" href="/login" style={{ marginTop: 16 }}>I&apos;ll sign in later</a>
+        {linking ? <p>{t("onboarding.linking")}</p> : <div ref={googleButtonRef} />}
+        <a className="secondary-button" href="/login" style={{ marginTop: 16 }}>{t("onboarding.signInLater")}</a>
       </main>
     );
   }
@@ -255,9 +257,9 @@ export default function ProviderOnboarding() {
     return (
       <main className="center-state">
         <div className="brand-mark">G</div>
-        <h1>We could not open this invitation</h1>
+        <h1>{t("onboarding.cannotOpen")}</h1>
         <p>{error}</p>
-        <a className="secondary-button" href="mailto:support@gabla.ug">Contact Gabla support</a>
+        <a className="secondary-button" href="mailto:support@gabla.ug">{t("onboarding.contactSupport")}</a>
       </main>
     );
   }
@@ -266,48 +268,48 @@ export default function ProviderOnboarding() {
     <main className="onboarding-shell">
       <header className="topbar">
         <div className="brand"><span className="brand-mark">G</span><strong>Gabla</strong></div>
-        <span className="secure-label">Secure provider registration</span>
+        <span className="secure-label">{t("onboarding.secureRegistration")}</span>
       </header>
 
       <div className="onboarding-grid">
         <aside className="welcome-pane">
           <img src="/assets/gabla-provider-welcome.png" alt="" />
-          <p className="eyebrow">You have been invited</p>
-          <h1>Let customers discover what you do best.</h1>
-          <p>Complete the profile for <strong>{invitation?.provider?.businessName}</strong>. Your details are saved securely and reviewed before publishing.</p>
+          <p className="eyebrow">{t("onboarding.invited")}</p>
+          <h1>{t("onboarding.headline")}</h1>
+          <p>{t("onboarding.completeFor")} <strong>{invitation?.provider?.businessName}</strong>. {t("onboarding.savedSecurely")}</p>
           <div className="category-chip">
             <Icon>✓</Icon>
-            <span>{category?.path || "Gabla service provider"}</span>
+            <span>{category?.path || t("onboarding.defaultCategory")}</span>
           </div>
         </aside>
 
         <form className="registration-form" onSubmit={submit}>
           <div className="form-heading">
-            <p className="eyebrow">Complete your profile</p>
-            <h2>Business and account details</h2>
-            <p>Invited as {invitation?.user?.email}</p>
+            <p className="eyebrow">{t("onboarding.completeProfile")}</p>
+            <h2>{t("onboarding.businessAccount")}</h2>
+            <p>{t("onboarding.invitedAs", { email: invitation?.user?.email })}</p>
           </div>
 
           {error ? <div className="error-message">{error}</div> : null}
 
           <section>
-            <h3>Business profile</h3>
+            <h3>{t("onboarding.businessProfile")}</h3>
             <div className="form-grid">
-              <Field label="Business name">
+              <Field label={t("onboarding.businessName")}>
                 <input required value={form.businessName} disabled={adminLocked.businessName} onChange={(e) => setForm({ ...form, businessName: e.target.value })} />
               </Field>
-              <Field label="Assigned category">
-                <input value={category?.path || "Assigned by Gabla"} disabled />
+              <Field label={t("onboarding.assignedCategory")}>
+                <input value={category?.path || t("onboarding.assignedByGabla")} disabled />
               </Field>
-              <Field label="Business description">
-                <textarea required rows="4" value={form.description} disabled={adminLocked.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Tell customers about your experience and services." />
+              <Field label={t("onboarding.businessDescription")}>
+                <textarea required rows="4" value={form.description} disabled={adminLocked.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={t("onboarding.descriptionPlaceholder")} />
               </Field>
             </div>
           </section>
 
           {providerFields.length ? (
             <section>
-              <h3>More about your {category?.name?.toLowerCase() || "business"}</h3>
+              <h3>{category?.name ? t("onboarding.moreAbout", { name: category.name.toLowerCase() }) : t("onboarding.moreAboutBusiness")}</h3>
               <div className="form-grid two">
                 {providerFields.map((field) => (
                   <Field
@@ -333,25 +335,25 @@ export default function ProviderOnboarding() {
           ) : null}
 
           <section>
-            <h3>Contact details</h3>
+            <h3>{t("onboarding.contactDetails")}</h3>
             <div className="form-grid two">
-              <Field label="Phone number"><input type="tel" value={form.phone} disabled={adminLocked.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+256" /></Field>
-              <Field label="WhatsApp number"><input type="tel" value={form.whatsapp} disabled={adminLocked.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="+256" /></Field>
-              <Field label="Website"><input type="url" value={form.website} disabled={adminLocked.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://" /></Field>
+              <Field label={t("onboarding.phoneNumber")}><input type="tel" value={form.phone} disabled={adminLocked.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+256" /></Field>
+              <Field label={t("onboarding.whatsappNumber")}><input type="tel" value={form.whatsapp} disabled={adminLocked.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="+256" /></Field>
+              <Field label={t("onboarding.website")}><input type="url" value={form.website} disabled={adminLocked.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://" /></Field>
             </div>
           </section>
 
           {adminLocked.geo ? (
             <section>
-              <h3>Business location</h3>
+              <h3>{t("onboarding.businessLocation")}</h3>
               <ReadOnlyMap lat={adminLocked.geo.lat} lng={adminLocked.geo.lng} />
             </section>
           ) : null}
 
           <button className="primary-button" type="submit" disabled={saving}>
-            {saving ? "Completing registration..." : "Complete registration"}
+            {saving ? t("onboarding.completing") : t("onboarding.complete")}
           </button>
-          <p className="terms">By continuing, you confirm that the information provided is accurate and that you are authorized to manage this business profile.</p>
+          <p className="terms">{t("onboarding.terms")}</p>
         </form>
       </div>
     </main>

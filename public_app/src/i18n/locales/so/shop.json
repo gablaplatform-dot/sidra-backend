@@ -1,0 +1,297 @@
+{
+  "shop": {
+    "meta": {
+      "title": "Dukaanka Gabla — Dharka Moodada, Elektaroonigga iyo Nolol-maalmeedka",
+      "allCategories": "Dhammaan Qaybaha — Dukaanka Gabla",
+      "browseProduct": "{{name}} oo ka mara {{where}} | Dukaanka Gabla",
+      "browseService": "{{name}} oo ka mara {{where}} | Adeegyada Gabla",
+      "collection": "{{title}} | Dukaanka Gabla"
+    },
+    "nav": {
+      "home": "Bogga hore",
+      "shop": "Dukaan",
+      "newArrivals": "Alaabta Cusub",
+      "bestSellers": "Ugu Iibsashada Badan",
+      "categories": "Qaybaha",
+      "about": "Nagu saabsan",
+      "blog": "Blog",
+      "contact": "Nala Soo Xiriir"
+    },
+    "navbar": {
+      "searchNearby": "Raadi meel u dhow",
+      "wishlist": "Liiska rabitaanka"
+    },
+    "trust": {
+      "quality": { "title": "Tayo Sare", "subtitle": "Laga sameeyay alaab tayo wanaagsan" },
+      "delivery": { "title": "Gaarsiin Degdeg ah", "subtitle": "Dirid dhakhso ah oo la isku halleyn karo" },
+      "checkout": { "title": "Bixin Ammaan ah", "subtitle": "Xogtaada waa la ilaaliyaa" },
+      "satisfaction": { "title": "Raaxada Macmiilka", "subtitle": "Dammaanad 100% raaxo ah" }
+    },
+    "hero": {
+      "eyebrow": "HADDA KU SOCDA",
+      "titleLine1": "Hel Alaab",
+      "titleLine2": "Aad Jeceshahay",
+      "subtitle": "Iibso alaabta ugu cusub ee loo doortay nolol casri ah.",
+      "shopNow": "Hadda Iibso",
+      "explore": "Eeg Uruurinta",
+      "loved": "Waxaa jecel <b>50,000+</b> macmiil oo adduunka ku nool",
+      "modelAlt": "Muuqaal gaar ah"
+    },
+    "adsHero": {
+      "nearYou": "KU DHOW · {{km}} KM",
+      "featured": "GAAR AH",
+      "showAd": "Tus xayeysiiska {{n}}",
+      "shopNow": "Hadda Iibso"
+    },
+    "promo": {
+      "flashSale": "Dhimis Degdeg ah",
+      "flashSaleAlt": "Dhimis degdeg ah",
+      "limitedTime": "Dalab waqti xaddidan",
+      "shopNow": "Hadda Iibso",
+      "days": "Maalmo",
+      "hours": "Saacado",
+      "min": "Daq",
+      "sec": "Ilbi",
+      "newCollection": "Uruurin Cusub",
+      "freshSeason": "Xilli cusub",
+      "discoverTrends": "Hel moodooyinka ugu cusub",
+      "explore": "Sahami"
+    },
+    "defaults": {
+      "category": "Qayb",
+      "product": "Alaab",
+      "productDescription": "Alaab tayo sare leh oo loo sameeyay raaxo iyo waarid.",
+      "promoTitle": "Dalab Xaddidan",
+      "promoCta": "Hadda Iibso"
+    },
+    "forYou": {
+      "title": "Kan ayaa kuu habboon",
+      "clearConfirm": "Ma tirtiraa waxa aan ka baranay raadintaada? Talooyinkaaga waa dib u bilaabmi doonaan.",
+      "popularAround": "Ku caan ah {{district}}. Waxay ka sii fiicnaataa marka aad sii daawato.",
+      "popularNow": "Hadda caan ah. Waxay ka sii fiicnaataa marka aad sii daawato.",
+      "clearHistory": "Tir taariikhdayda",
+      "continue": "Ka sii wad meeshii aad joogtay",
+      "picked": "Laguu doortay",
+      "contactForPrice": "La xiriir qiimaha"
+    },
+    "categories": {
+      "shopBy": "Ku iibso qaybaha",
+      "viewAll": "Eeg Dhammaan Qaybaha",
+      "shopNow": "Hadda Iibso",
+      "scrollLeft": "Bidix u rar",
+      "scrollRight": "Midig u rar",
+      "breadcrumb": "Dukaan",
+      "allTitle": "Dhammaan Qaybaha",
+      "empty": "Weli qaybo dukaan ma jiraan."
+    },
+    "newArrivals": {
+      "title": "Alaabta Cusub",
+      "viewAll": "Eeg Alaabta Cusub oo Dhan"
+    },
+    "bestSellers": {
+      "title": "Ugu Iibsashada Badan",
+      "viewAll": "Eeg Kuwa Ugu Iibsashada Badan",
+      "badge": "Ugu iibsasha badan",
+      "quickAdd": "Dhakhso ku dar",
+      "added": "Lagu daray ✓"
+    },
+    "card": {
+      "new": "Cusub",
+      "wishlist": "Ku dar liiska rabitaanka",
+      "addToCart": "Ku dar dambiisha",
+      "added": "Lagu daray"
+    },
+    "listing": {
+      "new": "Cusub",
+      "bookInstantly": "Hadda ballan qaad",
+      "bookable": "Ballansan karo",
+      "contactForPrice": "La xiriir qiimaha",
+      "uganda": "Uganda",
+      "distance": "{{km}} km"
+    },
+    "nearby": {
+      "title": "Raadi meel u dhow",
+      "close": "Xir",
+      "placeholder": "Maxaad raadinaysaa?",
+      "search": "Raadi",
+      "searching": "Waa la raadinayaa…",
+      "searchingLabel": "Waa la raadinayaa",
+      "allUganda": "Uganda oo dhan",
+      "thatDistrict": "degmadaas",
+      "noResultsDistrict": "Natiijo kuma jirto {{district}} — halkii waxaa lagu tusayaa natiijooyin Uganda oo dhan ka yimid.",
+      "noResultsNearby": "Natiijo u dhow ma jirto — halkii waxaa lagu tusayaa natiijooyin ka fog.",
+      "noResultsAnywhere": "Raadintaas meel natiijo kuma jirto. Isku day eray kale.",
+      "unableSearch": "Hadda raadin lama sameyn karo.",
+      "awayFrom": "{{provider}} — {{km}} km ka fog",
+      "away": "{{km}} km ka fog",
+      "notice": {
+        "denied": "Helitaanka goobtaada waa la diiday — hoos ka dooro degmo, ama waxaan tusi doonaa dhammaan natiijooyinka.",
+        "unsupported": "Browserkan ma wadaagi karo goobtaada — hoos ka dooro degmo, ama waxaan tusi doonaa dhammaan natiijooyinka.",
+        "timeout": "Goobtaada waqtigii lagu helin waayay — hoos ka dooro degmo, ama waxaan tusi doonaa dhammaan natiijooyinka.",
+        "unavailable": "Goobtaada lama garan karo — hoos ka dooro degmo, ama waxaan tusi doonaa dhammaan natiijooyinka."
+      }
+    },
+    "browse": {
+      "breadcrumbShop": "Dukaan",
+      "breadcrumbServices": "Adeegyo",
+      "geo": {
+        "denied": "Helitaanka goobtaada waa la diiday, sidaas darteed waxaan tusaynaa Uganda oo dhan.",
+        "unsupported": "Browserkan ma wadaagi karo goobtaada, sidaas darteed waxaan tusaynaa Uganda oo dhan.",
+        "timeout": "Goobtaada waqtigii lagu helin waayay, sidaas darteed waxaan tusaynaa Uganda oo dhan.",
+        "unavailable": "Goobtaada lama garan karo, sidaas darteed waxaan tusaynaa Uganda oo dhan."
+      },
+      "collection": {
+        "new": "Alaabta cusub",
+        "bestsellers": "Ugu iibsashada badan",
+        "all": "Alaabta oo dhan"
+      },
+      "sort": {
+        "featured": "La soo jeediyay",
+        "newest": "Ugu cusub",
+        "price_asc": "Ugu rikhiis",
+        "price_desc": "Ugu qaali",
+        "bestsellers": "Ugu iibsasha badan"
+      },
+      "nearYou": "Kuu dhow ({{km}} km)",
+      "around": "Agagaarka {{district}}",
+      "allUganda": "Uganda oo dhan",
+      "widenedNear": "{{km}} km gudahood waxba lagama helin, waxaan tusaynaa natiijooyinka ugu dhow Uganda oo dhan.",
+      "widenedDistrict": "Xayeysiis ku habboon kuma jiro {{district}}, waxaan tusaynaa Uganda oo dhan.",
+      "arrangedProducts": "Waxaa marka hore la tusayaa alaabta ugu dhow {{place}}.",
+      "arrangedServices": "Waxaa marka hore la tusayaa adeegyada ugu dhow {{place}}.",
+      "whereUganda": "Uganda",
+      "whereYourArea": "aagaaga",
+      "titleIn": "{{name}} oo ka mara {{where}}",
+      "allServices": "Adeegyada oo dhan",
+      "products": "Alaab",
+      "resultsFor": "Natiijooyinka “{{q}}”",
+      "count_one": "{{n}} natiijo",
+      "count_other": "{{n}} natiijo",
+      "searchChip": "Raadin: {{q}}",
+      "discountChip": "Dhimis leh",
+      "priceChip": "UGX {{range}}",
+      "filters": "Shaandhayn",
+      "closeFilters": "Xir shaandhaynta",
+      "showResults_one": "Tus {{n}} natiijo",
+      "showResults_other": "Tus {{n}} natiijo",
+      "location": "Goob",
+      "locationAria": "Goob: {{label}}. Beddel goobta",
+      "filtersBtn": "Shaandhayn ({{count}})",
+      "sort_label": "Kala saar",
+      "clearAll": "Tir dhammaan",
+      "noMatchProducts": "Alaab ku habboon ma jirto",
+      "noMatchServices": "Adeeg ku habboon ma jiro",
+      "tryRemoving": "Isku day inaad ka saarto shaandhayn ama dooro goob ballaaran.",
+      "clearAllFilters": "Tir dhammaan shaandhaynta",
+      "backToServices": "Ku noqo adeegyada",
+      "backToShop": "Ku noqo dukaanka",
+      "loadErrorProducts": "Alaabta lama soo rari karo.",
+      "loadErrorServices": "Adeegyada lama soo rari karo."
+    },
+    "sidebar": {
+      "categories": "Qaybaha",
+      "allCategories": "Dhammaan qaybaha",
+      "showLess": "Tus wax yar",
+      "showAll": "Tus dhammaan {{count}}",
+      "priceUgx": "Qiimo, UGX",
+      "min": "ugu yar",
+      "max": "ugu badan",
+      "clear": "Tir",
+      "apply": "Dabaq",
+      "yes": "Haa",
+      "location": "Goob",
+      "withDiscount": "Dhimis leh",
+      "clearAllFilters": "Tir dhammaan shaandhaynta"
+    },
+    "price": {
+      "under": "Ka hooseeya {{amount}}",
+      "over": "Ka badan {{amount}}"
+    },
+    "attr": {
+      "condition": "Xaalad",
+      "brand": "Nooca (Brand)",
+      "yearOfManufacture": "Sannadka lagu sameeyay",
+      "transmission": "Gearka",
+      "internalStorage": "Kaydka gudaha",
+      "ram": "RAM",
+      "storageCapacity": "Awoodda kaydka",
+      "screenSize": "Cabbirka shaashadda",
+      "size": "Cabbir",
+      "fuel": "Shidaal",
+      "type": "Nooc",
+      "color": "Midab",
+      "make": "Soo-saare",
+      "model": "Model",
+      "mileage": "Masaafada la maray"
+    },
+    "location": {
+      "title": "Dooro goob",
+      "close": "Xir",
+      "search": "Raadi degmo",
+      "useCurrent": "Isticmaal goobtayda hadda",
+      "nearestFirst": "ugu dhow marka hore",
+      "around": "Agagaarka {{district}}",
+      "yourAreaNearest": "aagaaga, ugu dhow marka hore",
+      "allUganda": "Uganda oo dhan",
+      "ads_one": "{{n}} xayeysiis",
+      "ads_other": "{{n}} xayeysiis",
+      "noMatch": "Degmo la mid ah “{{query}}” ma jirto."
+    },
+    "layout": {
+      "label": "Habaynta alaabta",
+      "grid": "Muuqaal shabakad",
+      "list": "Muuqaal liis"
+    }
+  },
+  "product": {
+    "notFound": "Alaabtan lama helin.",
+    "backToShop": "Ku noqo dukaanka",
+    "breadcrumbShop": "Dukaan",
+    "breadcrumbServices": "Adeegyo",
+    "metaShop": "{{name}} - {{price}} | Gabla Shop",
+    "metaService": "{{name}} - {{price}} | Gabla Services",
+    "shareCopied": "Xiriiriyaha waa la koobiyeeyay",
+    "shareFallback": "Xiriiriyaha ka koobiyee barta cinwaanka",
+    "share": "La wadaag xayeysiiskan",
+    "bookNow": "Hadda ballan qaad",
+    "checkAvailability": "Hubi helitaanka",
+    "seeContact": "Eeg macluumaadka xiriirka",
+    "unlockContact": "Fur macluumaadka xiriirka",
+    "orderNow": "Hadda dalbo",
+    "orderPayOnDelivery": "Hadda dalbo · ku bixi marka la gaarsiiyo",
+    "payOnDelivery": "Ku bixi marka la gaarsiiyo",
+    "addToCart": "Ku dar dambiisha",
+    "added": "Lagu daray",
+    "description": "Sharaxaad",
+    "specifications": "Faahfaahin",
+    "safetyTips": "Talooyin amni",
+    "tips": {
+      "service1": "Isku raac qiimaha iyo wixii si buuxda ugu jira kahor intaan shaqada bilaaban.",
+      "service2": "Ka dhig wada hadalkaaga iyo lacagaha mid la raadin karo, oo haddii aad awooddo ka bixi shaqada kadib.",
+      "service3": "Hubi faallooyinka oo weydiiso tusaalayaal shaqo oo la mid ah.",
+      "product1": "La kulan iibiyaha meel dadweyne oo hubi alaabta kahor intaadan bixin.",
+      "product2": "Hore ha u bixin wax aadan arkin.",
+      "product3": "Hubi in alaabtu la mid tahay sawirrada iyo sharaxaadda."
+    },
+    "posted": "La geliyay {{time}}",
+    "views_one": "{{n}} daawasho",
+    "views_other": "{{n}} daawasho",
+    "contactForPrice": "La xiriir qiimaha",
+    "save": "Waxaad badbaadisay {{amount}}",
+    "payNote": "Dir dalabkaaga oo ku bixi mobile money marka iibiyuhu aqbalo, ama dooro inaad ku bixiso marka la gaarsiiyo.",
+    "serviceNote": "Fur telefoonka iyo goobta bixiyaha adeegga si aad ugala hadashid shaqada oo aad si toos ah qiimaha ugu heshiisaan.",
+    "similarServices": "Adeegyo la mid ah",
+    "similarProducts": "Alaab la mid ah",
+    "browseMore": "Eeg wax kale",
+    "moreFrom": "Wax kale oo ka yimid {{seller}}",
+    "thisSeller": "iibiyahan",
+    "visitShop": "Booqo dukaanka",
+    "gallery": {
+      "openFull": "Fur sawirka cabbirkiisa buuxa",
+      "prev": "Sawirkii hore",
+      "next": "Sawirka xiga",
+      "showImage": "Tus sawirka {{n}}",
+      "close": "Xir"
+    }
+  }
+}

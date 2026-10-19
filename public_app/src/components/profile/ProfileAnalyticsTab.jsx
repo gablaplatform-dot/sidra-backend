@@ -1,24 +1,21 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { request } from "../../lib/api";
+import { formatUgx } from "../../lib/format";
+import { intlLocale } from "../../i18n";
 import { IconBox } from "../icons";
 import { SectionSkeleton } from "../Skeleton";
 
-const RANGE_OPTIONS = [
-  { key: 7, label: "7d" },
-  { key: 30, label: "30d" },
-  { key: 90, label: "90d" }
-];
+const RANGE_OPTIONS = [7, 30, 90];
 
-const CONTACT_LABELS = { call: "Calls", whatsapp: "WhatsApp", email: "Emails", website: "Website clicks", directions: "Directions" };
-
-const formatNumber = (n) => Number(n ?? 0).toLocaleString();
-const formatUgx = (v) => `UGX ${Number(v ?? 0).toLocaleString()}`;
-const formatShortDate = (isoDay) => new Date(`${isoDay}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+const formatNumber = (n) => Number(n ?? 0).toLocaleString(intlLocale());
+const formatShortDate = (isoDay) => new Date(`${isoDay}T00:00:00`).toLocaleDateString(intlLocale(), { month: "short", day: "numeric" });
 
 // Hand-rolled - this app has no chart library and hand-rolls every icon/graphic as inline SVG, so
 // a small dependency-free bar chart matches the codebase rather than pulling in a new package.
 // Single series (profile visits), so no legend is needed - the chart title already names it.
 function VisitsChart({ data }) {
+  const { t } = useTranslation();
   const [hoverIndex, setHoverIndex] = useState(null);
   if (!data.length) return null;
 
@@ -34,7 +31,7 @@ function VisitsChart({ data }) {
 
   return (
     <div className="analytics-chart-wrap">
-      <svg viewBox={`0 0 ${width} ${height}`} className="analytics-chart-svg" role="img" aria-label={`Profile visits per day over the last ${data.length} days, from 0 up to ${maxValue}`}>
+      <svg viewBox={`0 0 ${width} ${height}`} className="analytics-chart-svg" role="img" aria-label={t("profile.analytics.chartAria", { days: data.length, max: maxValue })}>
         <line x1={padding.left} y1={height - padding.bottom} x2={width - padding.right} y2={height - padding.bottom} stroke="var(--gabla-border)" strokeWidth="1" />
         {data.map((d, i) => {
           const x = padding.left + i * (barWidth + barGap);
@@ -72,14 +69,14 @@ function VisitsChart({ data }) {
       </svg>
       {hoverIndex !== null ? (
         <div className="analytics-chart-tooltip" style={{ left: `${((hoverIndex + 0.5) / data.length) * 100}%` }}>
-          <strong>{data[hoverIndex].count}</strong> visit{data[hoverIndex].count === 1 ? "" : "s"}
+          <strong>{data[hoverIndex].count}</strong> {t("profile.analytics.visit", { count: data[hoverIndex].count })}
           <span>{formatShortDate(data[hoverIndex].date)}</span>
         </div>
       ) : null}
 
       <table className="sr-only">
-        <caption>Profile visits by day</caption>
-        <thead><tr><th>Date</th><th>Visits</th></tr></thead>
+        <caption>{t("profile.analytics.visitsByDay")}</caption>
+        <thead><tr><th>{t("profile.analytics.date")}</th><th>{t("profile.analytics.visits")}</th></tr></thead>
         <tbody>
           {data.map((d) => <tr key={d.date}><td>{d.date}</td><td>{d.count}</td></tr>)}
         </tbody>
@@ -89,6 +86,7 @@ function VisitsChart({ data }) {
 }
 
 export default function ProfileAnalyticsTab() {
+  const { t } = useTranslation();
   const [days, setDays] = useState(30);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -103,7 +101,7 @@ export default function ProfileAnalyticsTab() {
         if (active) setData(result);
       })
       .catch((loadError) => {
-        if (active) setError(loadError.message || "Unable to load your analytics.");
+        if (active) setError(loadError.message || t("profile.analytics.errLoad"));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -113,21 +111,21 @@ export default function ProfileAnalyticsTab() {
     };
   }, [days]);
 
-  if (loading && !data) return <SectionSkeleton rows={3} label="Loading your analytics" />;
+  if (loading && !data) return <SectionSkeleton rows={3} label={t("profile.analytics.loading")} />;
 
   return (
     <section className="detail-block">
       <div className="detail-block-header">
-        <h2>Analytics</h2>
+        <h2>{t("profile.tabs.analytics")}</h2>
         <div className="analytics-range-toggle">
           {RANGE_OPTIONS.map((opt) => (
             <button
-              key={opt.key}
+              key={opt}
               type="button"
-              className={days === opt.key ? "is-active" : ""}
-              onClick={() => setDays(opt.key)}
+              className={days === opt ? "is-active" : ""}
+              onClick={() => setDays(opt)}
             >
-              {opt.label}
+              {t("profile.analytics.rangeDays", { n: opt })}
             </button>
           ))}
         </div>
@@ -140,42 +138,42 @@ export default function ProfileAnalyticsTab() {
           {data.totals.profileViews === 0 && data.totals.contactUnlocks === 0 && data.totals.listingViews === 0 && data.totals.orders === 0 ? (
             <div className="empty-state" style={{ marginBottom: 20 }}>
               <IconBox />
-              <p>No activity yet. Once people start viewing your profile and reaching out, you&apos;ll see it here.</p>
+              <p>{t("profile.analytics.noActivity")}</p>
             </div>
           ) : null}
 
           <div className="analytics-stat-grid">
             <div className="analytics-stat-tile">
-              <span className="analytics-stat-label">Profile views</span>
+              <span className="analytics-stat-label">{t("profile.analytics.profileViews")}</span>
               <strong className="analytics-stat-value">{formatNumber(data.totals.profileViews)}</strong>
             </div>
             <div className="analytics-stat-tile">
-              <span className="analytics-stat-label">Contact unlocks</span>
+              <span className="analytics-stat-label">{t("profile.analytics.contactUnlocks")}</span>
               <strong className="analytics-stat-value">{formatNumber(data.totals.contactUnlocks)}</strong>
               {Number(data.totals.contactUnlockRevenue) > 0 ? (
-                <span className="analytics-stat-sub">{formatUgx(data.totals.contactUnlockRevenue)} earned</span>
+                <span className="analytics-stat-sub">{t("profile.analytics.earned", { amount: formatUgx(data.totals.contactUnlockRevenue) })}</span>
               ) : null}
             </div>
             <div className="analytics-stat-tile">
-              <span className="analytics-stat-label">Listing views</span>
+              <span className="analytics-stat-label">{t("profile.analytics.listingViews")}</span>
               <strong className="analytics-stat-value">{formatNumber(data.totals.listingViews)}</strong>
             </div>
             <div className="analytics-stat-tile">
-              <span className="analytics-stat-label">Orders</span>
+              <span className="analytics-stat-label">{t("profile.tabs.orders")}</span>
               <strong className="analytics-stat-value">{formatNumber(data.totals.orders)}</strong>
               {Number(data.totals.orderRevenue) > 0 ? (
-                <span className="analytics-stat-sub">{formatUgx(data.totals.orderRevenue)} fulfilled</span>
+                <span className="analytics-stat-sub">{t("profile.analytics.fulfilled", { amount: formatUgx(data.totals.orderRevenue) })}</span>
               ) : null}
             </div>
             <div className="analytics-stat-tile">
-              <span className="analytics-stat-label">Favorites</span>
+              <span className="analytics-stat-label">{t("profile.analytics.favorites")}</span>
               <strong className="analytics-stat-value">{formatNumber(data.totals.favorites)}</strong>
             </div>
             <div className="analytics-stat-tile">
-              <span className="analytics-stat-label">Rating</span>
-              <strong className="analytics-stat-value">{data.totals.ratingCount ? Number(data.totals.ratingAvg).toFixed(1) : "New"}</strong>
+              <span className="analytics-stat-label">{t("profile.analytics.rating")}</span>
+              <strong className="analytics-stat-value">{data.totals.ratingCount ? Number(data.totals.ratingAvg).toFixed(1) : t("common.new")}</strong>
               {data.totals.ratingCount ? (
-                <span className="analytics-stat-sub">{data.totals.ratingCount} review{data.totals.ratingCount === 1 ? "" : "s"}</span>
+                <span className="analytics-stat-sub">{t("profile.analytics.reviews", { count: data.totals.ratingCount })}</span>
               ) : null}
             </div>
           </div>
@@ -183,12 +181,12 @@ export default function ProfileAnalyticsTab() {
           <div className="analytics-chart-card">
             <div className="analytics-chart-header">
               <div>
-                <h3>Profile visits</h3>
-                <p className="provider-meta">Last {days} days</p>
+                <h3>{t("profile.analytics.visits")}</h3>
+                <p className="provider-meta">{t("profile.analytics.lastDays", { days })}</p>
               </div>
               {data.trend ? (
                 <span className={`analytics-trend-badge ${data.trend.changePercent >= 0 ? "is-up" : "is-down"}`}>
-                  {data.trend.changePercent >= 0 ? "▲" : "▼"} {Math.abs(data.trend.changePercent)}% vs previous week
+                  {data.trend.changePercent >= 0 ? "▲" : "▼"} {t("profile.analytics.vsPrevWeek", { percent: Math.abs(data.trend.changePercent) })}
                 </span>
               ) : null}
             </div>
@@ -199,11 +197,11 @@ export default function ProfileAnalyticsTab() {
             <div className="analytics-breakdown-grid">
               {data.contactEventsByType.length ? (
                 <div className="analytics-breakdown-card">
-                  <h3>How people reach out</h3>
+                  <h3>{t("profile.analytics.howReach")}</h3>
                   <ul className="analytics-breakdown-list">
                     {data.contactEventsByType.map((row) => (
                       <li key={row.type}>
-                        <span>{CONTACT_LABELS[row.type] || row.type}</span>
+                        <span>{t(`profile.analytics.contact.${row.type}`, { defaultValue: row.type })}</span>
                         <strong>{formatNumber(row.count)}</strong>
                       </li>
                     ))}
@@ -213,12 +211,12 @@ export default function ProfileAnalyticsTab() {
 
               {data.topListings.length ? (
                 <div className="analytics-breakdown-card">
-                  <h3>Top viewed listings</h3>
+                  <h3>{t("profile.analytics.topListings")}</h3>
                   <ul className="analytics-breakdown-list">
                     {data.topListings.map((listing) => (
                       <li key={listing.id}>
                         <span>{listing.name}</span>
-                        <strong>{formatNumber(listing.viewCount)} view{listing.viewCount === 1 ? "" : "s"}</strong>
+                        <strong>{formatNumber(listing.viewCount)} {t("profile.analytics.view", { count: listing.viewCount })}</strong>
                       </li>
                     ))}
                   </ul>

@@ -1,36 +1,38 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import DeliveryLocationPicker from "./DeliveryLocationPicker";
 
 // Contact + delivery details for a cash order, shared by the order dialog and the cart.
 export default function OrderDetailsFields({ value, onChange, delivery = true }) {
+  const { t } = useTranslation();
   const set = (patch) => onChange({ ...value, ...patch });
   return (
     <>
       <label className="field">
-        <span>Your name</span>
+        <span>{t("form.yourName")}</span>
         <input value={value.name} onChange={(e) => set({ name: e.target.value })} autoComplete="name" />
       </label>
       <label className="field">
-        <span>Phone number</span>
-        <input value={value.phone} onChange={(e) => set({ phone: e.target.value })} placeholder="e.g. +256 700 000000" inputMode="tel" autoComplete="tel" />
+        <span>{t("form.phone")}</span>
+        <input value={value.phone} onChange={(e) => set({ phone: e.target.value })} placeholder={t("form.phonePlaceholder")} inputMode="tel" autoComplete="tel" />
       </label>
       {delivery ? (
         <>
           <div className="field">
-            <span>How do you want to get it?</span>
+            <span>{t("form.getItHow")}</span>
             <div className="od-choice">
               <button type="button" className={value.method === "delivery" ? "is-active" : ""} onClick={() => set({ method: "delivery" })}>
-                Delivery
+                {t("form.delivery")}
               </button>
               <button type="button" className={value.method === "pickup" ? "is-active" : ""} onClick={() => set({ method: "pickup" })}>
-                I&apos;ll pick it up
+                {t("form.pickup")}
               </button>
             </div>
           </div>
           {value.method === "delivery" ? (
             <div className="field">
-              <span>Where should it be delivered?</span>
+              <span>{t("form.whereDeliver")}</span>
               <DeliveryLocationPicker
                 value={value.location}
                 onChange={(location) => set({ location, address: location?.address || "" })}
@@ -40,8 +42,8 @@ export default function OrderDetailsFields({ value, onChange, delivery = true })
         </>
       ) : null}
       <label className="field">
-        <span>Note for the seller (optional)</span>
-        <input value={value.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="Anything the seller should know" />
+        <span>{t("form.noteLabel")}</span>
+        <input value={value.notes} onChange={(e) => set({ notes: e.target.value })} placeholder={t("form.notePlaceholder")} />
       </label>
     </>
   );

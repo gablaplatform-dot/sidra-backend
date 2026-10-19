@@ -1,15 +1,18 @@
 // Shared pieces of the "Quotes & receipts" studio: curated colours, the character limits (mirroring the API's
 // validation so errors show inline before a save), and draft helpers.
 
+import i18n from "../../i18n";
+
+// `key` selects the translated colour name (docs.palette.<key>); `name` is the English fallback.
 export const ACCENT_PALETTE = [
-  { name: "Navy", value: "#0b2046" },
-  { name: "Royal blue", value: "#1d4ed8" },
-  { name: "Teal", value: "#0f766e" },
-  { name: "Emerald", value: "#047857" },
-  { name: "Orange", value: "#ea580c" },
-  { name: "Burgundy", value: "#9f1239" },
-  { name: "Plum", value: "#6d28d9" },
-  { name: "Charcoal", value: "#1f2937" }
+  { key: "navy", name: "Navy", value: "#0b2046" },
+  { key: "royalBlue", name: "Royal blue", value: "#1d4ed8" },
+  { key: "teal", name: "Teal", value: "#0f766e" },
+  { key: "emerald", name: "Emerald", value: "#047857" },
+  { key: "orange", name: "Orange", value: "#ea580c" },
+  { key: "burgundy", name: "Burgundy", value: "#9f1239" },
+  { key: "plum", name: "Plum", value: "#6d28d9" },
+  { key: "charcoal", name: "Charcoal", value: "#1f2937" }
 ];
 
 // path -> max length
@@ -71,17 +74,17 @@ export const validateDraft = (settings) => {
   for (const [path, max] of Object.entries(LIMITS)) {
     const [section, key] = path.split(".");
     const value = String(s[section]?.[key] ?? "");
-    if (value.trim().length > max) errors[path] = `Too long - ${value.trim().length} of ${max} characters.`;
+    if (value.trim().length > max) errors[path] = i18n.t("docs.model.tooLong", { length: value.trim().length, max });
   }
-  if (s.brand.email && !EMAIL_RE.test(s.brand.email)) errors["brand.email"] = "Enter a valid email address, like sales@mybusiness.com.";
-  if (s.brand.logoUrl && !/^https?:\/\//i.test(s.brand.logoUrl)) errors["brand.logoUrl"] = "The logo must be an image link starting with https://.";
-  if (!HEX_RE.test(s.brand.accentColor)) errors["brand.accentColor"] = "Use a 6-digit hex colour like #0b2046.";
-  if (!PREFIX_RE.test(s.quotation.prefix)) errors["quotation.prefix"] = "1-6 letters or numbers, e.g. QT.";
-  if (!PREFIX_RE.test(s.receipt.prefix)) errors["receipt.prefix"] = "1-6 letters or numbers, e.g. RC.";
+  if (s.brand.email && !EMAIL_RE.test(s.brand.email)) errors["brand.email"] = i18n.t("docs.model.errEmail");
+  if (s.brand.logoUrl && !/^https?:\/\//i.test(s.brand.logoUrl)) errors["brand.logoUrl"] = i18n.t("docs.model.errLogo");
+  if (!HEX_RE.test(s.brand.accentColor)) errors["brand.accentColor"] = i18n.t("docs.model.errHex");
+  if (!PREFIX_RE.test(s.quotation.prefix)) errors["quotation.prefix"] = i18n.t("docs.model.errPrefix", { example: "QT" });
+  if (!PREFIX_RE.test(s.receipt.prefix)) errors["receipt.prefix"] = i18n.t("docs.model.errPrefix", { example: "RC" });
   const days = s.quotation.validityDays;
-  if (!Number.isInteger(days) || days < 1 || days > 365) errors["quotation.validityDays"] = "Enter a whole number of days from 1 to 365.";
+  if (!Number.isInteger(days) || days < 1 || days > 365) errors["quotation.validityDays"] = i18n.t("docs.model.errDays");
   const pct = s.tax.percent;
-  if (!Number.isFinite(pct) || pct < 0 || pct > 100) errors["tax.percent"] = "Enter a percentage from 0 to 100.";
+  if (!Number.isFinite(pct) || pct < 0 || pct > 100) errors["tax.percent"] = i18n.t("docs.model.errPercent");
   return errors;
 };
 
@@ -109,11 +112,11 @@ export const parseApiError = (message = "") => {
   if (!match) return { path: null, message };
   const [, path, rest] = match;
   let friendly = rest;
-  if (/fails to match/.test(rest)) friendly = "That value isn't in the right format.";
-  else if (/length must be less than or equal to (\d+)/.test(rest)) friendly = `Too long - at most ${/(\d+)/.exec(rest)[1]} characters.`;
-  else if (/must be a valid email/.test(rest)) friendly = "Enter a valid email address.";
-  else if (/must be a valid uri/.test(rest)) friendly = "That isn't a valid link.";
-  else if (/must be (less|greater)/.test(rest)) friendly = "That number is out of range.";
+  if (/fails to match/.test(rest)) friendly = i18n.t("docs.model.apiFormat");
+  else if (/length must be less than or equal to (\d+)/.test(rest)) friendly = i18n.t("docs.model.apiTooLong", { max: /(\d+)/.exec(rest)[1] });
+  else if (/must be a valid email/.test(rest)) friendly = i18n.t("docs.model.apiEmail");
+  else if (/must be a valid uri/.test(rest)) friendly = i18n.t("docs.model.apiLink");
+  else if (/must be (less|greater)/.test(rest)) friendly = i18n.t("docs.model.apiRange");
   return { path, message: friendly };
 };
 

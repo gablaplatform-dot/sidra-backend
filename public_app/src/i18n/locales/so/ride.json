@@ -1,0 +1,94 @@
+{
+  "ride": {
+    "back": "Dib",
+    "droppedPin": "Calaamad la dhigay",
+    "pickupPlaceholder": "Goobta lagaa qaadayo",
+    "dropoffPlaceholder": "Xaggee?",
+    "useCurrentLocation": "Isticmaal goobtaada hadda",
+    "searchHint": "Raadi cinwaan, ama taabo khariidadda si aad calaamad u dhigto.",
+    "chooseRide": "Dooro safar",
+    "editLocations": "Wax ka beddel goobta qaadista iyo dhigista",
+    "notAvailable": "Hadda lama heli karo",
+    "distanceEta": "~{{km}} km · {{eta}}",
+    "requesting": "Waa la codsanayaa…",
+    "requestRide": "Codso {{type}} • {{fare}}",
+    "chooseType": "Dooro nooca gaadhiga",
+    "signInToRequest": "Soo gal si aad safar u codsato",
+    "yourDriver": "Darawalkaaga",
+    "estimatedFare": "Qiimaha la qiyaasay",
+    "cancel": "Jooji",
+    "cancelRide": "Jooji safarka",
+    "bookAnother": "Ka dalbo safar kale",
+    "callDriver": "Wac darawalka",
+    "map": {
+      "notConfigured": "Khariidadda lama dhisin.",
+      "loadFailed": "Khariidadda lama soo rari karin",
+      "unavailable": "Khariidadda hadda lama heli karo."
+    },
+    "types": {
+      "boda": {
+        "label": "Boda",
+        "description": "Dhakhso ah oo jaban"
+      },
+      "car": {
+        "label": "Gaari",
+        "description": "Safar raaxo leh"
+      }
+    },
+    "eta": {
+      "underMinute": "wax ka yar hal daqiiqo",
+      "minutes_one": "{{count}} daqiiqo",
+      "minutes_other": "{{count}} daqiiqo"
+    },
+    "payment": {
+      "cash": "Lacag caddaan",
+      "mobileMoney": "Mobile Money",
+      "mobileMoneyNumber": "Lambarka Mobile Money",
+      "phonePlaceholder": "tusaale: +256 700 000000"
+    },
+    "confirm": {
+      "title": "Darawal ayaan kuu helnay",
+      "subtitle": "Eeg faahfaahintiisa, kadibna xaqiiji si codsiga loo diro.",
+      "confirming": "Waa la xaqiijinayaa…",
+      "button": "Xaqiiji darawalkan"
+    },
+    "noDrivers": {
+      "title": "Darawal u dhow ma jiro",
+      "body": "Hadda darawal ma helnin. Mar dambe isku day.",
+      "tryAgain": "Mar kale isku day"
+    },
+    "complete": {
+      "title": "Safarka waa dhammaaday",
+      "fare": "Qiimo: {{fare}}",
+      "thanks": "Waad ku mahadsan tahay safarka Gabla."
+    },
+    "cancelled": {
+      "title": "Safarka waa la joojiyay"
+    },
+    "status": {
+      "searching": {
+        "title": "Darawal ayaa la raadinayaa…",
+        "subtitle": "Badanaa waxay qaadataa dhowr ilbiriqsi."
+      },
+      "matched": {
+        "title": "Darawalku wuu soo socdaa",
+        "subtitle": "Hoos ka daawo."
+      },
+      "arrived": {
+        "title": "Darawalkaagii wuu yimid",
+        "subtitle": "Ka bax markaad diyaar tahay."
+      },
+      "in_progress": {
+        "title": "Waad socotaa",
+        "subtitle": "Ku raaxayso safarka."
+      }
+    },
+    "errors": {
+      "phoneRequired": "Geli lambarka taleefanka aad ka bixinayso.",
+      "sessionExpired": "Fadhigaagii wuu dhacay. Mar kale soo gal si aad safarkan ugu sii socoto.",
+      "requestFailed": "Hadda safar lama codsan karo.",
+      "confirmFailed": "Safarkan lama xaqiijin karo.",
+      "cancelFailed": "Safarkan lama joojin karo."
+    }
+  }
+}

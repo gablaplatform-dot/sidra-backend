@@ -1,0 +1,46 @@
+{
+  "lang": {
+    "label": "ቋንቋ"
+  },
+  "nav": {
+    "home": "ዋና ገጽ",
+    "shop": "ዕዳጋ",
+    "ride": "መጓዓዝያ",
+    "busTickets": "ትኬት ባስ",
+    "categories": "ክፍልታት",
+    "providers": "ሃበትቲ ኣገልግሎት",
+    "about": "ብዛዕባና",
+    "myOrders": "ትዕዛዛተይ",
+    "profile": "ፕሮፋይል",
+    "search": "ድለይ",
+    "savedProviders": "ዝተዓቝቡ ሃበትቲ ኣገልግሎት",
+    "cart": "ዘንቢል",
+    "logOut": "ውጻእ",
+    "signIn": "እተው",
+    "openMenu": "ዝርዝር ክፈት",
+    "closeMenu": "ዝርዝር ዕጸው"
+  },
+  "common": {
+    "seeAll": "ኩሉ ርአ",
+    "new": "ሓድሽ"
+  },
+  "time": {
+    "justNow": "ሕጂ",
+    "minutesAgo_one": "ቅድሚ {{count}} ደቒቕ",
+    "minutesAgo_other": "ቅድሚ {{count}} ደቒቕ",
+    "hoursAgo_one": "ቅድሚ {{count}} ሰዓት",
+    "hoursAgo_other": "ቅድሚ {{count}} ሰዓታት",
+    "daysAgo_one": "ቅድሚ {{count}} መዓልቲ",
+    "daysAgo_other": "ቅድሚ {{count}} መዓልታት",
+    "monthsAgo_one": "ቅድሚ {{count}} ወርሒ",
+    "monthsAgo_other": "ቅድሚ {{count}} ኣዋርሕ",
+    "yearsAgo_one": "ቅድሚ {{count}} ዓመት",
+    "yearsAgo_other": "ቅድሚ {{count}} ዓመታት"
+  },
+  "errors": {
+    "noFile": "ፋይል ኣይተመረጸን",
+    "uploadFailed": "ፋይል ክጽዕን ኣይተኻእለን",
+    "storageNotConfigured": "መዕቆቢ ኣይተዳለወን",
+    "requestFailed": "ሕቶ ኣይተዓወተን"
+  }
+}

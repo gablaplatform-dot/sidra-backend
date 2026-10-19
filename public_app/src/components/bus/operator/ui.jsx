@@ -1,5 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
+import { useTranslation } from "react-i18next";
+
+import i18n from "../../../i18n";
 import { Skel } from "../../Skeleton";
 import { uploadFile } from "../../../lib/storage";
 import { request } from "../../../lib/api";
@@ -45,8 +48,8 @@ export const IconSearchLite = IcSearch;
 export const IconGoogle = IcGoogle;
 
 // ------------------------------------------------------------------ helpers
-export const errMsg = (e, fallback = "Something went wrong. Please try again.") => {
-  if (e && e.status === 429) return "Too many requests right now. Please wait a minute and try again.";
+export const errMsg = (e, fallback = i18n.t("busOp.ui.errGeneric")) => {
+  if (e && e.status === 429) return i18n.t("busOp.ui.errTooMany");
   return (e && e.message) || fallback;
 };
 
@@ -70,20 +73,21 @@ export const timeLabel = (hhmm) => {
 };
 
 // Monday-first week, but values are JS weekdays (0 = Sunday) like the backend expects.
-export const WEEK = [
-  { v: 1, l: "Mon", s: "M" }, { v: 2, l: "Tue", s: "T" }, { v: 3, l: "Wed", s: "W" }, { v: 4, l: "Thu", s: "T" }, { v: 5, l: "Fri", s: "F" }, { v: 6, l: "Sat", s: "S" }, { v: 0, l: "Sun", s: "S" }
-];
+export const WEEK = [{ v: 1 }, { v: 2 }, { v: 3 }, { v: 4 }, { v: 5 }, { v: 6 }, { v: 0 }];
+const weekLong = (v) => i18n.t(`busOp.cal.wd${v}`);
+const weekShort = (v) => i18n.t(`busOp.cal.wds${v}`);
 export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 export const daysLabel = (days = []) => {
   const set = new Set(days);
-  if (set.size === 7) return "Every day";
-  if (set.size === 5 && [1, 2, 3, 4, 5].every((d) => set.has(d))) return "Weekdays";
-  if (set.size === 2 && set.has(0) && set.has(6)) return "Weekends";
-  return WEEK.filter((d) => set.has(d.v)).map((d) => d.l).join(", ") || "No days";
+  if (set.size === 7) return i18n.t("busOp.ui.everyDay");
+  if (set.size === 5 && [1, 2, 3, 4, 5].every((d) => set.has(d))) return i18n.t("busOp.ui.weekdays");
+  if (set.size === 2 && set.has(0) && set.has(6)) return i18n.t("busOp.ui.weekends");
+  return WEEK.filter((d) => set.has(d.v)).map((d) => weekLong(d.v)).join(", ") || i18n.t("busOp.ui.noDays");
 };
 
 // Editable day picker (or read-only dots for cards).
 export function DayChips({ value = [], onChange, readOnly = false, compact = false }) {
+  const { t } = useTranslation();
   const set = new Set(value);
   const all = set.size === 7;
   const toggle = (v) => {
@@ -95,19 +99,19 @@ export function DayChips({ value = [], onChange, readOnly = false, compact = fal
   if (readOnly) {
     return (
       <div className={`bop-daydots ${compact ? "is-compact" : ""}`} role="img" aria-label={daysLabel(value)}>
-        {WEEK.map((d) => <span key={d.v} className={set.has(d.v) ? "is-on" : ""} title={d.l}>{d.s}</span>)}
+        {WEEK.map((d) => <span key={d.v} className={set.has(d.v) ? "is-on" : ""} title={weekLong(d.v)}>{weekShort(d.v)}</span>)}
       </div>
     );
   }
   return (
-    <div className="bop-days" role="group" aria-label="Days of the week">
+    <div className="bop-days" role="group" aria-label={t("busOp.ui.daysOfWeek")}>
       {WEEK.map((d) => (
         <button key={d.v} type="button" className={`bop-day-chip ${set.has(d.v) ? "is-on" : ""}`} aria-pressed={set.has(d.v)} onClick={() => toggle(d.v)}>
-          {d.l}
+          {weekLong(d.v)}
         </button>
       ))}
       <button type="button" className={`bop-day-chip is-all ${all ? "is-on" : ""}`} onClick={() => onChange(all ? [] : ALL_DAYS)}>
-        Every day
+        {t("busOp.ui.everyDay")}
       </button>
     </div>
   );
@@ -147,7 +151,7 @@ export function useDebounced(value, delay = 350) {
 
 // ------------------------------------------------------------------ skeletons (shapes match the final layouts)
 export const ListSkel = ({ rows = 5, h = 70, avatar = true }) => (
-  <div className="bop-skel-list" role="status" aria-busy="true" aria-label="Loading">
+  <div className="bop-skel-list" role="status" aria-busy="true" aria-label={i18n.t("busOp.ui.loading")}>
     {Array.from({ length: rows }).map((_, i) => (
       <div className="bop-card bop-skel-row" key={i} style={{ minHeight: h }}>
         {avatar ? <Skel w={44} h={44} r={14} /> : null}
@@ -162,7 +166,7 @@ export const ListSkel = ({ rows = 5, h = 70, avatar = true }) => (
 );
 
 export const CardsSkel = ({ count = 4 }) => (
-  <div className="bop-kpis" role="status" aria-busy="true" aria-label="Loading">
+  <div className="bop-kpis" role="status" aria-busy="true" aria-label={i18n.t("busOp.ui.loading")}>
     {Array.from({ length: count }).map((_, i) => (
       <div className="bop-card bop-kpi" key={i}>
         <div className="bop-skel-between"><Skel w={34} h={34} r={11} /><Skel w={70} h={34} r={10} /></div>
@@ -175,7 +179,7 @@ export const CardsSkel = ({ count = 4 }) => (
 );
 
 export const PanelSkel = ({ h = 240, lines = 0 }) => (
-  <div className="bop-card bop-panel" role="status" aria-busy="true" aria-label="Loading">
+  <div className="bop-card bop-panel" role="status" aria-busy="true" aria-label={i18n.t("busOp.ui.loading")}>
     <Skel w="38%" h={16} />
     <Skel w="24%" h={11} style={{ marginTop: 10 }} />
     <Skel h={h} r={14} style={{ marginTop: 18 }} />
@@ -184,12 +188,13 @@ export const PanelSkel = ({ h = 240, lines = 0 }) => (
 );
 
 export function ErrorBox({ error, onRetry, className = "" }) {
+  const { t } = useTranslation();
   if (!error) return null;
   return (
     <div className={`bop-alert is-error bop-errorbox ${className}`} role="alert">
       <IcAlert size={18} />
       <span>{errMsg(error)}</span>
-      {onRetry ? <button type="button" className="bop-btn bop-btn-light bop-btn-sm" onClick={onRetry}>Try again</button> : null}
+      {onRetry ? <button type="button" className="bop-btn bop-btn-light bop-btn-sm" onClick={onRetry}>{t("busOp.ui.tryAgain")}</button> : null}
     </div>
   );
 }
@@ -242,15 +247,17 @@ export const Chip = ({ tone = "", dot = false, children, className = "", ...rest
   <span className={`bop-chip ${tone ? `is-${tone}` : ""} ${className}`} {...rest}>{dot ? <i className="bop-chip-dot" /> : null}{children}</span>
 );
 
-const STATUS = {
-  scheduled: ["Scheduled", "blue"], departed: ["Departed", "amber"], completed: ["Completed", "grey"], cancelled: ["Cancelled", "red"],
-  confirmed: ["Confirmed", "green"], refund_due: ["Refund pending", "amber"], valid: ["Not boarded", "blue"], used: ["Checked in", "green"],
-  requested: ["Pending", "amber"], paid: ["Paid", "green"], rejected: ["Rejected", "red"], active: ["Active", "green"], paused: ["Paused", "amber"],
-  pending_payment: ["Awaiting payment", "amber"], expired: ["Expired", "grey"], failed: ["Failed", "red"]
+// status -> tone; the visible label is busOp.ui.st.<status>
+const STATUS_TONE = {
+  scheduled: "blue", departed: "amber", completed: "grey", cancelled: "red",
+  confirmed: "green", refund_due: "amber", valid: "blue", used: "green",
+  requested: "amber", paid: "green", rejected: "red", active: "green", paused: "amber",
+  pending_payment: "amber", expired: "grey", failed: "red"
 };
 export const StatusChip = ({ status, label }) => {
-  const [text, tone] = STATUS[status] || [status, "grey"];
-  return <Chip tone={tone} dot>{label || text}</Chip>;
+  const { t } = useTranslation();
+  const tone = STATUS_TONE[status] || "grey";
+  return <Chip tone={tone} dot>{label || t(`busOp.ui.st.${status}`, { defaultValue: status })}</Chip>;
 };
 
 export function Avatar({ name = "", src, size = 40, square = false, className = "" }) {
@@ -294,7 +301,7 @@ export function Tabs({ tabs, value, onChange, label }) {
 }
 
 export const Meter = ({ pct = 0, level = "mid", label, className = "" }) => (
-  <span className={`bop-meter is-${level} ${className}`} role="img" aria-label={label || `${pct}% full`}><i style={{ width: `${Math.max(pct ? 4 : 0, pct)}%` }} /></span>
+  <span className={`bop-meter is-${level} ${className}`} role="img" aria-label={label || i18n.t("busOp.ui.pctFull", { pct })}><i style={{ width: `${Math.max(pct ? 4 : 0, pct)}%` }} /></span>
 );
 
 export const SearchBox = ({ value, onChange, placeholder, label }) => (
@@ -308,6 +315,7 @@ export const SearchBox = ({ value, onChange, placeholder, label }) => (
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export function Modal({ title, subtitle, onClose, children, footer, size = "md" }) {
+  const { t } = useTranslation();
   const box = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -346,7 +354,7 @@ export function Modal({ title, subtitle, onClose, children, footer, size = "md" 
             <h2>{title}</h2>
             {subtitle ? <p>{subtitle}</p> : null}
           </div>
-          <button type="button" className="bop-icon-btn" onClick={onClose} aria-label="Close"><IcClose size={20} /></button>
+          <button type="button" className="bop-icon-btn" onClick={onClose} aria-label={t("busOp.ui.close")}><IcClose size={20} /></button>
         </header>
         <div className="bop-modal-body">{children}</div>
         {footer ? <footer className="bop-modal-foot">{footer}</footer> : null}
@@ -355,7 +363,8 @@ export function Modal({ title, subtitle, onClose, children, footer, size = "md" 
   );
 }
 
-export function Confirm({ title, children, confirmLabel = "Confirm", danger = false, busy = false, error, onConfirm, onCancel, cancelLabel = "Keep as is" }) {
+export function Confirm({ title, children, confirmLabel, danger = false, busy = false, error, onConfirm, onCancel, cancelLabel }) {
+  const { t } = useTranslation();
   return (
     <Modal
       title={title}
@@ -363,8 +372,8 @@ export function Confirm({ title, children, confirmLabel = "Confirm", danger = fa
       onClose={busy ? () => {} : onCancel}
       footer={
         <>
-          <button type="button" className="bop-btn bop-btn-light" onClick={onCancel} disabled={busy}>{cancelLabel}</button>
-          <button type="button" className={`bop-btn ${danger ? "bop-btn-danger" : "bop-btn-primary"}`} onClick={onConfirm} disabled={busy}>{busy ? "Working…" : confirmLabel}</button>
+          <button type="button" className="bop-btn bop-btn-light" onClick={onCancel} disabled={busy}>{cancelLabel || t("busOp.ui.keepAsIs")}</button>
+          <button type="button" className={`bop-btn ${danger ? "bop-btn-danger" : "bop-btn-primary"}`} onClick={onConfirm} disabled={busy}>{busy ? t("busOp.ui.working") : confirmLabel || t("busOp.ui.confirm")}</button>
         </>
       }
     >
@@ -378,17 +387,18 @@ export function Confirm({ title, children, confirmLabel = "Confirm", danger = fa
 }
 
 export function Pager({ page, total, limit, onPage }) {
+  const { t } = useTranslation();
   const pages = Math.max(1, Math.ceil(total / limit));
   if (pages <= 1) return null;
   const from = (page - 1) * limit + 1;
   const to = Math.min(total, page * limit);
   return (
     <div className="bop-pager">
-      <span>{from}–{to} of {total}</span>
+      <span>{t("busOp.ui.pagerRange", { from, to, total })}</span>
       <div>
-        <button type="button" className="bop-btn bop-btn-light bop-btn-sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>Previous</button>
+        <button type="button" className="bop-btn bop-btn-light bop-btn-sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>{t("busOp.ui.previous")}</button>
         <b>{page} / {pages}</b>
-        <button type="button" className="bop-btn bop-btn-light bop-btn-sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>Next</button>
+        <button type="button" className="bop-btn bop-btn-light bop-btn-sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>{t("busOp.ui.next")}</button>
       </div>
     </div>
   );
@@ -396,6 +406,7 @@ export function Pager({ page, total, limit, onPage }) {
 
 // ------------------------------------------------------------------ toasts
 export function useToasts() {
+  const { t: tr } = useTranslation();
   const [items, setItems] = useState([]);
   const push = useCallback((message, tone = "success") => {
     const id = Math.random().toString(36).slice(2);
@@ -408,7 +419,7 @@ export function useToasts() {
         <div key={t.id} className={`bop-toast is-${t.tone}`} role={t.tone === "error" ? "alert" : "status"}>
           <span className="bop-toast-ico">{t.tone === "error" ? <IcAlert size={16} /> : <IcCheck size={16} strokeWidth={2.6} />}</span>
           <span>{t.message}</span>
-          <button type="button" aria-label="Dismiss" onClick={() => setItems((list) => list.filter((x) => x.id !== t.id))}><IcClose size={14} /></button>
+          <button type="button" aria-label={tr("busOp.ui.dismiss")} onClick={() => setItems((list) => list.filter((x) => x.id !== t.id))}><IcClose size={14} /></button>
         </div>
       ))}
     </div>
@@ -427,12 +438,13 @@ export const uploadOnboardingImage = async (file, token) => {
     body: JSON.stringify({ token, contentType: file.type, filename: file.name })
   });
   const put = await fetch(upload.uploadUrl, { method: upload.method || "PUT", headers: upload.headers || { "Content-Type": file.type }, body: file });
-  if (!put.ok) throw new Error("Unable to upload the image");
-  if (!upload.publicUrl) throw new Error("Storage is not configured");
+  if (!put.ok) throw new Error(i18n.t("busOp.ui.uploadFailedImage"));
+  if (!upload.publicUrl) throw new Error(i18n.t("busOp.ui.storageMissing"));
   return upload.publicUrl;
 };
 
 export function ImageField({ label, value, onChange, uploader, kind = "logo", hint }) {
+  const { t } = useTranslation();
   const input = useRef(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -443,11 +455,11 @@ export function ImageField({ label, value, onChange, uploader, kind = "logo", hi
     e.target.value = "";
     if (!file) return;
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setError("Please choose a JPG, PNG or WebP image.");
+      setError(t("busOp.ui.imgType"));
       return;
     }
     if (file.size > 6 * 1024 * 1024) {
-      setError("That image is too large. Please choose one under 6 MB.");
+      setError(t("busOp.ui.imgTooLarge"));
       return;
     }
     setBusy(true);
@@ -455,7 +467,7 @@ export function ImageField({ label, value, onChange, uploader, kind = "logo", hi
     try {
       onChange(await uploader(file));
     } catch (err) {
-      setError(`${errMsg(err, "Upload failed").replace(/[.!]*$/, ".")} You can skip this for now, or paste an image link instead.`);
+      setError(t("busOp.ui.imgUploadError", { reason: errMsg(err, t("busOp.ui.uploadFailed")).replace(/[.!]*$/, ".") }));
       setShowLink(true);
     } finally {
       setBusy(false);
@@ -466,19 +478,19 @@ export function ImageField({ label, value, onChange, uploader, kind = "logo", hi
     <div className={`bop-imgfield is-${kind}`}>
       {label ? <span className="bop-field-label">{label}</span> : null}
       <div className="bop-imgfield-row">
-        <button type="button" className="bop-imgfield-preview" onClick={() => input.current?.click()} disabled={busy} aria-label={value ? `Change ${label || "image"}` : `Upload ${label || "image"}`} style={value && kind === "cover" ? { backgroundImage: `url(${value})` } : undefined}>
-          {value && kind === "logo" ? <img src={value} alt="" /> : !value ? <span><IcUpload size={20} />{kind === "logo" ? "Logo" : "Cover"}</span> : null}
+        <button type="button" className="bop-imgfield-preview" onClick={() => input.current?.click()} disabled={busy} aria-label={value ? t("busOp.ui.changeX", { what: label || t("busOp.ui.image") }) : t("busOp.ui.uploadX", { what: label || t("busOp.ui.image") })} style={value && kind === "cover" ? { backgroundImage: `url(${value})` } : undefined}>
+          {value && kind === "logo" ? <img src={value} alt="" /> : !value ? <span><IcUpload size={20} />{kind === "logo" ? t("busOp.ui.logo") : t("busOp.ui.cover")}</span> : null}
         </button>
         <div className="bop-imgfield-actions">
           <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={pick} />
           <button type="button" className="bop-btn bop-btn-light bop-btn-sm" onClick={() => input.current?.click()} disabled={busy}>
-            {busy ? "Uploading…" : value ? "Change image" : "Upload image"}
+            {busy ? t("busOp.ui.uploading") : value ? t("busOp.ui.changeImage") : t("busOp.ui.uploadImage")}
           </button>
-          {value ? <button type="button" className="bop-linkbtn" onClick={() => onChange("")}>Remove</button> : null}
-          <button type="button" className="bop-linkbtn" onClick={() => setShowLink((s) => !s)}>{showLink ? "Hide link" : "Use a link"}</button>
+          {value ? <button type="button" className="bop-linkbtn" onClick={() => onChange("")}>{t("busOp.ui.remove")}</button> : null}
+          <button type="button" className="bop-linkbtn" onClick={() => setShowLink((s) => !s)}>{showLink ? t("busOp.ui.hideLink") : t("busOp.ui.useLink")}</button>
         </div>
       </div>
-      {showLink ? <input className="bop-input" type="url" placeholder="https://…" value={value || ""} onChange={(e) => onChange(e.target.value.trim())} aria-label={`${label || "Image"} link`} /> : null}
+      {showLink ? <input className="bop-input" type="url" placeholder="https://…" value={value || ""} onChange={(e) => onChange(e.target.value.trim())} aria-label={t("busOp.ui.linkOf", { what: label || t("busOp.ui.image") })} /> : null}
       {hint && !error ? <small className="bop-hint">{hint}</small> : null}
       {error ? <small className="bop-field-error">{error}</small> : null}
     </div>

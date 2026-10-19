@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { addToCart } from "../../lib/cart";
 import { IconStar } from "../icons";
 import { Skel } from "../Skeleton";
@@ -19,6 +20,7 @@ const IconArrowRight = (props) => (
 );
 
 const BestSellerCard = ({ product }) => {
+  const { t } = useTranslation();
   const [wish, setWish] = useState(false);
   const [added, setAdded] = useState(false);
   const handleAdd = () => {
@@ -30,7 +32,7 @@ const BestSellerCard = ({ product }) => {
   return (
     <div className="shop-bestseller-card">
       <Link to={`/shop/product/${product.id}`} className="shop-bestseller-media">
-        <span className="shop-badge shop-badge-bestseller">Bestseller</span>
+        <span className="shop-badge shop-badge-bestseller">{t("shop.bestSellers.badge")}</span>
         <div className="shop-bestseller-img">
           <LazyImg src={product.image} alt={product.name} loading="lazy" />
         </div>
@@ -65,13 +67,13 @@ const BestSellerCard = ({ product }) => {
             className={`shop-quick-add ${added ? "is-added" : ""}`}
             onClick={handleAdd}
           >
-            {added ? "Added ✓" : "Quick Add"}
+            {added ? t("shop.bestSellers.added") : t("shop.bestSellers.quickAdd")}
           </button>
           <button
             type="button"
             className={`shop-wish-circle ${wish ? "is-active" : ""}`}
             onClick={() => setWish((v) => !v)}
-            aria-label="Add to wishlist"
+            aria-label={t("shop.card.wishlist")}
           >
             <IconHeart />
           </button>
@@ -82,12 +84,13 @@ const BestSellerCard = ({ product }) => {
 };
 
 export default function ShopBestSellers({ products = [], loaded = true }) {
+  const { t } = useTranslation();
   const items = Array.isArray(products) && products.length ? products : [];
   return (
     <section className="shop-section">
       <div className="shop-section-header">
-        <h2 className="shop-section-title">Best Sellers</h2>
-        <Link to="/shop/best-sellers" className="shop-view-all">View All Best Sellers <IconArrowRight /></Link>
+        <h2 className="shop-section-title">{t("shop.bestSellers.title")}</h2>
+        <Link to="/shop/best-sellers" className="shop-view-all">{t("shop.bestSellers.viewAll")} <IconArrowRight /></Link>
       </div>
 
       <div className="shop-bestseller-grid" {...(!loaded ? { role: "status", "aria-busy": "true" } : {})}>

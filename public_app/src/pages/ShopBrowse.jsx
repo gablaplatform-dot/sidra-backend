@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
 import { findCategoryPath } from "../lib/categories";
@@ -29,35 +30,33 @@ import Pagination from "../components/Pagination";
 import { IconClose, IconPin } from "../components/icons";
 import { ProductGridSkeleton, SidebarSkeleton, Skel } from "../components/Skeleton";
 
-const GEO_NOTICES = {
-  denied: "Location access was declined, so we're showing all of Uganda.",
-  unsupported: "This browser can't share your location, so we're showing all of Uganda.",
-  timeout: "Couldn't get your location in time, so we're showing all of Uganda.",
-  unavailable: "Couldn't determine your location, so we're showing all of Uganda."
-};
+// Geolocation error codes (from lib/geolocation); shown as shop.browse.geo.<code>.
+const GEO_NOTICE_CODES = ["denied", "unsupported", "timeout", "unavailable"];
 
 // The Jiji-style browse page behind /shop/:categoryId: category tree + location + price +
 // category-specific attribute filters (with live counts) on the left, results grid on the right.
 // All filter state lives in the URL (see lib/browseFilters.js).
 // "View all" pages reuse this browse page with no category: a fixed server filter plus a sensible
 // default sort (the shopper can still re-sort).
+// The title is looked up at render time: shop.browse.collection.<key>.
 const COLLECTIONS = {
-  new: { title: "New arrivals", sort: "newest", params: { newArrivals: "true" } },
-  bestsellers: { title: "Best sellers", sort: "bestsellers", params: {} },
-  all: { title: "All products", sort: "featured", params: {} }
+  new: { sort: "newest", params: { newArrivals: "true" } },
+  bestsellers: { sort: "bestsellers", params: {} },
+  all: { sort: "featured", params: {} }
 };
 
 export default function ShopBrowse({ categoryId, collection, session, onLogout, kind = "product" }) {
+  const { t } = useTranslation();
   // The same browse page serves services (their own category tree, /services/c/:id); only the
   // endpoint, links and wording change.
   const isService = kind === "service";
   const basePath = isService ? "/services/c" : "/shop";
-  const noun = isService ? "services" : "products";
   const [searchParams, setSearchParams] = useSearchParams();
   const [layout, setLayout] = useListLayout();
   const filters = useMemo(() => readFilters(searchParams), [searchParams]);
   const queryKey = searchParams.toString();
   const collectionInfo = collection ? COLLECTIONS[collection] : null;
+  const collectionTitle = collectionInfo ? t(`shop.browse.collection.${collection}`) : "";
   const sort = searchParams.get("sort") || collectionInfo?.sort || "featured";
   // With no exact position and no explicit location, arrange products nearest-first around the
   // district the shopper picked (welcome form / location picker). An explicit sort wins.
@@ -94,7 +93,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
       .then((position) => active && setCoords(position))
       .catch((geoError) => {
         if (!active) return;
-        setGeoNotice(GEO_NOTICES[geoError.message] || GEO_NOTICES.unavailable);
+        setGeoNotice(t(`shop.browse.geo.${GEO_NOTICE_CODES.includes(geoError.message) ? geoError.message : "unavailable"}`));
         setSearchParams(patchParams(searchParams, { location: {} }), { replace: true });
       });
     return () => {
@@ -119,7 +118,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
         setResult(list);
         setFacets(facetData);
       })
-      .catch((loadError) => active && setError(loadError.message || `Unable to load ${noun}.`))
+      .catch((loadError) => active && setError(loadError.message || t(isService ? "shop.browse.loadErrorServices" : "shop.browse.loadErrorProducts")))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
@@ -143,31 +142,33 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
   const siblings = parent ? parent.children || [] : tree || [];
   const fieldDefs = node?.effectiveListingFields || [];
 
-  const locationLabel = filters.near ? `Near you (${NEAR_RADIUS_KM} km)` : filters.district || (arranged ? `Around ${preferred}` : "All Uganda");
+  const locationLabel = filters.near
+    ? t("shop.browse.nearYou", { km: NEAR_RADIUS_KM })
+    : filters.district || (arranged ? t("shop.browse.around", { district: preferred }) : t("shop.browse.allUganda"));
   const widenedAway = result?.widened;
   const locationNote = widenedAway
     ? filters.near
-      ? `Nothing within ${NEAR_RADIUS_KM} km, showing the closest results across Uganda.`
-      : `No matching ads in ${filters.district}, showing all of Uganda.`
-    : geoNotice || (result?.arrangedAround ? `Showing the ${noun} closest to ${result.arrangedAround} first.` : "");
-  const where = widenedAway ? "Uganda" : filters.near ? "your area" : filters.district || "Uganda";
+      ? t("shop.browse.widenedNear", { km: NEAR_RADIUS_KM })
+      : t("shop.browse.widenedDistrict", { district: filters.district })
+    : geoNotice || (result?.arrangedAround ? t(isService ? "shop.browse.arrangedServices" : "shop.browse.arrangedProducts", { place: result.arrangedAround }) : "");
+  const where = widenedAway ? t("shop.browse.whereUganda") : filters.near ? t("shop.browse.whereYourArea") : filters.district || t("shop.browse.whereUganda");
   const total = result?.total ?? 0;
   const filterCount = activeFilterCount(filters);
 
   useEffect(() => {
-    if (node) document.title = isService ? `${node.name} in ${where} | Gabla Services` : `${node.name} in ${where} for sale | Gabla Shop`;
-    else if (collectionInfo) document.title = `${collectionInfo.title} | Gabla Shop`;
-  }, [node, where, collectionInfo]);
+    if (node) document.title = t(isService ? "shop.meta.browseService" : "shop.meta.browseProduct", { name: node.name, where });
+    else if (collectionInfo) document.title = t("shop.meta.collection", { title: collectionTitle });
+  }, [node, where, collectionInfo, collectionTitle]);
 
   const clearAll = () => setSearchParams(patchParams(searchParams, { min: null, max: null, discount: false, attrs: {} }));
 
   const labelFor = (key) => fieldDefs.find((f) => f.key === key)?.label || prettyKey(key);
   const chips = [];
   if (filters.near || filters.district) chips.push({ id: "loc", text: locationLabel, remove: () => apply({ location: {} }) });
-  if (filters.q) chips.push({ id: "q", text: `Search: ${filters.q}`, remove: () => apply({ q: null }) });
+  if (filters.q) chips.push({ id: "q", text: t("shop.browse.searchChip", { q: filters.q }), remove: () => apply({ q: null }) });
   if (filters.min !== null || filters.max !== null) {
     const text = bucketLabel({ min: filters.min, max: filters.max === null ? null : filters.max + 1 });
-    chips.push({ id: "price", text: `UGX ${text}`, remove: () => apply({ min: null, max: null }) });
+    chips.push({ id: "price", text: t("shop.browse.priceChip", { range: text }), remove: () => apply({ min: null, max: null }) });
   }
   for (const [key, values] of Object.entries(filters.attrs)) {
     for (const value of values) {
@@ -183,7 +184,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
       });
     }
   }
-  if (filters.discount) chips.push({ id: "discount", text: "With discount", remove: () => apply({ discount: false }) });
+  if (filters.discount) chips.push({ id: "discount", text: t("shop.browse.discountChip"), remove: () => apply({ discount: false }) });
 
   // Until the category tree and first facets arrive, show the sidebar's shape rather than a half-empty one.
   const sidebar = tree === null || (loading && !facets) ? (
@@ -211,7 +212,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
       {isService ? <SiteHeader session={session} onLogout={onLogout} /> : <ShopNavbar session={session} onLogout={onLogout} />}
 
       <nav className="breadcrumb">
-        <Link to={isService ? "/services" : "/shop"}>{isService ? "Services" : "Shop"}</Link>
+        <Link to={isService ? "/services" : "/shop"}>{isService ? t("shop.browse.breadcrumbServices") : t("shop.browse.breadcrumbShop")}</Link>
         {ancestors.map((a) => (
           <React.Fragment key={a.id}>
             <span>/</span>
@@ -226,7 +227,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
         ) : collectionInfo ? (
           <>
             <span>/</span>
-            <span className="breadcrumb-current">{collectionInfo.title}</span>
+            <span className="breadcrumb-current">{collectionTitle}</span>
           </>
         ) : null}
       </nav>
@@ -234,15 +235,15 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
       <div className="sb-layout">
         <div className={`sb-side-wrap ${drawerOpen ? "is-open" : ""}`}>
           <div className="sb-drawer-head">
-            <strong>Filters</strong>
-            <button type="button" className="sb-icon-btn" onClick={() => setDrawerOpen(false)} aria-label="Close filters">
+            <strong>{t("shop.browse.filters")}</strong>
+            <button type="button" className="sb-icon-btn" onClick={() => setDrawerOpen(false)} aria-label={t("shop.browse.closeFilters")}>
               <IconClose />
             </button>
           </div>
           {sidebar}
           <div className="sb-drawer-foot">
             <button type="button" className="sb-apply sb-apply-wide" onClick={() => setDrawerOpen(false)}>
-              Show {total.toLocaleString()} results
+              {t("shop.browse.showResults", { count: total, n: total.toLocaleString() })}
             </button>
           </div>
         </div>
@@ -255,29 +256,34 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
                 <Skel h={28} w={280} />
               ) : (
                 <h1>
-                  {filters.q ? `Results for “${filters.q}”` : `${node ? node.name : collectionInfo ? collectionInfo.title : isService ? "All services" : "Products"} in ${where}`}
+                  {filters.q
+                    ? t("shop.browse.resultsFor", { q: filters.q })
+                    : t("shop.browse.titleIn", {
+                        name: node ? node.name : collectionInfo ? collectionTitle : isService ? t("shop.browse.allServices") : t("shop.browse.products"),
+                        where
+                      })}
                 </h1>
               )}
               {loading && !result ? (
                 <Skel h={14} w={90} style={{ marginTop: 10 }} />
               ) : (
-                <p className="sb-count">{`${total.toLocaleString()} result${total === 1 ? "" : "s"}`}</p>
+                <p className="sb-count">{t("shop.browse.count", { count: total, n: total.toLocaleString() })}</p>
               )}
             </div>
             <div className="sb-head-actions">
-              <button type="button" className={`sb-loc-btn ${filters.near || filters.district ? "is-set" : ""}`} onClick={() => setPickerOpen(true)} aria-label={`Location: ${locationLabel}. Change location`}>
+              <button type="button" className={`sb-loc-btn ${filters.near || filters.district ? "is-set" : ""}`} onClick={() => setPickerOpen(true)} aria-label={t("shop.browse.locationAria", { label: locationLabel })}>
                 <IconPin width={18} height={18} />
                 <span>
-                  <small>Location</small>
+                  <small>{t("shop.browse.location")}</small>
                   <b>{locationLabel}</b>
                 </span>
                 <i aria-hidden="true" />
               </button>
               <button type="button" className="sb-filter-btn" onClick={() => setDrawerOpen(true)}>
-                Filters{filterCount ? ` (${filterCount})` : ""}
+                {filterCount ? t("shop.browse.filtersBtn", { count: filterCount }) : t("shop.browse.filters")}
               </button>
               <label className="sb-sort">
-                <span>Sort</span>
+                <span>{t("shop.browse.sort_label")}</span>
                 <select value={sort} onChange={(event) => apply({ sort: event.target.value === (collectionInfo?.sort || "featured") ? null : event.target.value })}>
                   {SORT_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>
@@ -300,7 +306,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
               ))}
               {chips.length > 1 ? (
                 <button type="button" className="sb-link-btn" onClick={() => setSearchParams(new URLSearchParams())}>
-                  Clear all
+                  {t("shop.browse.clearAll")}
                 </button>
               ) : null}
             </div>
@@ -319,15 +325,15 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
             </div>
           ) : !error ? (
             <div className="sb-empty">
-              <h2>No {noun} match</h2>
-              <p>Try removing a filter or choosing a wider location.</p>
+              <h2>{t(isService ? "shop.browse.noMatchServices" : "shop.browse.noMatchProducts")}</h2>
+              <p>{t("shop.browse.tryRemoving")}</p>
               {chips.length ? (
                 <button type="button" className="sb-apply" onClick={() => setSearchParams(new URLSearchParams())}>
-                  Clear all filters
+                  {t("shop.browse.clearAllFilters")}
                 </button>
               ) : (
                 <Link to={isService ? "/services" : "/shop"} className="sb-apply">
-                  {isService ? "Back to services" : "Back to shop"}
+                  {isService ? t("shop.browse.backToServices") : t("shop.browse.backToShop")}
                 </Link>
               )}
             </div>

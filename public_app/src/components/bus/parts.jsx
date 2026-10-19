@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { Skel } from "../Skeleton";
 import { arrivalAt, dayDiff, eatTime, hueOf, imgSize, normalizeUgPhone, ugx } from "../../lib/bus";
@@ -51,10 +52,11 @@ export function BusLogo({ name, src, className = "", size }) {
 }
 
 export function Rating({ avg, count, className = "" }) {
+  const { t } = useTranslation();
   const text = ratingText(avg, count);
-  if (!text) return <span className={`bus-rating is-new ${className}`}>New</span>;
+  if (!text) return <span className={`bus-rating is-new ${className}`}>{t("common.new")}</span>;
   return (
-    <span className={`bus-rating ${className}`} title={`${text} out of 5 from ${count} reviews`}>
+    <span className={`bus-rating ${className}`} title={t("bus.parts.ratingTitle", { rating: text, count })}>
       <Star size={13} /> {text} <small>({count})</small>
     </span>
   );
@@ -78,15 +80,16 @@ export function AmenityChips({ list, max = 4, tone = "" }) {
   );
 }
 
-export function ErrorBox({ error, onRetry, title = "Couldn't load this right now" }) {
+export function ErrorBox({ error, onRetry, title }) {
+  const { t } = useTranslation();
   return (
     <div className="bus-alert bus-alert-error bus-error-box" role="alert">
       <div>
-        <strong>{title}</strong>
-        <p>{error?.status === 429 ? "Lots of people are booking right now. Wait a few seconds and try again." : error?.message || "Please check your connection and try again."}</p>
+        <strong>{title || t("bus.parts.loadFailed")}</strong>
+        <p>{error?.status === 429 ? t("bus.parts.busy") : error?.message || t("bus.parts.checkConnection")}</p>
       </div>
       {onRetry ? (
-        <button type="button" className="bus-btn bus-btn-light bus-btn-sm" onClick={onRetry}>Try again</button>
+        <button type="button" className="bus-btn bus-btn-light bus-btn-sm" onClick={onRetry}>{t("bus.parts.tryAgain")}</button>
       ) : null}
     </div>
   );
@@ -107,9 +110,10 @@ export function EmptyState({ title, children, action, icon: Icon = BusIcon, clas
 /* ---------------------------------------------------------------------------------------- skeletons */
 
 export function TripSkeletons({ count = 3 }) {
+  const { t } = useTranslation();
   return (
     <div className="bus-trip-list" role="status" aria-busy="true" aria-live="polite">
-      <span className="sr-only">Loading trips…</span>
+      <span className="sr-only">{t("bus.parts.loadingTrips")}</span>
       {Array.from({ length: count }).map((_, i) => (
         <div className="bus-trip bus-trip-skel" key={i} aria-hidden="true">
           <div className="bus-trip-body">
@@ -126,9 +130,10 @@ export function TripSkeletons({ count = 3 }) {
 }
 
 export function CardGridSkeleton({ count = 6, photo = true }) {
+  const { t } = useTranslation();
   return (
     <div className="bus-grid" role="status" aria-busy="true" aria-live="polite">
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">{t("bus.parts.loading")}</span>
       {Array.from({ length: count }).map((_, i) => (
         <div className="bus-card bus-skel-card" key={i} aria-hidden="true">
           {photo ? <Skel w="100%" h={150} r={0} /> : null}
@@ -144,9 +149,10 @@ export function CardGridSkeleton({ count = 6, photo = true }) {
 }
 
 export function TileSkeletons({ count = 8 }) {
+  const { t } = useTranslation();
   return (
     <div className="bus-tiles" role="status" aria-busy="true" aria-live="polite">
-      <span className="sr-only">Loading routes…</span>
+      <span className="sr-only">{t("bus.parts.loadingRoutes")}</span>
       {Array.from({ length: count }).map((_, i) => (
         <div className="bus-route-tile bus-card" key={i} aria-hidden="true">
           <Skel w={90} h={22} r={999} />
@@ -161,19 +167,20 @@ export function TileSkeletons({ count = 8 }) {
 /* ---------------------------------------------------------------------------------------- tiles */
 
 export function RouteTile({ from, to, companies, minPrice }) {
+  const { t } = useTranslation();
   const q = new URLSearchParams({ from, to }).toString();
   return (
-    <Link to={`/bus/search?${q}`} className="bus-route-tile bus-card" aria-label={`Trips from ${from} to ${to}${minPrice ? `, from ${ugx(minPrice)}` : ""}`} style={{ "--hue": hueOf(to) }}>
-      <div className="bus-route-badge"><Users size={13} />{companies} {companies === 1 ? "company" : "companies"}</div>
+    <Link to={`/bus/search?${q}`} className="bus-route-tile bus-card" aria-label={minPrice ? t("bus.parts.routeAriaPrice", { from, to, price: ugx(minPrice) }) : t("bus.parts.routeAria", { from, to })} style={{ "--hue": hueOf(to) }}>
+      <div className="bus-route-badge"><Users size={13} />{t("bus.parts.companies", { count: companies })}</div>
       <div className="bus-route-graphic">
         <span className="bus-route-track" aria-hidden="true"><i className="dot" /><i className="dash" /><span className="bus"><BusIcon size={14} /></span><i className="dash" /><i className="pin"><Pin size={15} /></i></span>
         <div className="bus-route-names">
-          <div><small>From</small><strong>{from}</strong></div>
-          <div><small>To</small><strong>{to}</strong></div>
+          <div><small>{t("bus.search.from")}</small><strong>{from}</strong></div>
+          <div><small>{t("bus.search.to")}</small><strong>{to}</strong></div>
         </div>
       </div>
       <div className="bus-route-foot">
-        {minPrice ? <span className="bus-route-price"><small>from</small> {ugx(minPrice)}</span> : <span className="bus-hint">See prices</span>}
+        {minPrice ? <span className="bus-route-price"><small>{t("bus.parts.from")}</small> {ugx(minPrice)}</span> : <span className="bus-hint">{t("bus.parts.seePrices")}</span>}
         <span className="bus-route-go" aria-hidden="true"><ArrowRight size={16} /></span>
       </div>
     </Link>
@@ -181,6 +188,7 @@ export function RouteTile({ from, to, companies, minPrice }) {
 }
 
 export function ParkCard({ park }) {
+  const { t } = useTranslation();
   const dests = asList(park.destinations);
   return (
     <Link to={`/bus/parks/${park.slug}`} className="bus-park-card bus-card" aria-label={`${park.companyName} - ${park.parkName}`}>
@@ -199,8 +207,8 @@ export function ParkCard({ park }) {
           </div>
         ) : null}
         <div className="bus-park-foot">
-          <span className="bus-hint">{park.routeCount} {park.routeCount === 1 ? "route" : "routes"}</span>
-          {park.priceFrom ? <span className="bus-route-price"><small>from</small> {ugx(park.priceFrom)}</span> : null}
+          <span className="bus-hint">{t("bus.parts.routes", { count: park.routeCount })}</span>
+          {park.priceFrom ? <span className="bus-route-price"><small>{t("bus.parts.from")}</small> {ugx(park.priceFrom)}</span> : null}
         </div>
       </div>
     </Link>
@@ -208,16 +216,17 @@ export function ParkCard({ park }) {
 }
 
 export function TypeCard({ type }) {
+  const { t } = useTranslation();
   return (
-    <Link to={`/bus/search?busTypeId=${encodeURIComponent(type.id)}`} className="bus-type-card bus-card" aria-label={`${type.name} trips`}>
+    <Link to={`/bus/search?busTypeId=${encodeURIComponent(type.id)}`} className="bus-type-card bus-card" aria-label={t("bus.parts.typeTrips", { name: type.name })}>
       <Photo src={type.imageUrl} name={type.name} width={800} className="bus-type-photo">
-        <span className="bus-type-seats"><Users size={13} />{type.seats} seats</span>
+        <span className="bus-type-seats"><Users size={13} />{t("bus.parts.seats", { count: type.seats })}</span>
       </Photo>
       <div className="bus-type-body">
         <h3>{type.name}</h3>
         {type.description ? <p className="bus-type-desc">{type.description}</p> : null}
         <AmenityChips list={type.amenities} max={2} />
-        {type.upcomingTrips ? <p className="bus-hint">{type.upcomingTrips} upcoming trips</p> : null}
+        {type.upcomingTrips ? <p className="bus-hint">{t("bus.parts.upcomingTrips", { count: type.upcomingTrips })}</p> : null}
       </div>
     </Link>
   );
@@ -232,12 +241,13 @@ export const waHref = (phone) => {
 
 // Arrival clock time; adds a small "+1" when the trip ends on a later day (overnight buses).
 export function ArrivalTime({ departureAt, minutes }) {
+  const { t } = useTranslation();
   const arrival = arrivalAt(departureAt, minutes);
   const plus = dayDiff(departureAt, arrival);
   return (
     <>
       {eatTime(arrival)}
-      {plus > 0 ? <sup className="bus-plusday" title={`Arrives ${plus} day${plus > 1 ? "s" : ""} later`}>+{plus}</sup> : null}
+      {plus > 0 ? <sup className="bus-plusday" title={t("bus.parts.arrivesLater", { count: plus })}>+{plus}</sup> : null}
     </>
   );
 }
