@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import Joi from "joi";
 
 import { requireAuth } from "../middlewares/auth.middleware.js";
@@ -19,6 +19,14 @@ export const buildStorageRoutes = ({ storageController }) => {
       })
     ),
     storageController.createUploadUrl
+  );
+  // Raw file body (the apps use this instead of a direct bucket upload). The size caps live in the service.
+  router.post(
+    "/upload",
+    requireAuth([Roles.ADMIN, Roles.PROVIDER, Roles.USER, Roles.DRIVER, Roles.BUS_OPERATOR]),
+    express.raw({ type: ["image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4"], limit: "26mb" }),
+    validate(Joi.object({ folder: Joi.string().trim().max(80).optional(), filename: Joi.string().trim().max(200).optional() }), "query"),
+    storageController.upload
   );
   router.post(
     "/assets",

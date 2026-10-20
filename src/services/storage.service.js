@@ -5,6 +5,9 @@ import { env } from "../config/env.js";
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 
+export const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
+
 const allowedContentTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4"]);
 
 const extensionForContentType = (contentType) => {
@@ -48,19 +51,38 @@ export class StorageService {
     return this.client;
   }
 
+  buildKey({ actorUserId, role, contentType, folder = "provider-media", filename }) {
+    const ext = extensionForContentType(contentType);
+    const baseName = safeSegment(filename ? filename.replace(/\.[^.]+$/, "") : "asset");
+    return [safeSegment(folder), safeSegment(role), safeSegment(actorUserId), `${Date.now()}-${baseName}.${ext}`].join("/");
+  }
+
+  // The apps cannot PUT straight to the bucket (it only allows the website's origin), so they send
+  // the file here and we write it ourselves. Same key layout and result as createUploadUrl.
+  async uploadDirect({ actorUserId, role, contentType, folder, filename, body }) {
+    if (!allowedContentTypes.has(contentType)) {
+      throw new AppError({ message: "Unsupported content type", statusCode: 400, code: "UNSUPPORTED_CONTENT_TYPE" });
+    }
+    if (!Buffer.isBuffer(body) || !body.length) {
+      throw new AppError({ message: "No file received", statusCode: 400, code: "NO_FILE" });
+    }
+    const limit = contentType.startsWith("video/") ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+    if (body.length > limit) {
+      throw new AppError({ message: `File is too large (max ${Math.round(limit / 1048576)} MB)`, statusCode: 413, code: "FILE_TOO_LARGE" });
+    }
+
+    const key = this.buildKey({ actorUserId, role, contentType, folder, filename });
+    await this.getClient().send(new PutObjectCommand({ Bucket: env.r2Bucket, Key: key, ContentType: contentType, Body: body }));
+    const publicUrl = env.r2PublicBaseUrl ? `${env.r2PublicBaseUrl.replace(/\/$/, "")}/${key}` : null;
+    return { key, publicUrl };
+  }
+
   async createUploadUrl({ actorUserId, role, contentType, folder = "provider-media", filename }) {
     if (!allowedContentTypes.has(contentType)) {
       throw new AppError({ message: "Unsupported content type", statusCode: 400, code: "UNSUPPORTED_CONTENT_TYPE" });
     }
 
-    const ext = extensionForContentType(contentType);
-    const baseName = safeSegment(filename ? filename.replace(/\.[^.]+$/, "") : "asset");
-    const key = [
-      safeSegment(folder),
-      safeSegment(role),
-      safeSegment(actorUserId),
-      `${Date.now()}-${baseName}.${ext}`
-    ].join("/");
+    const key = this.buildKey({ actorUserId, role, contentType, folder, filename });
 
     const command = new PutObjectCommand({
       Bucket: env.r2Bucket,

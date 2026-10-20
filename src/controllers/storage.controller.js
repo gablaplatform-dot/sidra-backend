@@ -18,6 +18,22 @@ export class StorageController {
     }
   };
 
+  upload = async (req, res, next) => {
+    try {
+      const result = await this.storageService.uploadDirect({
+        actorUserId: req.user.id,
+        role: req.user.role,
+        contentType: String(req.headers["content-type"] || "").split(";")[0].trim().toLowerCase(),
+        folder: req.query.folder,
+        filename: req.query.filename,
+        body: req.body
+      });
+      res.status(201).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   registerAsset = async (req, res, next) => {
     try {
       const result = await this.storageService.registerAsset({
