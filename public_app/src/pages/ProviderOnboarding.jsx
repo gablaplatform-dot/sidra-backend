@@ -7,6 +7,7 @@ import { setSession } from "../lib/session";
 import { GOOGLE_CLIENT_ID, loadGoogleIdentity } from "../lib/google";
 import { loadGoogleMaps } from "../lib/maps";
 import { flattenCategories } from "../lib/categories";
+import AudiencePicker from "../components/AudiencePicker";
 import { isCustomFieldFilled } from "../lib/customFields";
 import Field from "../components/Field";
 import DynamicField from "../components/DynamicField";
@@ -76,6 +77,7 @@ export default function ProviderOnboarding() {
     country: "Uganda",
     customFields: {}
   });
+  const [audience, setAudience] = useState({ ids: [], suggestions: [] });
 
   useEffect(() => {
     let active = true;
@@ -175,7 +177,9 @@ export default function ProviderOnboarding() {
                   region: form.region.trim() || undefined,
                   country: form.country.trim() || "Uganda"
                 },
-            customFields: form.customFields
+            customFields: form.customFields,
+            audienceIds: audience.ids,
+            ...(audience.suggestions.length ? { newAudiences: audience.suggestions } : {})
           }
         })
       });
@@ -333,6 +337,11 @@ export default function ProviderOnboarding() {
               </div>
             </section>
           ) : null}
+
+          <section>
+            <h3>{t("audience.title")}</h3>
+            <AudiencePicker value={audience} onChange={setAudience} />
+          </section>
 
           <section>
             <h3>{t("onboarding.contactDetails")}</h3>

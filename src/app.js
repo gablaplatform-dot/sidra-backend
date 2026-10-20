@@ -22,6 +22,7 @@ import { ShopCategoryService } from "./services/shopCategory.service.js";
 import { ShopCategoryController } from "./controllers/shopCategory.controller.js";
 import { ListingService } from "./services/listing.service.js";
 import { ListingController } from "./controllers/listing.controller.js";
+import { AudienceService } from "./services/audience.service.js";
 import { ServiceCategoryService } from "./services/serviceCategory.service.js";
 import { AdminSettingsService } from "./services/adminSettings.service.js";
 import { runMaintenance } from "./jobs/maintenance.js";
@@ -117,6 +118,7 @@ export const buildApp = () => {
   const productCategoryService = new ProductCategoryService();
   const productCategoryController = new ProductCategoryController({ productCategoryService });
 
+  const audienceService = new AudienceService();
   const serviceCategoryService = new ServiceCategoryService();
   // Same controller as products: it just calls whichever tree service it is given.
   const serviceCategoryController = new ProductCategoryController({ productCategoryService: serviceCategoryService });
@@ -190,6 +192,7 @@ export const buildApp = () => {
   paymentService.attachServiceBooking(serviceBookingService);
   const busOperationsService = new BusOperationsService({ emailService: busEmailService, catalogService: busCatalogService, bookingService: busBookingService });
 
+  app.locals.ensureAudiences = () => audienceService.ensureCountries();
   app.locals.runMaintenance = () => runMaintenance({ serviceBookingService });
 
   app.use(
@@ -200,6 +203,7 @@ export const buildApp = () => {
       categoryController,
       productCategoryController,
       serviceCategoryController,
+      audienceService,
       shopCategoryController,
       listingController,
       adminSettingsController,

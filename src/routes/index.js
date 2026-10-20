@@ -20,6 +20,7 @@ import { buildPromotionRoutes } from "./promotion.routes.js";
 import { buildInterestRoutes } from "./interest.routes.js";
 import { buildBusRoutes } from "./bus.routes.js";
 import { buildDocumentRoutes } from "./document.routes.js";
+import { buildAudienceRoutes } from "./audience.routes.js";
 import { buildBookingRoutes } from "./booking.routes.js";
 import { buildAiAdminRoutes } from "./aiAdmin.routes.js";
 
@@ -29,6 +30,7 @@ export const buildRoutes = ({
   categoryController,
   productCategoryController,
   serviceCategoryController,
+  audienceService,
   shopCategoryController,
   listingController,
   adminSettingsController,
@@ -66,6 +68,7 @@ export const buildRoutes = ({
       }
     })
   );
+  router.use("/audiences", buildAudienceRoutes({ audienceService }));
   router.use("/shop-categories", buildShopCategoryRoutes({ shopCategoryController }));
   router.use("/listings", buildListingRoutes({ listingController }));
   router.use("/payments", buildPaymentRoutes({ paymentController }));

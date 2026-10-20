@@ -178,6 +178,8 @@ model Provider {
   createdCategories Category[] @relation("CategoryCreatedBy")
   createdProductCategories ProductCategory[] @relation("ProductCategoryCreatedBy")
   createdServiceCategories ServiceCategory[] @relation("ServiceCategoryCreatedBy")
+  audiences ProviderAudience[]
+  createdAudiences Audience[] @relation("AudienceCreatedBy")
   serviceBookings ServiceBooking[]
 
   @@index([categoryId, createdAt])
@@ -482,6 +484,41 @@ model ServiceBooking {
   @@index([providerId, status, startAt])
   @@index([userId, createdAt])
   @@map("service_bookings")
+}
+
+// The countries and cultures a provider says it serves. Countries are preloaded; cultures are added by admins. A
+// provider can also suggest its own: it is "pending" (visible only on that provider's own profile) until an admin
+// approves it, after which customers can filter by it.
+model Audience {
+  id                  String   @id @default(cuid())
+  kind                String   // country | culture
+  name                String
+  code                String?  // ISO 3166-1 alpha-2 for countries
+  moderationStatus    String   @default("approved")
+  createdByProviderId String?
+  sortOrder           Int      @default(1000)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  createdByProvider Provider?          @relation("AudienceCreatedBy", fields: [createdByProviderId], references: [id], onDelete: SetNull)
+  providers         ProviderAudience[]
+
+  @@unique([kind, name])
+  @@index([kind, moderationStatus, sortOrder])
+  @@map("audiences")
+}
+
+model ProviderAudience {
+  providerId String
+  audienceId String
+  createdAt  DateTime @default(now())
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  audience Audience @relation(fields: [audienceId], references: [id], onDelete: Cascade)
+
+  @@id([providerId, audienceId])
+  @@index([audienceId])
+  @@map("provider_audiences")
 }
 
 model ContactUnlock {

@@ -1,0 +1,25 @@
+{
+  "audience": {
+    "title": "Oweereza ani?",
+    "hint": "Londa ensi n'obuwangwa bakasitoma bo gye bava. Bivaamu bwereere bw'oba oweereza buli omu.",
+    "countries": "Ensi",
+    "cultures": "Obuwangwa n'abantu",
+    "searchCountries": "Noonya ensi",
+    "searchCultures": "Noonya obuwangwa",
+    "addNew": "Gattako “{{name}}” nga {{kind}} empya",
+    "kindCountry": "ensi",
+    "kindCulture": "obuwangwa",
+    "pending": "Linda okukkirizibwa",
+    "pendingNote": "Bakasitoma balikiraba Gabla bw'eriyisa.",
+    "none": "Buli omu — tewali kkomo",
+    "remove": "Ggyawo {{name}}",
+    "noMatch": "Tewali kikwatagana ne “{{query}}”.",
+    "serves": "Aweereza",
+    "filterTitle": "Ani gwe kigyiddwa",
+    "filterCountry": "Ensi",
+    "filterCulture": "Obuwangwa",
+    "allCountries": "Ensi zonna",
+    "allCultures": "Obuwangwa bwonna",
+    "filterNote": "Mulimu abaweereza buli omu."
+  }
+}

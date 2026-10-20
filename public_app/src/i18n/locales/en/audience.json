@@ -1,0 +1,25 @@
+{
+  "audience": {
+    "title": "Who do you serve?",
+    "hint": "Pick the countries and cultures your customers come from. Leave it empty to serve everyone.",
+    "countries": "Countries",
+    "cultures": "Cultures & communities",
+    "searchCountries": "Search countries",
+    "searchCultures": "Search cultures",
+    "addNew": "Add “{{name}}” as a new {{kind}}",
+    "kindCountry": "country",
+    "kindCulture": "culture",
+    "pending": "Waiting for approval",
+    "pendingNote": "Customers will see this once Gabla approves it.",
+    "none": "Everyone — no restriction",
+    "remove": "Remove {{name}}",
+    "noMatch": "Nothing matches “{{query}}”.",
+    "serves": "Serves",
+    "filterTitle": "Who it's for",
+    "filterCountry": "Country",
+    "filterCulture": "Culture",
+    "allCountries": "All countries",
+    "allCultures": "All cultures",
+    "filterNote": "Includes providers who serve everyone."
+  }
+}

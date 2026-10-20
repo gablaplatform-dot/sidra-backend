@@ -458,6 +458,28 @@ CREATE TABLE IF NOT EXISTS service_bookings (
   FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS audiences (
+  id TEXT PRIMARY KEY NOT NULL,
+  kind TEXT NOT NULL,
+  name TEXT NOT NULL,
+  code TEXT,
+  moderationStatus TEXT NOT NULL DEFAULT 'approved',
+  createdByProviderId TEXT,
+  sortOrder INTEGER NOT NULL DEFAULT 1000,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (createdByProviderId) REFERENCES providers(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS provider_audiences (
+  providerId TEXT NOT NULL,
+  audienceId TEXT NOT NULL,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (providerId, audienceId),
+  FOREIGN KEY (providerId) REFERENCES providers(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (audienceId) REFERENCES audiences(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS ai_settings (
   id TEXT PRIMARY KEY NOT NULL DEFAULT 'singleton',
   enabled BOOLEAN NOT NULL DEFAULT 1,
@@ -924,6 +946,9 @@ CREATE INDEX IF NOT EXISTS service_products_status_createdAt_idx ON service_prod
 CREATE INDEX IF NOT EXISTS service_products_featured_status_idx ON service_products(featured, status);
 CREATE UNIQUE INDEX IF NOT EXISTS shop_categories_providerId_parentId_name_key ON shop_categories(providerId, parentId, name);
 CREATE INDEX IF NOT EXISTS shop_categories_providerId_parentId_idx ON shop_categories(providerId, parentId);
+CREATE UNIQUE INDEX IF NOT EXISTS audiences_kind_name_key ON audiences(kind, name);
+CREATE INDEX IF NOT EXISTS audiences_kind_moderationStatus_sortOrder_idx ON audiences(kind, moderationStatus, sortOrder);
+CREATE INDEX IF NOT EXISTS provider_audiences_audienceId_idx ON provider_audiences(audienceId);
 CREATE UNIQUE INDEX IF NOT EXISTS service_categories_parentId_name_key ON service_categories(parentId, name);
 CREATE INDEX IF NOT EXISTS service_categories_parentId_idx ON service_categories(parentId);
 CREATE INDEX IF NOT EXISTS service_categories_isActive_sortOrder_idx ON service_categories(isActive, sortOrder);

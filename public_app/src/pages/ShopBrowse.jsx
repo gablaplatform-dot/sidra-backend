@@ -18,6 +18,7 @@ import {
   readFilters,
   toApiParams
 } from "../lib/browseFilters";
+import { audienceName, useAudienceCatalog } from "../components/AudienceFilter";
 import ShopNavbar from "../components/shop/ShopNavbar";
 import SiteHeader from "../components/SiteHeader";
 import ShopFooterTrust from "../components/shop/ShopFooterTrust";
@@ -63,6 +64,8 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
   const preferred = getPreferredDistrict();
   const arranged = Boolean(preferred) && !filters.near && !filters.district && !filters.everywhere && sort === "featured";
 
+  const audienceCatalog = useAudienceCatalog();
+  const tFilterName = (id, kind) => audienceName(audienceCatalog, kind, id);
   const [tree, setTree] = useState(null);
   const [coords, setCoords] = useState(null);
   const [geoNotice, setGeoNotice] = useState("");
@@ -160,7 +163,7 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
     else if (collectionInfo) document.title = t("shop.meta.collection", { title: collectionTitle });
   }, [node, where, collectionInfo, collectionTitle]);
 
-  const clearAll = () => setSearchParams(patchParams(searchParams, { min: null, max: null, discount: false, attrs: {} }));
+  const clearAll = () => setSearchParams(patchParams(searchParams, { min: null, max: null, discount: false, attrs: {}, country: null, culture: null }));
 
   const labelFor = (key) => fieldDefs.find((f) => f.key === key)?.label || prettyKey(key);
   const chips = [];
@@ -184,6 +187,8 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
       });
     }
   }
+  if (filters.country) chips.push({ id: "country", text: tFilterName(filters.country, "country"), remove: () => apply({ country: null }) });
+  if (filters.culture) chips.push({ id: "culture", text: tFilterName(filters.culture, "culture"), remove: () => apply({ culture: null }) });
   if (filters.discount) chips.push({ id: "discount", text: t("shop.browse.discountChip"), remove: () => apply({ discount: false }) });
 
   // Until the category tree and first facets arrive, show the sidebar's shape rather than a half-empty one.

@@ -2,6 +2,7 @@ import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 import { findNearbyProviderIds } from "./geoProviderSearch.js";
 import { haversineDistanceKm } from "../utils/geohash.js";
+import { AudienceService, audienceProviderWhere } from "./audience.service.js";
 import { BOOKING_MODES, normalizeBookingConfig } from "./serviceBooking.service.js";
 
 const GEOHASH_SAFE_RADIUS_KM = 20; // a 3x3 geohash5 cell grid covers ~15km across - beyond this,
@@ -66,6 +67,7 @@ export class ListingService {
   constructor({ aiSearchService, contactGuardService } = {}) {
     this.aiSearchService = aiSearchService ?? null;
     this.contactGuardService = contactGuardService ?? null;
+    this.audienceService = new AudienceService();
   }
 
   // A service must sit in a leaf of the service-category tree, like a product does in the product tree.
@@ -563,7 +565,7 @@ export class ListingService {
     return ids;
   }
 
-  async _buildPublicFilter({ type, q, ai, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, district, minPrice, maxPrice }) {
+  async _buildPublicFilter({ countryId, cultureId, type, q, ai, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, district, minPrice, maxPrice }) {
     const filter = { status: "approved" };
 
     let normalizedType = null;
@@ -613,6 +615,10 @@ export class ListingService {
     } else {
       filter.provider = providerFilter;
     }
+
+    // Only providers that serve the chosen country / culture (or that don't restrict it).
+    const audienceWhere = audienceProviderWhere({ countryId, cultureId });
+    if (audienceWhere) filter.AND = [...(filter.AND ?? []), { provider: audienceWhere }];
 
     return filter;
   }
@@ -718,12 +724,22 @@ export class ListingService {
     };
   }
 
-  async publicList({ page = 1, limit = 20, type, q, ai, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, sort, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, around, minPrice, maxPrice, attrs: rawAttrs }) {
+  async publicList(args) {
+    const result = await this._publicList(args);
+    // Listings from providers that named the chosen country or culture come first (stable within each group).
+    if ((args.countryId || args.cultureId) && result.items?.length) {
+      const matched = await this.audienceService.matchedProviderIds(result.items.map((i) => i.providerId), [args.countryId, args.cultureId]);
+      result.items = [...result.items.filter((i) => matched.has(i.providerId)), ...result.items.filter((i) => !matched.has(i.providerId))];
+    }
+    return result;
+  }
+
+  async _publicList({ page = 1, limit = 20, type, q, ai, countryId, cultureId, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, sort, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, around, minPrice, maxPrice, attrs: rawAttrs }) {
     const normalizedPage = Math.max(1, Number(page) || 1);
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
     const skip = (normalizedPage - 1) * normalizedLimit;
     const attrs = parseAttrs(rawAttrs);
-    const baseArgs = { type, q, ai, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, minPrice, maxPrice };
+    const baseArgs = { countryId, cultureId, type, q, ai, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, minPrice, maxPrice };
 
     // "Arrange around my district": no exact position and no explicit location, default ordering ->
     // rank everything nearest-first from the middle of the shopper's district. An explicit sort
@@ -826,10 +842,10 @@ export class ListingService {
   // return. Every group's counts ignore that group's OWN selection (so ticking "Apple" still shows
   // what "Dell" would add) but respect every other active filter, and all of it is scoped to the
   // chosen location, so numbers always match what the result grid would show.
-  async facets({ type, q, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
+  async facets({ countryId, cultureId, type, q, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
     const attrs = parseAttrs(rawAttrs);
     const hasGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Number.isFinite(Number(radiusKm));
-    const filter = await this._buildPublicFilter({ type, q, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals });
+    const filter = await this._buildPublicFilter({ countryId, cultureId, type, q, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals });
 
     let geo = null;
     if (hasGeo) {

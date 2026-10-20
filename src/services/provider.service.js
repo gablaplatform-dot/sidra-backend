@@ -5,6 +5,7 @@ import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 import { PaymentService } from "./payment.service.js";
 import { env } from "../config/env.js";
+import { AudienceService, audienceProviderWhere } from "./audience.service.js";
 import { verifyGoogleIdToken } from "../utils/googleAuth.js";
 import { geohashEncode } from "../utils/geohash.js";
 
@@ -51,6 +52,7 @@ export class ProviderService {
   constructor({ hashPassword, paymentService = new PaymentService() }) {
     this.hashPassword = hashPassword;
     this.paymentService = paymentService;
+    this.audienceService = new AudienceService();
   }
 
   normalizeEmail(email) {
@@ -724,6 +726,7 @@ export class ProviderService {
     if (Object.keys(data).length) {
       await prisma.provider.update({ where: { id: provider.id }, data });
     }
+    if (updates.audienceIds !== undefined || updates.newAudiences?.length) await this.audienceService.setProviderAudiences(provider.id, updates.audienceIds ?? (await this.audienceService.forProvider(provider.id, { includePending: true })).map((a) => a.id), updates.newAudiences);
 
     return this.getProviderProfile({ providerId: provider.id, includeUnapproved: true });
   }
@@ -779,6 +782,8 @@ export class ProviderService {
     lng,
     radiusKm,
     minRating,
+    countryId,
+    cultureId,
     sort = "newest"
   }) {
     const normalizedPage = Math.max(1, Number(page) || 1);
@@ -795,6 +800,7 @@ export class ProviderService {
       isApproved: true,
       moderationStatus: "approved",
       ...(categoryId ? { categoryId } : {}),
+      ...(audienceProviderWhere({ countryId, cultureId }) ?? {}),
       ...(minRating !== undefined ? { ratingAvg: { gte: Math.max(0, Math.min(5, Number(minRating) || 0)) } } : {}),
       ...(q
         ? {
@@ -814,11 +820,17 @@ export class ProviderService {
           ? [{ createdAt: "desc" }]
           : [{ createdAt: "desc" }];
 
-    const [items, total, globalSettings] = await Promise.all([
+    const [fetched, total, globalSettings] = await Promise.all([
       prisma.provider.findMany({ where, orderBy, skip, take: normalizedLimit }),
       prisma.provider.count({ where }),
       this.paymentService.getSettings()
     ]);
+    // Providers that named the chosen country or culture come before those that serve everyone (stable within each group).
+    let items = fetched;
+    if (countryId || cultureId) {
+      const matched = await this.audienceService.matchedProviderIds(fetched.map((p) => p.id), [countryId, cultureId]);
+      items = [...fetched.filter((p) => matched.has(p.id)), ...fetched.filter((p) => !matched.has(p.id))];
+    }
 
     return {
       items: items.map((p) => ({
@@ -897,6 +909,7 @@ export class ProviderService {
         pin: hasPin
       },
       stats: { unlockCount, listingCount },
+      audiences: await this.audienceService.forProvider(provider.id, { includePending: includeUnapproved }),
       media: provider.media,
       customFields: provider.customFields,
       isApproved: provider.isApproved,

@@ -113,6 +113,12 @@ export default function ProviderDetail() {
       ) : (
         <div className="pcc-page">
           <div className="pcc-page-main">
+            {provider.audiences?.length ? (
+              <div className="aud-serves">
+                <strong>{t("audience.serves")}</strong>
+                {provider.audiences.map((a) => <span key={a.id} className="aud-chip">{a.name}</span>)}
+              </div>
+            ) : null}
             <Layout
               provider={provider}
               categoryId={provider.categoryId}

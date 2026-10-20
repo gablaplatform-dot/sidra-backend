@@ -1,0 +1,25 @@
+{
+  "audience": {
+    "title": "Yaa u adeegtaa?",
+    "hint": "Dooro waddamada iyo dhaqamada macaamiishaadu ka yimaadaan. Ka tag madhan haddii aad qof walba u adeegto.",
+    "countries": "Waddamada",
+    "cultures": "Dhaqamada iyo bulshooyinka",
+    "searchCountries": "Raadi waddamo",
+    "searchCultures": "Raadi dhaqamo",
+    "addNew": "Ku dar “{{name}}” sidii {{kind}} cusub",
+    "kindCountry": "waddan",
+    "kindCulture": "dhaqan",
+    "pending": "Sugaya ogolaansho",
+    "pendingNote": "Macaamiishu way arki doonaan marka Gabla oggolaado.",
+    "none": "Qof walba — xaddidaad la'aan",
+    "remove": "Ka saar {{name}}",
+    "noMatch": "Waxba kuma jiraan “{{query}}”.",
+    "serves": "Wuxuu u adeegaa",
+    "filterTitle": "Yaa loogu talagalay",
+    "filterCountry": "Waddan",
+    "filterCulture": "Dhaqan",
+    "allCountries": "Dhammaan waddamada",
+    "allCultures": "Dhammaan dhaqamada",
+    "filterNote": "Waxay ku jirtaa kuwa qof walba u adeega."
+  }
+}

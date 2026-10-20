@@ -14,6 +14,7 @@ const main = async () => {
   await new BootstrapService({ hashPassword }).ensureDefaultAdmin();
 
   const app = buildApp();
+  await app.locals.ensureAudiences?.().catch((e) => process.stderr.write(`[audiences] ${e?.message ?? e}\n`));
   const server = http.createServer(app);
 
   server.listen(env.port, "0.0.0.0");

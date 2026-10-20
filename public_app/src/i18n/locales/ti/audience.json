@@ -1,0 +1,25 @@
+{
+  "audience": {
+    "title": "ንመን ኢኹም ትገልግሉ?",
+    "hint": "ዓማዊልኩም ካብ ዝመጹሎም ሃገራትን ባህልታትን ምረጹ። ንኹሉ ክትገልግሉ እንተደሊኹም ባዶ ግደፍዎ።",
+    "countries": "ሃገራት",
+    "cultures": "ባህልታትን ሕብረተሰባትን",
+    "searchCountries": "ሃገራት ድለዩ",
+    "searchCultures": "ባህልታት ድለዩ",
+    "addNew": "“{{name}}” ከም ሓዳስ {{kind}} ወስኹ",
+    "kindCountry": "ሃገር",
+    "kindCulture": "ባህሊ",
+    "pending": "ዝፍቀድ ይጽበ ኣሎ",
+    "pendingNote": "ጋብላ ምስ ኣፍቀደ ዓማዊል ይርእይዎ።",
+    "none": "ኩሉ ሰብ — ገደብ የለን",
+    "remove": "{{name}} ኣውጽእ",
+    "noMatch": "ምስ “{{query}}” ዝሰማማዕ የለን።",
+    "serves": "ዝገልግል",
+    "filterTitle": "ንመን ዝዓለመ",
+    "filterCountry": "ሃገር",
+    "filterCulture": "ባህሊ",
+    "allCountries": "ኩሎም ሃገራት",
+    "allCultures": "ኩሎም ባህልታት",
+    "filterNote": "ንኹሉ ዝገልግሉ ኣቕረብቲ ይሓዝ።"
+  }
+}

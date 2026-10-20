@@ -31,6 +31,8 @@ export const buildListingRoutes = ({ listingController }) => {
     categoryId: id.optional(),
     productCategoryId: id.optional(),
     serviceCategoryId: id.optional(),
+    countryId: id.optional(),
+    cultureId: id.optional(),
     bookable: Joi.boolean().optional(),
     shopCategoryId: id.optional(),
     providerId: id.optional(),

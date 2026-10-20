@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import AudienceFilter from "../components/AudienceFilter";
 import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
@@ -22,14 +23,17 @@ export default function CategoryDetail() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [aud, setAud] = useState({ country: "", culture: "" });
+
+  const audQuery = `${aud.country ? `&countryId=${encodeURIComponent(aud.country)}` : ""}${aud.culture ? `&cultureId=${encodeURIComponent(aud.culture)}` : ""}`;
 
   useEffect(() => {
     let active = true;
     setLoading(true);
     Promise.all([
       request("/categories"),
-      request(`/providers?categoryId=${encodeURIComponent(categoryId)}&limit=50`),
-      request(`/listings?categoryId=${encodeURIComponent(categoryId)}&limit=50`)
+      request(`/providers?categoryId=${encodeURIComponent(categoryId)}&limit=50${audQuery}`),
+      request(`/listings?categoryId=${encodeURIComponent(categoryId)}&limit=50${audQuery}`)
     ])
       .then(([categoryResult, providerResult, listingResult]) => {
         if (!active) return;
@@ -46,7 +50,7 @@ export default function CategoryDetail() {
     return () => {
       active = false;
     };
-  }, [categoryId]);
+  }, [categoryId, audQuery]);
 
   const logout = () => {
     clearSession();
@@ -135,6 +139,7 @@ export default function CategoryDetail() {
 
           <section className="home-section">
             <h2>{t("services.category.providers")}</h2>
+            <AudienceFilter compact country={aud.country} culture={aud.culture} onChange={(patch) => setAud((a) => ({ country: "country" in patch ? patch.country || "" : a.country, culture: "culture" in patch ? patch.culture || "" : a.culture }))} />
             {providers.length ? (
               <div className="provider-grid">
                 {providers.map((p) => (

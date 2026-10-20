@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+import AudienceFilter from "../../AudienceFilter";
 import { activeFilterCount, bucketLabel, prettyKey } from "../../../lib/browseFilters";
 
 const FILTERABLE = new Set(["select", "multi_select", "boolean"]);
@@ -198,6 +199,12 @@ export default function BrowseSidebar({ node, ancestors, siblings, fieldDefs, fa
       )}
 
       <PriceBlock filters={filters} facets={facets} onChange={onChange} />
+
+      <section className="sb-block">
+        <div className="sb-block-body">
+          <AudienceFilter country={filters.country} culture={filters.culture} onChange={onChange} />
+        </div>
+      </section>
 
       {groups.map((group, index) => (
         <AttributeGroup

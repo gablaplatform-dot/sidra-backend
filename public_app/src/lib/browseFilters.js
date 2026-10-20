@@ -37,6 +37,8 @@ export const readFilters = (searchParams) => {
     min: num("min"),
     max: num("max"),
     discount: searchParams.get("discount") === "1",
+    country: searchParams.get("country") || "",
+    culture: searchParams.get("culture") || "",
     sort: searchParams.get("sort") || "featured",
     page: Math.max(1, num("page") || 1),
     attrs
@@ -79,6 +81,8 @@ export const toApiParams = (filters, { categoryId, coords, kind = "product" }) =
   if (filters.min !== null) params.minPrice = String(filters.min);
   if (filters.max !== null) params.maxPrice = String(filters.max);
   if (filters.discount) params.discountOnly = "true";
+  if (filters.country) params.countryId = filters.country;
+  if (filters.culture) params.cultureId = filters.culture;
   if (Object.keys(filters.attrs).length) params.attrs = JSON.stringify(filters.attrs);
   if (filters.near && coords) {
     params.lat = String(coords.lat);
@@ -93,7 +97,9 @@ export const toApiParams = (filters, { categoryId, coords, kind = "product" }) =
 export const activeFilterCount = (filters) =>
   Object.values(filters.attrs).reduce((n, v) => n + v.length, 0) +
   (filters.min !== null || filters.max !== null ? 1 : 0) +
-  (filters.discount ? 1 : 0);
+  (filters.discount ? 1 : 0) +
+  (filters.country ? 1 : 0) +
+  (filters.culture ? 1 : 0);
 
 // 35000 -> "35 K", 1500000 -> "1.5 M"
 export const shortMoney = (n) => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import AudiencePicker from "../components/AudiencePicker";
 import { loginPath } from "../lib/authRedirect";
 import { formatUgx } from "../lib/format";
 
@@ -56,6 +57,7 @@ export default function Profile() {
   const galleryFileRef = useRef(null);
 
   const [form, setForm] = useState({ businessName: "", description: "", phone: "", whatsapp: "", website: "", onlinePaymentsEnabled: true });
+  const [audience, setAudience] = useState({ ids: [], suggestions: [] });
   const [savingInfo, setSavingInfo] = useState(false);
 
   useEffect(() => {
@@ -83,6 +85,7 @@ export default function Profile() {
           website: providerResult.contact?.website || "",
           onlinePaymentsEnabled: providerResult.onlinePaymentsEnabled !== false
         });
+        setAudience({ ids: (providerResult.audiences || []).map((a) => a.id), suggestions: [] });
       })
       .catch((loadError) => setError(loadError.message || t("profile.errLoad")))
       .finally(() => setLoading(false));
@@ -135,10 +138,13 @@ export default function Profile() {
             whatsapp: form.whatsapp.trim() || null,
             website: form.website.trim() || null
           },
-          onlinePaymentsEnabled: form.onlinePaymentsEnabled
+          onlinePaymentsEnabled: form.onlinePaymentsEnabled,
+          audienceIds: audience.ids,
+          ...(audience.suggestions.length ? { newAudiences: audience.suggestions } : {})
         })
       });
       setProvider(updated);
+      setAudience({ ids: (updated.audiences || []).map((a) => a.id), suggestions: [] });
       setNotice(t("profile.updated"));
     } catch (saveError) {
       setError(saveError.message || t("profile.errSave"));
@@ -330,6 +336,9 @@ export default function Profile() {
                       onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                       placeholder={t("profile.descriptionPlaceholder")}
                     />
+                  </Field>
+                  <Field label={t("audience.title")} as="div">
+                    <AudiencePicker value={audience} onChange={setAudience} known={provider?.audiences || []} />
                   </Field>
                   <Field label={t("profile.onlinePayments")} as="div">
                     <label className="checkbox-row">

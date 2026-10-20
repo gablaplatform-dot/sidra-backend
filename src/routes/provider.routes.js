@@ -54,6 +54,8 @@ export const buildProviderRoutes = ({ providerController }) => {
         lng: Joi.number().min(-180).max(180).optional(),
         radiusKm: Joi.number().min(0).max(200).optional(),
         minRating: Joi.number().min(0).max(5).optional(),
+        countryId: id.optional(),
+        cultureId: id.optional(),
         sort: Joi.string().valid("random", "top-rated", "top_rated", "toprated", "newest").optional()
       }).and("lat", "lng", "radiusKm"),
       "query"
@@ -117,7 +119,9 @@ export const buildProviderRoutes = ({ providerController }) => {
           location: locationSchema.optional(),
           contact: contactSchema.optional(),
           media: mediaSchema.optional(),
-          customFields: boundedAnswers().optional()
+          customFields: boundedAnswers().optional(),
+          audienceIds: Joi.array().items(id).max(40).optional(),
+          newAudiences: Joi.array().items(Joi.object({ kind: Joi.string().valid("country", "culture").required(), name: Joi.string().trim().min(2).max(60).required() })).max(5).optional()
         }).optional()
       })
     ),
@@ -142,6 +146,8 @@ export const buildProviderRoutes = ({ providerController }) => {
         contact: contactSchema.optional(),
         media: mediaSchema.optional(),
         customFields: boundedAnswers().optional(),
+        audienceIds: Joi.array().items(id).max(40).optional(),
+        newAudiences: Joi.array().items(Joi.object({ kind: Joi.string().valid("country", "culture").required(), name: Joi.string().trim().min(2).max(60).required() })).max(5).optional(),
         onlinePaymentsEnabled: Joi.boolean().optional()
       })
     ),
