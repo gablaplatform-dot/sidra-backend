@@ -147,10 +147,10 @@ export default function Shop() {
     <main className="shop-shell">
       <ShopNavbar session={session} onLogout={logout} />
       {ads === null ? <ShopHeroSkeleton /> : ads.length ? <ShopAdsHero ads={ads} /> : <ShopHero products={displayNewArrivals.slice(0, 4)} />}
-      <ShopForYou />
       {!loaded || displayCategories.length ? (
         <ShopCategoryRow categories={displayCategories} loaded={loaded} />
       ) : null}
+      <ShopForYou />
       {!loaded || displayNewArrivals.length ? (
         <ShopNewArrivals products={displayNewArrivals} loaded={loaded} />
       ) : null}
