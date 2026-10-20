@@ -284,3 +284,16 @@ export const IconList = (props) => (
     <path d="M11.5 6h9M11.5 17.75h9M11.5 9.5h5M11.5 21h5" />
   </svg>
 );
+
+export const IconUser = (props) => (
+  <svg {...base} {...props}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" />
+  </svg>
+);
+
+export const IconChart = (props) => (
+  <svg {...base} {...props}>
+    <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+  </svg>
+);

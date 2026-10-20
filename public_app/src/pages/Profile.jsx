@@ -17,22 +17,22 @@ import ProfileShopCategoriesTab from "../components/profile/ProfileShopCategorie
 import ProfileAnalyticsTab from "../components/profile/ProfileAnalyticsTab";
 import ProfileAdsTab from "../components/profile/ProfileAdsTab";
 import ProfileDocumentsTab from "../components/profile/ProfileDocumentsTab";
-import { IconBox, IconCamera, IconClose, IconImage } from "../components/icons";
+import { IconBox, IconCamera, IconClose, IconImage, IconUser, IconChart, IconGrid, IconTarget, IconCart, IconCalendar, IconReceipt, IconWallet } from "../components/icons";
 import { Skel, SectionSkeleton } from "../components/Skeleton";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
 const TABS = [
-  { key: "info" },
-  { key: "analytics" },
-  { key: "listings" },
-  { key: "shopCategories" },
-  { key: "ads" },
-  { key: "orders" },
-  { key: "bookings" },
-  { key: "documents" },
-  { key: "wallet" },
-  { key: "gallery" }
+  { key: "info", Icon: IconUser },
+  { key: "analytics", Icon: IconChart },
+  { key: "listings", Icon: IconBox },
+  { key: "shopCategories", Icon: IconGrid },
+  { key: "ads", Icon: IconTarget },
+  { key: "orders", Icon: IconCart },
+  { key: "bookings", Icon: IconCalendar },
+  { key: "documents", Icon: IconReceipt },
+  { key: "wallet", Icon: IconWallet },
+  { key: "gallery", Icon: IconImage }
 ];
 
 export default function Profile() {
@@ -283,14 +283,16 @@ export default function Profile() {
           {notice ? <div className="notice-message">{notice}</div> : null}
 
           <nav className="profile-tabs">
-            {TABS.map((tab) => (
+            {TABS.map(({ key, Icon }) => (
               <button
-                key={tab.key}
+                key={key}
                 type="button"
-                className={`hero-tab ${activeTab === tab.key ? "is-active" : ""}`}
-                onClick={() => changeTab(tab.key)}
+                className={`hero-tab ${activeTab === key ? "is-active" : ""}`}
+                aria-current={activeTab === key ? "page" : undefined}
+                onClick={() => changeTab(key)}
               >
-                {t(`profile.tabs.${tab.key}`)}
+                <span className="hero-tab-ico" aria-hidden="true"><Icon /></span>
+                <span className="hero-tab-label">{t(`profile.tabs.${key}`)}</span>
               </button>
             ))}
           </nav>
