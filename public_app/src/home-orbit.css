@@ -488,3 +488,7 @@
 
 /* Anything in transit through the bowl's warp glows gold. */
 .is-warping .ho-tile-card, .is-warping .ho-card, .is-warping .ho-phone, .is-warping .ho-chip-icon { box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.6), 0 0 30px 6px rgba(250, 204, 21, 0.75); }
+
+/* Chips live in the bowl layer now (so the front lip can hide them); each sets its own stacking order. */
+.ho-chips { position: static; z-index: auto; pointer-events: none; }
+.ho-trails { z-index: 2; }

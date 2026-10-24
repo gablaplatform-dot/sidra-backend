@@ -40,12 +40,12 @@ const SPARKS = Array.from({ length: 22 }, (_, i) => ({
 // Scroll budget, in screens. Block 0 (orbit -> bowl -> beam) pins for PINS[0]. Every chapter is then its own
 // block: it slides in from below as the page really scrolls, pins while its cards pop out, hold and drop back
 // into the bowl, and slides away as the next one arrives. The bowl crosses and drops with the page between them.
-const PINS = [3.0, 1.4, 1.4, 1.4, 2.0, 1.8];
+const PINS = [4.4, 2.0, 2.0, 2.0, 2.8, 3.0];
 const CHAPTERS = [
   { key: "shop", side: "left", to: "/shop", eyebrow: "home.promo.shopEyebrow", title: "landing.story.shopTitle", sub: "home.promo.shopText", cta: "home.promo.shopCta" },
   { key: "bus", side: "right", to: "/bus", eyebrow: "home.bus.eyebrow", title: "home.bus.title", sub: "home.bus.text", cta: "home.bus.findBuses" },
   { key: "ride", side: "left", to: "/ride", eyebrow: "home.promo.rideEyebrow", title: "home.promo.rideTitle", sub: "home.promo.rideText", cta: "home.promo.rideCta" },
-  { key: "phone", side: "right", to: "/search", fall: 0.88 },
+  { key: "phone", side: "right", to: "/search", fall: 0.76 },
   // The finale: the categories come back out of the bowl and stay up; the bowl then drops away below them.
   { key: "categories", side: "center", to: "/home#categories", fall: null }
 ];
@@ -256,9 +256,12 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       const rad = (c.angle * Math.PI) / 180;
       const tx = ax + rx * Math.cos(rad);
       const ty = ay - ry * Math.sin(rad);
-      const cxp = mx + (tx - mx) * 0.15;
-      const cyp = Math.min(my, ty) - 90;
-      return { mx, my, tx, ty, cxp, cyp, d: `M${mx.toFixed(1)} ${my.toFixed(1)} Q${cxp.toFixed(1)} ${cyp.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)}` };
+      // Out of the mouth straight up, then curving over to the resting place.
+      const c1x = mx;
+      const c1y = my - bowl.bh * 1.0;
+      const c2x = mx + (tx - mx) * 0.7;
+      const c2y = Math.min(my, ty) - bowl.bh * 0.4;
+      return { mx, my, tx, ty, c1x, c1y, c2x, c2y, d: `M${mx.toFixed(1)} ${my.toFixed(1)} C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)}` };
     });
   }, [size, bowl]);
 
@@ -332,6 +335,11 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
     const arc = size.h * 0.22;
     const storyH = blocks[blocks.length - 1].T + blocks[blocks.length - 1].P + size.h;
 
+    const cubic = (a, b, c, d, t) => {
+      const u = 1 - t;
+      return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
+    };
+    const inBowl = (x, y, mxL, myL, sc) => Math.abs(x - mxL) < bowl.bw * sc * 0.62 && y > myL - bowl.bh * sc * 1.05;
     // The warp: whatever goes into or comes out of the bowl is drawn into a spiral around its mouth and stretched along
     // the way it travels. `near` is 1 at the mouth and 0 once settled, so the same effect runs in and out.
     const warpXf = (px, py, mx, my, near, sgn, sc, spin) => {
@@ -381,7 +389,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       const layerTop = clamp(v, 0, storyH - size.h);
       const p = clamp(v / Math.max(1, blocks[0].P));
       // The intro scene (beam, sparks, headline, chips) hands over to the first chapter.
-      const leave = smooth(p, 0.93, 1);
+      const leave = smooth(p, 0.9, 1);
 
       // The bowl rises into view as the first tiles start to fall.
       const rise = 1 - smooth(p, 0.02, 0.16);
@@ -399,7 +407,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
         const last = b === blocks.length - 1;
         if (v <= end || last) {
           // In the finale the bowl, once the categories are out, drops away below the bottom of the screen.
-          const goDown = last ? smooth((v - blocks[b].T) / Math.max(1, blocks[b].P), 0.64, 0.9) : 0;
+          const goDown = last ? smooth((v - blocks[b].T) / Math.max(1, blocks[b].P), 0.72, 0.95) : 0;
           bx = anchorX[b];
           by = stageTopOf(b) + mouthStageY + (b === 0 ? lift : 0) + goDown * size.h * 0.95;
           bs = anchorS[b] * (1 - 0.18 * goDown);
@@ -417,6 +425,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
           break;
         }
       }
+      const glowBase = bowlOpacity * (0.4 + 0.6 * smooth(p, 0.1, 0.55));
       const dx = bx - mouthX;
       const dy = by - layerTop - mouthStageY;
       for (const ref of [bowlBackRef, bowlFrontRef]) {
@@ -426,14 +435,14 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
         el.style.opacity = bowlOpacity.toFixed(3);
       }
       if (bowlGlowRef.current) {
-        bowlGlowRef.current.style.opacity = (bowlOpacity * (0.4 + 0.6 * smooth(p, 0.1, 0.55))).toFixed(3);
         bowlGlowRef.current.style.translate = `${dx.toFixed(1)}px ${dy.toFixed(1)}px`;
-        bowlGlowRef.current.style.scale = bs.toFixed(3);
       }
       if (glowRef.current) glowRef.current.style.transform = `translate(-50%, calc(-52% + ${(stageTop0 - layerTop + size.h * 0.5).toFixed(1)}px))`;
 
       // Intro: tiles ring the search, then fall into the mouth (stage coordinates plus the pinned offset).
       const mouthY = mouthStageY + lift;
+      // Whenever something passes through the mouth the bowl flares.
+      let flare = 0;
       const open = 1 + 0.06 * smooth(p, 0, 0.1) - 0.05 * pull;
       for (let i = 0; i < n; i += 1) {
         const el = tileRefs.current[i];
@@ -446,14 +455,15 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
 
         // Each tile has its own slot in the scroll: it leaves the ring, falls with gravity, shrinks and tumbles
         // towards the mouth, then sinks behind the front lip.
-        const start = 0.08 + 0.28 * order[i];
-        const f = clamp((p - start) / 0.22);
-        const sideways = smooth(f, 0, 1);
-        const gravity = Math.pow(f, 2.1);
-        const x = lerp(ox, mouthX, sideways);
-        let y = lerp(oy, mouthY, gravity);
-        y += smooth(f, 0.78, 1) * bowl.bh * 0.36;
-        const s = lerp(os, 0.32, Math.pow(f, 0.8));
+        const start = 0.06 + 0.26 * order[i];
+        const f = clamp((p - start) / 0.28);
+        // It lifts over the rim and comes down vertically through the opening (never through the side of the bowl).
+        const tp = smooth(f, 0, 1);
+        const x = cubic(ox, ox, mouthX, mouthX, tp);
+        let y = cubic(oy, Math.min(oy, mouthY) - bowl.bh * 0.55, mouthY - bowl.bh * 1.0, mouthY, tp);
+        y += smooth(f, 0.8, 1) * bowl.bh * 0.36;
+        flare = Math.max(flare, smooth(f, 0.55, 0.9) * (1 - smooth(f, 0.93, 1)));
+        const s = lerp(os, 0.3, Math.pow(f, 0.7));
         const spin = (i % 2 ? 1 : -1) * 30 * f;
         const yy = y + stageTop0 - layerTop;
         el.style.transform = warpXf(x, yy, mouthX, mouthY + stageTop0 - layerTop, f, i % 2 ? 1 : -1, s, spin);
@@ -475,7 +485,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
 
       // Once the last category is inside, the bowl lights up: a beam and sparks rise, the headline lights word by
       // word, and the key points rise out one by one along trails of light.
-      const lit = smooth(p, 0.5, 0.62);
+      const lit = smooth(p, 0.46, 0.58);
       const parkLit = 0;
       if (beamRef.current) {
         beamRef.current.style.opacity = Math.max(lit * (1 - leave), parkLit).toFixed(3);
@@ -485,15 +495,15 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
         sparksRef.current.style.opacity = Math.max(lit * (1 - leave), parkLit).toFixed(3);
         sparksRef.current.style.translate = `0 ${((parkLit > 0 ? stageTopOf(blocks.length - 1) : stageTop0) - layerTop).toFixed(1)}px`;
       }
-      if (endRef.current) endRef.current.style.opacity = (smooth(p, 0.5, 0.56) * (1 - leave)).toFixed(3);
-      const reveal = clamp((p - 0.54) / 0.2);
+      if (endRef.current) endRef.current.style.opacity = (smooth(p, 0.46, 0.52) * (1 - leave)).toFixed(3);
+      const reveal = clamp((p - 0.5) / 0.22);
       const total = wordRefs.current.length;
       for (let i = 0; i < total; i += 1) {
         const w = wordRefs.current[i];
         if (w) w.style.opacity = (0.14 + 0.86 * clamp(reveal * (total + 2) - i)).toFixed(3);
       }
       if (subRef.current) {
-        const subIn = smooth(p, 0.66, 0.76);
+        const subIn = smooth(p, 0.64, 0.74);
         subRef.current.style.opacity = subIn.toFixed(3);
         subRef.current.style.transform = `translateY(${((1 - subIn) * 14).toFixed(1)}px)`;
       }
@@ -502,16 +512,20 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
         const chip = chipRefs.current[j];
         const trail = trailRefs.current[j];
         if (!geo || !chip) continue;
-        const g = clamp((p - (0.56 + 0.06 * j)) / 0.14) * (1 - leave);
-        const e = 1 - Math.pow(1 - g, 3);
-        const x = (1 - e) * (1 - e) * geo.mx + 2 * (1 - e) * e * geo.cxp + e * e * geo.tx;
-        const y = (1 - e) * (1 - e) * geo.my + 2 * (1 - e) * e * geo.cyp + e * e * geo.ty;
-        chip.style.transform = warpXf(x, y, geo.mx, geo.my, 1 - e, j % 2 ? -1 : 1, 0.25 + 0.75 * e, 0);
+        const g = clamp((p - (0.52 + 0.05 * j)) / 0.15) * (1 - leave);
+        const e = smooth(g, 0, 1);
+        const yOff = stageTop0 - layerTop;
+        const x = cubic(geo.mx, geo.c1x, geo.c2x, geo.tx, e);
+        const y = cubic(geo.my, geo.c1y, geo.c2y, geo.ty, e) + yOff;
+        chip.style.transform = warpXf(x, y, geo.mx, geo.my + yOff, 1 - e, j % 2 ? -1 : 1, 0.25 + 0.75 * e, 0);
         chip.classList.toggle("is-warping", e > 0.02 && e < 0.98);
+        chip.style.zIndex = inBowl(x, y, geo.mx, geo.my + yOff, 1) ? "2" : "6";
+        flare = Math.max(flare, smooth(1 - e, 0.55, 0.9) * (g > 0.001 ? 1 : 0) * (1 - smooth(1 - e, 0.93, 1)));
         chip.style.opacity = smooth(g, 0, 0.2).toFixed(3);
         chip.style.visibility = g <= 0 ? "hidden" : "visible";
         if (trail) {
           trail.style.strokeDasharray = `${e.toFixed(3)} 1`;
+          trail.style.transform = `translateY(${yOff.toFixed(1)}px)`;
           trail.style.opacity = (g <= 0 ? 0 : 1 - 0.78 * smooth(g, 0.8, 1)).toFixed(3);
         }
       }
@@ -520,11 +534,11 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       // scrolls on, they drop back in.
       for (let k = 0; k < CHAPTERS.length; k += 1) {
         const b = k + 1;
-        const fall = CHAPTERS[k].fall === undefined ? 0.72 : CHAPTERS[k].fall;
+        const fall = CHAPTERS[k].fall === undefined ? 0.64 : CHAPTERS[k].fall;
         const q = (v - blocks[b].T) / Math.max(1, blocks[b].P);
         if (CHAPTERS[k].key === "phone") {
           // The phone walks through Find, Unlock and Book while the section is pinned.
-          const step = q < 0.46 ? 0 : q < 0.68 ? 1 : 2;
+          const step = q < 0.4 ? 0 : q < 0.58 ? 1 : 2;
           phoneScreenRefs.current.forEach((el, i) => el && el.classList.toggle("is-on", i === step));
           phoneChipRefs.current.forEach((el, i) => el && el.classList.toggle("is-active", i === step));
         }
@@ -533,28 +547,37 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
         for (let j = 0; j < geos.length; j += 1) {
           const el = cardRefs.current[`${k}-${j}`];
           if (!el) continue;
-          const stagger = geos.length > 6 ? 0.02 : 0.05;
-          let g = clamp((q - (0.04 + stagger * j)) / 0.14);
-          if (fall !== null) g *= 1 - smooth(q, fall + 0.03 * j, fall + 0.12 + 0.03 * j);
-          const e = 1 - Math.pow(1 - g, 3);
+          const stagger = geos.length > 6 ? 0.025 : 0.06;
+          let g = clamp((q - (0.04 + stagger * j)) / 0.22);
+          if (fall !== null) g *= 1 - smooth(q, fall + 0.03 * j, fall + 0.22 + 0.03 * j);
+          const e = smooth(g, 0, 1);
           const tx = geos[j].x;
           const ty = top + geos[j].y - layerTop;
-          // Start (and end) below the lip, hidden by the front of the bowl, so a card visibly climbs out of the
-          // mouth and drops back in rather than fading in front of it.
-          const sx = bx;
-          const sy = by - layerTop + bowl.bh * 0.3 * bs;
-          const cxp = sx + (tx - sx) * 0.25;
-          const cyp = Math.min(sy, ty) - 100;
-          const x = (1 - e) * (1 - e) * sx + 2 * (1 - e) * e * cxp + e * e * tx;
-          const y = (1 - e) * (1 - e) * sy + 2 * (1 - e) * e * cyp + e * e * ty;
+          // A card leaves the bowl straight up through the mouth (starting hidden below the front lip) and only then
+          // curves off to its place; going back it drops vertically into the opening. While it overlaps the bowl it
+          // stays behind the front lip, so it really comes out of it rather than passing in front.
+          const mxL = bx;
+          const myL = by - layerTop;
+          const sx = mxL;
+          const sy = myL + bowl.bh * 0.3 * bs;
+          const c1y = myL - bowl.bh * bs * 1.0;
+          const c2x = lerp(mxL, tx, 0.75);
+          const c2y = Math.min(ty, myL) - bowl.bh * 0.45;
+          const x = cubic(sx, mxL, c2x, tx, e);
+          const y = cubic(sy, c1y, c2y, ty, e);
           const rot = (1 - e) * (j % 2 ? 14 : -14);
-          el.style.transform = warpXf(x, y, bx, by - layerTop, 1 - e, j % 2 ? -1 : 1, 0.25 + 0.75 * e, rot);
+          el.style.transform = warpXf(x, y, mxL, myL, 1 - e, j % 2 ? -1 : 1, 0.25 + 0.75 * e, rot);
           el.classList.toggle("is-warping", e > 0.02 && e < 0.98);
+          flare = Math.max(flare, smooth(1 - e, 0.55, 0.9) * (g > 0.001 ? 1 : 0) * (1 - smooth(1 - e, 0.93, 1)));
           el.style.opacity = g > 0 ? "1" : "0";
-          el.style.zIndex = e > 0.28 ? "6" : "2";
+          el.style.zIndex = inBowl(x, y, mxL, myL, bs) ? "2" : "6";
           el.style.visibility = g <= 0.001 ? "hidden" : "visible";
           el.style.pointerEvents = g > 0.95 ? "auto" : "none";
         }
+      }
+      if (bowlGlowRef.current) {
+        bowlGlowRef.current.style.opacity = Math.min(1, glowBase * (1 + 0.8 * flare)).toFixed(3);
+        bowlGlowRef.current.style.scale = (bs * (1 + 0.16 * flare)).toFixed(3);
       }
     };
     raf = requestAnimationFrame(frame);
@@ -619,6 +642,30 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
           ))}
         </div>
 
+      <svg className="ho-trails" width={size.w} height={size.h} aria-hidden="true" style={{ zIndex: 2 }}>
+        <defs>
+          <linearGradient id="hoTrail" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0" stopColor="#facc15" stopOpacity="0" />
+            <stop offset="1" stopColor="#f59e0b" stopOpacity="0.95" />
+          </linearGradient>
+        </defs>
+        {chipGeo.map((geo, j) => (
+          <path key={CHIPS[j].key} ref={(el) => { trailRefs.current[j] = el; }} d={geo.d} pathLength="1" className="ho-trail" />
+        ))}
+      </svg>
+
+      <div className="ho-chips">
+        {CHIPS.map(({ key, Icon }, j) => (
+          <div key={key} className="ho-chip" ref={(el) => { chipRefs.current[j] = el; }}>
+            <span className="ho-chip-in" style={{ animationDelay: `${j * 0.6}s` }}>
+              <span className="ho-chip-icon"><Icon /></span>
+              <strong>{t(`landing.chips.${key}.title`)}</strong>
+              <small>{t(`landing.chips.${key}.sub`)}</small>
+            </span>
+          </div>
+        ))}
+      </div>
+
         <div className="ho-bowl ho-bowl-front" ref={bowlFrontRef} style={bowlStyle}><BowlFront /></div>
 
         <div className="ho-cards" style={{ "--cw": `${cardBox.cw}px` }}>
@@ -648,30 +695,6 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       {/* Block 0: the orbit, the fall into the bowl and the lit-up scene. */}
       <div className="hb hb-intro" style={{ height: blocks[0].P + size.h }}>
         <div className="hb-stage ho-sticky" style={stageStyle}>
-          <svg className="ho-trails" width={size.w} height={size.h} aria-hidden="true">
-            <defs>
-              <linearGradient id="hoTrail" x1="0" y1="1" x2="0" y2="0">
-                <stop offset="0" stopColor="#facc15" stopOpacity="0" />
-                <stop offset="1" stopColor="#f59e0b" stopOpacity="0.95" />
-              </linearGradient>
-            </defs>
-            {chipGeo.map((geo, j) => (
-              <path key={CHIPS[j].key} ref={(el) => { trailRefs.current[j] = el; }} d={geo.d} pathLength="1" className="ho-trail" />
-            ))}
-          </svg>
-
-          <div className="ho-chips">
-            {CHIPS.map(({ key, Icon }, j) => (
-              <div key={key} className="ho-chip" ref={(el) => { chipRefs.current[j] = el; }}>
-                <span className="ho-chip-in" style={{ animationDelay: `${j * 0.6}s` }}>
-                  <span className="ho-chip-icon"><Icon /></span>
-                  <strong>{t(`landing.chips.${key}.title`)}</strong>
-                  <small>{t(`landing.chips.${key}.sub`)}</small>
-                </span>
-              </div>
-            ))}
-          </div>
-
           <div className="ho-end" ref={endRef}>
             <h2 className="ho-end-title">
               {endWords.map((word, i) => (
