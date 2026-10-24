@@ -1,0 +1,39 @@
+{
+  "landing": {
+    "eyebrow": "Bixiye kasta, hal meel",
+    "titleLine1": "Bixiyeyaasha adeegga oo dhan,",
+    "titleLine2": "hal meel.",
+    "searchPlaceholder": "Raadi bixiyeyaasha adeegga…",
+    "searchButton": "Raadi",
+    "alsoOn": "Gabla waxaad kaloo ka helaysaa",
+    "shop": "Dukaan",
+    "ride": "Hel gaari",
+    "bus": "Tigidhada baska",
+    "orbitAria": "Raadi qaybaha adeegga",
+    "openCategory": "Fur {{name}}",
+    "scrollHint": "Hoos u dhaadhac",
+    "manifesto": "Gabla waxay hal meel isugu keentaa bixiyeyaasha adeegga ee la xaqiijiyay, dukaamada iyo darawalada Uganda oo dhan. Dooro qayb, arag cidda kuu dhow, fur xiriirkooda lacag yar, kana buug. Waxaad bixisaa kaliya kadib marka ay codsigaaga ogolaadaan.",
+    "phone": {
+      "title": "Raadi. Fur. Buug.",
+      "body": "Laga bilaabo raadinta ilaa buug la xaqiijiyay adigoon ka bixin Gabla. Arag bixiyeyaasha la xaqiijiyay, fur xiriir hal mar qalabkan, oo bixi kaliya marka bixiyuhu ogolaado.",
+      "cta": "Arag bixiyeyaasha",
+      "stepsAria": "Sida ay u shaqeyso",
+      "find": "Raadi",
+      "unlock": "Fur",
+      "book": "Buug",
+      "findQuery": "Sawir qaade Kampala",
+      "verified": "La xaqiijiyay",
+      "newProvider": "Cusub",
+      "unlockTitle": "Fur xiriirka",
+      "unlockSub": "Lacag hal mar ah, qalabkan ayaa xasuusanaya",
+      "phoneLabel": "Lambarka taleefanka",
+      "pay": "Ku bixi Mobile Money",
+      "noAccount": "Akoon looma baahna",
+      "bookTitle": "Codsiga buugga",
+      "stepSent": "Codsiga waa la diray",
+      "stepApproved": "Bixiyaha ayaa ogolaaday",
+      "stepPay": "Bixi si loo xaqiijiyo",
+      "payNow": "Hadda bixi"
+    }
+  }
+}

@@ -11,19 +11,19 @@ import { IconArrowRight, IconBike, IconBus, IconTicket, IconBox, IconCar, IconCa
 import { ProviderCardsSkeleton, Skel } from "../components/Skeleton";
 import { mapCategoryDto } from "../lib/shopMappers";
 import MobileHome from "../components/mobilehome/MobileHome";
+import OrbitStage from "../components/home/OrbitStage";
+import ContactPhone from "../components/home/ContactPhone";
 import { busApi, todayEat, ugx } from "../lib/bus";
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
-
-const SEARCH_TABS = ["nearby", "topRated", "new", "featured"];
 
 function DesktopHome() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [session, setSessionState] = useState(() => getSession());
-  const [activeTab, setActiveTab] = useState("featured");
   const [categories, setCategories] = useState([]);
+  const [orbitCategories, setOrbitCategories] = useState([]);
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -68,6 +68,9 @@ function DesktopHome() {
         if (!active) return;
         const rawCats = categoryResult?.items || categoryResult || [];
         setCategories(rawCats.map(mapCategoryDto));
+        // The ring wants about sixteen tiles: top-level categories first, then their subcategories to fill it.
+        const flat = [...rawCats, ...rawCats.flatMap((c) => c.children || [])];
+        setOrbitCategories(flat.slice(0, 16).map(mapCategoryDto));
         setProviders(providerResult?.items || providerResult || []);
       })
       .catch((loadError) => {
@@ -132,133 +135,21 @@ function DesktopHome() {
     setSessionState(null);
   };
 
-  const heroFeatureCategories = useMemo(() => categories.slice(0, 4), [categories]);
+  // Real providers when there are some; until then the phone shows the categories so it is never empty.
+  const phoneProviders = useMemo(
+    () => (providers.length ? providers : categories.slice(0, 3).map((c) => ({ id: c.id, businessName: c.name }))),
+    [providers, categories]
+  );
 
   return (
     <main className="home-shell home-themed">
       <SiteHeader session={session} onLogout={logout} />
 
-      {/* ============ HERO ============ */}
-      <section className="home-hero">
-        <div className="home-hero-blob home-hero-blob-1" />
-        <div className="home-hero-blob home-hero-blob-2" />
+      {/* ============ HERO: categories orbit the search, scatter on scroll ============ */}
+      <OrbitStage categories={orbitCategories} searchValue={searchValue} onSearchChange={setSearchValue} />
 
-        <div className="home-hero-inner">
-          <div className="home-hero-copy">
-            <span className="home-eyebrow">
-              <IconSparkles /> {t("home.eyebrow")}
-            </span>
-            <h1 className="home-hero-title">
-              {t("home.heroTitle1")}{" "}
-              <span className="home-gradient-text">{t("home.heroTitle2")}</span>
-            </h1>
-            <p className="home-hero-subtitle">
-              {t("home.heroSubtitle")}
-            </p>
-
-            <form
-              className="home-hero-search"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const trimmed = searchValue.trim();
-                if (trimmed) navigate(`/search?q=${encodeURIComponent(trimmed)}`);
-              }}
-            >
-              <span className="home-hero-search-icon"><IconSearch /></span>
-              <input
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder={t("home.searchPlaceholder")}
-              />
-              <div className="home-hero-search-tabs">
-                {SEARCH_TABS.map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    className={`home-hero-tab ${activeTab === tab ? "is-active" : ""}`}
-                    onClick={() => setActiveTab(tab)}
-                  >
-                    {t(`home.tabs.${tab}`)}
-                  </button>
-                ))}
-              </div>
-            </form>
-
-            <div className="home-hero-actions">
-              <Link to="/shop" className="home-cta home-cta-primary">
-                {t("home.shopNow")} <IconArrowRight />
-              </Link>
-              <Link to="/ride" className="home-cta home-cta-secondary">
-                {t("home.getRide")} <IconCar />
-              </Link>
-            </div>
-
-            <div className="home-hero-trust">
-              <div className="home-hero-avatars">
-                <span className="home-avatar home-avatar-1" />
-                <span className="home-avatar home-avatar-2" />
-                <span className="home-avatar home-avatar-3" />
-                <span className="home-avatar home-avatar-4" />
-              </div>
-              <p><strong>500+</strong> {t("home.trustSellers")} · <strong>UGX</strong> {t("home.trustPayments")} · <strong>4.8★</strong> {t("home.trustRating")}</p>
-            </div>
-          </div>
-
-          <div className="home-hero-visual">
-            <div className="home-hero-oval" />
-            <div className="home-hero-stage">
-              <div className="home-hero-card home-hero-card-tl home-animate-float">
-                <span className="home-hero-card-icon"><IconCart /></span>
-                <div>
-                  <strong>{t("home.cards.newArrivalsTitle")}</strong>
-                  <span>{t("home.cards.newArrivalsSub")}</span>
-                </div>
-              </div>
-              <div className="home-hero-card home-hero-card-tr home-animate-float home-animate-delay-1">
-                <span className="home-hero-card-icon home-hero-card-icon-alt"><IconBike /></span>
-                <div>
-                  <strong>{t("home.cards.rideReadyTitle")}</strong>
-                  <span>{t("home.cards.rideReadySub")}</span>
-                </div>
-              </div>
-              <div className="home-hero-card home-hero-card-ml home-animate-float home-animate-delay-2">
-                <span className="home-hero-card-icon home-hero-card-icon-teal"><IconWrench /></span>
-                <div>
-                  <strong>{t("home.cards.topProsTitle")}</strong>
-                  <span>{t("home.cards.topProsSub")}</span>
-                </div>
-              </div>
-              <div className="home-hero-card home-hero-card-br home-animate-float home-animate-delay-3">
-                <span className="home-hero-card-icon home-hero-card-icon-violet"><IconTruck /></span>
-                <div>
-                  <strong>{t("home.cards.fastDeliveryTitle")}</strong>
-                  <span>{t("home.cards.fastDeliverySub")}</span>
-                </div>
-              </div>
-              <div className="home-hero-center">
-                <span className="home-hero-center-mark">G</span>
-              </div>
-              {heroFeatureCategories.length ? (
-                <>
-                  {heroFeatureCategories[0]?.image ? (
-                    <img className="home-hero-ring-img home-hero-ring-img-1" src={heroFeatureCategories[0].image} alt={heroFeatureCategories[0].name} />
-                  ) : null}
-                  {heroFeatureCategories[1]?.image ? (
-                    <img className="home-hero-ring-img home-hero-ring-img-2" src={heroFeatureCategories[1].image} alt={heroFeatureCategories[1].name} />
-                  ) : null}
-                  {heroFeatureCategories[2]?.image ? (
-                    <img className="home-hero-ring-img home-hero-ring-img-3" src={heroFeatureCategories[2].image} alt={heroFeatureCategories[2].name} />
-                  ) : null}
-                  {heroFeatureCategories[3]?.image ? (
-                    <img className="home-hero-ring-img home-hero-ring-img-4" src={heroFeatureCategories[3].image} alt={heroFeatureCategories[3].name} />
-                  ) : null}
-                </>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ============ FIND / UNLOCK / BOOK (pinned phone) ============ */}
+      <ContactPhone providers={phoneProviders} />
 
       {/* ============ TRUST BAR ============ */}
       <section className="home-trustbar">

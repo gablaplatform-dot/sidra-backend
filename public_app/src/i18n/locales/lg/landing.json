@@ -1,0 +1,39 @@
+{
+  "landing": {
+    "eyebrow": "Buli muwa obuweereza, mu kifo kimu",
+    "titleLine1": "Bonna abawa obuweereza,",
+    "titleLine2": "mu kifo kimu.",
+    "searchPlaceholder": "Noonya abawa obuweereza…",
+    "searchButton": "Noonya",
+    "alsoOn": "Ne ku Gabla",
+    "shop": "Dduuka",
+    "ride": "Funa entambula",
+    "bus": "Amatikiti ga bbaasi",
+    "orbitAria": "Laba ebika by'obuweereza",
+    "openCategory": "Ggulawo {{name}}",
+    "scrollHint": "Serengeta wansi",
+    "manifesto": "Gabla ereeta abawa obuweereza abakakasiddwa, amaduuka n'abavuzi mu Uganda yonna mu kifo kimu. Londa ekika, laba abali okumpi naawe, ggulawo okukwatagana n'ensimbi entonotono, olwo obbuukinge. Osasula bokka nga bakkirizza okusaba kwo.",
+    "phone": {
+      "title": "Noonya. Ggulawo. Bbuukinga.",
+      "body": "Okuva ku kunoonya okutuuka ku kubbuukinga okukakasiddwa nga tolese Gabla. Laba abawa obuweereza abakakasiddwa, ggulawo okukwatagana omulundi gumu ku kyuma kino, osasule oluvannyuma lw'okukkirizibwa.",
+      "cta": "Laba abawa obuweereza",
+      "stepsAria": "Engeri gye kikola",
+      "find": "Noonya",
+      "unlock": "Ggulawo",
+      "book": "Bbuukinga",
+      "findQuery": "Omukubi w'ebifaananyi e Kampala",
+      "verified": "Akakasiddwa",
+      "newProvider": "Omuggya",
+      "unlockTitle": "Ggulawo okukwatagana",
+      "unlockSub": "Ensimbi omulundi gumu, kijjukirwa ku kyuma kino",
+      "phoneLabel": "Nnamba ya ssimu",
+      "pay": "Sasula na Mobile Money",
+      "noAccount": "Tekyetaagisa akawunti",
+      "bookTitle": "Okusaba okubbuukinga",
+      "stepSent": "Okusaba kutumiddwa",
+      "stepApproved": "Omuwa obuweereza akkirizza",
+      "stepPay": "Sasula okukakasa",
+      "payNow": "Sasula kati"
+    }
+  }
+}

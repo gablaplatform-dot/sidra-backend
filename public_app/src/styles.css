@@ -723,8 +723,8 @@ button { cursor: pointer; }
 .empty-state p { margin: 0; font-size: 13px; }
 
 /* Modal (unlock prompt) */
-.modal-overlay { position: fixed; inset: 0; background: rgba(11, 32, 70, 0.5); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 60; }
-.modal-card { position: relative; width: min(100%, 420px); padding: 32px 28px; border-radius: 16px; background: #fff; box-shadow: 0 30px 70px -40px rgba(11, 32, 70, 0.6); }
+.modal-overlay { position: fixed; inset: 0; background: rgba(11, 32, 70, 0.5); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 90; overflow-y: auto; overscroll-behavior: contain; }
+.modal-card { position: relative; width: min(100%, 420px); max-height: calc(100dvh - 40px); overflow-y: auto; margin: auto; padding: 32px 28px; border-radius: 16px; background: #fff; box-shadow: 0 30px 70px -40px rgba(11, 32, 70, 0.6); }
 .modal-card h2 { margin: 0 0 10px; color: #0b2046; font-size: 20px; }
 .modal-card > p { margin: 0 0 20px; color: #64748b; font-size: 14px; line-height: 1.6; }
 .modal-close { position: absolute; top: 14px; right: 14px; border: 0; background: transparent; color: #94a3b8; padding: 4px; }
@@ -4570,7 +4570,14 @@ textarea.docs-input { min-height: 84px; }
 /* Translated nav labels run longer than English: never wrap, and fall back to the drawer sooner. */
 .site-nav a, .shop-themed-header .site-nav a { white-space: nowrap; }
 .site-nav { min-width: 0; }
-@media (max-width: 1240px) {
-  html:not([lang="en"]) .site-nav { display: none; }
-  html:not([lang="en"]) .hamburger { display: inline-flex; }
+/* Nine links plus the action buttons need real room: tighten the spacing, and hand over to the menu button
+   well before they can collide (this used to happen only below 880px, so tablets and "desktop site" on a
+   phone saw the links run into the buttons). */
+.site-header { gap: 14px; }
+.site-header .site-nav { gap: 0; }
+.shop-themed-header .site-nav a, .site-nav a { padding: 9px 9px; font-size: 13.5px; }
+.site-header .hamburger { display: none; }
+@media (max-width: 1360px) {
+  .site-nav { display: none; }
+  .site-header .hamburger { display: inline-flex; }
 }
