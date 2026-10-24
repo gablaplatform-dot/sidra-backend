@@ -13,7 +13,16 @@ import { mapCategoryDto } from "../lib/shopMappers";
 import MobileHome from "../components/mobilehome/MobileHome";
 import OrbitStage from "../components/home/OrbitStage";
 import ContactPhone from "../components/home/ContactPhone";
+import Reveal from "../components/home/Reveal";
 import { busApi, todayEat, ugx } from "../lib/bus";
+
+const FOOTER_LINKS = [
+  { key: "shop", href: "/shop" },
+  { key: "ride", href: "/ride" },
+  { key: "busTickets", href: "/bus" },
+  { key: "categories", href: "/home#categories" },
+  { key: "providers", href: "/home#providers" }
+];
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
@@ -142,7 +151,7 @@ function DesktopHome() {
   );
 
   return (
-    <main className="home-shell home-themed">
+    <main className="home-shell home-themed home-landing">
       <SiteHeader session={session} onLogout={logout} />
 
       {/* ============ HERO: categories orbit the search, scatter on scroll ============ */}
@@ -154,42 +163,28 @@ function DesktopHome() {
       {/* ============ TRUST BAR ============ */}
       <section className="home-trustbar">
         <div className="home-trustbar-inner">
-          <div className="home-trust-item">
-            <span className="home-trust-icon"><IconShield /></span>
-            <div className="home-trust-copy">
-              <strong>{t("home.trustbar.verifiedTitle")}</strong>
-              <span>{t("home.trustbar.verifiedSub")}</span>
-            </div>
-          </div>
-          <div className="home-trust-item">
-            <span className="home-trust-icon"><IconPin /></span>
-            <div className="home-trust-copy">
-              <strong>{t("home.trustbar.localTitle")}</strong>
-              <span>{t("home.trustbar.localSub")}</span>
-            </div>
-          </div>
-          <div className="home-trust-item">
-            <span className="home-trust-icon"><IconStar /></span>
-            <div className="home-trust-copy">
-              <strong>{t("home.trustbar.ratedTitle")}</strong>
-              <span>{t("home.trustbar.ratedSub")}</span>
-            </div>
-          </div>
-          <div className="home-trust-item">
-            <span className="home-trust-icon"><IconClockIcon /></span>
-            <div className="home-trust-copy">
-              <strong>{t("home.trustbar.supportTitle")}</strong>
-              <span>{t("home.trustbar.supportSub")}</span>
-            </div>
-          </div>
+          {[
+            [IconShield, "verified"],
+            [IconPin, "local"],
+            [IconStar, "rated"],
+            [IconClockIcon, "support"]
+          ].map(([Icon, key], i) => (
+            <Reveal key={key} className="home-trust-item" delay={i * 90}>
+              <span className="home-trust-icon"><Icon /></span>
+              <div className="home-trust-copy">
+                <strong>{t(`home.trustbar.${key}Title`)}</strong>
+                <span>{t(`home.trustbar.${key}Sub`)}</span>
+              </div>
+            </Reveal>
+          ))}
         </div>
       </section>
 
       {/* ============ PROMO CARDS DUO ============ */}
-      <section className="home-section">
+      <section className="home-section hs-promos">
         <div className="home-promo-duo">
-          <Link to="/ride" className="home-promo home-promo-ride">
-            <div>
+          <Reveal as={Link} from="left" to="/ride" className="home-promo home-promo-ride">
+            <div className="home-promo-text">
               <span className="home-promo-eyebrow">{t("home.promo.rideEyebrow")}</span>
               <h2>{t("home.promo.rideTitle")}</h2>
               <p>{t("home.promo.rideText")}</p>
@@ -199,10 +194,10 @@ function DesktopHome() {
               <span className="home-promo-icon home-promo-icon-a"><IconBike /></span>
               <span className="home-promo-icon home-promo-icon-b"><IconCar /></span>
             </div>
-          </Link>
+          </Reveal>
 
-          <Link to="/shop" className="home-promo home-promo-shop">
-            <div>
+          <Reveal as={Link} from="right" delay={120} to="/shop" className="home-promo home-promo-shop">
+            <div className="home-promo-text">
               <span className="home-promo-eyebrow">{t("home.promo.shopEyebrow")}</span>
               <h2>{t("home.promo.shopTitle")}</h2>
               <p>{t("home.promo.shopText")}</p>
@@ -212,14 +207,15 @@ function DesktopHome() {
               <span className="home-promo-icon home-promo-icon-a"><IconCart /></span>
               <span className="home-promo-icon home-promo-icon-b"><IconBox /></span>
             </div>
-          </Link>
+          </Reveal>
         </div>
       </section>
 
       {/* ============ BUS TICKETS ============ */}
-      <section className="home-section">
-        <div className="bus-promo">
-          <div>
+      <section className="home-section hs-bus">
+        <Reveal from="zoom" className="bus-promo">
+          <span className="bus-promo-route" aria-hidden="true" />
+          <div className="bus-promo-copy">
             <span className="bus-promo-eyebrow"><IconBus width={16} height={16} /> {t("home.bus.eyebrow")}</span>
             <h2>{t("home.bus.title")}</h2>
             <p>{t("home.bus.text")}</p>
@@ -248,61 +244,54 @@ function DesktopHome() {
             <button type="submit" className="bus-promo-btn"><IconBus width={18} height={18} /> {t("home.bus.findBuses")}</button>
             <Link to="/bus/tickets" className="bus-link" style={{ textAlign: "center" }}><IconTicket width={14} height={14} /> {t("home.bus.myTickets")}</Link>
           </form>
-        </div>
+        </Reveal>
       </section>
 
       {error ? <div className="error-message home-error">{error}</div> : null}
 
       {/* ============ CATEGORY CARDS ============ */}
-      <section id="categories" className="home-section">
-        <div className="home-section-header">
-          <div>
-            <h2 className="home-section-title">{t("home.categories.title")}</h2>
-            <p className="home-section-subtitle">{t("home.categories.subtitle")}</p>
-          </div>
-        </div>
+      <div className="hs-band hs-band-white">
+        <section id="categories" className="home-section">
+          <Reveal className="home-section-header">
+            <div>
+              <h2 className="home-section-title">{t("home.categories.title")}</h2>
+              <p className="home-section-subtitle">{t("home.categories.subtitle")}</p>
+            </div>
+          </Reveal>
 
-        {!loading && !categories.length ? <p className="home-empty">{t("home.categories.empty")}</p> : null}
-        {loading ? (
-          <div className="home-category-grid" role="status" aria-busy="true">
-            <span className="sr-only">{t("home.categories.loading")}</span>
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skel key={i} h={230} w="100%" r={18} />
+          {!loading && !categories.length ? <p className="home-empty">{t("home.categories.empty")}</p> : null}
+          {loading ? (
+            <div className="home-category-grid" role="status" aria-busy="true">
+              <span className="sr-only">{t("home.categories.loading")}</span>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skel key={i} h={230} w="100%" r={22} />
+              ))}
+            </div>
+          ) : null}
+          <div className="home-category-grid">
+            {categories.map((c, idx) => (
+              <Reveal as={Link} from="zoom" delay={(idx % 4) * 80} to={`/category/${c.id}`} key={c.id} className="home-category-card">
+                <div className={`home-category-img ${c.image ? "" : "home-category-img-fallback"}`}>
+                  {c.image ? (
+                    <img src={c.image} alt="" loading="lazy" />
+                  ) : (
+                    <span className="home-category-fallback-mark">{initials(c.name)}</span>
+                  )}
+                  <div className="home-category-overlay" />
+                  <div className="hc-label">
+                    <strong className="home-category-name">{c.name}</strong>
+                    <span className="home-category-arrow"><IconArrowRight /></span>
+                  </div>
+                </div>
+              </Reveal>
             ))}
           </div>
-        ) : null}
-        <div className="home-category-grid">
-          {categories.map((c, idx) => (
-            <Link
-              to={`/category/${c.id}`}
-              key={c.id}
-              className="home-category-card home-animate-reveal"
-              style={{ animationDelay: `${50 + idx * 60}ms` }}
-            >
-              <div className={`home-category-img ${c.image ? "" : "home-category-img-fallback"}`}>
-                {c.image ? (
-                  <img src={c.image} alt={c.name} loading="lazy" />
-                ) : (
-                  <span className="home-category-fallback-mark">{initials(c.name)}</span>
-                )}
-                <div className="home-category-overlay" />
-                <span className="home-category-chip">{t("home.categories.providersChip", { count: Math.max(40, 18 + ((idx + 1) * 7)) })}</span>
-              </div>
-              <div className="home-category-body">
-                <span className="home-category-initials">{initials(c.name)}</span>
-                <div>
-                  <strong className="home-category-name">{c.name}</strong>
-                  <span className="home-category-arrow"><IconArrowRight /></span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+        </section>
+      </div>
 
       {/* ============ FEATURED PROVIDERS ============ */}
-      <section id="providers" className="home-section home-section-last">
-        <div className="home-section-header">
+      <section id="providers" className="home-section home-section-last hs-providers">
+        <Reveal className="home-section-header">
           <div>
             <h2 className="home-section-title">{t("home.providers.title")}</h2>
             <p className="home-section-subtitle">{t("home.providers.subtitle")}</p>
@@ -310,20 +299,38 @@ function DesktopHome() {
           <Link to="/home#providers" className="home-view-all">
             {t("home.providers.cta")} <IconArrowRight />
           </Link>
-        </div>
+        </Reveal>
 
         {loading ? (
           <ProviderCardsSkeleton count={4} />
         ) : providers.length ? (
           <div className="home-provider-grid">
-            {providers.map((p) => (
-              <ProviderCard key={p.id} provider={p} categoryName={categoryName(p.categoryId)} />
+            {providers.map((p, i) => (
+              <Reveal key={p.id} delay={(i % 4) * 90}>
+                <ProviderCard provider={p} categoryName={categoryName(p.categoryId)} />
+              </Reveal>
             ))}
           </div>
         ) : (
           <p className="home-empty">{t("home.providers.empty")}</p>
         )}
       </section>
+
+      {/* ============ FOOTER ============ */}
+      <footer className="home-footer">
+        <div className="home-footer-inner">
+          <Link to="/home#top" className="home-footer-brand">
+            <span className="brand-mark">G</span>
+            <strong>Gabla</strong>
+          </Link>
+          <nav className="home-footer-links">
+            {FOOTER_LINKS.map((link) => (
+              <Link key={link.key} to={link.href}>{t(`nav.${link.key}`)}</Link>
+            ))}
+          </nav>
+          <span className="home-footer-copy">&copy; {new Date().getFullYear()} Gabla</span>
+        </div>
+      </footer>
     </main>
   );
 }
