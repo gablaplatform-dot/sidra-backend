@@ -144,7 +144,7 @@ const renderCard = (card, t) => {
 // The categories ring the search box like an orbit. Scrolling drops them one by one into the Gabla bowl, then the
 // bowl travels down the page, section by section, crossing left and right, taking each chapter's cards in as it
 // leaves and popping the next chapter's out as it lands. Everything is positioned from one scroll-driven loop.
-export default function OrbitStage({ categories, shopCards = [], busRoutes = [], phoneProviders = [], searchValue, onSearchChange }) {
+export default function OrbitStage({ categories, shopCards = [], busRoutes = [], phoneProviders = [], searchValue, onSearchChange, children }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const storyRef = useRef(null);
@@ -158,6 +158,8 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
   const chipRefs = useRef([]);
   const trailRefs = useRef([]);
   const cardRefs = useRef({});
+  const parkRef = useRef(null);
+  const [parkH, setParkH] = useState(0);
   const phoneScreenRefs = useRef([]);
   const phoneChipRefs = useRef([]);
   const bowlBackRef = useRef(null);
@@ -214,15 +216,28 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  useEffect(() => {
+    const node = parkRef.current;
+    if (!node) return undefined;
+    const update = () => setParkH(node.offsetHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   // Block geometry in story coordinates: T is where a block starts, P how long its stage stays pinned.
   const blocks = useMemo(() => {
     let top = 0;
-    return PINS.map((pin) => {
-      const block = { T: top, P: pin * size.h };
-      top += block.P + size.h;
+    return PINS.map((pin, i) => {
+      const P = pin * size.h;
+      // The closing block holds the category grid, so it is as tall as that content.
+      const H = i === PINS.length - 1 ? Math.max(size.h, parkH) : P + size.h;
+      const block = { T: top, P, H };
+      top += H;
       return block;
     });
-  }, [size.h]);
+  }, [size.h, parkH]);
 
   // Bowl placement: centred along the bottom of the stage, its visible base 20px above the edge.
   const bowl = useMemo(() => {
@@ -291,9 +306,11 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
     // ...and finally back to the centre, parked on top of "Browse by category".
     const anchorX = [cx, ...CHAPTERS.map((c) => (c.side === "left" ? size.w * 0.24 : size.w * 0.76)), cx];
     const anchorS = [1, ...CHAPTERS.map(() => BOWL_SIDE_SCALE), 1];
-    const parkStart = blocks[blocks.length - 2].T + blocks[blocks.length - 2].P;
     const arc = size.h * 0.22;
-    const storyH = blocks[blocks.length - 1].T + blocks[blocks.length - 1].P + size.h;
+    const storyH = blocks[blocks.length - 1].T + blocks[blocks.length - 1].H;
+    // The bowl rides down past the categories and rests at the very bottom of the story, under them.
+    const trEnd = storyH - size.h;
+    const parkY = trEnd + mouthStageY;
 
     let raf = 0;
     let last = performance.now();
@@ -342,20 +359,30 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
       let tilt = 0;
       for (let b = 0; b < blocks.length; b += 1) {
         const end = blocks[b].T + blocks[b].P;
-        if (v <= end || b === blocks.length - 1) {
+        if (b === blocks.length - 1) {
+          bx = anchorX[b];
+          by = parkY;
+          bs = anchorS[b];
+          break;
+        }
+        if (v <= end) {
           bx = anchorX[b];
           by = stageTopOf(b) + mouthStageY + (b === 0 ? lift : 0);
           bs = anchorS[b];
           break;
         }
-        const nextT = blocks[b + 1].T;
+        const toPark = b + 1 === blocks.length - 1;
+        const nextT = toPark ? trEnd : blocks[b + 1].T;
         if (v < nextT) {
           const tr = (v - end) / (nextT - end);
-          const e = smooth(tr, 0, 1);
+          // On the way down past the categories the bowl crosses to the centre within about a screen of scrolling,
+          // then simply keeps its place on screen while the categories slide up past it.
+          const trx = toPark ? clamp((v - end) / Math.min(nextT - end, size.h * 0.9)) : tr;
+          const e = smooth(trx, 0, 1);
           bx = lerp(anchorX[b], anchorX[b + 1], e);
-          by = lerp(end + mouthStageY, nextT + mouthStageY, tr) - arc * Math.sin(Math.PI * tr);
+          by = lerp(end + mouthStageY, nextT + mouthStageY, tr) - arc * Math.sin(Math.PI * trx);
           bs = lerp(anchorS[b], anchorS[b + 1], e);
-          tilt = Math.sign(anchorX[b + 1] - anchorX[b]) * 14 * Math.sin(Math.PI * tr);
+          tilt = Math.sign(anchorX[b + 1] - anchorX[b]) * 14 * Math.sin(Math.PI * trx);
           break;
         }
       }
@@ -416,8 +443,7 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
       // Once the last category is inside, the bowl lights up: a beam and sparks rise, the headline lights word by
       // word, and the key points rise out one by one along trails of light.
       const lit = smooth(p, 0.5, 0.62);
-      // The beam comes back as the bowl settles on top of the categories.
-      const parkLit = smooth((v - parkStart) / size.h, 0.55, 0.95);
+      const parkLit = 0;
       if (beamRef.current) {
         beamRef.current.style.opacity = Math.max(lit * (1 - leave), parkLit).toFixed(3);
         beamRef.current.style.translate = `0 ${((parkLit > 0 ? stageTopOf(blocks.length - 1) : stageTop0) - layerTop).toFixed(1)}px`;
@@ -690,14 +716,14 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
         </div>
       ))}
 
-      {/* The journey ends here: the bowl comes to rest on top of the categories and waits for you to scroll back up. */}
-      <div id="categories" className="hb hb-park" style={{ height: size.h }}>
-        <div className="hb-stage" style={stageStyle}>
-          <div className="ho-park is-in">
-            <h2 className="home-section-title">{t("home.categories.title")}</h2>
-            <p className="home-section-subtitle">{t("home.categories.subtitle")}</p>
-          </div>
+      {/* The journey ends here: the bowl rides down past the categories and rests under them; each category card
+          comes out of it as it scrolls up past the bowl, and everything stays put until you scroll back up. */}
+      <div id="categories" className="hb hb-park" ref={parkRef} style={{ minHeight: size.h, paddingBottom: size.h * 0.36 }}>
+        <div className="ho-park is-in">
+          <h2 className="home-section-title">{t("home.categories.title")}</h2>
+          <p className="home-section-subtitle">{t("home.categories.subtitle")}</p>
         </div>
+        {children}
       </div>
 
       </div>

@@ -470,11 +470,10 @@
 .ho-phone-pos { visibility: hidden; }
 .ho-phone-pos .ho-phone { max-height: none; justify-self: auto; box-shadow: 0 40px 70px -30px rgba(11, 32, 70, 0.6), inset 0 0 0 2px #2a2a2a; }
 .hb-stage .ho-side .hp-chips { margin: 0 0 18px; }
-.ho-park { position: absolute; left: 0; right: 0; top: clamp(30px, 9vh, 100px); padding: 0 8vw; text-align: center; pointer-events: none; }
+.ho-park { padding: clamp(48px, 9vh, 100px) 8vw 8px; text-align: center; }
 .ho-park .home-section-title { display: inline-block; margin: 0 0 12px; }
 .ho-park .home-section-subtitle { margin: 0 auto; }
 .ho-park .home-section-title::after { left: 50%; transform: translateX(-50%); }
 .home-landing .ho-park .home-section-subtitle { margin: 0 auto; text-align: center; }
 
-.home-landing .hs-band-white { margin-top: 0; border-top: 0; padding-bottom: 72px; }
-.home-landing .hs-band-white .home-section.hs-categories { padding-top: 8px; }
+.home-landing .hb-park .home-section.hs-categories { padding-top: 24px; padding-bottom: 0; }

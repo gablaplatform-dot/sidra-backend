@@ -160,44 +160,41 @@ function DesktopHome() {
     <main className="home-shell home-themed home-landing">
       <SiteHeader session={session} onLogout={logout} />
 
-      {/* ============ HERO: categories orbit the search, scatter on scroll ============ */}
-      <OrbitStage categories={orbitCategories} shopCards={shopCards} busRoutes={busRoutes} phoneProviders={phoneProviders} searchValue={searchValue} onSearchChange={setSearchValue} />
+      {/* ============ HERO STORY: categories orbit the search, fall into the bowl, which then visits Shop, Bus, Ride and Find/Unlock/Book and ends under the category cards ============ */}
+      <OrbitStage categories={orbitCategories} shopCards={shopCards} busRoutes={busRoutes} phoneProviders={phoneProviders} searchValue={searchValue} onSearchChange={setSearchValue}>
+    <section className="home-section hs-categories">
+
+      {!loading && !categories.length ? <p className="home-empty">{t("home.categories.empty")}</p> : null}
+      {loading ? (
+        <div className="home-category-grid" role="status" aria-busy="true">
+          <span className="sr-only">{t("home.categories.loading")}</span>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skel key={i} h={230} w="100%" r={22} />
+          ))}
+        </div>
+      ) : null}
+      <div className="home-category-grid">
+        {categories.map((c, idx) => (
+          <Reveal as={Link} from="bowl" delay={(idx % 4) * 90} to={`/category/${c.id}`} key={c.id} className="home-category-card">
+            <div className={`home-category-img ${c.image ? "" : "home-category-img-fallback"}`}>
+              {c.image ? (
+                <img src={c.image} alt="" loading="lazy" />
+              ) : (
+                <span className="home-category-fallback-mark">{initials(c.name)}</span>
+              )}
+              <div className="home-category-overlay" />
+              <div className="hc-label">
+                <strong className="home-category-name">{c.name}</strong>
+                <span className="home-category-arrow"><IconArrowRight /></span>
+              </div>
+            </div>
+          </Reveal>
+        ))}
+      </div>
+    </section>
+      </OrbitStage>
 
       {error ? <div className="error-message home-error">{error}</div> : null}
-
-      {/* ============ CATEGORY CARDS ============ */}
-      <div className="hs-band hs-band-white">
-        <section className="home-section hs-categories">
-
-          {!loading && !categories.length ? <p className="home-empty">{t("home.categories.empty")}</p> : null}
-          {loading ? (
-            <div className="home-category-grid" role="status" aria-busy="true">
-              <span className="sr-only">{t("home.categories.loading")}</span>
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Skel key={i} h={230} w="100%" r={22} />
-              ))}
-            </div>
-          ) : null}
-          <div className="home-category-grid">
-            {categories.map((c, idx) => (
-              <Reveal as={Link} from="bowl" delay={(idx % 4) * 90} to={`/category/${c.id}`} key={c.id} className="home-category-card">
-                <div className={`home-category-img ${c.image ? "" : "home-category-img-fallback"}`}>
-                  {c.image ? (
-                    <img src={c.image} alt="" loading="lazy" />
-                  ) : (
-                    <span className="home-category-fallback-mark">{initials(c.name)}</span>
-                  )}
-                  <div className="home-category-overlay" />
-                  <div className="hc-label">
-                    <strong className="home-category-name">{c.name}</strong>
-                    <span className="home-category-arrow"><IconArrowRight /></span>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-      </div>
 
       {/* ============ FEATURED PROVIDERS ============ */}
       <section id="providers" className="home-section home-section-last hs-providers">
