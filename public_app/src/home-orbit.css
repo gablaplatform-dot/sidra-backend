@@ -180,7 +180,7 @@
 .ho-also svg { width: 14px; height: 14px; color: #ea580c; }
 
 /* ---- chapters: the bowl moves to a side and its cards pop out on the other ---- */
-.ho-cards { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.ho-cards { pointer-events: none; }
 .ho-card-pos { position: absolute; left: 0; top: 0; width: var(--cw); visibility: hidden; opacity: 0; will-change: transform, opacity; }
 .ho-card {
   display: flex;
@@ -242,11 +242,10 @@
   opacity: 0;
   pointer-events: none;
   clip-path: polygon(38% 100%, 62% 100%, 100% 0, 0 0);
-  background: linear-gradient(to top, rgba(255, 193, 7, 0.5) 0%, rgba(255, 213, 79, 0.2) 45%, rgba(255, 193, 7, 0) 100%);
-  filter: blur(6px);
-  animation: ho-beam 3.2s ease-in-out infinite;
+  filter: blur(7px);
 }
-@keyframes ho-beam { 0%, 100% { filter: blur(6px) brightness(0.9); } 50% { filter: blur(9px) brightness(1.25); } }
+.ho-beam::before { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(255, 193, 7, 0.55) 0%, rgba(255, 213, 79, 0.22) 45%, rgba(255, 193, 7, 0) 100%); animation: ho-beam 3.2s ease-in-out infinite; }
+@keyframes ho-beam { 0%, 100% { opacity: 0.8; } 50% { opacity: 1; } }
 .ho-sparks { position: absolute; z-index: 2; width: 0; height: 0; opacity: 0; pointer-events: none; }
 .ho-sparks i {
   position: absolute;
@@ -439,7 +438,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ho-hint i, .ho-bowl-glow, .ho-beam, .ho-chip-in, .ho-sparks i, .ho-card { animation: none; }
+  .ho-hint i, .ho-bowl-glow, .ho-beam::before, .ho-chip-in, .ho-sparks i, .ho-card { animation: none; }
   .ho-tile-card, .ho-tile-name, .hp-screen, .hp-chips button { transition: none; }
 }
 
@@ -460,6 +459,6 @@
 .hb-stage { position: sticky; z-index: 3; overflow: hidden; pointer-events: none; }
 .hb-stage .ho-side { pointer-events: auto; }
 .hb-stage .ho-side { opacity: 1; visibility: visible; }
-.story-layer { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
+.story-layer { position: sticky; z-index: 1; overflow: hidden; pointer-events: none; }
 .story-layer .ho-glow { top: 0; transform: translate(-50%, -52%); }
 .story-layer .ho-tiles { position: absolute; inset: 0; z-index: 2; }

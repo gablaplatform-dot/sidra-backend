@@ -285,6 +285,7 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
     const anchorX = [cx, ...CHAPTERS.map((c) => (c.side === "left" ? size.w * 0.24 : size.w * 0.76))];
     const anchorS = [1, BOWL_SIDE_SCALE, BOWL_SIDE_SCALE, BOWL_SIDE_SCALE];
     const arc = size.h * 0.22;
+    const storyH = blocks[blocks.length - 1].T + blocks[blocks.length - 1].P + size.h;
 
     let raf = 0;
     let last = performance.now();
@@ -314,6 +315,8 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
       const v = size.hdr - rect.top;
       const stageTopOf = (b) => clamp(v, blocks[b].T, blocks[b].T + blocks[b].P);
       const stageTop0 = stageTopOf(0);
+      // The bowl layer is pinned natively for the whole story, so its own offset is simply how far it has stuck.
+      const layerTop = clamp(v, 0, storyH - size.h);
       const p = clamp(v / Math.max(1, blocks[0].P));
       // The intro scene (beam, sparks, headline, chips) hands over to the first chapter.
       const leave = smooth(p, 0.93, 1);
@@ -349,7 +352,7 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
         }
       }
       const dx = bx - mouthX;
-      const dy = by - mouthStageY;
+      const dy = by - layerTop - mouthStageY;
       for (const ref of [bowlBackRef, bowlFrontRef]) {
         const el = ref.current;
         if (!el) continue;
@@ -361,7 +364,7 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
         bowlGlowRef.current.style.translate = `${dx.toFixed(1)}px ${dy.toFixed(1)}px`;
         bowlGlowRef.current.style.scale = bs.toFixed(3);
       }
-      if (glowRef.current) glowRef.current.style.transform = `translate(-50%, calc(-52% + ${(stageTop0 + size.h * 0.5).toFixed(1)}px))`;
+      if (glowRef.current) glowRef.current.style.transform = `translate(-50%, calc(-52% + ${(stageTop0 - layerTop + size.h * 0.5).toFixed(1)}px))`;
 
       // Intro: tiles ring the search, then fall into the mouth (stage coordinates plus the pinned offset).
       const mouthY = mouthStageY + lift;
@@ -386,8 +389,8 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
         y += smooth(f, 0.78, 1) * bowl.bh * 0.36;
         const s = lerp(os, 0.32, Math.pow(f, 0.8));
         const spin = (i % 2 ? 1 : -1) * 30 * f;
-        el.style.transform = `translate3d(${x.toFixed(1)}px, ${(y + stageTop0).toFixed(1)}px, 0) translate(-50%, -50%) rotate(${spin.toFixed(1)}deg) scale(${s.toFixed(3)})`;
-        el.style.opacity = f > 0 ? "1" : (0.82 + 0.18 * depthOnRing).toFixed(3);
+        el.style.transform = `translate3d(${x.toFixed(1)}px, ${(y + stageTop0 - layerTop).toFixed(1)}px, 0) translate(-50%, -50%) rotate(${spin.toFixed(1)}deg) scale(${s.toFixed(3)})`;
+        el.style.opacity = lerp(0.82 + 0.18 * depthOnRing, 1, clamp(f * 6)).toFixed(3);
         el.style.zIndex = String(Math.round(depthOnRing * 10));
         el.style.pointerEvents = f > 0 ? "none" : "auto";
         el.style.visibility = f >= 1 ? "hidden" : "visible";
@@ -407,11 +410,11 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
       const lit = smooth(p, 0.5, 0.62);
       if (beamRef.current) {
         beamRef.current.style.opacity = (lit * (1 - leave)).toFixed(3);
-        beamRef.current.style.translate = `0 ${stageTop0.toFixed(1)}px`;
+        beamRef.current.style.translate = `0 ${(stageTop0 - layerTop).toFixed(1)}px`;
       }
       if (sparksRef.current) {
         sparksRef.current.style.opacity = (lit * (1 - leave)).toFixed(3);
-        sparksRef.current.style.translate = `0 ${stageTop0.toFixed(1)}px`;
+        sparksRef.current.style.translate = `0 ${(stageTop0 - layerTop).toFixed(1)}px`;
       }
       if (endRef.current) endRef.current.style.opacity = (smooth(p, 0.5, 0.56) * (1 - leave)).toFixed(3);
       const reveal = clamp((p - 0.54) / 0.2);
@@ -458,14 +461,19 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
           if (!last) g *= 1 - smooth(q, 0.72 + 0.03 * j, 0.84 + 0.03 * j);
           const e = 1 - Math.pow(1 - g, 3);
           const tx = geos[j].x;
-          const ty = top + geos[j].y;
-          const cxp = bx + (tx - bx) * 0.25;
-          const cyp = Math.min(by, ty) - 100;
-          const x = (1 - e) * (1 - e) * bx + 2 * (1 - e) * e * cxp + e * e * tx;
-          const y = (1 - e) * (1 - e) * by + 2 * (1 - e) * e * cyp + e * e * ty;
+          const ty = top + geos[j].y - layerTop;
+          // Start (and end) below the lip, hidden by the front of the bowl, so a card visibly climbs out of the
+          // mouth and drops back in rather than fading in front of it.
+          const sx = bx;
+          const sy = by - layerTop + bowl.bh * 0.3 * bs;
+          const cxp = sx + (tx - sx) * 0.25;
+          const cyp = Math.min(sy, ty) - 100;
+          const x = (1 - e) * (1 - e) * sx + 2 * (1 - e) * e * cxp + e * e * tx;
+          const y = (1 - e) * (1 - e) * sy + 2 * (1 - e) * e * cyp + e * e * ty;
           const rot = (1 - e) * (j % 2 ? 14 : -14);
           el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%) rotate(${rot.toFixed(1)}deg) scale(${(0.25 + 0.75 * e).toFixed(3)})`;
-          el.style.opacity = smooth(g, 0, 0.25).toFixed(3);
+          el.style.opacity = g > 0 ? "1" : "0";
+          el.style.zIndex = e > 0.28 ? "6" : "2";
           el.style.visibility = g <= 0.001 ? "hidden" : "visible";
           el.style.pointerEvents = g > 0.95 ? "auto" : "none";
         }
@@ -491,6 +499,61 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
 
   return (
     <section className="story" ref={storyRef} aria-label={t("landing.orbitAria")} style={{ "--tw": `${tileW}px`, "--th": `${tileW * 1.22}px` }}>
+      {/* The layer the bowl, the tiles and the cards live in: positioned in page coordinates, so the bowl can
+          travel from one section to the next while the page scrolls under it. */}
+      <div className="story-layer" style={{ top: size.hdr, height: size.h, marginBottom: -size.h }}>
+        <div className="ho-glow" ref={glowRef} aria-hidden="true" />
+        <div
+          className="ho-bowl-glow"
+          ref={bowlGlowRef}
+          aria-hidden="true"
+          style={{ left: bowl.left - bowl.bw * 0.15, top: bowl.top - bowl.bh * 0.2, width: bowl.bw * 1.3, height: bowl.bh * 1.2 }}
+        />
+
+        <div className="ho-bowl ho-bowl-back" ref={bowlBackRef} style={bowlStyle}><BowlBack /></div>
+
+        <div className="ho-beam" ref={beamRef} aria-hidden="true" style={{ left: bowl.left + bowl.bw / 2, top: bowl.top + (MOUTH_Y / BOWL_H) * bowl.bh, width: bowl.bw * 0.62, height: size.h * 0.62 }} />
+        <div className="ho-sparks" ref={sparksRef} aria-hidden="true" style={{ left: bowl.left + bowl.bw / 2, top: bowl.top + (MOUTH_Y / BOWL_H) * bowl.bh, "--spread": `${bowl.bw * 0.5}px`, "--rise": `${size.h * 0.55}px` }}>
+          {SPARKS.map((sp, i) => (
+            <i key={i} style={{ "--x": `${sp.x * 0.01}`, "--drift": `${sp.drift}px`, animationDelay: `${sp.delay}s`, animationDuration: `${sp.dur}s`, width: sp.size, height: sp.size }} />
+          ))}
+        </div>
+
+        <div className="ho-tiles">
+          {tiles.map((cat, i) => (
+            <Link
+              key={cat.id}
+              ref={(el) => { tileRefs.current[i] = el; }}
+              to={`/category/${cat.id}`}
+              className="ho-tile"
+              aria-label={t("landing.openCategory", { name: cat.name })}
+              onMouseEnter={() => { hoverRef.current = true; }}
+              onMouseLeave={() => { hoverRef.current = false; }}
+              onFocus={() => { hoverRef.current = true; }}
+              onBlur={() => { hoverRef.current = false; }}
+            >
+              <span className="ho-tile-card">
+                {cat.image ? <img src={cat.image} alt="" loading="lazy" draggable="false" /> : <span className="ho-tile-initial">{initial(cat.name)}</span>}
+              </span>
+              <span className="ho-tile-name">{cat.name}</span>
+            </Link>
+          ))}
+        </div>
+
+        <div className="ho-bowl ho-bowl-front" ref={bowlFrontRef} style={bowlStyle}><BowlFront /></div>
+
+        <div className="ho-cards" style={{ "--cw": `${cardBox.cw}px` }}>
+          {CHAPTERS.map((chapter, k) =>
+            (chapterCards[chapter.key] || []).map((card, j) => (
+              <div key={`${chapter.key}-${card.id}`} className="ho-card-pos" ref={(el) => { cardRefs.current[`${k}-${j}`] = el; }}>
+                <Link to={card.to} className={`ho-card ho-card-${card.kind}`} style={{ animationDelay: `${(k + j) * 0.5}s` }}>
+                  {renderCard(card, t)}
+                </Link>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
       {/* Block 0: the orbit, the fall into the bowl and the lit-up scene. */}
       <div className="hb hb-intro" style={{ height: blocks[0].P + size.h }}>
         <div className="hb-stage ho-sticky" style={stageStyle}>
@@ -583,61 +646,6 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
         </div>
       ))}
 
-      {/* The layer the bowl, the tiles and the cards live in: positioned in page coordinates, so the bowl can
-          travel from one section to the next while the page scrolls under it. */}
-      <div className="story-layer" aria-hidden="false">
-        <div className="ho-glow" ref={glowRef} aria-hidden="true" />
-        <div
-          className="ho-bowl-glow"
-          ref={bowlGlowRef}
-          aria-hidden="true"
-          style={{ left: bowl.left - bowl.bw * 0.15, top: bowl.top - bowl.bh * 0.2, width: bowl.bw * 1.3, height: bowl.bh * 1.2 }}
-        />
-
-        <div className="ho-bowl ho-bowl-back" ref={bowlBackRef} style={bowlStyle}><BowlBack /></div>
-
-        <div className="ho-beam" ref={beamRef} aria-hidden="true" style={{ left: bowl.left + bowl.bw / 2, top: bowl.top + (MOUTH_Y / BOWL_H) * bowl.bh, width: bowl.bw * 0.62, height: size.h * 0.62 }} />
-        <div className="ho-sparks" ref={sparksRef} aria-hidden="true" style={{ left: bowl.left + bowl.bw / 2, top: bowl.top + (MOUTH_Y / BOWL_H) * bowl.bh, "--spread": `${bowl.bw * 0.5}px`, "--rise": `${size.h * 0.55}px` }}>
-          {SPARKS.map((sp, i) => (
-            <i key={i} style={{ "--x": `${sp.x * 0.01}`, "--drift": `${sp.drift}px`, animationDelay: `${sp.delay}s`, animationDuration: `${sp.dur}s`, width: sp.size, height: sp.size }} />
-          ))}
-        </div>
-
-        <div className="ho-tiles">
-          {tiles.map((cat, i) => (
-            <Link
-              key={cat.id}
-              ref={(el) => { tileRefs.current[i] = el; }}
-              to={`/category/${cat.id}`}
-              className="ho-tile"
-              aria-label={t("landing.openCategory", { name: cat.name })}
-              onMouseEnter={() => { hoverRef.current = true; }}
-              onMouseLeave={() => { hoverRef.current = false; }}
-              onFocus={() => { hoverRef.current = true; }}
-              onBlur={() => { hoverRef.current = false; }}
-            >
-              <span className="ho-tile-card">
-                {cat.image ? <img src={cat.image} alt="" loading="lazy" draggable="false" /> : <span className="ho-tile-initial">{initial(cat.name)}</span>}
-              </span>
-              <span className="ho-tile-name">{cat.name}</span>
-            </Link>
-          ))}
-        </div>
-
-        <div className="ho-bowl ho-bowl-front" ref={bowlFrontRef} style={bowlStyle}><BowlFront /></div>
-
-        <div className="ho-cards" style={{ "--cw": `${cardBox.cw}px` }}>
-          {CHAPTERS.map((chapter, k) =>
-            (chapterCards[chapter.key] || []).map((card, j) => (
-              <div key={`${chapter.key}-${card.id}`} className="ho-card-pos" ref={(el) => { cardRefs.current[`${k}-${j}`] = el; }}>
-                <Link to={card.to} className={`ho-card ho-card-${card.kind}`} style={{ animationDelay: `${(k + j) * 0.5}s` }}>
-                  {renderCard(card, t)}
-                </Link>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
     </section>
   );
 }
