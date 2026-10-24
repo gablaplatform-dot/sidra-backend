@@ -332,6 +332,23 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
     const arc = size.h * 0.22;
     const storyH = blocks[blocks.length - 1].T + blocks[blocks.length - 1].P + size.h;
 
+    // The warp: whatever goes into or comes out of the bowl is drawn into a spiral around its mouth and stretched along
+    // the way it travels. `near` is 1 at the mouth and 0 once settled, so the same effect runs in and out.
+    const warpXf = (px, py, mx, my, near, sgn, sc, spin) => {
+      const swirl = near * near * 1.2 * sgn;
+      const dx0 = px - mx;
+      const dy0 = py - my;
+      const c = Math.cos(swirl);
+      const sn = Math.sin(swirl);
+      const x = mx + dx0 * c - dy0 * sn;
+      const y = my + dx0 * sn + dy0 * c;
+      const ang = Math.atan2(y - my, x - mx) * (180 / Math.PI);
+      const w = Math.pow(near, 1.4);
+      const along = 1 + 1.5 * w;
+      const across = Math.max(0.35, 1 - 0.55 * w);
+      return `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%) rotate(${ang.toFixed(1)}deg) scale(${(along * sc).toFixed(3)}, ${(across * sc).toFixed(3)}) rotate(${(spin - ang).toFixed(1)}deg)`;
+    };
+
     let raf = 0;
     let last = performance.now();
     let angle = 0;
@@ -438,7 +455,9 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
         y += smooth(f, 0.78, 1) * bowl.bh * 0.36;
         const s = lerp(os, 0.32, Math.pow(f, 0.8));
         const spin = (i % 2 ? 1 : -1) * 30 * f;
-        el.style.transform = `translate3d(${x.toFixed(1)}px, ${(y + stageTop0 - layerTop).toFixed(1)}px, 0) translate(-50%, -50%) rotate(${spin.toFixed(1)}deg) scale(${s.toFixed(3)})`;
+        const yy = y + stageTop0 - layerTop;
+        el.style.transform = warpXf(x, yy, mouthX, mouthY + stageTop0 - layerTop, f, i % 2 ? 1 : -1, s, spin);
+        el.classList.toggle("is-warping", f > 0.02 && f < 0.98);
         el.style.opacity = lerp(0.82 + 0.18 * depthOnRing, 1, clamp(f * 6)).toFixed(3);
         el.style.zIndex = String(Math.round(depthOnRing * 10));
         el.style.pointerEvents = f > 0 ? "none" : "auto";
@@ -487,7 +506,8 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
         const e = 1 - Math.pow(1 - g, 3);
         const x = (1 - e) * (1 - e) * geo.mx + 2 * (1 - e) * e * geo.cxp + e * e * geo.tx;
         const y = (1 - e) * (1 - e) * geo.my + 2 * (1 - e) * e * geo.cyp + e * e * geo.ty;
-        chip.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%) scale(${(0.25 + 0.75 * e).toFixed(3)})`;
+        chip.style.transform = warpXf(x, y, geo.mx, geo.my, 1 - e, j % 2 ? -1 : 1, 0.25 + 0.75 * e, 0);
+        chip.classList.toggle("is-warping", e > 0.02 && e < 0.98);
         chip.style.opacity = smooth(g, 0, 0.2).toFixed(3);
         chip.style.visibility = g <= 0 ? "hidden" : "visible";
         if (trail) {
@@ -528,7 +548,8 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
           const x = (1 - e) * (1 - e) * sx + 2 * (1 - e) * e * cxp + e * e * tx;
           const y = (1 - e) * (1 - e) * sy + 2 * (1 - e) * e * cyp + e * e * ty;
           const rot = (1 - e) * (j % 2 ? 14 : -14);
-          el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%) rotate(${rot.toFixed(1)}deg) scale(${(0.25 + 0.75 * e).toFixed(3)})`;
+          el.style.transform = warpXf(x, y, bx, by - layerTop, 1 - e, j % 2 ? -1 : 1, 0.25 + 0.75 * e, rot);
+          el.classList.toggle("is-warping", e > 0.02 && e < 0.98);
           el.style.opacity = g > 0 ? "1" : "0";
           el.style.zIndex = e > 0.28 ? "6" : "2";
           el.style.visibility = g <= 0.001 ? "hidden" : "visible";
