@@ -12,7 +12,6 @@
     "orbitAria": "Laba ebika by'obuweereza",
     "openCategory": "Ggulawo {{name}}",
     "scrollHint": "Serengeta wansi",
-    "manifesto": "Gabla ereeta abawa obuweereza abakakasiddwa, amaduuka n'abavuzi mu Uganda yonna mu kifo kimu. Londa ekika, laba abali okumpi naawe, ggulawo okukwatagana n'ensimbi entonotono, olwo obbuukinge. Osasula bokka nga bakkirizza okusaba kwo.",
     "phone": {
       "title": "Noonya. Ggulawo. Bbuukinga.",
       "body": "Okuva ku kunoonya okutuuka ku kubbuukinga okukakasiddwa nga tolese Gabla. Laba abawa obuweereza abakakasiddwa, ggulawo okukwatagana omulundi gumu ku kyuma kino, osasule oluvannyuma lw'okukkirizibwa.",
@@ -34,6 +33,27 @@
       "stepApproved": "Omuwa obuweereza akkirizza",
       "stepPay": "Sasula okukakasa",
       "payNow": "Sasula kati"
+    },
+    "endTitle1": "Buli muwa obuweereza,",
+    "endTitle2": "Gabla emu.",
+    "endSub": "Londa ekika, laba abali okumpi naawe, ggulawo okukwatagana obbuukinge. Osasula bokka nga bakkirizza.",
+    "chips": {
+      "categories": {
+        "title": "Buli kika",
+        "sub": "Obuweereza, dduuka n'entambula"
+      },
+      "near": {
+        "title": "Okumpi naawe",
+        "sub": "Laba abali okumpi"
+      },
+      "unlock": {
+        "title": "Ggulawo okukwatagana",
+        "sub": "Ensimbi entono"
+      },
+      "approval": {
+        "title": "Sasula nga bakkirizza",
+        "sub": "Bokka nga bakkirizza"
+      }
     }
   }
 }

@@ -12,7 +12,6 @@
     "orbitAria": "Raadi qaybaha adeegga",
     "openCategory": "Fur {{name}}",
     "scrollHint": "Hoos u dhaadhac",
-    "manifesto": "Gabla waxay hal meel isugu keentaa bixiyeyaasha adeegga ee la xaqiijiyay, dukaamada iyo darawalada Uganda oo dhan. Dooro qayb, arag cidda kuu dhow, fur xiriirkooda lacag yar, kana buug. Waxaad bixisaa kaliya kadib marka ay codsigaaga ogolaadaan.",
     "phone": {
       "title": "Raadi. Fur. Buug.",
       "body": "Laga bilaabo raadinta ilaa buug la xaqiijiyay adigoon ka bixin Gabla. Arag bixiyeyaasha la xaqiijiyay, fur xiriir hal mar qalabkan, oo bixi kaliya marka bixiyuhu ogolaado.",
@@ -34,6 +33,27 @@
       "stepApproved": "Bixiyaha ayaa ogolaaday",
       "stepPay": "Bixi si loo xaqiijiyo",
       "payNow": "Hadda bixi"
+    },
+    "endTitle1": "Bixiye kasta,",
+    "endTitle2": "hal Gabla.",
+    "endSub": "Dooro qayb, arag cidda kuu dhow, fur xiriirkooda oo buug. Waxaad bixisaa kaliya marka ay ogolaadaan.",
+    "chips": {
+      "categories": {
+        "title": "Qayb kasta",
+        "sub": "Adeegyo, dukaan & gaari"
+      },
+      "near": {
+        "title": "Kuu dhow",
+        "sub": "Arag cidda dhow"
+      },
+      "unlock": {
+        "title": "Fur xiriirka",
+        "sub": "Lacag yar oo hal mar ah"
+      },
+      "approval": {
+        "title": "Bixi kadib ogolaansho",
+        "sub": "Marka ay aqbalaan oo keliya"
+      }
     }
   }
 }

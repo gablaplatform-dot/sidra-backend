@@ -12,7 +12,6 @@
     "orbitAria": "Browse service categories",
     "openCategory": "Open {{name}}",
     "scrollHint": "Scroll",
-    "manifesto": "Gabla brings every verified service provider, shop and driver in Uganda to one place. Pick a category, see who is near you, unlock their contact for a small fee, and book. You only pay after they approve your request.",
     "phone": {
       "title": "Find. Unlock. Book.",
       "body": "From search to a confirmed booking without leaving Gabla. See verified providers, unlock a contact once on this device, and pay only after the provider approves.",
@@ -34,6 +33,27 @@
       "stepApproved": "Provider approved",
       "stepPay": "Pay to confirm",
       "payNow": "Pay now"
+    },
+    "endTitle1": "Every provider,",
+    "endTitle2": "one Gabla.",
+    "endSub": "Pick a category, see who is near you, unlock their contact and book. You only pay once they approve.",
+    "chips": {
+      "categories": {
+        "title": "Every category",
+        "sub": "Services, shop & rides"
+      },
+      "near": {
+        "title": "Near you",
+        "sub": "See who is close"
+      },
+      "unlock": {
+        "title": "Unlock contact",
+        "sub": "One small fee"
+      },
+      "approval": {
+        "title": "Pay after approval",
+        "sub": "Only when they accept"
+      }
     }
   }
 }
