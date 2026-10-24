@@ -3,7 +3,7 @@
 .ho {
   position: relative;
   /* One sticky screen plus ~2 screens of scroll that drive the scatter and the word-by-word reveal. */
-  height: calc((100dvh - var(--hdr, 76px)) * 3);
+  height: calc((100dvh - var(--hdr, 76px)) * 3.6);
   background: linear-gradient(180deg, #fafafa 0%, #f3f5f9 100%);
 }
 .ho-sticky {
@@ -28,7 +28,24 @@
 }
 
 /* ---- tiles ---- */
-.ho-tiles { position: absolute; inset: 0; z-index: 1; }
+.ho-tiles { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.ho-tiles .ho-tile { pointer-events: auto; }
+/* The Gabla bowl (same artwork as the admin sign-in): back half behind the tiles, front half over them. */
+.ho-bowl { position: absolute; opacity: 0; will-change: transform, opacity; pointer-events: none; }
+.ho-bowl-back { z-index: 1; }
+.ho-bowl-front { z-index: 3; }
+.ho-bowl-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.ho-bowl-glow {
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(closest-side, rgba(255, 193, 7, 0.55), rgba(255, 193, 7, 0.16) 55%, rgba(255, 193, 7, 0) 100%);
+  filter: blur(10px);
+  pointer-events: none;
+  animation: ho-bowl-pulse 4.2s ease-in-out infinite;
+}
+@keyframes ho-bowl-pulse { 0%, 100% { transform: scale(0.97); } 50% { transform: scale(1.05); } }
 .ho-tile {
   position: absolute;
   left: 0;
@@ -172,9 +189,9 @@
   inset: 0;
   z-index: 20;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 0 8vw;
+  padding: clamp(36px, 11vh, 120px) 8vw 0;
   pointer-events: none;
   opacity: 0;
 }
@@ -321,7 +338,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ho-hint i { animation: none; }
+  .ho-hint i, .ho-bowl-glow { animation: none; }
   .ho-tile-card, .ho-tile-name, .hp-screen, .hp-chips button { transition: none; }
 }
 

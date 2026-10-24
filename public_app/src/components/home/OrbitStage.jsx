@@ -8,6 +8,11 @@ const MAX_TILES = 16;
 const ORBIT_SECONDS = 70;
 const TAU = Math.PI * 2;
 
+// The Gabla bowl artwork (same as the admin sign-in screen) is drawn on a 1200x520 canvas.
+const BOWL_W = 1200;
+const BOWL_H = 520;
+const MOUTH_Y = 182; // centre of the bowl's opening, in artwork units
+
 const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 const smooth = (v, a, b) => {
   const x = clamp((v - a) / (b - a));
@@ -15,18 +20,65 @@ const smooth = (v, a, b) => {
 };
 const lerp = (a, b, t) => a + (b - a) * t;
 
-// Same layout every render: a seeded generator, so tiles do not jump when the page re-renders.
-const seeded = (seed) => () => {
-  seed = (seed + 0x6d2b79f5) | 0;
-  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-};
-
 const initial = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
-// The categories ring the search box like an orbit; scrolling pulls them apart into a field of floating
-// tiles while the statement lights up word by word. Everything is positioned from one scroll-driven loop.
+// Back half of the bowl: glow, the open mouth and its dark inside. The tiles are drawn on top of this...
+function BowlBack() {
+  return (
+    <svg viewBox={`0 0 ${BOWL_W} ${BOWL_H}`} className="ho-bowl-svg" aria-hidden="true" focusable="false">
+      <defs>
+        <radialGradient id="gbRimGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(600 148) rotate(90) scale(58 300)">
+          <stop stopColor="#FFE082" />
+          <stop offset="0.55" stopColor="#FFBF1E" />
+          <stop offset="1" stopColor="#FFBF1E" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="gbBody" x1="600" y1="192" x2="600" y2="466" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#133270" />
+          <stop offset="0.55" stopColor="#08162E" />
+          <stop offset="1" stopColor="#030A16" />
+        </linearGradient>
+        <linearGradient id="gbGold" x1="243" y1="149" x2="955" y2="335" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFE28A" />
+          <stop offset="0.4" stopColor="#FFC931" />
+          <stop offset="1" stopColor="#D99800" />
+        </linearGradient>
+        <filter id="gbShadow" x="123" y="96" width="954" height="398" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+          <feDropShadow dx="0" dy="30" stdDeviation="28" floodColor="#000814" floodOpacity="0.45" />
+        </filter>
+        <mask id="gbHole" maskUnits="userSpaceOnUse" x="0" y="0" width={BOWL_W} height={BOWL_H}>
+          <rect width={BOWL_W} height={BOWL_H} fill="white" />
+          <ellipse cx="600" cy={MOUTH_Y} rx="288" ry="48" fill="black" />
+        </mask>
+      </defs>
+      <ellipse cx="600" cy="176" rx="278" ry="58" fill="url(#gbRimGlow)" />
+      <ellipse cx="600" cy={MOUTH_Y} rx="342" ry="70" fill="rgba(10,26,56,0.92)" stroke="url(#gbGold)" strokeWidth="14" />
+      <ellipse cx="600" cy={MOUTH_Y} rx="288" ry="48" fill="rgba(4,15,31,0.95)" stroke="rgba(255,201,49,0.35)" strokeWidth="8" />
+      <ellipse cx="600" cy="456" rx="220" ry="28" fill="rgba(255,191,30,0.25)" />
+    </svg>
+  );
+}
+
+// ...and the front half sits over them: anything that drops below the lip disappears inside the bowl.
+function BowlFront() {
+  return (
+    <svg viewBox={`0 0 ${BOWL_W} ${BOWL_H}`} className="ho-bowl-svg" aria-hidden="true" focusable="false">
+      <g filter="url(#gbShadow)">
+        <g mask="url(#gbHole)">
+          <path d="M258 182C265 302 375 424 600 424C825 424 935 302 942 182H258Z" fill="url(#gbBody)" />
+        </g>
+        <path d="M258 182C265 302 375 424 600 424C825 424 935 302 942 182" stroke="url(#gbGold)" strokeWidth="12" strokeLinecap="round" fill="none" />
+        <path d={`M258 ${MOUTH_Y}A342 70 0 0 0 942 ${MOUTH_Y}`} stroke="url(#gbGold)" strokeWidth="14" strokeLinecap="round" fill="none" />
+        <path d={`M312 ${MOUTH_Y}A288 48 0 0 0 888 ${MOUTH_Y}`} stroke="rgba(255,201,49,0.35)" strokeWidth="8" fill="none" />
+        <path d="M390 281C456 316 520 334 600 334C680 334 744 316 810 281" stroke="rgba(255,201,49,0.28)" strokeWidth="8" strokeLinecap="round" fill="none" />
+        <path d="M342 232C420 282 498 306 600 306C702 306 780 282 858 232" stroke="rgba(255,201,49,0.18)" strokeWidth="6" strokeLinecap="round" fill="none" />
+      </g>
+    </svg>
+  );
+}
+
+// The categories ring the search box like an orbit. Scrolling drops them one by one into the Gabla bowl
+// (and scrolling back up lifts them out again onto the ring), then the statement lights up above it.
+// Everything is positioned from one scroll-driven loop.
 export default function OrbitStage({ categories, searchValue, onSearchChange }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -35,6 +87,9 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
   const heroRef = useRef(null);
   const hintRef = useRef(null);
   const manifestoRef = useRef(null);
+  const bowlBackRef = useRef(null);
+  const bowlFrontRef = useRef(null);
+  const bowlGlowRef = useRef(null);
   const tileRefs = useRef([]);
   const wordRefs = useRef([]);
   const hoverRef = useRef(false);
@@ -61,26 +116,12 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
     };
   }, []);
 
-  // Where each tile drifts to once the ring breaks apart. Mostly clear of the statement in the middle,
-  // with a few passing behind it; far ones are smaller and fainter.
-  const scatter = useMemo(() => {
-    const { w, h } = size;
-    const rand = seeded(7);
-    const boxW = Math.min(460, w * 0.4);
-    const boxH = 170;
-    return tiles.map((_, i) => {
-      let x = w / 2;
-      let y = h / 2;
-      for (let tries = 0; tries < 14; tries += 1) {
-        x = 50 + rand() * Math.max(1, w - 100);
-        y = 60 + rand() * Math.max(1, h - 120);
-        const clearOfText = Math.abs(x - w / 2) > boxW || Math.abs(y - h / 2) > boxH;
-        if (clearOfText || i % 6 === 0) break;
-      }
-      const depth = rand();
-      return { x, y, scale: 0.55 + depth * 0.7, opacity: 0.45 + depth * 0.55, depth };
-    });
-  }, [tiles, size]);
+  // Bowl placement: centred along the bottom of the stage, its visible base 20px above the edge.
+  const bowl = useMemo(() => {
+    const bw = Math.min(size.w * 0.46, 640, size.h * 1.45);
+    const bh = (bw * BOWL_H) / BOWL_W;
+    return { bw, bh, left: (size.w - bw) / 2, top: size.h - bh * 0.9 - 20 };
+  }, [size]);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -91,6 +132,10 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
     const rx = Math.min(size.w * 0.38, 600);
     const ry = Math.min(size.h * 0.35, 320);
     const n = tiles.length;
+    const mouthX = bowl.left + bowl.bw / 2;
+    const mouthRestY = bowl.top + (MOUTH_Y / BOWL_H) * bowl.bh;
+    // Tiles drop in a scrambled order (golden-ratio steps) so neighbours do not all go at once.
+    const order = tiles.map((_, i) => (i * 0.6180339887) % 1);
 
     let raf = 0;
     let last = performance.now();
@@ -118,9 +163,21 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
       const rect = section.getBoundingClientRect();
       const travel = Math.max(1, rect.height - size.h);
       const p = clamp((size.hdr - rect.top) / travel);
-      const breakApart = smooth(p, 0.1, 0.42);
-      const open = 1 + 0.12 * smooth(p, 0, 0.2) - 0.05 * pull;
 
+      // The bowl rises into view from below the edge as the first tiles start to fall.
+      const rise = 1 - smooth(p, 0.02, 0.16);
+      const lift = rise * bowl.bh * 1.15;
+      const bowlOpacity = smooth(p, 0.02, 0.1);
+      for (const ref of [bowlBackRef, bowlFrontRef]) {
+        const el = ref.current;
+        if (!el) continue;
+        el.style.transform = `translate3d(0, ${lift.toFixed(1)}px, 0)`;
+        el.style.opacity = bowlOpacity.toFixed(3);
+      }
+      if (bowlGlowRef.current) bowlGlowRef.current.style.opacity = (bowlOpacity * (0.4 + 0.6 * smooth(p, 0.1, 0.55))).toFixed(3);
+      const mouthY = mouthRestY + lift;
+
+      const open = 1 + 0.06 * smooth(p, 0, 0.1) - 0.05 * pull;
       for (let i = 0; i < n; i += 1) {
         const el = tileRefs.current[i];
         if (!el) continue;
@@ -129,26 +186,37 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
         const ox = cx + rx * open * Math.cos(a);
         const oy = cy + ry * open * Math.sin(a);
         const os = 0.88 + 0.12 * depthOnRing;
-        const target = scatter[i] || { x: ox, y: oy, scale: 1, opacity: 1, depth: 0.5 };
-        const x = lerp(ox, target.x, breakApart);
-        const y = lerp(oy, target.y, breakApart);
-        const s = lerp(os, target.scale, breakApart);
-        el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%) scale(${s.toFixed(3)})`;
-        el.style.opacity = lerp(0.82 + 0.18 * depthOnRing, target.opacity, breakApart).toFixed(3);
-        el.style.zIndex = String(Math.round(lerp(depthOnRing, target.depth, breakApart) * 10));
+
+        // Each tile has its own slot in the scroll: it leaves the ring, falls with gravity, shrinks and tumbles
+        // towards the mouth, then sinks behind the front lip.
+        const start = 0.08 + 0.28 * order[i];
+        const f = clamp((p - start) / 0.22);
+        const sideways = smooth(f, 0, 1);
+        const gravity = Math.pow(f, 2.1);
+        const x = lerp(ox, mouthX, sideways);
+        let y = lerp(oy, mouthY, gravity);
+        y += smooth(f, 0.78, 1) * bowl.bh * 0.36;
+        const s = lerp(os, 0.32, Math.pow(f, 0.8));
+        const spin = (i % 2 ? 1 : -1) * 30 * f;
+        el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%) rotate(${spin.toFixed(1)}deg) scale(${s.toFixed(3)})`;
+        el.style.opacity = f > 0 ? "1" : (0.82 + 0.18 * depthOnRing).toFixed(3);
+        el.style.zIndex = String(Math.round(depthOnRing * 10));
+        el.style.pointerEvents = f > 0 ? "none" : "auto";
+        el.style.visibility = f >= 1 ? "hidden" : "visible";
       }
 
       const hero = heroRef.current;
       if (hero) {
-        const fade = smooth(p, 0.06, 0.26);
+        const fade = smooth(p, 0.04, 0.2);
         hero.style.opacity = String(1 - fade);
         hero.style.transform = `translateY(${(-36 * fade).toFixed(1)}px)`;
         hero.style.visibility = fade > 0.98 ? "hidden" : "visible";
       }
-      if (hintRef.current) hintRef.current.style.opacity = String(1 - smooth(p, 0, 0.08));
+      if (hintRef.current) hintRef.current.style.opacity = String(1 - smooth(p, 0, 0.06));
 
-      if (manifestoRef.current) manifestoRef.current.style.opacity = String(smooth(p, 0.3, 0.4));
-      const reveal = clamp((p - 0.4) / 0.5);
+      // The statement appears above the bowl once the last tile is inside.
+      if (manifestoRef.current) manifestoRef.current.style.opacity = String(smooth(p, 0.52, 0.6));
+      const reveal = clamp((p - 0.58) / 0.38);
       const total = wordRefs.current.length;
       for (let i = 0; i < total; i += 1) {
         const w = wordRefs.current[i];
@@ -160,7 +228,7 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
       cancelAnimationFrame(raf);
       observer.disconnect();
     };
-  }, [tiles, scatter, size]);
+  }, [tiles, bowl, size]);
 
   const submit = (event) => {
     event.preventDefault();
@@ -170,11 +238,20 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
 
   // Phone-width screens use the mobile home instead, so tile size only has to suit tablets and up.
   const tileW = clamp(Math.min(size.w, size.h * 1.5) * 0.075, 56, 92);
+  const bowlStyle = { left: bowl.left, top: bowl.top, width: bowl.bw, height: bowl.bh };
 
   return (
     <section className="ho" ref={sectionRef} aria-label={t("landing.orbitAria")}>
       <div className="ho-sticky" ref={stickyRef} style={{ "--tw": `${tileW}px`, "--th": `${tileW * 1.22}px` }}>
         <div className="ho-glow" aria-hidden="true" />
+        <div
+          className="ho-bowl-glow"
+          ref={bowlGlowRef}
+          aria-hidden="true"
+          style={{ left: bowl.left - bowl.bw * 0.15, top: bowl.top - bowl.bh * 0.2, width: bowl.bw * 1.3, height: bowl.bh * 1.2 }}
+        />
+
+        <div className="ho-bowl ho-bowl-back" ref={bowlBackRef} style={bowlStyle}><BowlBack /></div>
 
         <div className="ho-tiles">
           {tiles.map((cat, i) => (
@@ -196,6 +273,8 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
             </Link>
           ))}
         </div>
+
+        <div className="ho-bowl ho-bowl-front" ref={bowlFrontRef} style={bowlStyle}><BowlFront /></div>
 
         <div className="ho-hero" ref={heroRef}>
           <span className="home-eyebrow">
