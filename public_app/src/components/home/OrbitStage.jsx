@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { todayEat, ugx } from "../../lib/bus";
+import { BookScreen, FindScreen, UnlockScreen } from "./ContactPhone";
 import { IconArrowRight, IconBike, IconBus, IconCar, IconCart, IconCheck, IconGrid, IconLock, IconPin, IconSearch, IconSparkles, IconTicket } from "../icons";
 
 const MAX_TILES = 16;
@@ -39,12 +40,14 @@ const SPARKS = Array.from({ length: 22 }, (_, i) => ({
 // Scroll budget, in screens. Block 0 (orbit -> bowl -> beam) pins for PINS[0]. Every chapter is then its own
 // block: it slides in from below as the page really scrolls, pins while its cards pop out, hold and drop back
 // into the bowl, and slides away as the next one arrives. The bowl crosses and drops with the page between them.
-const PINS = [3.0, 1.4, 1.4, 1.0];
+const PINS = [3.0, 1.4, 1.4, 1.4, 2.0, 0];
 const CHAPTERS = [
   { key: "shop", side: "left", to: "/shop", eyebrow: "home.promo.shopEyebrow", title: "landing.story.shopTitle", sub: "home.promo.shopText", cta: "home.promo.shopCta" },
   { key: "bus", side: "right", to: "/bus", eyebrow: "home.bus.eyebrow", title: "home.bus.title", sub: "home.bus.text", cta: "home.bus.findBuses" },
-  { key: "ride", side: "left", to: "/ride", eyebrow: "home.promo.rideEyebrow", title: "home.promo.rideTitle", sub: "home.promo.rideText", cta: "home.promo.rideCta" }
+  { key: "ride", side: "left", to: "/ride", eyebrow: "home.promo.rideEyebrow", title: "home.promo.rideTitle", sub: "home.promo.rideText", cta: "home.promo.rideCta" },
+  { key: "phone", side: "right", to: "/search", fall: 0.88 }
 ];
+const PHONE_STEPS = ["find", "unlock", "book"];
 const BOWL_SIDE_SCALE = 0.78;
 const HDR_FALLBACK = 76;
 
@@ -141,7 +144,7 @@ const renderCard = (card, t) => {
 // The categories ring the search box like an orbit. Scrolling drops them one by one into the Gabla bowl, then the
 // bowl travels down the page, section by section, crossing left and right, taking each chapter's cards in as it
 // leaves and popping the next chapter's out as it lands. Everything is positioned from one scroll-driven loop.
-export default function OrbitStage({ categories, shopCards = [], busRoutes = [], searchValue, onSearchChange }) {
+export default function OrbitStage({ categories, shopCards = [], busRoutes = [], phoneProviders = [], searchValue, onSearchChange }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const storyRef = useRef(null);
@@ -155,6 +158,8 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
   const chipRefs = useRef([]);
   const trailRefs = useRef([]);
   const cardRefs = useRef({});
+  const phoneScreenRefs = useRef([]);
+  const phoneChipRefs = useRef([]);
   const bowlBackRef = useRef(null);
   const bowlFrontRef = useRef(null);
   const bowlGlowRef = useRef(null);
@@ -193,7 +198,8 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
       ride: [
         { kind: "ride", id: "boda", to: "/ride", icon: "bike", title: t("landing.story.boda"), sub: t("landing.story.bodaSub") },
         { kind: "ride", id: "car", to: "/ride", icon: "car", title: t("landing.story.car"), sub: t("landing.story.carSub") }
-      ]
+      ],
+      phone: [{ kind: "phone", id: "phone" }]
     };
   }, [shopCards, busRoutes, t]);
 
@@ -282,8 +288,10 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
     // Tiles drop in a scrambled order (golden-ratio steps) so neighbours do not all go at once.
     const order = tiles.map((_, i) => (i * 0.6180339887) % 1);
     // Bowl anchors per block: centre for the intro, then the side of each chapter (left, right, left).
-    const anchorX = [cx, ...CHAPTERS.map((c) => (c.side === "left" ? size.w * 0.24 : size.w * 0.76))];
-    const anchorS = [1, BOWL_SIDE_SCALE, BOWL_SIDE_SCALE, BOWL_SIDE_SCALE];
+    // ...and finally back to the centre, parked on top of "Browse by category".
+    const anchorX = [cx, ...CHAPTERS.map((c) => (c.side === "left" ? size.w * 0.24 : size.w * 0.76)), cx];
+    const anchorS = [1, ...CHAPTERS.map(() => BOWL_SIDE_SCALE), 1];
+    const parkStart = blocks[blocks.length - 2].T + blocks[blocks.length - 2].P;
     const arc = size.h * 0.22;
     const storyH = blocks[blocks.length - 1].T + blocks[blocks.length - 1].P + size.h;
 
@@ -408,13 +416,15 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
       // Once the last category is inside, the bowl lights up: a beam and sparks rise, the headline lights word by
       // word, and the key points rise out one by one along trails of light.
       const lit = smooth(p, 0.5, 0.62);
+      // The beam comes back as the bowl settles on top of the categories.
+      const parkLit = smooth((v - parkStart) / size.h, 0.55, 0.95);
       if (beamRef.current) {
-        beamRef.current.style.opacity = (lit * (1 - leave)).toFixed(3);
-        beamRef.current.style.translate = `0 ${(stageTop0 - layerTop).toFixed(1)}px`;
+        beamRef.current.style.opacity = Math.max(lit * (1 - leave), parkLit).toFixed(3);
+        beamRef.current.style.translate = `0 ${((parkLit > 0 ? stageTopOf(blocks.length - 1) : stageTop0) - layerTop).toFixed(1)}px`;
       }
       if (sparksRef.current) {
-        sparksRef.current.style.opacity = (lit * (1 - leave)).toFixed(3);
-        sparksRef.current.style.translate = `0 ${(stageTop0 - layerTop).toFixed(1)}px`;
+        sparksRef.current.style.opacity = Math.max(lit * (1 - leave), parkLit).toFixed(3);
+        sparksRef.current.style.translate = `0 ${((parkLit > 0 ? stageTopOf(blocks.length - 1) : stageTop0) - layerTop).toFixed(1)}px`;
       }
       if (endRef.current) endRef.current.style.opacity = (smooth(p, 0.5, 0.56) * (1 - leave)).toFixed(3);
       const reveal = clamp((p - 0.54) / 0.2);
@@ -447,18 +457,24 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
       }
 
       // Chapters: once the bowl has landed in a block, its cards pop out of the mouth one by one; before the page
-      // scrolls on, they drop back in (the last chapter keeps its cards).
+      // scrolls on, they drop back in.
       for (let k = 0; k < CHAPTERS.length; k += 1) {
         const b = k + 1;
-        const last = k === CHAPTERS.length - 1;
+        const fall = CHAPTERS[k].fall ?? 0.72;
         const q = (v - blocks[b].T) / Math.max(1, blocks[b].P);
+        if (CHAPTERS[k].key === "phone") {
+          // The phone walks through Find, Unlock and Book while the section is pinned.
+          const step = q < 0.46 ? 0 : q < 0.68 ? 1 : 2;
+          phoneScreenRefs.current.forEach((el, i) => el && el.classList.toggle("is-on", i === step));
+          phoneChipRefs.current.forEach((el, i) => el && el.classList.toggle("is-active", i === step));
+        }
         const top = stageTopOf(b);
         const geos = cardGeo[k] || [];
         for (let j = 0; j < geos.length; j += 1) {
           const el = cardRefs.current[`${k}-${j}`];
           if (!el) continue;
           let g = clamp((q - (0.04 + 0.05 * j)) / 0.14);
-          if (!last) g *= 1 - smooth(q, 0.72 + 0.03 * j, 0.84 + 0.03 * j);
+          g *= 1 - smooth(q, fall + 0.03 * j, fall + 0.12 + 0.03 * j);
           const e = 1 - Math.pow(1 - g, 3);
           const tx = geos[j].x;
           const ty = top + geos[j].y - layerTop;
@@ -496,12 +512,13 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
   const tileW = clamp(Math.min(size.w, size.h * 1.5) * 0.075, 56, 92);
   const bowlStyle = { left: bowl.left, top: bowl.top, width: bowl.bw, height: bowl.bh };
   const stageStyle = { top: size.hdr, height: size.h };
+  const phoneW = clamp(Math.min(size.h * 0.42, size.w * 0.2), 190, 290);
 
   return (
     <section className="story" ref={storyRef} aria-label={t("landing.orbitAria")} style={{ "--tw": `${tileW}px`, "--th": `${tileW * 1.22}px` }}>
       {/* The layer the bowl, the tiles and the cards live in: positioned in page coordinates, so the bowl can
           travel from one section to the next while the page scrolls under it. */}
-      <div className="story-layer" style={{ top: size.hdr, height: size.h, marginBottom: -size.h }}>
+      <div className="story-layer" style={{ top: size.hdr, height: size.h }}>
         <div className="ho-glow" ref={glowRef} aria-hidden="true" />
         <div
           className="ho-bowl-glow"
@@ -544,16 +561,28 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
 
         <div className="ho-cards" style={{ "--cw": `${cardBox.cw}px` }}>
           {CHAPTERS.map((chapter, k) =>
-            (chapterCards[chapter.key] || []).map((card, j) => (
-              <div key={`${chapter.key}-${card.id}`} className="ho-card-pos" ref={(el) => { cardRefs.current[`${k}-${j}`] = el; }}>
-                <Link to={card.to} className={`ho-card ho-card-${card.kind}`} style={{ animationDelay: `${(k + j) * 0.5}s` }}>
-                  {renderCard(card, t)}
-                </Link>
-              </div>
-            ))
+            (chapterCards[chapter.key] || []).map((card, j) =>
+              card.kind === "phone" ? (
+                <div key={`${chapter.key}-${card.id}`} className="ho-card-pos ho-phone-pos" style={{ width: phoneW }} ref={(el) => { cardRefs.current[`${k}-${j}`] = el; }}>
+                  <div className="hp-phone ho-phone" style={{ width: phoneW }} aria-hidden="true">
+                    <span className="hp-notch" />
+                    <div className="hp-screen is-on" ref={(el) => { phoneScreenRefs.current[0] = el; }}><FindScreen providers={phoneProviders.slice(0, 3)} /></div>
+                    <div className="hp-screen" ref={(el) => { phoneScreenRefs.current[1] = el; }}><UnlockScreen provider={phoneProviders[0]} /></div>
+                    <div className="hp-screen" ref={(el) => { phoneScreenRefs.current[2] = el; }}><BookScreen /></div>
+                  </div>
+                </div>
+              ) : (
+                <div key={`${chapter.key}-${card.id}`} className="ho-card-pos" ref={(el) => { cardRefs.current[`${k}-${j}`] = el; }}>
+                  <Link to={card.to} className={`ho-card ho-card-${card.kind}`} style={{ animationDelay: `${(k + j) * 0.5}s` }}>
+                    {renderCard(card, t)}
+                  </Link>
+                </div>
+              )
+            )
           )}
         </div>
       </div>
+      <div className="story-blocks">
       {/* Block 0: the orbit, the fall into the bowl and the lit-up scene. */}
       <div className="hb hb-intro" style={{ height: blocks[0].P + size.h }}>
         <div className="hb-stage ho-sticky" style={stageStyle}>
@@ -632,20 +661,46 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
         </div>
       </div>
 
-      {/* Blocks 1-3: one section per chapter, each sliding in from below as the page scrolls. */}
+      {/* Blocks 1-4: one section per chapter, each sliding in from below as the page scrolls. */}
       {CHAPTERS.map((chapter, k) => (
         <div key={chapter.key} className={`hb hb-${chapter.key}`} style={{ height: blocks[k + 1].P + size.h }}>
           <div className="hb-stage" style={stageStyle}>
-            <div className={`ho-side ho-side-${chapter.side}`}>
-              <span className="home-eyebrow">{t(chapter.eyebrow)}</span>
-              <h2>{t(chapter.title)}</h2>
-              <p>{t(chapter.sub)}</p>
-              <Link to={chapter.to} className="ho-side-cta">{t(chapter.cta)} <IconArrowRight /></Link>
-            </div>
+            {chapter.key === "phone" ? (
+              <div className={`ho-side ho-side-${chapter.side}`}>
+                <h2>{t("landing.phone.title")}</h2>
+                <div className="hp-chips" aria-hidden="true">
+                  {PHONE_STEPS.map((key, i) => (
+                    <button key={key} type="button" tabIndex={-1} className={i === 0 ? "is-active" : ""} ref={(el) => { phoneChipRefs.current[i] = el; }}>
+                      <b>{i + 1}</b> {t(`landing.phone.${key}`)}
+                    </button>
+                  ))}
+                </div>
+                <p>{t("landing.phone.body")}</p>
+                <Link to={chapter.to} className="ho-side-cta">{t("landing.phone.cta")} <IconArrowRight /></Link>
+              </div>
+            ) : (
+              <div className={`ho-side ho-side-${chapter.side}`}>
+                <span className="home-eyebrow">{t(chapter.eyebrow)}</span>
+                <h2>{t(chapter.title)}</h2>
+                <p>{t(chapter.sub)}</p>
+                <Link to={chapter.to} className="ho-side-cta">{t(chapter.cta)} <IconArrowRight /></Link>
+              </div>
+            )}
           </div>
         </div>
       ))}
 
+      {/* The journey ends here: the bowl comes to rest on top of the categories and waits for you to scroll back up. */}
+      <div id="categories" className="hb hb-park" style={{ height: size.h }}>
+        <div className="hb-stage" style={stageStyle}>
+          <div className="ho-park is-in">
+            <h2 className="home-section-title">{t("home.categories.title")}</h2>
+            <p className="home-section-subtitle">{t("home.categories.subtitle")}</p>
+          </div>
+        </div>
+      </div>
+
+      </div>
     </section>
   );
 }

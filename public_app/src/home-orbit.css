@@ -449,7 +449,8 @@
 .home-shell { overflow-x: clip; }
 
 /* ---------- story: separate scroll blocks, with the bowl travelling between them ---------- */
-.story { position: relative; }
+.story { position: relative; display: grid; }
+.story-blocks { grid-area: 1 / 1; min-width: 0; }
 .hb { position: relative; }
 .hb-intro { background: linear-gradient(180deg, #fafafa 0%, #f3f5f9 100%); }
 .hb-shop { background: linear-gradient(180deg, #f3f5f9 0%, #fff3e6 100%); }
@@ -459,6 +460,21 @@
 .hb-stage { position: sticky; z-index: 3; overflow: hidden; pointer-events: none; }
 .hb-stage .ho-side { pointer-events: auto; }
 .hb-stage .ho-side { opacity: 1; visibility: visible; }
-.story-layer { position: sticky; z-index: 1; overflow: hidden; pointer-events: none; }
+.story-layer { grid-area: 1 / 1; align-self: start; position: sticky; z-index: 1; overflow: hidden; pointer-events: none; }
 .story-layer .ho-glow { top: 0; transform: translate(-50%, -52%); }
 .story-layer .ho-tiles { position: absolute; inset: 0; z-index: 2; }
+
+/* ---- phone chapter and the closing block ---- */
+.hb-phone { background: linear-gradient(180deg, #fff0e4 0%, #eaf1ff 100%); }
+.hb-park { background: linear-gradient(180deg, #eaf1ff 0%, #ffffff 100%); }
+.ho-phone-pos { visibility: hidden; }
+.ho-phone-pos .ho-phone { max-height: none; justify-self: auto; box-shadow: 0 40px 70px -30px rgba(11, 32, 70, 0.6), inset 0 0 0 2px #2a2a2a; }
+.hb-stage .ho-side .hp-chips { margin: 0 0 18px; }
+.ho-park { position: absolute; left: 0; right: 0; top: clamp(30px, 9vh, 100px); padding: 0 8vw; text-align: center; pointer-events: none; }
+.ho-park .home-section-title { display: inline-block; margin: 0 0 12px; }
+.ho-park .home-section-subtitle { margin: 0 auto; }
+.ho-park .home-section-title::after { left: 50%; transform: translateX(-50%); }
+.home-landing .ho-park .home-section-subtitle { margin: 0 auto; text-align: center; }
+
+.home-landing .hs-band-white { margin-top: 0; border-top: 0; padding-bottom: 72px; }
+.home-landing .hs-band-white .home-section.hs-categories { padding-top: 8px; }

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
@@ -7,14 +7,13 @@ import { clearSession, getSession, setSession } from "../lib/session";
 import { GOOGLE_CLIENT_ID, loadGoogleIdentity } from "../lib/google";
 import SiteHeader from "../components/SiteHeader";
 import ProviderCard from "../components/ProviderCard";
-import { IconArrowRight, IconBike, IconBus, IconTicket, IconBox, IconCar, IconCart } from "../components/icons";
+import { IconArrowRight } from "../components/icons";
 import { ProviderCardsSkeleton, Skel } from "../components/Skeleton";
 import { mapCategoryDto, mapProductDto } from "../lib/shopMappers";
 import MobileHome from "../components/mobilehome/MobileHome";
 import OrbitStage from "../components/home/OrbitStage";
-import ContactPhone from "../components/home/ContactPhone";
 import Reveal from "../components/home/Reveal";
-import { busApi, todayEat, ugx } from "../lib/bus";
+import { busApi } from "../lib/bus";
 
 const FOOTER_LINKS = [
   { key: "shop", href: "/shop" },
@@ -28,7 +27,6 @@ const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
 function DesktopHome() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const location = useLocation();
   const [session, setSessionState] = useState(() => getSession());
   const [categories, setCategories] = useState([]);
@@ -38,20 +36,15 @@ function DesktopHome() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchValue, setSearchValue] = useState("");
-  const [busPlaces, setBusPlaces] = useState({ origins: [], destinations: [] });
   const [busRoutes, setBusRoutes] = useState([]);
-  const [busFrom, setBusFrom] = useState("");
-  const [busTo, setBusTo] = useState("");
-  const [busDate, setBusDate] = useState(() => todayEat());
 
-  // The bus promo is a bonus section: if the bus API is unavailable the rest of Home is unaffected.
+  // The bus chapter is a bonus: if the bus API is unavailable the rest of Home is unaffected.
   useEffect(() => {
     let active = true;
-    Promise.all([busApi.places(), busApi.popularRoutes(6)])
-      .then(([places, popular]) => {
-        if (!active) return;
-        setBusPlaces(places || { origins: [], destinations: [] });
-        setBusRoutes(popular?.items || []);
+    busApi
+      .popularRoutes(6)
+      .then((popular) => {
+        if (active) setBusRoutes(popular?.items || []);
       })
       .catch(() => {});
     return () => {
@@ -78,14 +71,7 @@ function DesktopHome() {
     };
   }, []);
 
-  const searchBuses = (event) => {
-    event.preventDefault();
-    const params = new URLSearchParams();
-    if (busFrom) params.set("from", busFrom);
-    if (busTo) params.set("to", busTo);
-    params.set("date", busDate || todayEat());
-    navigate(`/bus/search?${params.toString()}`);
-  };
+
 
   useEffect(() => {
     let active = true;
@@ -175,89 +161,13 @@ function DesktopHome() {
       <SiteHeader session={session} onLogout={logout} />
 
       {/* ============ HERO: categories orbit the search, scatter on scroll ============ */}
-      <OrbitStage categories={orbitCategories} shopCards={shopCards} busRoutes={busRoutes} searchValue={searchValue} onSearchChange={setSearchValue} />
-
-      {/* ============ FIND / UNLOCK / BOOK (pinned phone) ============ */}
-      <ContactPhone providers={phoneProviders} />
-
-      {/* ============ PROMO CARDS DUO ============ */}
-      <section className="home-section hs-promos">
-        <div className="home-promo-duo">
-          <Reveal as={Link} from="left" to="/ride" className="home-promo home-promo-ride">
-            <div className="home-promo-text">
-              <span className="home-promo-eyebrow">{t("home.promo.rideEyebrow")}</span>
-              <h2>{t("home.promo.rideTitle")}</h2>
-              <p>{t("home.promo.rideText")}</p>
-              <span className="home-promo-cta">{t("home.promo.rideCta")} <IconArrowRight /></span>
-            </div>
-            <div className="home-promo-icons">
-              <span className="home-promo-icon home-promo-icon-a"><IconBike /></span>
-              <span className="home-promo-icon home-promo-icon-b"><IconCar /></span>
-            </div>
-          </Reveal>
-
-          <Reveal as={Link} from="right" delay={120} to="/shop" className="home-promo home-promo-shop">
-            <div className="home-promo-text">
-              <span className="home-promo-eyebrow">{t("home.promo.shopEyebrow")}</span>
-              <h2>{t("home.promo.shopTitle")}</h2>
-              <p>{t("home.promo.shopText")}</p>
-              <span className="home-promo-cta">{t("home.promo.shopCta")} <IconArrowRight /></span>
-            </div>
-            <div className="home-promo-icons">
-              <span className="home-promo-icon home-promo-icon-a"><IconCart /></span>
-              <span className="home-promo-icon home-promo-icon-b"><IconBox /></span>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ============ BUS TICKETS ============ */}
-      <section className="home-section hs-bus">
-        <Reveal from="zoom" className="bus-promo">
-          <span className="bus-promo-route" aria-hidden="true" />
-          <div className="bus-promo-copy">
-            <span className="bus-promo-eyebrow"><IconBus width={16} height={16} /> {t("home.bus.eyebrow")}</span>
-            <h2>{t("home.bus.title")}</h2>
-            <p>{t("home.bus.text")}</p>
-            {busRoutes.length ? (
-              <div className="bus-promo-routes">
-                {busRoutes.map((r) => (
-                  <Link key={`${r.from}-${r.to}`} to={`/bus/search?from=${encodeURIComponent(r.from)}&to=${encodeURIComponent(r.to)}&date=${todayEat()}`}>
-                    {r.from} &rarr; {r.to}{r.minPrice ? ` · ${ugx(r.minPrice)}` : ""}
-                  </Link>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          <form className="bus-promo-form" onSubmit={searchBuses}>
-            <div className="bus-promo-form-row">
-              <select value={busFrom} onChange={(e) => setBusFrom(e.target.value)} aria-label={t("home.bus.travellingFrom")}>
-                <option value="">{t("home.bus.fromAny")}</option>
-                {busPlaces.origins.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
-              <select value={busTo} onChange={(e) => setBusTo(e.target.value)} aria-label={t("home.bus.travellingTo")}>
-                <option value="">{t("home.bus.toAny")}</option>
-                {busPlaces.destinations.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <input type="date" value={busDate} min={todayEat()} onChange={(e) => setBusDate(e.target.value)} aria-label={t("home.bus.travelDate")} />
-            <button type="submit" className="bus-promo-btn"><IconBus width={18} height={18} /> {t("home.bus.findBuses")}</button>
-            <Link to="/bus/tickets" className="bus-link" style={{ textAlign: "center" }}><IconTicket width={14} height={14} /> {t("home.bus.myTickets")}</Link>
-          </form>
-        </Reveal>
-      </section>
+      <OrbitStage categories={orbitCategories} shopCards={shopCards} busRoutes={busRoutes} phoneProviders={phoneProviders} searchValue={searchValue} onSearchChange={setSearchValue} />
 
       {error ? <div className="error-message home-error">{error}</div> : null}
 
       {/* ============ CATEGORY CARDS ============ */}
       <div className="hs-band hs-band-white">
-        <section id="categories" className="home-section">
-          <Reveal className="home-section-header">
-            <div>
-              <h2 className="home-section-title">{t("home.categories.title")}</h2>
-              <p className="home-section-subtitle">{t("home.categories.subtitle")}</p>
-            </div>
-          </Reveal>
+        <section className="home-section hs-categories">
 
           {!loading && !categories.length ? <p className="home-empty">{t("home.categories.empty")}</p> : null}
           {loading ? (
@@ -270,7 +180,7 @@ function DesktopHome() {
           ) : null}
           <div className="home-category-grid">
             {categories.map((c, idx) => (
-              <Reveal as={Link} from="zoom" delay={(idx % 4) * 80} to={`/category/${c.id}`} key={c.id} className="home-category-card">
+              <Reveal as={Link} from="bowl" delay={(idx % 4) * 90} to={`/category/${c.id}`} key={c.id} className="home-category-card">
                 <div className={`home-category-img ${c.image ? "" : "home-category-img-fallback"}`}>
                   {c.image ? (
                     <img src={c.image} alt="" loading="lazy" />
@@ -306,7 +216,7 @@ function DesktopHome() {
         ) : providers.length ? (
           <div className="home-provider-grid">
             {providers.map((p, i) => (
-              <Reveal key={p.id} delay={(i % 4) * 90}>
+              <Reveal key={p.id} from="bowl" delay={(i % 4) * 90}>
                 <ProviderCard provider={p} categoryName={categoryName(p.categoryId)} />
               </Reveal>
             ))}

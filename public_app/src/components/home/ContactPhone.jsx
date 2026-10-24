@@ -7,7 +7,7 @@ import { IconArrowRight, IconCalendar, IconCheck, IconLock, IconSearch } from ".
 const STEPS = ["find", "unlock", "book"];
 const initial = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
-function FindScreen({ providers }) {
+export function FindScreen({ providers }) {
   const { t } = useTranslation();
   return (
     <div className="hp-screen-body">
@@ -29,7 +29,7 @@ function FindScreen({ providers }) {
   );
 }
 
-function UnlockScreen({ provider }) {
+export function UnlockScreen({ provider }) {
   const { t } = useTranslation();
   return (
     <div className="hp-screen-body">
@@ -49,7 +49,7 @@ function UnlockScreen({ provider }) {
   );
 }
 
-function BookScreen() {
+export function BookScreen() {
   const { t } = useTranslation();
   return (
     <div className="hp-screen-body">
