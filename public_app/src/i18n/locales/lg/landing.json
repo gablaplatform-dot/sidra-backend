@@ -54,6 +54,15 @@
         "title": "Sasula nga bakkirizza",
         "sub": "Bokka nga bakkirizza"
       }
+    },
+    "story": {
+      "shopTitle": "Gula ku Gabla",
+      "boda": "Boda",
+      "bodaSub": "Mangu era okumpi",
+      "car": "Mmotoka",
+      "carSub": "Entambula ennungi",
+      "fromPrice": "Okuva ku {{price}}",
+      "browse": "Laba"
     }
   }
 }

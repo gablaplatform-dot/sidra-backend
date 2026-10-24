@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-import { IconArrowRight, IconBus, IconCar, IconCart, IconCheck, IconGrid, IconLock, IconPin, IconSearch, IconSparkles } from "../icons";
+import { todayEat, ugx } from "../../lib/bus";
+import { IconArrowRight, IconBike, IconBus, IconCar, IconCart, IconCheck, IconGrid, IconLock, IconPin, IconSearch, IconSparkles, IconTicket } from "../icons";
 
 const MAX_TILES = 16;
 const ORBIT_SECONDS = 70;
@@ -34,6 +35,17 @@ const SPARKS = Array.from({ length: 22 }, (_, i) => ({
   dur: 3 + ((i * 7) % 30) / 10,
   size: 3 + (i % 4)
 }));
+
+// Scroll budget. The first part runs orbit -> bowl -> beam; every chapter after that glides the bowl to a side
+// (left, right, left...) and pops that chapter's cards out of it on the opposite side.
+const PHASE1 = 0.313;
+const CH_LEN = 0.229;
+const CHAPTERS = [
+  { key: "shop", side: "left", to: "/shop", eyebrow: "home.promo.shopEyebrow", title: "landing.story.shopTitle", sub: "home.promo.shopText", cta: "home.promo.shopCta" },
+  { key: "bus", side: "right", to: "/bus", eyebrow: "home.bus.eyebrow", title: "home.bus.title", sub: "home.bus.text", cta: "home.bus.findBuses" },
+  { key: "ride", side: "left", to: "/ride", eyebrow: "home.promo.rideEyebrow", title: "home.promo.rideTitle", sub: "home.promo.rideText", cta: "home.promo.rideCta" }
+];
+const BOWL_SIDE_SCALE = 0.78;
 
 const initial = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
@@ -91,10 +103,44 @@ function BowlFront() {
   );
 }
 
+const renderCard = (card, t) => {
+  if (card.kind === "product" || card.kind === "category") {
+    return (
+      <>
+        <span className="ho-card-img" style={card.image ? { backgroundImage: `url("${card.image}")` } : undefined}>
+          {!card.image ? <b>{initial(card.name)}</b> : null}
+        </span>
+        <span className="ho-card-body">
+          <strong>{card.name}</strong>
+          {card.price ? <em>{card.price}</em> : <em>{t("landing.story.browse")}</em>}
+        </span>
+      </>
+    );
+  }
+  if (card.kind === "route") {
+    return (
+      <>
+        <span className="ho-ticket-top"><IconBus /> <b>{card.from}</b></span>
+        <span className="ho-ticket-arrow">&darr;</span>
+        <span className="ho-ticket-top"><IconPin /> <b>{card.toPlace}</b></span>
+        <span className="ho-ticket-foot">{card.price ? t("landing.story.fromPrice", { price: card.price }) : t("home.bus.findBuses")}</span>
+      </>
+    );
+  }
+  const Icon = card.icon === "bike" ? IconBike : card.icon === "car" ? IconCar : card.icon === "ticket" ? IconTicket : IconBus;
+  return (
+    <>
+      <span className="ho-card-icon"><Icon /></span>
+      <strong>{card.title || card.label}</strong>
+      {card.sub ? <small>{card.sub}</small> : null}
+    </>
+  );
+};
+
 // The categories ring the search box like an orbit. Scrolling drops them one by one into the Gabla bowl
 // (and scrolling back up lifts them out again onto the ring), then the statement lights up above it.
 // Everything is positioned from one scroll-driven loop.
-export default function OrbitStage({ categories, searchValue, onSearchChange }) {
+export default function OrbitStage({ categories, shopCards = [], busRoutes = [], searchValue, onSearchChange }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const sectionRef = useRef(null);
@@ -107,6 +153,8 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
   const sparksRef = useRef(null);
   const chipRefs = useRef([]);
   const trailRefs = useRef([]);
+  const sideRefs = useRef([]);
+  const cardRefs = useRef({});
   const bowlBackRef = useRef(null);
   const bowlFrontRef = useRef(null);
   const bowlGlowRef = useRef(null);
@@ -119,6 +167,56 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
   const tiles = useMemo(() => categories.slice(0, MAX_TILES), [categories]);
   const endWords = useMemo(() => [...t("landing.endTitle1").split(/\s+/), ...t("landing.endTitle2").split(/\s+/)].filter(Boolean), [t]);
   const lineBreakAt = useMemo(() => t("landing.endTitle1").split(/\s+/).filter(Boolean).length, [t]);
+
+  // Cards each chapter pops out. Bus falls back to two plain actions while no routes are published yet.
+  const chapterCards = useMemo(() => {
+    const bus = busRoutes.slice(0, 4).map((r) => ({
+      kind: "route",
+      id: `${r.from}-${r.to}`,
+      to: `/bus/search?from=${encodeURIComponent(r.from)}&to=${encodeURIComponent(r.to)}&date=${todayEat()}`,
+      from: r.from,
+      toPlace: r.to,
+      price: r.minPrice ? ugx(r.minPrice) : null
+    }));
+    return {
+      shop: shopCards.slice(0, 4),
+      bus: bus.length
+        ? bus
+        : [
+            { kind: "action", id: "buses", to: "/bus", icon: "bus", label: t("home.bus.findBuses") },
+            { kind: "action", id: "tickets", to: "/bus/tickets", icon: "ticket", label: t("home.bus.myTickets") }
+          ],
+      ride: [
+        { kind: "ride", id: "boda", to: "/ride", icon: "bike", title: t("landing.story.boda"), sub: t("landing.story.bodaSub") },
+        { kind: "ride", id: "car", to: "/ride", icon: "car", title: t("landing.story.car"), sub: t("landing.story.carSub") }
+      ]
+    };
+  }, [shopCards, busRoutes, t]);
+
+  // Card size follows the stage, and each chapter's cards sit in a 2x2 (or 1x2) block on the side opposite the bowl.
+  const cardBox = useMemo(() => {
+    const cw = clamp(Math.min(size.w * 0.19, (size.h - 170) / 2 / 1.22), 130, 232);
+    return { cw, ch: cw * 1.22 };
+  }, [size]);
+  const cardGeo = useMemo(() => {
+    const gap = 22;
+    return CHAPTERS.map((chapter) => {
+      const n = (chapterCards[chapter.key] || []).length;
+      const cols = n >= 3 ? 2 : Math.max(1, n);
+      const rows = n >= 3 ? 2 : 1;
+      const regionX = chapter.side === "left" ? size.w * 0.5 : size.w * 0.04;
+      const regionW = size.w * 0.46;
+      const totalW = cols * cardBox.cw + (cols - 1) * gap;
+      const totalH = rows * cardBox.ch + (rows - 1) * gap + (cols > 1 ? 26 : 0);
+      const x0 = regionX + (regionW - totalW) / 2 + cardBox.cw / 2;
+      const y0 = size.h / 2 - totalH / 2 + cardBox.ch / 2 - 8;
+      return Array.from({ length: n }, (_, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        return { x: x0 + col * (cardBox.cw + gap), y: y0 + row * (cardBox.ch + gap) + (col ? 26 : 0) };
+      });
+    });
+  }, [size, cardBox, chapterCards]);
 
   useEffect(() => {
     const node = stickyRef.current;
@@ -175,6 +273,7 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
     const mouthRestY = bowl.top + (MOUTH_Y / BOWL_H) * bowl.bh;
     // Tiles drop in a scrambled order (golden-ratio steps) so neighbours do not all go at once.
     const order = tiles.map((_, i) => (i * 0.6180339887) % 1);
+    const sideDx = CHAPTERS.map((c) => (c.side === "left" ? size.w * 0.24 : size.w * 0.76) - mouthX);
 
     let raf = 0;
     let last = performance.now();
@@ -201,7 +300,24 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
 
       const rect = section.getBoundingClientRect();
       const travel = Math.max(1, rect.height - size.h);
-      const p = clamp((size.hdr - rect.top) / travel);
+      const pAll = clamp((size.hdr - rect.top) / travel);
+      const p = clamp(pAll / PHASE1);
+
+      // Chapters: cu runs 0..3 across shop, bus and ride. The bowl glides to each chapter's side.
+      const cu = (pAll - PHASE1) / CH_LEN;
+      const ci = clamp(Math.floor(cu), 0, CHAPTERS.length - 1);
+      let dx = 0;
+      let sc = 1;
+      if (cu >= 0) {
+        const u = clamp(cu - ci, 0, 1);
+        const prevX = ci === 0 ? 0 : sideDx[ci - 1];
+        const prevS = ci === 0 ? 1 : BOWL_SIDE_SCALE;
+        const glide = smooth(u, 0.1, 0.3);
+        dx = lerp(prevX, sideDx[ci], glide);
+        sc = lerp(prevS, BOWL_SIDE_SCALE, glide);
+      }
+      // The end-state scene (beam, sparks, headline, chips) hands over to chapter one.
+      const leave = cu < 0 ? 0 : cu >= 1 ? 1 : smooth(cu, 0, 0.09);
 
       // The bowl rises into view from below the edge as the first tiles start to fall.
       const rise = 1 - smooth(p, 0.02, 0.16);
@@ -210,10 +326,14 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
       for (const ref of [bowlBackRef, bowlFrontRef]) {
         const el = ref.current;
         if (!el) continue;
-        el.style.transform = `translate3d(0, ${lift.toFixed(1)}px, 0)`;
+        el.style.transform = `translate3d(${dx.toFixed(1)}px, ${lift.toFixed(1)}px, 0) scale(${sc.toFixed(3)})`;
         el.style.opacity = bowlOpacity.toFixed(3);
       }
-      if (bowlGlowRef.current) bowlGlowRef.current.style.opacity = (bowlOpacity * (0.4 + 0.6 * smooth(p, 0.1, 0.55))).toFixed(3);
+      if (bowlGlowRef.current) {
+        bowlGlowRef.current.style.opacity = (bowlOpacity * (0.4 + 0.6 * smooth(p, 0.1, 0.55))).toFixed(3);
+        bowlGlowRef.current.style.translate = `${dx.toFixed(1)}px 0`;
+        bowlGlowRef.current.style.scale = sc.toFixed(3);
+      }
       const mouthY = mouthRestY + lift;
 
       const open = 1 + 0.06 * smooth(p, 0, 0.1) - 0.05 * pull;
@@ -256,9 +376,9 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
       // Once the last category is inside, the bowl lights up: a beam and sparks rise, the headline lights word by
       // word, and the key points rise out one by one along trails of light.
       const lit = smooth(p, 0.5, 0.62);
-      if (beamRef.current) beamRef.current.style.opacity = lit.toFixed(3);
-      if (sparksRef.current) sparksRef.current.style.opacity = lit.toFixed(3);
-      if (endRef.current) endRef.current.style.opacity = String(smooth(p, 0.5, 0.56));
+      if (beamRef.current) beamRef.current.style.opacity = (lit * (1 - leave)).toFixed(3);
+      if (sparksRef.current) sparksRef.current.style.opacity = (lit * (1 - leave)).toFixed(3);
+      if (endRef.current) endRef.current.style.opacity = (smooth(p, 0.5, 0.56) * (1 - leave)).toFixed(3);
       const reveal = clamp((p - 0.54) / 0.2);
       const total = wordRefs.current.length;
       for (let i = 0; i < total; i += 1) {
@@ -275,7 +395,7 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
         const chip = chipRefs.current[j];
         const trail = trailRefs.current[j];
         if (!geo || !chip) continue;
-        const g = clamp((p - (0.56 + 0.06 * j)) / 0.14);
+        const g = clamp((p - (0.56 + 0.06 * j)) / 0.14) * (1 - leave);
         const e = 1 - Math.pow(1 - g, 3);
         const x = (1 - e) * (1 - e) * geo.mx + 2 * (1 - e) * e * geo.cxp + e * e * geo.tx;
         const y = (1 - e) * (1 - e) * geo.my + 2 * (1 - e) * e * geo.cyp + e * e * geo.ty;
@@ -287,13 +407,49 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
           trail.style.opacity = (g <= 0 ? 0 : 1 - 0.78 * smooth(g, 0.8, 1)).toFixed(3);
         }
       }
+
+      // Each chapter: its words fade in beside the bowl, then its cards pop out of the mouth one by one and, when
+      // the chapter ends, drop back in before the bowl glides to the other side.
+      const mx = mouthX + dx;
+      for (let k = 0; k < CHAPTERS.length; k += 1) {
+        const last = k === CHAPTERS.length - 1;
+        const uk = cu - k;
+        const side = sideRefs.current[k];
+        if (side) {
+          const tin = smooth(uk, 0.24, 0.38);
+          const o = tin * (last ? 1 : 1 - smooth(uk, 0.9, 0.97));
+          side.style.opacity = o.toFixed(3);
+          side.style.transform = `translateY(${((1 - tin) * 18).toFixed(1)}px)`;
+          side.style.visibility = o <= 0.01 ? "hidden" : "visible";
+          side.style.pointerEvents = o > 0.6 ? "auto" : "none";
+        }
+        const geos = cardGeo[k] || [];
+        for (let j = 0; j < geos.length; j += 1) {
+          const el = cardRefs.current[`${k}-${j}`];
+          if (!el) continue;
+          let g = clamp((uk - (0.3 + 0.06 * j)) / 0.12);
+          if (!last) g *= 1 - smooth(uk, 0.88 + 0.02 * j, 0.95 + 0.02 * j);
+          const e = 1 - Math.pow(1 - g, 3);
+          const tx = geos[j].x;
+          const ty = geos[j].y;
+          const cxp = mx + (tx - mx) * 0.25;
+          const cyp = Math.min(mouthY, ty) - 100;
+          const x = (1 - e) * (1 - e) * mx + 2 * (1 - e) * e * cxp + e * e * tx;
+          const y = (1 - e) * (1 - e) * mouthY + 2 * (1 - e) * e * cyp + e * e * ty;
+          const rot = (1 - e) * (j % 2 ? 14 : -14);
+          el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%) rotate(${rot.toFixed(1)}deg) scale(${(0.25 + 0.75 * e).toFixed(3)})`;
+          el.style.opacity = smooth(g, 0, 0.25).toFixed(3);
+          el.style.visibility = g <= 0.001 ? "hidden" : "visible";
+          el.style.pointerEvents = g > 0.95 ? "auto" : "none";
+        }
+      }
     };
     raf = requestAnimationFrame(frame);
     return () => {
       cancelAnimationFrame(raf);
       observer.disconnect();
     };
-  }, [tiles, bowl, size, chipGeo]);
+  }, [tiles, bowl, size, chipGeo, cardGeo]);
 
   const submit = (event) => {
     event.preventDefault();
@@ -415,6 +571,27 @@ export default function OrbitStage({ categories, searchValue, onSearchChange }) 
           </h2>
           <p ref={subRef}>{t("landing.endSub")}</p>
         </div>
+
+        <div className="ho-cards" style={{ "--cw": `${cardBox.cw}px` }}>
+          {CHAPTERS.map((chapter, k) =>
+            (chapterCards[chapter.key] || []).map((card, j) => (
+              <div key={`${chapter.key}-${card.id}`} className="ho-card-pos" ref={(el) => { cardRefs.current[`${k}-${j}`] = el; }}>
+                <Link to={card.to} className={`ho-card ho-card-${card.kind}`} style={{ animationDelay: `${(k + j) * 0.5}s` }}>
+                  {renderCard(card, t)}
+                </Link>
+              </div>
+            ))
+          )}
+        </div>
+
+        {CHAPTERS.map((chapter, k) => (
+          <div key={chapter.key} className={`ho-side ho-side-${chapter.side}`} ref={(el) => { sideRefs.current[k] = el; }}>
+            <span className="home-eyebrow">{t(chapter.eyebrow)}</span>
+            <h2>{t(chapter.title)}</h2>
+            <p>{t(chapter.sub)}</p>
+            <Link to={chapter.to} className="ho-side-cta">{t(chapter.cta)} <IconArrowRight /></Link>
+          </div>
+        ))}
 
         <div className="ho-hint" ref={hintRef} aria-hidden="true">
           <span>{t("landing.scrollHint")}</span>

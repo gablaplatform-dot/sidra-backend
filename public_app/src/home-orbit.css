@@ -3,7 +3,7 @@
 .ho {
   position: relative;
   /* One sticky screen plus ~2 screens of scroll that drive the scatter and the word-by-word reveal. */
-  height: calc((100dvh - var(--hdr, 76px)) * 3.9);
+  height: calc((100dvh - var(--hdr, 76px)) * 9.3);
   background: linear-gradient(180deg, #fafafa 0%, #f3f5f9 100%);
 }
 .ho-sticky {
@@ -31,7 +31,7 @@
 .ho-tiles { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .ho-tiles .ho-tile { pointer-events: auto; }
 /* The Gabla bowl (same artwork as the admin sign-in): back half behind the tiles, front half over them. */
-.ho-bowl { position: absolute; opacity: 0; will-change: transform, opacity; pointer-events: none; }
+.ho-bowl { position: absolute; opacity: 0; will-change: transform, opacity; pointer-events: none; transform-origin: 50% 35%; }
 .ho-bowl-back { z-index: 1; }
 .ho-bowl-front { z-index: 3; }
 .ho-bowl-svg { display: block; width: 100%; height: 100%; overflow: visible; }
@@ -182,6 +182,61 @@
 }
 .ho-also a:hover { border-color: #ea580c; transform: translateY(-1px); }
 .ho-also svg { width: 14px; height: 14px; color: #ea580c; }
+
+/* ---- chapters: the bowl moves to a side and its cards pop out on the other ---- */
+.ho-cards { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.ho-card-pos { position: absolute; left: 0; top: 0; width: var(--cw); visibility: hidden; opacity: 0; will-change: transform, opacity; }
+.ho-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: calc(var(--cw) * 1.22);
+  overflow: hidden;
+  border-radius: 22px;
+  background: #fff;
+  color: #0b2046;
+  text-decoration: none;
+  box-shadow: 0 26px 50px -26px rgba(11, 32, 70, 0.65), 0 0 0 1px rgba(11, 32, 70, 0.05);
+  animation: ho-bob 4.8s ease-in-out infinite;
+  transition: box-shadow 0.2s ease;
+}
+.ho-card:hover { box-shadow: 0 34px 60px -26px rgba(11, 32, 70, 0.8), 0 0 0 2px #facc15; }
+.ho-card-img { display: flex; align-items: center; justify-content: center; flex: 1; min-height: calc(var(--cw) * 0.8); background: linear-gradient(150deg, #fb923c, #c2410c) center/cover no-repeat; color: #fff; }
+.ho-card-img b { font-size: 48px; font-weight: 800; }
+.ho-card-body { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px 14px; }
+.ho-card-body strong { font-size: 14px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ho-card-body em { color: #ea580c; font-style: normal; font-size: 14px; font-weight: 800; }
+/* bus tickets */
+.ho-card-route, .ho-card-action { justify-content: center; gap: 10px; padding: 18px; background: radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.4px) 0 0 / 18px 18px, linear-gradient(150deg, #0b2046 0%, #17386f 100%); color: #fff; }
+.ho-ticket-top { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.ho-ticket-top svg { width: 18px; height: 18px; color: #facc15; flex: none; }
+.ho-ticket-top b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ho-ticket-arrow { color: #facc15; font-size: 18px; line-height: 1; padding-left: 5px; }
+.ho-ticket-foot { margin-top: 6px; padding-top: 10px; border-top: 2px dashed rgba(255, 255, 255, 0.3); color: #fde68a; font-size: 13px; font-weight: 800; }
+/* ride + generic actions */
+.ho-card-ride { align-items: flex-start; justify-content: flex-end; gap: 6px; padding: 18px; background: radial-gradient(rgba(255, 255, 255, 0.14) 1.2px, transparent 1.4px) 0 0 / 18px 18px, linear-gradient(150deg, #7c2d12 0%, #c2410c 55%, #f97316 100%); color: #fff; }
+.ho-card-icon { display: flex; align-items: center; justify-content: center; width: 54px; height: 54px; margin-bottom: auto; border-radius: 18px; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: #fff; }
+.ho-card-icon svg { width: 26px; height: 26px; }
+.ho-card-ride strong, .ho-card-action strong { font-size: 18px; font-weight: 800; }
+.ho-card-ride small { color: rgba(255, 255, 255, 0.88); font-size: 13px; font-weight: 600; }
+.ho-card-action { align-items: flex-start; }
+/* the words that sit beside the bowl */
+.ho-side {
+  position: absolute;
+  top: clamp(28px, 8vh, 96px);
+  z-index: 20;
+  width: min(430px, 38vw);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.ho-side-left { left: 6vw; text-align: left; }
+.ho-side-right { right: 6vw; text-align: left; }
+.ho-side h2 { margin: 14px 0 12px; color: #0b2046; font-size: clamp(30px, 3.7vw, 54px); line-height: 1.05; letter-spacing: -0.03em; font-weight: 800; }
+.ho-side p { margin: 0 0 22px; color: #475569; font-size: clamp(14px, 1.15vw, 17px); line-height: 1.6; font-weight: 500; }
+.ho-side-cta { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 22px; border-radius: 999px; background: #0b2046; color: #fff; font-size: 14px; font-weight: 800; text-decoration: none; box-shadow: 0 16px 30px -16px rgba(11, 32, 70, 0.8); transition: background 0.15s ease, transform 0.15s ease; }
+.ho-side-cta:hover { background: #ea580c; transform: translateY(-2px); }
+.ho-side-cta svg { width: 16px; height: 16px; }
 
 /* ---- end state: the bowl lights up ---- */
 .ho-beam {
@@ -388,7 +443,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ho-hint i, .ho-bowl-glow, .ho-beam, .ho-chip-in, .ho-sparks i { animation: none; }
+  .ho-hint i, .ho-bowl-glow, .ho-beam, .ho-chip-in, .ho-sparks i, .ho-card { animation: none; }
   .ho-tile-card, .ho-tile-name, .hp-screen, .hp-chips button { transition: none; }
 }
 

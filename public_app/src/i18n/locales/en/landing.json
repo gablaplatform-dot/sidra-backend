@@ -54,6 +54,15 @@
         "title": "Pay after approval",
         "sub": "Only when they accept"
       }
+    },
+    "story": {
+      "shopTitle": "Shop on Gabla",
+      "boda": "Boda",
+      "bodaSub": "Quick and nearby",
+      "car": "Car",
+      "carSub": "Comfortable rides",
+      "fromPrice": "From {{price}}",
+      "browse": "Browse"
     }
   }
 }

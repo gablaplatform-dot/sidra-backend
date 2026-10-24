@@ -9,7 +9,7 @@ import SiteHeader from "../components/SiteHeader";
 import ProviderCard from "../components/ProviderCard";
 import { IconArrowRight, IconBike, IconBus, IconTicket, IconBox, IconCar, IconCart, IconChat, IconClockIcon, IconPin, IconSearch, IconShield, IconSparkles, IconStar, IconStore, IconTruck, IconWrench } from "../components/icons";
 import { ProviderCardsSkeleton, Skel } from "../components/Skeleton";
-import { mapCategoryDto } from "../lib/shopMappers";
+import { mapCategoryDto, mapProductDto } from "../lib/shopMappers";
 import MobileHome from "../components/mobilehome/MobileHome";
 import OrbitStage from "../components/home/OrbitStage";
 import ContactPhone from "../components/home/ContactPhone";
@@ -33,6 +33,7 @@ function DesktopHome() {
   const [session, setSessionState] = useState(() => getSession());
   const [categories, setCategories] = useState([]);
   const [orbitCategories, setOrbitCategories] = useState([]);
+  const [shopCards, setShopCards] = useState([]);
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -53,6 +54,25 @@ function DesktopHome() {
         setBusRoutes(popular?.items || []);
       })
       .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // The shop chapter of the hero: newest products, or the shop's top categories until there are products.
+  useEffect(() => {
+    let active = true;
+    const safe = (path) => request(path).catch(() => null);
+    Promise.all([safe("/listings/new-arrivals?limit=4&type=product"), safe("/product-categories/roots?limit=4")]).then(([arrivals, roots]) => {
+      if (!active) return;
+      const products = Array.isArray(arrivals?.items) ? arrivals.items.map((p) => mapProductDto(p)) : [];
+      if (products.length) {
+        setShopCards(products.slice(0, 4).map((p) => ({ kind: "product", id: p.id, to: `/shop/product/${p.id}`, name: p.name, price: p.price, image: p.image })));
+        return;
+      }
+      const cats = Array.isArray(roots?.items) ? roots.items.map(mapCategoryDto) : [];
+      setShopCards(cats.slice(0, 4).map((c) => ({ kind: "category", id: c.id, to: `/shop/${c.id}`, name: c.name, image: c.image })));
+    });
     return () => {
       active = false;
     };
@@ -155,7 +175,7 @@ function DesktopHome() {
       <SiteHeader session={session} onLogout={logout} />
 
       {/* ============ HERO: categories orbit the search, scatter on scroll ============ */}
-      <OrbitStage categories={orbitCategories} searchValue={searchValue} onSearchChange={setSearchValue} />
+      <OrbitStage categories={orbitCategories} shopCards={shopCards} busRoutes={busRoutes} searchValue={searchValue} onSearchChange={setSearchValue} />
 
       {/* ============ FIND / UNLOCK / BOOK (pinned phone) ============ */}
       <ContactPhone providers={phoneProviders} />

@@ -54,6 +54,15 @@
         "title": "ድሕሪ ምጽዳቕ ክፈል",
         "sub": "ምስ ተቐበሉ ጥራይ"
       }
+    },
+    "story": {
+      "shopTitle": "ኣብ ጋብላ ዕደጉ",
+      "boda": "ቦዳ",
+      "bodaSub": "ቅልጡፍን ቀረባን",
+      "car": "መኪና",
+      "carSub": "ምቹእ ጉዕዞ",
+      "fromPrice": "ካብ {{price}}",
+      "browse": "ርአ"
     }
   }
 }
