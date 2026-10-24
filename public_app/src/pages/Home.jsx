@@ -15,6 +15,8 @@ import OrbitStage from "../components/home/OrbitStage";
 import Reveal from "../components/home/Reveal";
 import { busApi } from "../lib/bus";
 
+const STAGE_CATEGORIES = 16;
+
 const FOOTER_LINKS = [
   { key: "shop", href: "/shop" },
   { key: "ride", href: "/ride" },
@@ -150,6 +152,12 @@ function DesktopHome() {
     setSessionState(null);
   };
 
+  // The finale of the hero story: the first sixteen categories come back out of the bowl.
+  const categoryCards = useMemo(
+    () => categories.slice(0, STAGE_CATEGORIES).map((c) => ({ kind: "tile", id: c.id, to: `/category/${c.id}`, name: c.name, image: c.image })),
+    [categories]
+  );
+
   // Real providers when there are some; until then the phone shows the categories so it is never empty.
   const phoneProviders = useMemo(
     () => (providers.length ? providers : categories.slice(0, 3).map((c) => ({ id: c.id, businessName: c.name }))),
@@ -161,38 +169,31 @@ function DesktopHome() {
       <SiteHeader session={session} onLogout={logout} />
 
       {/* ============ HERO STORY: categories orbit the search, fall into the bowl, which then visits Shop, Bus, Ride and Find/Unlock/Book and ends under the category cards ============ */}
-      <OrbitStage categories={orbitCategories} shopCards={shopCards} busRoutes={busRoutes} phoneProviders={phoneProviders} searchValue={searchValue} onSearchChange={setSearchValue}>
-    <section className="home-section hs-categories">
+      <OrbitStage categories={orbitCategories} shopCards={shopCards} categoryCards={categoryCards} busRoutes={busRoutes} phoneProviders={phoneProviders} searchValue={searchValue} onSearchChange={setSearchValue} />
 
-      {!loading && !categories.length ? <p className="home-empty">{t("home.categories.empty")}</p> : null}
-      {loading ? (
-        <div className="home-category-grid" role="status" aria-busy="true">
-          <span className="sr-only">{t("home.categories.loading")}</span>
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skel key={i} h={230} w="100%" r={22} />
-          ))}
-        </div>
+      {/* Categories beyond the sixteen the finale shows (when there are that many) continue as a plain grid. */}
+      {categories.length > STAGE_CATEGORIES ? (
+        <section className="home-section hs-categories hs-more">
+          <div className="home-category-grid">
+            {categories.slice(STAGE_CATEGORIES).map((c, idx) => (
+              <Reveal as={Link} delay={(idx % 4) * 90} to={`/category/${c.id}`} key={c.id} className="home-category-card">
+                <div className={`home-category-img ${c.image ? "" : "home-category-img-fallback"}`}>
+                  {c.image ? (
+                    <img src={c.image} alt="" loading="lazy" />
+                  ) : (
+                    <span className="home-category-fallback-mark">{initials(c.name)}</span>
+                  )}
+                  <div className="home-category-overlay" />
+                  <div className="hc-label">
+                    <strong className="home-category-name">{c.name}</strong>
+                    <span className="home-category-arrow"><IconArrowRight /></span>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </section>
       ) : null}
-      <div className="home-category-grid">
-        {categories.map((c, idx) => (
-          <Reveal as={Link} from="bowl" delay={(idx % 4) * 90} to={`/category/${c.id}`} key={c.id} className="home-category-card">
-            <div className={`home-category-img ${c.image ? "" : "home-category-img-fallback"}`}>
-              {c.image ? (
-                <img src={c.image} alt="" loading="lazy" />
-              ) : (
-                <span className="home-category-fallback-mark">{initials(c.name)}</span>
-              )}
-              <div className="home-category-overlay" />
-              <div className="hc-label">
-                <strong className="home-category-name">{c.name}</strong>
-                <span className="home-category-arrow"><IconArrowRight /></span>
-              </div>
-            </div>
-          </Reveal>
-        ))}
-      </div>
-    </section>
-      </OrbitStage>
 
       {error ? <div className="error-message home-error">{error}</div> : null}
 
@@ -213,7 +214,7 @@ function DesktopHome() {
         ) : providers.length ? (
           <div className="home-provider-grid">
             {providers.map((p, i) => (
-              <Reveal key={p.id} from="bowl" delay={(i % 4) * 90}>
+              <Reveal key={p.id} delay={(i % 4) * 90}>
                 <ProviderCard provider={p} categoryName={categoryName(p.categoryId)} />
               </Reveal>
             ))}
