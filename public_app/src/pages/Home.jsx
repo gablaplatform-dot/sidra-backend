@@ -7,7 +7,7 @@ import { clearSession, getSession, setSession } from "../lib/session";
 import { GOOGLE_CLIENT_ID, loadGoogleIdentity } from "../lib/google";
 import SiteHeader from "../components/SiteHeader";
 import ProviderCard from "../components/ProviderCard";
-import { IconArrowRight, IconBike, IconBus, IconTicket, IconBox, IconCar, IconCart, IconChat, IconClockIcon, IconPin, IconSearch, IconShield, IconSparkles, IconStar, IconStore, IconTruck, IconWrench } from "../components/icons";
+import { IconArrowRight, IconBike, IconBus, IconTicket, IconBox, IconCar, IconCart } from "../components/icons";
 import { ProviderCardsSkeleton, Skel } from "../components/Skeleton";
 import { mapCategoryDto, mapProductDto } from "../lib/shopMappers";
 import MobileHome from "../components/mobilehome/MobileHome";
@@ -179,26 +179,6 @@ function DesktopHome() {
 
       {/* ============ FIND / UNLOCK / BOOK (pinned phone) ============ */}
       <ContactPhone providers={phoneProviders} />
-
-      {/* ============ TRUST BAR ============ */}
-      <section className="home-trustbar">
-        <div className="home-trustbar-inner">
-          {[
-            [IconShield, "verified"],
-            [IconPin, "local"],
-            [IconStar, "rated"],
-            [IconClockIcon, "support"]
-          ].map(([Icon, key], i) => (
-            <Reveal key={key} className="home-trust-item" delay={i * 90}>
-              <span className="home-trust-icon"><Icon /></span>
-              <div className="home-trust-copy">
-                <strong>{t(`home.trustbar.${key}Title`)}</strong>
-                <span>{t(`home.trustbar.${key}Sub`)}</span>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
 
       {/* ============ PROMO CARDS DUO ============ */}
       <section className="home-section hs-promos">
