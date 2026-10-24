@@ -21,6 +21,33 @@ const smooth = (v, a, b) => {
 };
 const lerp = (a, b, t) => a + (b - a) * t;
 
+// Cubic-bezier easing (same maths as CSS): a quick start and a long, soft landing. Everything that moves uses it.
+const cubicBezier = (x1, y1, x2, y2) => {
+  const cx = 3 * x1;
+  const bx = 3 * (x2 - x1) - cx;
+  const ax = 1 - cx - bx;
+  const cy = 3 * y1;
+  const by = 3 * (y2 - y1) - cy;
+  const ay = 1 - cy - by;
+  const sampleX = (t) => ((ax * t + bx) * t + cx) * t;
+  const sampleY = (t) => ((ay * t + by) * t + cy) * t;
+  const slopeX = (t) => (3 * ax * t + 2 * bx) * t + cx;
+  return (x) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let t = x;
+    for (let i = 0; i < 6; i += 1) {
+      const err = sampleX(t) - x;
+      if (Math.abs(err) < 1e-4) break;
+      const d = slopeX(t);
+      if (Math.abs(d) < 1e-6) break;
+      t -= err / d;
+    }
+    return sampleY(clamp(t));
+  };
+};
+const ease = cubicBezier(0.2, 0.9, 0.25, 1);
+
 // The points that rise out of the bowl once the last category is inside, fanned out above it.
 const CHIPS = [
   { key: "categories", Icon: IconGrid, angle: 158 },
@@ -340,11 +367,11 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
         const nextT = blocks[b + 1].T;
         if (v < nextT) {
           const tr = (v - end) / (nextT - end);
-          const e = smooth(tr, 0, 1);
+          const e = ease(tr);
           bx = lerp(anchorX[b], anchorX[b + 1], e);
-          by = lerp(end + mouthStageY, nextT + mouthStageY, tr) - arc * Math.sin(Math.PI * tr);
+          by = lerp(end + mouthStageY, nextT + mouthStageY, e) - arc * Math.sin(Math.PI * e);
           bs = lerp(anchorS[b], anchorS[b + 1], e);
-          tilt = Math.sign(anchorX[b + 1] - anchorX[b]) * 14 * Math.sin(Math.PI * tr);
+          tilt = Math.sign(anchorX[b + 1] - anchorX[b]) * 14 * Math.sin(Math.PI * e);
           break;
         }
       }
@@ -379,13 +406,12 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
         // towards the mouth, then sinks behind the front lip.
         const start = 0.08 + 0.28 * order[i];
         const f = clamp((p - start) / 0.22);
-        const sideways = smooth(f, 0, 1);
-        const gravity = Math.pow(f, 2.1);
-        const x = lerp(ox, mouthX, sideways);
-        let y = lerp(oy, mouthY, gravity);
-        y += smooth(f, 0.78, 1) * bowl.bh * 0.36;
-        const s = lerp(os, 0.32, Math.pow(f, 0.8));
-        const spin = (i % 2 ? 1 : -1) * 30 * f;
+        const fe = ease(f);
+        const x = lerp(ox, mouthX, fe);
+        let y = lerp(oy, mouthY, fe);
+        y += smooth(fe, 0.8, 1) * bowl.bh * 0.36;
+        const s = lerp(os, 0.32, fe);
+        const spin = (i % 2 ? 1 : -1) * 30 * fe;
         el.style.transform = `translate3d(${x.toFixed(1)}px, ${(y + stageTop0).toFixed(1)}px, 0) translate(-50%, -50%) rotate(${spin.toFixed(1)}deg) scale(${s.toFixed(3)})`;
         el.style.opacity = f > 0 ? "1" : (0.82 + 0.18 * depthOnRing).toFixed(3);
         el.style.zIndex = String(Math.round(depthOnRing * 10));
@@ -431,7 +457,7 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
         const trail = trailRefs.current[j];
         if (!geo || !chip) continue;
         const g = clamp((p - (0.56 + 0.06 * j)) / 0.14) * (1 - leave);
-        const e = 1 - Math.pow(1 - g, 3);
+        const e = ease(g);
         const x = (1 - e) * (1 - e) * geo.mx + 2 * (1 - e) * e * geo.cxp + e * e * geo.tx;
         const y = (1 - e) * (1 - e) * geo.my + 2 * (1 - e) * e * geo.cyp + e * e * geo.ty;
         chip.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%) scale(${(0.25 + 0.75 * e).toFixed(3)})`;
@@ -456,7 +482,7 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
           if (!el) continue;
           let g = clamp((q - (0.04 + 0.05 * j)) / 0.14);
           if (!last) g *= 1 - smooth(q, 0.72 + 0.03 * j, 0.84 + 0.03 * j);
-          const e = 1 - Math.pow(1 - g, 3);
+          const e = ease(g);
           const tx = geos[j].x;
           const ty = top + geos[j].y;
           const cxp = bx + (tx - bx) * 0.25;
@@ -477,6 +503,94 @@ export default function OrbitStage({ categories, shopCards = [], busRoutes = [],
       observer.disconnect();
     };
   }, [tiles, bowl, size, blocks, chipGeo, cardGeo]);
+
+  // Nothing should stop half-way. Whenever the scrolling stops between two settled scenes, the page glides on to
+  // the nearest one in the direction you were heading, with a fast start and a long soft landing, so a started
+  // animation always plays through. Any wheel, touch or key press takes control straight back.
+  useEffect(() => {
+    const story = storyRef.current;
+    if (!story || !size.w || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+    const [b0, b1, b2, b3] = blocks;
+    const beats = [0, b0.P * 0.62, b0.P * 0.92, b1.T + b1.P * 0.42, b2.T + b2.P * 0.42, b3.T + b3.P * 0.62];
+    let idle = 0;
+    let anim = 0;
+    let lastY = window.scrollY;
+    let dir = 1;
+    let busy = false;
+
+    const storyTop = () => story.getBoundingClientRect().top + window.scrollY;
+    const toScroll = (v) => storyTop() + v - size.hdr;
+    const currentV = () => size.hdr - story.getBoundingClientRect().top;
+    const cancel = () => {
+      if (anim) cancelAnimationFrame(anim);
+      anim = 0;
+      busy = false;
+    };
+
+    const glideTo = (targetY) => {
+      cancel();
+      busy = true;
+      const from = window.scrollY;
+      const dist = targetY - from;
+      const dur = clamp(550 + Math.abs(dist) * 0.8, 700, 1700);
+      const t0 = performance.now();
+      const step = (now) => {
+        const k = clamp((now - t0) / dur);
+        window.scrollTo({ top: from + dist * ease(k), behavior: "instant" });
+        if (k < 1) anim = requestAnimationFrame(step);
+        else {
+          anim = 0;
+          busy = false;
+          lastY = window.scrollY;
+        }
+      };
+      anim = requestAnimationFrame(step);
+    };
+
+    const settle = () => {
+      if (busy) return;
+      const v = currentV();
+      if (v < -4 || v > beats[beats.length - 1] + 4) return; // outside the story: leave the page alone
+      // The two beats either side of where we stopped.
+      let lo = 0;
+      while (lo < beats.length - 1 && beats[lo + 1] <= v) lo += 1;
+      const hi = Math.min(beats.length - 1, lo + 1);
+      if (Math.abs(v - beats[lo]) < 6 || Math.abs(v - beats[hi]) < 6) return; // already settled
+      if (hi === lo) return;
+      const frac = (v - beats[lo]) / (beats[hi] - beats[lo]);
+      // Heading down: finish forwards once a fifth of the way; heading up: finish backwards once a fifth back.
+      const forward = dir > 0 ? frac > 0.2 : frac > 0.8;
+      glideTo(toScroll(forward ? beats[hi] : beats[lo]));
+    };
+
+    const onScroll = () => {
+      if (busy) return;
+      const y = window.scrollY;
+      if (Math.abs(y - lastY) > 0.5) dir = y > lastY ? 1 : -1;
+      lastY = y;
+      window.clearTimeout(idle);
+      idle = window.setTimeout(settle, 140);
+    };
+    const interrupt = () => {
+      if (!busy) return;
+      cancel();
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", interrupt, { passive: true });
+    window.addEventListener("touchstart", interrupt, { passive: true });
+    window.addEventListener("keydown", interrupt);
+    window.addEventListener("mousedown", interrupt);
+    return () => {
+      window.clearTimeout(idle);
+      cancel();
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", interrupt);
+      window.removeEventListener("touchstart", interrupt);
+      window.removeEventListener("keydown", interrupt);
+      window.removeEventListener("mousedown", interrupt);
+    };
+  }, [blocks, size]);
 
   const submit = (event) => {
     event.preventDefault();
