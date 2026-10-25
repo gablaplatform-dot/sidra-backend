@@ -71,6 +71,13 @@ export const buildAuthRoutes = ({ authController }) => {
     authController.googleLogin
   );
   router.get("/me", requireAuth(), authController.me);
+  // POST rather than DELETE: the confirmation (password + typed DELETE) travels in the body.
+  router.post(
+    "/me/delete",
+    requireAuth(),
+    validate(Joi.object({ password: Joi.string().max(128).allow("").optional(), confirm: Joi.string().max(20).required() })),
+    authController.deleteMe
+  );
   router.patch(
     "/me",
     requireAuth(),

@@ -18,7 +18,8 @@
     "logOut": "Log out",
     "signIn": "Sign in",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "deleteAccount": "Delete account"
   },
   "common": {
     "seeAll": "See all",

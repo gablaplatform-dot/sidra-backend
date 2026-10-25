@@ -100,6 +100,7 @@ export default function SiteHeader({ session, onLogout }) {
           <Link to="/cart" onClick={closeDrawer}>{t("nav.cart")}{cartCount > 0 ? ` (${cartCount})` : ""}</Link>
           {session ? <Link to="/orders" onClick={closeDrawer}>{t("nav.myOrders")}</Link> : null}
           {isProvider ? <Link to="/profile" onClick={closeDrawer}>{t("nav.profile")}</Link> : null}
+          {session ? <Link to="/account/delete" onClick={closeDrawer}>{t("nav.deleteAccount")}</Link> : null}
         </nav>
         {session ? (
           <button type="button" className="cta-button drawer-cta shop-themed-cta" onClick={() => { closeDrawer(); onLogout(); }}>{t("nav.logOut")}</button>

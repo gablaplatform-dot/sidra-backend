@@ -18,7 +18,8 @@
     "logOut": "Ka bax",
     "signIn": "Soo gal",
     "openMenu": "Fur liiska",
-    "closeMenu": "Xir liiska"
+    "closeMenu": "Xir liiska",
+    "deleteAccount": "Tirtir akoonka"
   },
   "common": {
     "seeAll": "Arag dhammaan",

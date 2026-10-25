@@ -4617,3 +4617,29 @@ textarea.docs-input { min-height: 84px; }
 .aud-picker { margin-bottom: 22px; }
 .profile-info-form textarea { margin-bottom: 8px; }
 .profile-info-form .profile-save-button { margin-top: 22px; }
+
+/* ---- Delete account ---- */
+.da-page { max-width: 640px; margin: 0 auto; padding: 28px 5vw 72px; display: grid; gap: 16px; }
+.da-card {
+  background: #fff; border: 1px solid #e3e8f2; border-radius: 22px; padding: 24px;
+  box-shadow: 0 10px 30px rgba(11, 32, 70, 0.06); display: grid; gap: 12px; justify-items: start;
+}
+.da-card h1 { margin: 0; font-size: 28px; color: #0b2046; }
+.da-card h2 { margin: 6px 0 0; font-size: 16px; color: #0b2046; }
+.da-card p, .da-card li { margin: 0; color: #475569; line-height: 1.55; }
+.da-card ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.da-lead { font-size: 16px; }
+.da-badge { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: #fee2e2; color: #b91c1c; }
+.da-badge svg { width: 22px; height: 22px; }
+.da-badge-ok { background: #dcfce7; color: #15803d; }
+.da-done { justify-items: center; text-align: center; padding: 40px 24px; }
+.da-field { display: grid; gap: 6px; width: 100%; font-weight: 700; font-size: 14px; color: #0b2046; }
+.da-field input { height: 48px; border-radius: 14px; border: 1px solid #cbd5e1; padding: 0 14px; font: inherit; font-weight: 500; background: #f8fafc; }
+.da-field input:focus { outline: 2px solid #2563eb; background: #fff; }
+.da-card .error-message { width: 100%; }
+.da-actions { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
+.da-danger {
+  height: 48px; padding: 0 22px; border: 0; border-radius: 999px; background: #dc2626; color: #fff;
+  font: inherit; font-weight: 800; cursor: pointer;
+}
+.da-danger:disabled { opacity: 0.55; cursor: not-allowed; }

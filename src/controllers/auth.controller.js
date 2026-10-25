@@ -58,6 +58,15 @@ export class AuthController {
     }
   };
 
+  deleteMe = async (req, res, next) => {
+    try {
+      const result = await this.authService.deleteMe({ actorUserId: req.user.id, password: req.body?.password, confirm: req.body?.confirm });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   updateMe = async (req, res, next) => {
     try {
       const result = await this.authService.updateMe({ actorUserId: req.user.id, patch: req.body });

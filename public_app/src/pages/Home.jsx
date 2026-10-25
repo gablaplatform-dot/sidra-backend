@@ -44,7 +44,8 @@ const FOOTER_LINKS = [
   { key: "ride", href: "/ride" },
   { key: "busTickets", href: "/bus" },
   { key: "categories", href: "/home#categories" },
-  { key: "providers", href: "/home#providers" }
+  { key: "providers", href: "/home#providers" },
+  { key: "deleteAccount", href: "/account/delete" }
 ];
 
 const initials = (value) => (value || "G").trim().slice(0, 1).toUpperCase();

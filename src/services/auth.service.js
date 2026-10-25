@@ -3,6 +3,7 @@ import { prisma } from "../config/db.js";
 import { env } from "../config/env.js";
 import { verifyGoogleIdToken } from "../utils/googleAuth.js";
 import { SYSTEM_ROLES } from "../constants/permissions.js";
+import { forgetUserActive } from "../middlewares/auth.middleware.js";
 
 const uniqueError = (e, field) => e?.code === "P2002" && Array.isArray(e?.meta?.target) && e.meta.target.includes(field);
 
@@ -302,6 +303,106 @@ export class AuthService {
     return { user: await this.userDto(user) };
   }
 
+
+  // Account deletion (required by Google Play). The account is anonymised rather than erased: orders, payments,
+  // tickets and wallet history that other people (providers, bus operators, the platform's books) still rely on are
+  // kept, but they no longer point to a name, email, phone or sign-in. Sign-in stops working straight away.
+  async deleteMe({ actorUserId, password, confirm }) {
+    const user = await prisma.user.findUnique({ where: { id: actorUserId } });
+    if (!user) throw new AppError({ message: "User not found", statusCode: 404, code: "USER_NOT_FOUND" });
+    if (user.role !== "user" && user.role !== "provider") {
+      throw new AppError({
+        message: "Driver, bus operator and admin accounts are removed by our team. Please contact support to delete this account.",
+        statusCode: 403,
+        code: "DELETE_VIA_SUPPORT"
+      });
+    }
+    if (String(confirm ?? "").trim().toUpperCase() !== "DELETE") {
+      throw new AppError({ message: "Type DELETE to confirm.", statusCode: 400, code: "CONFIRMATION_REQUIRED" });
+    }
+    if (user.authProvider === "password" && user.passwordHash) {
+      const ok = password ? await this.verifyPassword({ plain: password, hash: user.passwordHash }) : false;
+      if (!ok) throw new AppError({ message: "Your password is not correct.", statusCode: 400, code: "INVALID_PASSWORD" });
+    }
+
+    const blocked = (message, code) => new AppError({ message, statusCode: 409, code });
+    const now = new Date();
+    const provider = user.role === "provider" ? await prisma.provider.findUnique({ where: { userId: user.id }, include: { wallets: true } }) : null;
+
+    const openRide = await prisma.rideTrip.count({ where: { riderId: user.id, status: { in: ["searching", "matched", "arrived", "in_progress"] } } });
+    if (openRide) throw blocked("You have a ride in progress. Finish or cancel it first.", "DELETE_BLOCKED_RIDE");
+    const tickets = await prisma.busBooking.count({ where: { userId: user.id, status: "confirmed", trip: { departureAt: { gt: now } } } });
+    if (tickets) throw blocked("You have bus tickets for upcoming trips. Cancel them or travel first.", "DELETE_BLOCKED_TICKETS");
+    const openOrders = await prisma.order.count({ where: { userId: user.id, status: { in: ["pending", "confirmed", "shipped"] } } });
+    if (openOrders) throw blocked("You have orders that are not delivered yet. Wait until they are completed or cancel them.", "DELETE_BLOCKED_ORDERS");
+    const openBookings = await prisma.serviceBooking.count({ where: { userId: user.id, status: { in: ["pending", "confirmed"] } } });
+    if (openBookings) throw blocked("You have service bookings that are still open. Cancel them or wait until they are done.", "DELETE_BLOCKED_BOOKINGS");
+
+    if (provider) {
+      const balance = Number(provider.wallets?.balance ?? 0);
+      if (balance > 0) throw blocked("Withdraw your wallet balance before deleting the account.", "DELETE_BLOCKED_BALANCE");
+      const pendingPayouts = await prisma.withdrawalRequest.count({ where: { providerId: provider.id, status: { in: ["requested", "approved"] } } });
+      if (pendingPayouts) throw blocked("You have a withdrawal that is still being processed.", "DELETE_BLOCKED_PAYOUT");
+      const incomingOrders = await prisma.order.count({ where: { providerId: provider.id, status: { in: ["pending", "confirmed", "shipped"] } } });
+      if (incomingOrders) throw blocked("You have customer orders that are not completed yet.", "DELETE_BLOCKED_CUSTOMER_ORDERS");
+      const incomingBookings = await prisma.serviceBooking.count({ where: { providerId: provider.id, status: { in: ["pending", "confirmed"] } } });
+      if (incomingBookings) throw blocked("You have customer bookings that are still open.", "DELETE_BLOCKED_CUSTOMER_BOOKINGS");
+    }
+
+    // The provider's listings: remove them, or (when an old order still points at one) blank and hide them.
+    if (provider) {
+      const listings = await prisma.serviceProduct.findMany({ where: { providerId: provider.id }, select: { id: true } });
+      for (const listing of listings) {
+        try {
+          await prisma.serviceProduct.delete({ where: { id: listing.id } });
+        } catch {
+          await prisma.serviceProduct.update({
+            where: { id: listing.id },
+            data: { status: "suspended", name: "Removed item", description: "", media: {}, customFields: {}, featured: false, sku: null }
+          });
+        }
+      }
+    }
+
+    const gone = "Deleted user";
+    await prisma.$transaction(async (tx) => {
+      if (provider) {
+        await tx.mediaAsset.deleteMany({ where: { providerId: provider.id } });
+        await tx.promotion.deleteMany({ where: { providerId: provider.id } });
+        await tx.favorite.deleteMany({ where: { providerId: provider.id } });
+        await tx.provider.update({
+          where: { id: provider.id },
+          data: {
+            businessName: "Deleted business", description: "", contact: {}, media: {}, customFields: {}, location: {}, availability: {}, verification: {},
+            lat: null, lng: null, geohash5: null, geohash6: null, district: null, publicSlug: null,
+            isApproved: false, moderationStatus: "suspended", onlinePaymentsEnabled: false
+          }
+        });
+      }
+      await tx.mediaAsset.deleteMany({ where: { ownerId: user.id } });
+      await tx.favorite.deleteMany({ where: { userId: user.id } });
+      await tx.contactUnlock.deleteMany({ where: { userId: user.id } });
+      await tx.interestEvent.deleteMany({ where: { userId: user.id } });
+      await tx.searchEvent.deleteMany({ where: { userId: user.id } });
+      await tx.profileVisit.updateMany({ where: { userId: user.id }, data: { userId: null, userAgent: null } });
+      await tx.contactEvent.updateMany({ where: { userId: user.id }, data: { userId: null } });
+      await tx.inquiry.updateMany({ where: { userId: user.id }, data: { name: gone, email: null, phone: null } });
+      await tx.order.updateMany({ where: { userId: user.id }, data: { customer: { name: gone } } });
+      await tx.serviceBooking.updateMany({ where: { userId: user.id }, data: { customer: { name: gone } } });
+      await tx.busBooking.updateMany({ where: { userId: user.id }, data: { passengerName: gone, passengerPhone: "", passengerEmail: null, payPhone: null } });
+      await tx.rideTrip.updateMany({ where: { riderId: user.id }, data: { pickupAddress: "", dropoffAddress: "" } });
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          name: gone, email: null, phone: null, passwordHash: "", googleSub: null, authProvider: "deleted", avatarUrl: null,
+          profile: { deletedAt: now.toISOString() }, isActive: false
+        }
+      });
+      await tx.auditLog.create({ data: { actorId: user.id, action: "account.deleted", entity: "user", entityId: user.id, metadata: { role: user.role } } });
+    });
+    forgetUserActive(user.id);
+    return { deleted: true };
+  }
 
   async ensureSuperAdminRole() {
     const superAdmin = SYSTEM_ROLES.find((r) => r.key === "super_admin");

@@ -10,6 +10,7 @@ import Home from "./pages/Home";
 import CategoryDetail from "./pages/CategoryDetail";
 import ProviderDetail from "./pages/ProviderDetail";
 import Profile from "./pages/Profile";
+import DeleteAccount from "./pages/DeleteAccount";
 import ListingForm from "./pages/ListingForm";
 import SearchResults from "./pages/SearchResults";
 import Cart from "./pages/Cart";
@@ -63,6 +64,7 @@ export default function App() {
       <Route path="/category/:categoryId" element={<CategoryDetail />} />
       <Route path="/provider/:providerId" element={<ProviderDetail />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/account/delete" element={<DeleteAccount />} />
       <Route path="/profile/listings/new" element={<ListingForm />} />
       <Route path="/profile/listings/:listingId/edit" element={<ListingForm />} />
       <Route path="/search" element={<SearchResults />} />

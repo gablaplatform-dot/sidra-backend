@@ -18,7 +18,8 @@
     "logOut": "Vaamu",
     "signIn": "Yingira",
     "openMenu": "Ggulawo olukalala",
-    "closeMenu": "Ggalawo olukalala"
+    "closeMenu": "Ggalawo olukalala",
+    "deleteAccount": "Ggyawo akawunti"
   },
   "common": {
     "seeAll": "Laba byonna",
