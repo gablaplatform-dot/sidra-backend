@@ -1,0 +1,103 @@
+/* The animated launch splash (see components/AppSplash.jsx): blue and yellow. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 46%, #1d40af 0%, #0b2046 62%, #06132b 100%);
+  opacity: 1;
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.splash.is-out { opacity: 0; transform: scale(1.06); pointer-events: none; }
+.splash-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150vmin;
+  height: 150vmin;
+  transform: translate(-50%, -50%) scale(0.4);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(250, 204, 21, 0.34), rgba(250, 204, 21, 0.08) 55%, rgba(250, 204, 21, 0) 100%);
+  opacity: 0;
+  animation: splash-glow 2.4s ease-out 0.55s forwards;
+}
+.splash-stage { position: relative; display: flex; flex-direction: column; align-items: center; width: min(82vw, 380px); }
+/* 1. a point of light */
+.splash-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: #fef08a;
+  box-shadow: 0 0 18px 6px rgba(250, 204, 21, 0.8), 0 0 60px 20px rgba(250, 204, 21, 0.35);
+  animation: splash-dot 0.9s ease-out forwards;
+}
+/* 2. which stretches into a line of light */
+.splash-line {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(250, 204, 21, 0), #fde68a 30%, #facc15 50%, #fde68a 70%, rgba(250, 204, 21, 0));
+  box-shadow: 0 0 16px rgba(250, 204, 21, 0.8);
+  transform: translateX(-50%) scaleX(0);
+  opacity: 0;
+  animation: splash-line 1.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.35s forwards;
+}
+/* 3. the wordmark is unveiled from the centre */
+.splash-mark-wrap { position: relative; width: 100%; aspect-ratio: 3184 / 480; }
+.splash-mark, .splash-sheen {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: url("/brand/gabla-wordmark.png") center / contain no-repeat;
+  mask: url("/brand/gabla-wordmark.png") center / contain no-repeat;
+}
+.splash-mark {
+  background: linear-gradient(180deg, #fef08a 0%, #facc15 60%, #f59e0b 100%);
+  filter: drop-shadow(0 0 18px rgba(250, 204, 21, 0.5));
+  clip-path: inset(0 50% 0 50%);
+  opacity: 0;
+  transform: scale(1.14);
+  animation: splash-mark 1.15s cubic-bezier(0.2, 0.8, 0.2, 1) 0.85s forwards;
+}
+.splash-sheen {
+  background: linear-gradient(105deg, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0.95) 50%, rgba(255, 255, 255, 0) 62%) 220% 0 / 260% 100% no-repeat;
+  animation: splash-sheen 1s ease-in-out 1.85s forwards;
+}
+.splash-sparks { position: absolute; left: 0; right: 0; top: 50%; height: 0; }
+.splash-sparks i { position: absolute; top: 0; border-radius: 50%; background: #fef08a; box-shadow: 0 0 8px rgba(250, 204, 21, 0.9); opacity: 0; animation-name: splash-spark; animation-timing-function: ease-out; animation-fill-mode: forwards; }
+.splash-tag {
+  margin: 22px 0 0;
+  color: #bfdbfe;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: splash-tag 0.8s ease-out 2.15s forwards;
+}
+@keyframes splash-dot { 0% { transform: scale(0.2); opacity: 0; } 35% { transform: scale(1.6); opacity: 1; } 100% { transform: scale(0.9); opacity: 0; } }
+@keyframes splash-line { 0% { opacity: 0; transform: translateX(-50%) scaleX(0); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) scaleX(1); } }
+@keyframes splash-mark { 0% { opacity: 0; clip-path: inset(0 50% 0 50%); filter: blur(12px) drop-shadow(0 0 18px rgba(250, 204, 21, 0.5)); transform: scale(1.14); } 100% { opacity: 1; clip-path: inset(0 0 0 0); filter: blur(0) drop-shadow(0 0 18px rgba(250, 204, 21, 0.5)); transform: scale(1); } }
+@keyframes splash-sheen { 0% { background-position: 220% 0; } 100% { background-position: -120% 0; } }
+@keyframes splash-glow { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); } 60% { opacity: 1; } 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(1); } }
+@keyframes splash-tag { to { opacity: 1; transform: none; } }
+@keyframes splash-spark { 0% { opacity: 0; transform: translateY(18px) scale(0.5); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateY(-70px) scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .splash-dot, .splash-line, .splash-sparks { display: none; }
+  .splash-mark { animation: splash-fade 0.4s ease forwards; clip-path: none; filter: none; transform: none; }
+  .splash-sheen, .splash-glow { animation: none; }
+  .splash-tag { animation: splash-fade 0.4s ease 0.2s forwards; transform: none; }
+  @keyframes splash-fade { to { opacity: 1; } }
+}

@@ -34,27 +34,6 @@
       "stepPay": "Pay to confirm",
       "payNow": "Pay now"
     },
-    "endTitle1": "Every provider,",
-    "endTitle2": "one Gabla.",
-    "endSub": "Pick a category, see who is near you, unlock their contact and book. You only pay once they approve.",
-    "chips": {
-      "categories": {
-        "title": "Every category",
-        "sub": "Services, shop & rides"
-      },
-      "near": {
-        "title": "Near you",
-        "sub": "See who is close"
-      },
-      "unlock": {
-        "title": "Unlock contact",
-        "sub": "One small fee"
-      },
-      "approval": {
-        "title": "Pay after approval",
-        "sub": "Only when they accept"
-      }
-    },
     "story": {
       "shopTitle": "Shop on Gabla",
       "boda": "Boda",

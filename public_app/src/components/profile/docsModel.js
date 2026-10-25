@@ -9,7 +9,7 @@ export const ACCENT_PALETTE = [
   { key: "royalBlue", name: "Royal blue", value: "#1d4ed8" },
   { key: "teal", name: "Teal", value: "#0f766e" },
   { key: "emerald", name: "Emerald", value: "#047857" },
-  { key: "orange", name: "Orange", value: "#ea580c" },
+  { key: "orange", name: "Orange", value: "#2563eb" },
   { key: "burgundy", name: "Burgundy", value: "#9f1239" },
   { key: "plum", name: "Plum", value: "#6d28d9" },
   { key: "charcoal", name: "Charcoal", value: "#1f2937" }

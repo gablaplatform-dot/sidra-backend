@@ -34,27 +34,6 @@
       "stepPay": "Sasula okukakasa",
       "payNow": "Sasula kati"
     },
-    "endTitle1": "Buli muwa obuweereza,",
-    "endTitle2": "Gabla emu.",
-    "endSub": "Londa ekika, laba abali okumpi naawe, ggulawo okukwatagana obbuukinge. Osasula bokka nga bakkirizza.",
-    "chips": {
-      "categories": {
-        "title": "Buli kika",
-        "sub": "Obuweereza, dduuka n'entambula"
-      },
-      "near": {
-        "title": "Okumpi naawe",
-        "sub": "Laba abali okumpi"
-      },
-      "unlock": {
-        "title": "Ggulawo okukwatagana",
-        "sub": "Ensimbi entono"
-      },
-      "approval": {
-        "title": "Sasula nga bakkirizza",
-        "sub": "Bokka nga bakkirizza"
-      }
-    },
     "story": {
       "shopTitle": "Gula ku Gabla",
       "boda": "Boda",

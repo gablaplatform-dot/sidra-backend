@@ -14,6 +14,16 @@ import OrbitStage from "../components/home/OrbitStage";
 import Reveal from "../components/home/Reveal";
 import { busApi } from "../lib/bus";
 
+// A different mix on every visit: shuffled once per page load, so re-renders do not reshuffle.
+const shuffled = (items) => {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+
 const STAGE_CATEGORIES_DESKTOP = 16;
 const STAGE_CATEGORIES_PHONE = 12;
 
@@ -58,9 +68,9 @@ function DesktopHome() {
   useEffect(() => {
     let active = true;
     busApi
-      .popularRoutes(6)
+      .popularRoutes(12)
       .then((popular) => {
-        if (active) setBusRoutes(popular?.items || []);
+        if (active) setBusRoutes(shuffled(popular?.items || []));
       })
       .catch(() => {});
     return () => {
@@ -72,15 +82,15 @@ function DesktopHome() {
   useEffect(() => {
     let active = true;
     const safe = (path) => request(path).catch(() => null);
-    Promise.all([safe("/listings/new-arrivals?limit=4&type=product"), safe("/product-categories/roots?limit=4")]).then(([arrivals, roots]) => {
+    Promise.all([safe("/listings/new-arrivals?limit=24&type=product"), safe("/product-categories/roots?limit=12")]).then(([arrivals, roots]) => {
       if (!active) return;
       const products = Array.isArray(arrivals?.items) ? arrivals.items.map((p) => mapProductDto(p)) : [];
       if (products.length) {
-        setShopCards(products.slice(0, 4).map((p) => ({ kind: "product", id: p.id, to: `/shop/product/${p.id}`, name: p.name, price: p.price, image: p.image })));
+        setShopCards(shuffled(products).slice(0, 4).map((p) => ({ kind: "product", id: p.id, to: `/shop/product/${p.id}`, name: p.name, price: p.price, image: p.image })));
         return;
       }
       const cats = Array.isArray(roots?.items) ? roots.items.map(mapCategoryDto) : [];
-      setShopCards(cats.slice(0, 4).map((c) => ({ kind: "category", id: c.id, to: `/shop/${c.id}`, name: c.name, image: c.image })));
+      setShopCards(shuffled(cats).slice(0, 4).map((c) => ({ kind: "category", id: c.id, to: `/shop/${c.id}`, name: c.name, image: c.image })));
     });
     return () => {
       active = false;
@@ -97,7 +107,7 @@ function DesktopHome() {
     ])
       .then(([categoryResult, providerResult]) => {
         if (!active) return;
-        const rawCats = categoryResult?.items || categoryResult || [];
+        const rawCats = shuffled(categoryResult?.items || categoryResult || []);
         setCategories(rawCats.map(mapCategoryDto));
         // The ring wants about sixteen tiles: top-level categories first, then their subcategories to fill it.
         const flat = [...rawCats, ...rawCats.flatMap((c) => c.children || [])];

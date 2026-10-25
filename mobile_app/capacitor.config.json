@@ -2,7 +2,7 @@
   "appId": "com.devcraft.gabla",
   "appName": "Gabla",
   "webDir": "www",
-  "backgroundColor": "#FFFFFF",
+  "backgroundColor": "#0B2046",
   "ios": {
     "contentInset": "always"
   },
@@ -12,9 +12,9 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 1500,
+      "launchShowDuration": 3000,
       "launchAutoHide": true,
-      "backgroundColor": "#FFFFFF",
+      "backgroundColor": "#0B2046",
       "showSpinner": false,
       "androidScaleType": "CENTER_INSIDE"
     },

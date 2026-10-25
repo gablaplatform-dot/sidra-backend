@@ -3,7 +3,7 @@
 .aud-hint { margin: 0; color: #64748b; font-size: 13px; line-height: 1.45; }
 .aud-chips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 36px; align-items: center; }
 .aud-everyone { padding: 6px 14px; border-radius: 999px; background: #f1f5f9; color: #475569; font-size: 13px; font-weight: 700; }
-.aud-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 999px; background: #fff1e6; color: #9a3412; font-size: 13px; font-weight: 700; }
+.aud-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 999px; background: #e8f0ff; color: #1e40af; font-size: 13px; font-weight: 700; }
 .aud-chip em { font-style: normal; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #fef3c7; color: #92400e; }
 .aud-chip.is-pending { background: #f8fafc; color: #475569; box-shadow: inset 0 0 0 1.5px #cbd5e1; }
 .aud-chip button { border: 0; width: 20px; height: 20px; border-radius: 50%; background: rgba(15, 23, 42, 0.08); color: inherit; cursor: pointer; line-height: 1; }
@@ -14,11 +14,11 @@
 .aud-list { max-height: 240px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 4px; display: grid; }
 .aud-opt { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; color: #0f172a; }
 .aud-opt:hover { background: #f8fafc; }
-.aud-opt.is-on { background: #fff7ed; font-weight: 700; }
-.aud-opt input { width: 17px; height: 17px; accent-color: #ea580c; }
+.aud-opt.is-on { background: #eff6ff; font-weight: 700; }
+.aud-opt input { width: 17px; height: 17px; accent-color: #2563eb; }
 .aud-opt small { margin-left: auto; color: #94a3b8; font-weight: 700; }
 .aud-empty { margin: 6px 10px; color: #94a3b8; font-size: 13px; }
-.aud-add { margin: 4px; padding: 10px 12px; border: 1.5px dashed #ea580c; border-radius: 10px; background: #fff7ed; color: #9a3412; font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+.aud-add { margin: 4px; padding: 10px 12px; border: 1.5px dashed #2563eb; border-radius: 10px; background: #eff6ff; color: #1e40af; font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
 
 /* Provider profile chips */
 .aud-serves { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }

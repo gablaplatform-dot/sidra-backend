@@ -34,27 +34,6 @@
       "stepPay": "Bixi si loo xaqiijiyo",
       "payNow": "Hadda bixi"
     },
-    "endTitle1": "Bixiye kasta,",
-    "endTitle2": "hal Gabla.",
-    "endSub": "Dooro qayb, arag cidda kuu dhow, fur xiriirkooda oo buug. Waxaad bixisaa kaliya marka ay ogolaadaan.",
-    "chips": {
-      "categories": {
-        "title": "Qayb kasta",
-        "sub": "Adeegyo, dukaan & gaari"
-      },
-      "near": {
-        "title": "Kuu dhow",
-        "sub": "Arag cidda dhow"
-      },
-      "unlock": {
-        "title": "Fur xiriirka",
-        "sub": "Lacag yar oo hal mar ah"
-      },
-      "approval": {
-        "title": "Bixi kadib ogolaansho",
-        "sub": "Marka ay aqbalaan oo keliya"
-      }
-    },
     "story": {
       "shopTitle": "Ka dukaamayso Gabla",
       "boda": "Boda",

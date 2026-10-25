@@ -19,7 +19,7 @@
   position: relative;
   overflow: hidden;
   border: 0;
-  background: radial-gradient(60% 140% at 10% 0%, rgba(234, 88, 12, 0.28), transparent 60%), linear-gradient(135deg, #0b2046 0%, #06132b 100%);
+  background: radial-gradient(60% 140% at 10% 0%, rgba(37, 99, 235, 0.28), transparent 60%), linear-gradient(135deg, #0b2046 0%, #06132b 100%);
 }
 .home-landing .home-trustbar-inner { padding: 40px 5vw; gap: 28px; }
 .home-landing .home-trust-item { align-items: center; gap: 16px; padding: 4px; }
@@ -62,7 +62,7 @@
   width: 0;
   height: 4px;
   border-radius: 4px;
-  background: linear-gradient(90deg, #ea580c, #facc15);
+  background: linear-gradient(90deg, #2563eb, #facc15);
   transition: width 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.25s;
 }
 .home-landing .is-in .home-section-title::after { width: 64px; }
@@ -105,7 +105,7 @@
 .home-landing .home-promo-shop {
   background:
     radial-gradient(rgba(255, 255, 255, 0.16) 1.2px, transparent 1.4px) 0 0 / 22px 22px,
-    linear-gradient(100deg, #7c2d12 0%, #c2410c 55%, #f97316 100%);
+    linear-gradient(100deg, #172554 0%, #1d4ed8 55%, #3b82f6 100%);
 }
 .home-landing .home-promo::before {
   content: "";
@@ -152,7 +152,7 @@
   padding: 48px 48px;
   border-radius: 32px;
   background:
-    radial-gradient(900px 360px at 100% 0%, rgba(234, 88, 12, 0.55), transparent 60%),
+    radial-gradient(900px 360px at 100% 0%, rgba(37, 99, 235, 0.55), transparent 60%),
     radial-gradient(rgba(255, 255, 255, 0.1) 1.2px, transparent 1.4px) 0 0 / 24px 24px,
     linear-gradient(120deg, #06132b 0%, #0b2046 55%, #17386f 100%);
   box-shadow: 0 34px 70px -38px rgba(6, 19, 43, 0.9);
@@ -170,9 +170,9 @@
 .home-landing .bus-promo-form select,
 .home-landing .bus-promo-form input { padding: 14px 14px; border-radius: 14px; border-color: #dbe2ea; font-weight: 600; color: #0b2046; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
 .home-landing .bus-promo-form select:focus,
-.home-landing .bus-promo-form input:focus { outline: none; border-color: #ea580c; box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.14); }
-.home-landing .bus-promo-btn { padding: 15px 18px; border-radius: 14px; box-shadow: 0 16px 30px -16px rgba(234, 88, 12, 0.9); transition: transform 0.15s ease, box-shadow 0.15s ease; }
-.home-landing .bus-promo-btn:hover { transform: translateY(-2px); box-shadow: 0 22px 36px -16px rgba(234, 88, 12, 1); }
+.home-landing .bus-promo-form input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14); }
+.home-landing .bus-promo-btn { padding: 15px 18px; border-radius: 14px; box-shadow: 0 16px 30px -16px rgba(37, 99, 235, 0.9); transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.home-landing .bus-promo-btn:hover { transform: translateY(-2px); box-shadow: 0 22px 36px -16px rgba(37, 99, 235, 1); }
 .home-landing .bus-promo-form .bus-link { color: #0b2046; font-weight: 700; font-size: 13px; }
 
 /* ---------- categories ---------- */
@@ -195,7 +195,7 @@
 .home-landing .home-category-card:hover .home-category-img { transform: none; }
 .home-landing .home-category-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1); }
 .home-landing .home-category-card:hover .home-category-img img { transform: scale(1.1); }
-.home-landing .home-category-img-fallback { background: linear-gradient(145deg, #f97316 0%, #c2410c 55%, #7c2d12 100%); display: flex; align-items: center; justify-content: center; }
+.home-landing .home-category-img-fallback { background: linear-gradient(145deg, #3b82f6 0%, #1d4ed8 55%, #172554 100%); display: flex; align-items: center; justify-content: center; }
 .home-landing .home-category-fallback-mark { color: rgba(255, 255, 255, 0.9); font-size: 72px; font-weight: 800; transition: transform 0.6s ease; }
 .home-landing .home-category-card:hover .home-category-fallback-mark { transform: scale(1.14) rotate(-4deg); }
 /* dark fade at the bottom so the white name always reads, whatever the photo */
@@ -219,7 +219,7 @@
 }
 .home-landing .home-category-card:hover .home-category-arrow,
 .home-landing .home-category-card:focus-visible .home-category-arrow { transform: none; opacity: 1; background: #facc15; }
-.home-landing .home-category-card:focus-visible { outline: 3px solid #ea580c; outline-offset: 3px; }
+.home-landing .home-category-card:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
 .home-landing .home-category-arrow svg { width: 16px; height: 16px; }
 
 /* ---------- providers ---------- */
@@ -245,7 +245,7 @@
 .home-landing .home-footer { margin-top: 56px; background: #06132b; color: #b9c6e0; }
 .home-landing .home-footer-inner { max-width: 1400px; margin: 0 auto; padding: 36px 5vw; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
 .home-landing .home-footer-brand { display: inline-flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font-size: 20px; }
-.home-landing .home-footer-brand .brand-mark { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; background: #ea580c; color: #fff; font-weight: 800; }
+.home-landing .home-footer-brand .brand-mark { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; background: #2563eb; color: #fff; font-weight: 800; }
 .home-landing .home-footer-links { display: flex; flex-wrap: wrap; gap: 8px 24px; }
 .home-landing .home-footer-links a { color: #cbd7f0; font-size: 14px; font-weight: 600; text-decoration: none; transition: color 0.15s ease; }
 .home-landing .home-footer-links a:hover { color: #facc15; }
@@ -267,7 +267,7 @@
 }
 
 /* Categories without a photo: a bright gradient tile with big soft rings instead of a photo fade. */
-.home-landing .home-category-img-fallback { position: relative; background: linear-gradient(150deg, #fb923c 0%, #ea580c 45%, #9a3412 100%); }
+.home-landing .home-category-img-fallback { position: relative; background: linear-gradient(150deg, #60a5fa 0%, #2563eb 45%, #1e40af 100%); }
 .home-landing .home-category-img-fallback::before,
 .home-landing .home-category-img-fallback::after { content: ""; position: absolute; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.22); pointer-events: none; transition: transform 0.8s ease; }
 .home-landing .home-category-img-fallback::before { width: 150%; aspect-ratio: 1; left: -25%; top: -48%; }

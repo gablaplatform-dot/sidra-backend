@@ -34,7 +34,7 @@ function PinMap({ location }) {
         new google.maps.Marker({
           position: center,
           map,
-          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: "#ea580c", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 3 }
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: "#2563eb", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 3 }
         });
       })
       .catch(() => active && setFailed(true));

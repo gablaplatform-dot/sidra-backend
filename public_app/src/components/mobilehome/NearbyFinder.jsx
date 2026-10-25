@@ -19,7 +19,7 @@ const MIN_CHARS = 2;
 
 // The orange map pin; a number shows when several matches share one spot.
 const pinIcon = (google, { count, active }) => {
-  const fill = active ? "#0b2046" : "#ea580c";
+  const fill = active ? "#0b2046" : "#2563eb";
   const size = active ? 46 : 38;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${Math.round(size * 1.25)}" viewBox="0 0 44 55"><path d="M22 53C22 53 4 33 4 21A18 18 0 0 1 40 21C40 33 22 53 22 53Z" fill="${fill}" stroke="#fff" stroke-width="3"/><circle cx="22" cy="21" r="${count > 1 ? 11 : 7}" fill="#fff"/>${count > 1 ? `<text x="22" y="26" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="800" fill="${fill}">${count > 9 ? "9+" : count}</text>` : ""}</svg>`;
   return { url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`, scaledSize: new google.maps.Size(size, Math.round(size * 1.25)), anchor: new google.maps.Point(size / 2, Math.round(size * 1.25)) };

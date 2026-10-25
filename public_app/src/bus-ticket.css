@@ -4,7 +4,7 @@
    =================================================================================== */
 
 /* ---------- backdrop ---------- */
-.bus-ticketpage { position: relative; padding: 24px 0 64px; color: #fff; min-height: calc(100vh - 68px); background: radial-gradient(720px 380px at 88% -4%, rgba(234, 88, 12, 0.42), transparent 62%), radial-gradient(600px 400px at -6% 100%, rgba(99, 102, 241, 0.3), transparent 60%), linear-gradient(165deg, #0b2046 0%, #17376f 58%, #272e75 100%); }
+.bus-ticketpage { position: relative; padding: 24px 0 64px; color: #fff; min-height: calc(100vh - 68px); background: radial-gradient(720px 380px at 88% -4%, rgba(37, 99, 235, 0.42), transparent 62%), radial-gradient(600px 400px at -6% 100%, rgba(99, 102, 241, 0.3), transparent 60%), linear-gradient(165deg, #0b2046 0%, #17376f 58%, #272e75 100%); }
 .bus-ticketpage.is-used, .bus-ticketpage.is-past { background: radial-gradient(700px 360px at 90% 0%, rgba(148, 163, 184, 0.25), transparent 60%), linear-gradient(165deg, #1e293b 0%, #334155 100%); }
 .bus-ticketpage.is-cancelled, .bus-ticketpage.is-refund { background: radial-gradient(700px 360px at 90% 0%, rgba(248, 113, 113, 0.3), transparent 60%), linear-gradient(165deg, #3b0d12 0%, #7f1d1d 100%); }
 .bus-ticketpage.is-stack { min-height: 0; padding-top: 44px; }
@@ -17,7 +17,7 @@
 .bus-pager-dots { display: flex; align-items: center; gap: 4px; }
 .bus-pager-dots button { width: 28px; height: 44px; border: 0; background: none; padding: 0; position: relative; }
 .bus-pager-dots button::after { content: ""; position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: rgba(255, 255, 255, 0.4); transition: width 0.2s, margin 0.2s, background 0.2s; }
-.bus-pager-dots button.is-on::after { width: 26px; margin-left: -13px; border-radius: 6px; background: #fdba74; }
+.bus-pager-dots button.is-on::after { width: 26px; margin-left: -13px; border-radius: 6px; background: #93c5fd; }
 .bus-pager p { flex-basis: 100%; text-align: center; font-size: 13.5px; font-weight: 650; color: rgba(255, 255, 255, 0.8); }
 
 .bus-pass-scroller { position: relative; display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 12px max(0px, calc(50% - 220px)) 30px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
@@ -75,7 +75,7 @@
 .bus-actions-grid > button:hover span, .bus-actions-grid > a:hover span { background: var(--bus-orange); border-color: var(--bus-orange); transform: translateY(-2px); }
 .bus-actions-note { margin-top: 16px; min-height: 22px; font-size: 13px; color: rgba(255, 255, 255, 0.72); display: flex; align-items: center; justify-content: center; gap: 6px; }
 .bus-pass-foot { margin-top: 22px; text-align: center; font-size: 13px; color: rgba(255, 255, 255, 0.72); display: flex; flex-direction: column; gap: 6px; align-items: center; }
-.bus-pass-foot a { color: #fdba74; font-weight: 700; }
+.bus-pass-foot a { color: #93c5fd; font-weight: 700; }
 
 /* ---------- my tickets ---------- */
 .bus-segment { display: inline-flex; background: #fff; border: 1.5px solid var(--bus-sand-2); border-radius: 999px; padding: 4px; gap: 2px; }

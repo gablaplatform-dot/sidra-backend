@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { todayEat, ugx } from "../../lib/bus";
 import { BookScreen, FindScreen, UnlockScreen } from "./ContactPhone";
-import { IconArrowRight, IconBike, IconBus, IconCar, IconCart, IconCheck, IconGrid, IconLock, IconPin, IconSearch, IconSparkles, IconTicket } from "../icons";
+import { IconArrowRight, IconBike, IconBus, IconCar, IconCart, IconPin, IconSearch, IconSparkles, IconTicket } from "../icons";
 
 const MAX_TILES = 16;
 const ORBIT_SECONDS = 70;
@@ -22,25 +22,10 @@ const smooth = (v, a, b) => {
 };
 const lerp = (a, b, t) => a + (b - a) * t;
 
-// The points that rise out of the bowl once the last category is inside, fanned out above it.
-const CHIPS = [
-  { key: "categories", Icon: IconGrid, angle: 158 },
-  { key: "near", Icon: IconPin, angle: 122 },
-  { key: "unlock", Icon: IconLock, angle: 58 },
-  { key: "approval", Icon: IconCheck, angle: 22 }
-];
-const SPARKS = Array.from({ length: 22 }, (_, i) => ({
-  x: ((i * 37) % 100) - 50,
-  drift: ((i * 53) % 90) - 45,
-  delay: (i * 0.37) % 4,
-  dur: 3 + ((i * 7) % 30) / 10,
-  size: 3 + (i % 4)
-}));
-
 // Scroll budget, in screens. Block 0 (orbit -> bowl -> beam) pins for PINS[0]. Every chapter is then its own
 // block: it slides in from below as the page really scrolls, pins while its cards pop out, hold and drop back
 // into the bowl, and slides away as the next one arrives. The bowl crosses and drops with the page between them.
-const PINS = [4.4, 2.0, 2.0, 2.0, 2.8, 3.0];
+const PINS = [3.4, 2.0, 2.0, 2.0, 2.8, 3.0];
 const CHAPTERS = [
   { key: "shop", side: "left", to: "/shop", eyebrow: "home.promo.shopEyebrow", title: "landing.story.shopTitle", sub: "home.promo.shopText", cta: "home.promo.shopCta" },
   { key: "bus", side: "right", to: "/bus", eyebrow: "home.bus.eyebrow", title: "home.bus.title", sub: "home.bus.text", cta: "home.bus.findBuses" },
@@ -163,13 +148,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
   const storyRef = useRef(null);
   const heroRef = useRef(null);
   const hintRef = useRef(null);
-  const endRef = useRef(null);
-  const subRef = useRef(null);
-  const beamRef = useRef(null);
-  const sparksRef = useRef(null);
   const glowRef = useRef(null);
-  const chipRefs = useRef([]);
-  const trailRefs = useRef([]);
   const cardRefs = useRef({});
   const phoneScreenRefs = useRef([]);
   const phoneChipRefs = useRef([]);
@@ -177,7 +156,6 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
   const bowlFrontRef = useRef(null);
   const bowlGlowRef = useRef(null);
   const tileRefs = useRef([]);
-  const wordRefs = useRef([]);
   const hoverRef = useRef(false);
   const focusRef = useRef(false);
   const [size, setSize] = useState(() => {
@@ -191,9 +169,6 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
   });
 
   const tiles = useMemo(() => categories.slice(0, size.compact ? 10 : MAX_TILES), [categories, size.compact]);
-  const endWords = useMemo(() => [...t("landing.endTitle1").split(/\s+/), ...t("landing.endTitle2").split(/\s+/)].filter(Boolean), [t]);
-  const lineBreakAt = useMemo(() => t("landing.endTitle1").split(/\s+/).filter(Boolean).length, [t]);
-
   // Cards each chapter pops out. Bus falls back to two plain actions while no routes are published yet.
   const chapterCards = useMemo(() => {
     const bus = busRoutes.slice(0, 4).map((r) => ({
@@ -256,34 +231,6 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
     const bh = (bw * BOWL_H) / BOWL_W;
     return { bw, bh, left: (size.w - bw) / 2, top: size.h - bh * 0.9 - 20 };
   }, [size]);
-
-  // Where each chip comes to rest, and the curved path of light it follows out of the bowl's mouth.
-  const chipGeo = useMemo(() => {
-    const mx = size.w / 2;
-    const my = bowl.top + (MOUTH_Y / BOWL_H) * bowl.bh;
-    const ax = mx;
-    const ay = my - bowl.bh * 0.1;
-    const rx = Math.min(size.w * 0.34, 430);
-    const ry = Math.min(size.h * 0.3, 210);
-    // On a phone the four chips sit in a 2x2 block above the bowl instead of a wide fan.
-    const compactSpots = [
-      { x: -1, y: 0.58 },
-      { x: -1, y: 0.4 },
-      { x: 1, y: 0.4 },
-      { x: 1, y: 0.58 }
-    ];
-    return CHIPS.map((c, ci) => {
-      const rad = (c.angle * Math.PI) / 180;
-      const tx = size.compact ? ax + compactSpots[ci].x * size.w * 0.235 : ax + rx * Math.cos(rad);
-      const ty = size.compact ? size.h * compactSpots[ci].y : ay - ry * Math.sin(rad);
-      // Out of the mouth straight up, then curving over to the resting place.
-      const c1x = mx;
-      const c1y = my - bowl.bh * 1.0;
-      const c2x = mx + (tx - mx) * 0.7;
-      const c2y = Math.min(my, ty) - bowl.bh * 0.4;
-      return { mx, my, tx, ty, c1x, c1y, c2x, c2y, d: `M${mx.toFixed(1)} ${my.toFixed(1)} C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)}` };
-    });
-  }, [size, bowl]);
 
   // Card size follows the stage. On desktop each chapter's cards sit in a 2x2 block opposite the bowl; on a phone
   // they sit in a 2x2 block between the chapter's text (above) and the bowl (below).
@@ -428,7 +375,6 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       const layerTop = clamp(v, 0, storyH - size.h);
       const p = clamp(v / Math.max(1, blocks[0].P));
       // The intro scene (beam, sparks, headline, chips) hands over to the first chapter.
-      const leave = smooth(p, 0.9, 1);
 
       // The bowl rises into view as the first tiles start to fall.
       const rise = 1 - smooth(p, 0.02, 0.16);
@@ -494,8 +440,8 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
 
         // Each tile has its own slot in the scroll: it leaves the ring, falls with gravity, shrinks and tumbles
         // towards the mouth, then sinks behind the front lip.
-        const start = 0.06 + 0.26 * order[i];
-        const f = clamp((p - start) / 0.28);
+        const start = 0.05 + 0.5 * order[i];
+        const f = clamp((p - start) / 0.33);
         // It lifts over the rim and comes down vertically through the opening (never through the side of the bowl).
         const tp = smooth(f, 0, 1);
         const x = cubic(ox, ox, mouthX, mouthX, tp);
@@ -521,53 +467,6 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
         hero.style.visibility = fade > 0.98 ? "hidden" : "visible";
       }
       if (hintRef.current) hintRef.current.style.opacity = String(1 - smooth(p, 0, 0.06));
-
-      // Once the last category is inside, the bowl lights up: a beam and sparks rise, the headline lights word by
-      // word, and the key points rise out one by one along trails of light.
-      const lit = smooth(p, 0.46, 0.58);
-      const parkLit = 0;
-      if (beamRef.current) {
-        beamRef.current.style.opacity = Math.max(lit * (1 - leave), parkLit).toFixed(3);
-        beamRef.current.style.translate = `0 ${((parkLit > 0 ? stageTopOf(blocks.length - 1) : stageTop0) - layerTop).toFixed(1)}px`;
-      }
-      if (sparksRef.current) {
-        sparksRef.current.style.opacity = Math.max(lit * (1 - leave), parkLit).toFixed(3);
-        sparksRef.current.style.translate = `0 ${((parkLit > 0 ? stageTopOf(blocks.length - 1) : stageTop0) - layerTop).toFixed(1)}px`;
-      }
-      if (endRef.current) endRef.current.style.opacity = (smooth(p, 0.46, 0.52) * (1 - leave)).toFixed(3);
-      const reveal = clamp((p - 0.5) / 0.22);
-      const total = wordRefs.current.length;
-      for (let i = 0; i < total; i += 1) {
-        const w = wordRefs.current[i];
-        if (w) w.style.opacity = (0.14 + 0.86 * clamp(reveal * (total + 2) - i)).toFixed(3);
-      }
-      if (subRef.current) {
-        const subIn = smooth(p, 0.64, 0.74);
-        subRef.current.style.opacity = subIn.toFixed(3);
-        subRef.current.style.transform = `translateY(${((1 - subIn) * 14).toFixed(1)}px)`;
-      }
-      for (let j = 0; j < CHIPS.length; j += 1) {
-        const geo = chipGeo[j];
-        const chip = chipRefs.current[j];
-        const trail = trailRefs.current[j];
-        if (!geo || !chip) continue;
-        const g = clamp((p - (0.52 + 0.05 * j)) / 0.15) * (1 - leave);
-        const e = smooth(g, 0, 1);
-        const yOff = stageTop0 - layerTop;
-        const x = cubic(geo.mx, geo.c1x, geo.c2x, geo.tx, e);
-        const y = cubic(geo.my, geo.c1y, geo.c2y, geo.ty, e) + yOff;
-        chip.style.transform = warpXf(x, y, geo.mx, geo.my + yOff, 1 - e, j % 2 ? -1 : 1, 0.25 + 0.75 * e, 0);
-        chip.classList.toggle("is-warping", e > 0.02 && e < 0.98);
-        chip.style.zIndex = inBowl(x, y, geo.mx, geo.my + yOff, 1) ? "2" : "6";
-        flare = Math.max(flare, smooth(1 - e, 0.55, 0.9) * (g > 0.001 ? 1 : 0) * (1 - smooth(1 - e, 0.93, 1)));
-        chip.style.opacity = smooth(g, 0, 0.2).toFixed(3);
-        chip.style.visibility = g <= 0 ? "hidden" : "visible";
-        if (trail) {
-          trail.style.strokeDasharray = `${e.toFixed(3)} 1`;
-          trail.style.transform = `translateY(${yOff.toFixed(1)}px)`;
-          trail.style.opacity = (g <= 0 ? 0 : 1 - 0.78 * smooth(g, 0.8, 1)).toFixed(3);
-        }
-      }
 
       // Chapters: once the bowl has landed in a block, its cards pop out of the mouth one by one; before the page
       // scrolls on, they drop back in.
@@ -624,7 +523,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       cancelAnimationFrame(raf);
       observer.disconnect();
     };
-  }, [tiles, bowl, size, blocks, chipGeo, cardGeo]);
+  }, [tiles, bowl, size, blocks, cardGeo]);
 
   const submit = (event) => {
     event.preventDefault();
@@ -653,13 +552,6 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
 
         <div className="ho-bowl ho-bowl-back" ref={bowlBackRef} style={bowlStyle}><BowlBack /></div>
 
-        <div className="ho-beam" ref={beamRef} aria-hidden="true" style={{ left: bowl.left + bowl.bw / 2, top: bowl.top + (MOUTH_Y / BOWL_H) * bowl.bh, width: bowl.bw * 0.62, height: size.h * 0.62 }} />
-        <div className="ho-sparks" ref={sparksRef} aria-hidden="true" style={{ left: bowl.left + bowl.bw / 2, top: bowl.top + (MOUTH_Y / BOWL_H) * bowl.bh, "--spread": `${bowl.bw * 0.5}px`, "--rise": `${size.h * 0.55}px` }}>
-          {SPARKS.map((sp, i) => (
-            <i key={i} style={{ "--x": `${sp.x * 0.01}`, "--drift": `${sp.drift}px`, animationDelay: `${sp.delay}s`, animationDuration: `${sp.dur}s`, width: sp.size, height: sp.size }} />
-          ))}
-        </div>
-
         <div className="ho-tiles">
           {tiles.map((cat, i) => (
             <Link
@@ -680,30 +572,6 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
             </Link>
           ))}
         </div>
-
-      <svg className="ho-trails" width={size.w} height={size.h} aria-hidden="true" style={{ zIndex: 2 }}>
-        <defs>
-          <linearGradient id="hoTrail" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0" stopColor="#facc15" stopOpacity="0" />
-            <stop offset="1" stopColor="#f59e0b" stopOpacity="0.95" />
-          </linearGradient>
-        </defs>
-        {chipGeo.map((geo, j) => (
-          <path key={CHIPS[j].key} ref={(el) => { trailRefs.current[j] = el; }} d={geo.d} pathLength="1" className="ho-trail" />
-        ))}
-      </svg>
-
-      <div className="ho-chips">
-        {CHIPS.map(({ key, Icon }, j) => (
-          <div key={key} className="ho-chip" ref={(el) => { chipRefs.current[j] = el; }}>
-            <span className="ho-chip-in" style={{ animationDelay: `${j * 0.6}s` }}>
-              <span className="ho-chip-icon"><Icon /></span>
-              <strong>{t(`landing.chips.${key}.title`)}</strong>
-              <small>{t(`landing.chips.${key}.sub`)}</small>
-            </span>
-          </div>
-        ))}
-      </div>
 
         <div className="ho-bowl ho-bowl-front" ref={bowlFrontRef} style={bowlStyle}><BowlFront /></div>
 
@@ -734,18 +602,6 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       {/* Block 0: the orbit, the fall into the bowl and the lit-up scene. */}
       <div className="hb hb-intro" style={{ height: blocks[0].P + size.h }}>
         <div className="hb-stage ho-sticky" style={stageStyle}>
-          <div className="ho-end" ref={endRef}>
-            <h2 className="ho-end-title">
-              {endWords.map((word, i) => (
-                <React.Fragment key={`${word}-${i}`}>
-                  {i === lineBreakAt ? <br /> : null}
-                  <span className={i >= lineBreakAt ? "home-gradient-text" : undefined} ref={(el) => { wordRefs.current[i] = el; }}>{word}{" "}</span>
-                </React.Fragment>
-              ))}
-            </h2>
-            <p ref={subRef}>{t("landing.endSub")}</p>
-          </div>
-
           <div className="ho-hero" ref={heroRef}>
             <span className="home-eyebrow">
               <IconSparkles /> {t("landing.eyebrow")}

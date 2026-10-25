@@ -274,7 +274,7 @@ function MapSheet({ initial, onClose, onConfirm }) {
           <div ref={mapElRef} className="dlp-map" />
           {error ? <div className="dlp-map-error">{error}</div> : null}
           <div className={`dlp-pin ${dragging ? "is-lifted" : ""}`} aria-hidden="true">
-            <svg width="44" height="56" viewBox="0 0 44 56"><path d="M22 54C22 54 4 33.5 4 21A18 18 0 0 1 40 21C40 33.5 22 54 22 54Z" fill="#ea580c" stroke="#fff" strokeWidth="3" /><circle cx="22" cy="21" r="7" fill="#fff" /></svg>
+            <svg width="44" height="56" viewBox="0 0 44 56"><path d="M22 54C22 54 4 33.5 4 21A18 18 0 0 1 40 21C40 33.5 22 54 22 54Z" fill="#2563eb" stroke="#fff" strokeWidth="3" /><circle cx="22" cy="21" r="7" fill="#fff" /></svg>
             <span className="dlp-pin-shadow" />
           </div>
           <div className="dlp-map-tools">
