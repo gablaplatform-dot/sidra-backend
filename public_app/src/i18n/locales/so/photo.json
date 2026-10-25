@@ -1,0 +1,14 @@
+{
+  "photo": {
+    "addCover": "Ku dar sawir dahab ah",
+    "hintCover": "Taabo si aad sawir u doorato. Mid iftiin leh oo ballaadhan ayaa ugu wanaagsan.",
+    "addMedia": "Ku dar sawir ama fiidyow",
+    "hintMedia": "Taabo si aad sawir ama fiidyow MP4 u doorato.",
+    "change": "Beddel",
+    "remove": "Ka saar",
+    "addMore": "Ku dar sawir",
+    "uploading": "Waa la soo gelinayaa…",
+    "errType": "Fadlan dooro sawir.",
+    "errUpload": "Fayladan lama soo gelin karo."
+  }
+}

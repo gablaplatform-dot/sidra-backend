@@ -1,0 +1,14 @@
+{
+  "photo": {
+    "addCover": "Teekako ekifaananyi ky'oku ddiba",
+    "hintCover": "Kanda olonde ekifaananyi. Ekitangaavu era ekigazi kisinga.",
+    "addMedia": "Teekako ekifaananyi oba vidiyo",
+    "hintMedia": "Kanda olonde ekifaananyi oba vidiyo ya MP4.",
+    "change": "Kyusa",
+    "remove": "Ggyawo",
+    "addMore": "Teekako ekifaananyi",
+    "uploading": "Kiriko kitikkibwa…",
+    "errType": "Nsaba olonde ekifaananyi.",
+    "errUpload": "Tulemereddwa okuteeka fayiro eno."
+  }
+}

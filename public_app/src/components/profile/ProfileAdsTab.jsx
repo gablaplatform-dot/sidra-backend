@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { request } from "../../lib/api";
 import { uploadFile } from "../../lib/storage";
+import { PhotoField } from "../PhotoPicker";
 import { IconBox, IconClose } from "../icons";
 import { SectionSkeleton } from "../Skeleton";
 
@@ -15,13 +16,9 @@ export default function ProfileAdsTab() {
 
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
-  const [ctaLabel, setCtaLabel] = useState("");
-  const [ctaHref, setCtaHref] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
   const [mediaKind, setMediaKind] = useState(""); // "image" | "video"
-  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const fileRef = useRef(null);
 
   const load = () => {
     setLoading(true);
@@ -33,28 +30,9 @@ export default function ProfileAdsTab() {
 
   useEffect(load, []);
 
-  const pickFile = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setError("");
-    try {
-      const url = await uploadFile(file, "provider-ads");
-      setMediaUrl(url);
-      setMediaKind(file.type?.startsWith("video/") ? "video" : "image");
-    } catch (uploadError) {
-      setError(uploadError.message || t("profile.ads.errUpload"));
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  };
-
   const resetForm = () => {
     setTitle("");
     setSubtitle("");
-    setCtaLabel("");
-    setCtaHref("");
     setMediaUrl("");
     setMediaKind("");
   };
@@ -71,8 +49,6 @@ export default function ProfileAdsTab() {
         body: JSON.stringify({
           title: title.trim(),
           subtitle: subtitle.trim() || null,
-          ctaLabel: ctaLabel.trim() || null,
-          ctaHref: ctaHref.trim() || null,
           imageUrl: mediaKind === "video" ? null : mediaUrl,
           videoUrl: mediaKind === "video" ? mediaUrl : null
         })
@@ -120,37 +96,31 @@ export default function ProfileAdsTab() {
           <span>{t("profile.ads.subtitle")}</span>
           <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder={t("profile.ads.subtitlePlaceholder")} />
         </label>
-        <label className="field">
-          <span>{t("profile.ads.ctaLabel")}</span>
-          <input value={ctaLabel} onChange={(e) => setCtaLabel(e.target.value)} placeholder={t("profile.ads.ctaPlaceholder")} />
-        </label>
-        <label className="field">
-          <span>{t("profile.ads.ctaLink")}</span>
-          <input value={ctaHref} onChange={(e) => setCtaHref(e.target.value)} placeholder="/shop" />
-        </label>
-
-        <label className="field" style={{ gridColumn: "1 / -1" }}>
+        <div className="field" style={{ gridColumn: "1 / -1" }}>
           <span>{t("profile.ads.media")}</span>
-          <input ref={fileRef} type="file" accept="image/*,video/mp4" onChange={pickFile} disabled={uploading} />
-        </label>
-
-        {mediaUrl ? (
-          <div style={{ gridColumn: "1 / -1" }}>
-            {mediaKind === "video" ? (
-              <video src={mediaUrl} controls style={{ maxWidth: 240, borderRadius: 12 }} />
-            ) : (
-              <img src={mediaUrl} alt={t("profile.ads.previewAlt")} style={{ maxWidth: 240, borderRadius: 12 }} />
-            )}
-          </div>
-        ) : null}
+          <PhotoField
+            value={mediaUrl}
+            kind={mediaKind || "image"}
+            accept="image/*,video/mp4"
+            aspect="16 / 9"
+            emptyLabel={t("photo.addMedia")}
+            hint={t("photo.hintMedia")}
+            upload={(file) => uploadFile(file, "provider-ads")}
+            onChange={(url, kind) => {
+              setMediaUrl(url);
+              setMediaKind(url ? kind : "");
+            }}
+            onError={setError}
+          />
+        </div>
 
         <button
           type="submit"
           className="cta-button"
-          disabled={saving || uploading || !mediaUrl}
+          disabled={saving || !mediaUrl}
           style={{ gridColumn: "1 / -1", width: "auto" }}
         >
-          {uploading ? t("profile.ads.uploading") : saving ? t("profile.ads.creating") : t("profile.ads.create")}
+          {saving ? t("profile.ads.creating") : t("profile.ads.create")}
         </button>
       </form>
 

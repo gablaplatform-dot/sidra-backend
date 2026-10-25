@@ -151,6 +151,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
   const glowRef = useRef(null);
   const cardRefs = useRef({});
   const phoneScreenRefs = useRef([]);
+  const uiRefs = useRef([]);
   const phoneChipRefs = useRef([]);
   const bowlBackRef = useRef(null);
   const bowlFrontRef = useRef(null);
@@ -168,7 +169,28 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
     };
   });
 
-  const tiles = useMemo(() => categories.slice(0, size.compact ? 10 : MAX_TILES), [categories, size.compact]);
+  // The ring on larger screens; on a phone, two strips of categories that scroll sideways on their own (in opposite
+  // directions), repeated as often as needed to fill the width.
+  const tiles = useMemo(() => {
+    if (!size.compact) return categories.slice(0, MAX_TILES).map((cat) => ({ cat, key: cat.id }));
+    const rows = [[], []];
+    categories.slice(0, 12).forEach((c, i) => rows[i % 2].push(c));
+    const step = clamp(size.w * 0.22, 72, 104) + 12;
+    const need = Math.ceil(size.w / step) + 3;
+    const out = [];
+    rows.forEach((row, ri) => {
+      if (!row.length) return;
+      const count = Math.max(need, row.length);
+      for (let k = 0; k < count; k += 1) out.push({ cat: row[k % row.length], row: ri, idx: k, key: `${ri}-${k}-${row[k % row.length].id}` });
+    });
+    return out;
+  }, [categories, size.compact, size.w]);
+  const ui = useMemo(() => {
+    const pad = 18;
+    const gap = 8;
+    const full = size.w - 2 * pad;
+    return { pad, gap, full, bw: (full - 2 * gap) / 3, searchY: size.h * 0.1, btnY: size.h * 0.215 };
+  }, [size]);
   // Cards each chapter pops out. Bus falls back to two plain actions while no routes are published yet.
   const chapterCards = useMemo(() => {
     const bus = busRoutes.slice(0, 4).map((r) => ({
@@ -204,9 +226,9 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       const w = document.documentElement.clientWidth;
       setSize((cur) => {
         const h = window.innerHeight - hdr;
-        // On touch screens the address bar sliding away changes the height by a few dozen pixels: ignore that,
-        // otherwise every section would resize (and the page jump) while scrolling.
-        if (coarse && cur.w === w && cur.hdr === hdr && Math.abs(h - cur.h) < 160) return cur;
+        // On touch screens the address bar sliding away (or the keyboard opening) changes the height: ignore that,
+        // otherwise every section would resize and the page would jump. Only a rotation (a width change) re-lays out.
+        if (coarse && cur.w === w && cur.hdr === hdr) return cur;
         return { w, h, hdr, compact: w < COMPACT_W };
       });
     };
@@ -310,6 +332,8 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
     const mouthStageY = bowl.top + (MOUTH_Y / BOWL_H) * bowl.bh;
     // Tiles drop in a scrambled order (golden-ratio steps) so neighbours do not all go at once.
     const order = tiles.map((_, i) => (i * 0.6180339887) % 1);
+    const tileStep = clamp(size.w * 0.22, 72, 104) + 12;
+    const rowLen = [tiles.filter((x) => x.row === 0).length, tiles.filter((x) => x.row === 1).length];
     // Bowl anchors per block: centre for the intro, then the side of each chapter (left, right, left).
     // ...and finally the centre, under the category tiles.
     // On a phone the bowl still alternates sides, but only a little way off centre, and a bit smaller.
@@ -345,6 +369,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
 
     let raf = 0;
     let last = performance.now();
+    let marq = 0;
     let angle = 0;
     let speed = 1;
     let pull = 0;
@@ -364,6 +389,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       const targetSpeed = reduce ? 0 : hoverRef.current ? 0 : focusRef.current ? 0.3 : 1;
       speed += (targetSpeed - speed) * Math.min(1, dt * 5);
       angle += (dt * speed * TAU) / ORBIT_SECONDS;
+      marq += dt * 26;
       pull += ((focusRef.current ? 1 : 0) - pull) * Math.min(1, dt * 4);
 
       // v is the story coordinate sitting at the header line; every block's stage sticks while v is inside it.
@@ -377,9 +403,10 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       // The intro scene (beam, sparks, headline, chips) hands over to the first chapter.
 
       // The bowl rises into view as the first tiles start to fall.
-      const rise = 1 - smooth(p, 0.02, 0.16);
+      // On a phone the bowl is already waiting at the bottom when the page opens.
+      const rise = size.compact ? 0 : 1 - smooth(p, 0.02, 0.16);
       const lift = rise * bowl.bh * 1.15;
-      const bowlOpacity = smooth(p, 0.02, 0.1);
+      const bowlOpacity = size.compact ? 1 : smooth(p, 0.02, 0.1);
 
       // Where the bowl is: parked at its block's anchor while that block is pinned, and travelling down to the
       // next block's anchor (swooping through the screen) while the page scrolls one block over.
@@ -432,16 +459,34 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       for (let i = 0; i < n; i += 1) {
         const el = tileRefs.current[i];
         if (!el) continue;
-        const a = angle + (i / n) * TAU - Math.PI / 2;
-        const depthOnRing = (Math.sin(a) + 1) / 2;
-        const ox = cx + rx * open * Math.cos(a);
-        const oy = cy + ry * open * Math.sin(a);
-        const os = 0.88 + 0.12 * depthOnRing;
+        let ox;
+        let oy;
+        let os;
+        let depthOnRing;
+        const tl = tiles[i];
+        if (size.compact) {
+          // two strips drifting in opposite directions, wrapping around off the edges of the screen
+          const step = tileStep;
+          const len = rowLen[tl.row] * step;
+          const dir = tl.row ? 1 : -1;
+          let px = (tl.idx * step + dir * marq) % len;
+          if (px < 0) px += len;
+          ox = px - step + tileStep / 2;
+          oy = size.h * (tl.row ? 0.545 : 0.385);
+          os = 1;
+          depthOnRing = 0.6;
+        } else {
+          const a = angle + (i / n) * TAU - Math.PI / 2;
+          depthOnRing = (Math.sin(a) + 1) / 2;
+          ox = cx + rx * open * Math.cos(a);
+          oy = cy + ry * open * Math.sin(a);
+          os = 0.88 + 0.12 * depthOnRing;
+        }
 
         // Each tile has its own slot in the scroll: it leaves the ring, falls with gravity, shrinks and tumbles
         // towards the mouth, then sinks behind the front lip.
-        const start = 0.05 + 0.5 * order[i];
-        const f = clamp((p - start) / 0.33);
+        const start = size.compact ? 0.04 + 0.4 * order[i] : 0.05 + 0.5 * order[i];
+        const f = clamp((p - start) / (size.compact ? 0.3 : 0.33));
         // It lifts over the rim and comes down vertically through the opening (never through the side of the bowl).
         const tp = smooth(f, 0, 1);
         const x = cubic(ox, ox, mouthX, mouthX, tp);
@@ -457,6 +502,29 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
         el.style.zIndex = String(Math.round(depthOnRing * 10));
         el.style.pointerEvents = f > 0 ? "none" : "auto";
         el.style.visibility = f >= 1 ? "hidden" : "visible";
+      }
+
+      // Phone home: the search field and the three action buttons are drawn into the bowl last (and come out first).
+      if (size.compact) {
+        const uiGeo = [
+          { x: cx, y: ui.searchY, start: 0.66, dur: 0.28 },
+          ...[0, 1, 2].map((k) => ({ x: ui.pad + ui.bw / 2 + k * (ui.bw + ui.gap), y: ui.btnY, start: 0.5 + 0.07 * k, dur: 0.26 }))
+        ];
+        uiGeo.forEach((geo, i) => {
+          const el = uiRefs.current[i];
+          if (!el) return;
+          const f = clamp((p - geo.start) / geo.dur);
+          const tp = smooth(f, 0, 1);
+          const x = cubic(geo.x, geo.x, mouthX, mouthX, tp);
+          let y = cubic(geo.y, Math.min(geo.y, mouthY) - bowl.bh * 0.55, mouthY - bowl.bh * 1.0, mouthY, tp);
+          y += smooth(f, 0.8, 1) * bowl.bh * 0.36;
+          flare = Math.max(flare, smooth(f, 0.55, 0.9) * (1 - smooth(f, 0.93, 1)));
+          const yy = y + stageTop0 - layerTop;
+          el.style.transform = warpXf(x, yy, mouthX, mouthY + stageTop0 - layerTop, f, i % 2 ? 1 : -1, lerp(1, 0.3, Math.pow(f, 0.7)), (i % 2 ? 1 : -1) * 20 * f);
+          el.classList.toggle("is-warping", f > 0.02 && f < 0.98);
+          el.style.pointerEvents = f > 0 ? "none" : "auto";
+          el.style.visibility = f >= 1 ? "hidden" : "visible";
+        });
       }
 
       const hero = heroRef.current;
@@ -523,7 +591,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       cancelAnimationFrame(raf);
       observer.disconnect();
     };
-  }, [tiles, bowl, size, blocks, cardGeo]);
+  }, [tiles, bowl, size, blocks, cardGeo, ui]);
 
   const submit = (event) => {
     event.preventDefault();
@@ -532,7 +600,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
   };
 
   // Phone-width screens use the mobile home instead, so tile size only has to suit tablets and up.
-  const tileW = size.compact ? clamp(size.w * 0.115, 40, 52) : clamp(Math.min(size.w, size.h * 1.5) * 0.075, 56, 92);
+  const tileW = size.compact ? clamp(size.w * 0.22, 72, 104) : clamp(Math.min(size.w, size.h * 1.5) * 0.075, 56, 92);
   const bowlStyle = { left: bowl.left, top: bowl.top, width: bowl.bw, height: bowl.bh };
   const stageStyle = { top: size.hdr, height: size.h };
   const phoneW = size.compact ? clamp(Math.min(size.w * 0.52, (mouthStage - 40 - size.h * 0.3 - 8) / 2.03), 120, 200) : clamp(Math.min(size.h * 0.42, size.w * 0.2), 190, 290);
@@ -553,9 +621,9 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
         <div className="ho-bowl ho-bowl-back" ref={bowlBackRef} style={bowlStyle}><BowlBack /></div>
 
         <div className="ho-tiles">
-          {tiles.map((cat, i) => (
+          {tiles.map((tl, i) => { const cat = tl.cat; return (
             <Link
-              key={cat.id}
+              key={tl.key}
               ref={(el) => { tileRefs.current[i] = el; }}
               to={`/category/${cat.id}`}
               className="ho-tile"
@@ -570,7 +638,21 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
               </span>
               <span className="ho-tile-name">{cat.name}</span>
             </Link>
-          ))}
+          ); })}
+          {size.compact ? (
+            <>
+              <form className="ho-search ho-ui ho-ui-search" ref={(el) => { uiRefs.current[0] = el; }} style={{ width: ui.full }} onSubmit={submit}>
+                <span className="ho-search-icon"><IconSearch /></span>
+                <input type="text" value={searchValue} onChange={(e) => onSearchChange(e.target.value)} placeholder={t("landing.searchPlaceholder")} aria-label={t("landing.searchPlaceholder")} />
+                <button type="submit" className="ho-search-go" aria-label={t("landing.searchButton")}><IconArrowRight /></button>
+              </form>
+              {[["/shop", IconCart, "landing.shop"], ["/ride", IconCar, "landing.ride"], ["/bus", IconBus, "landing.bus"]].map(([to, Icon, label], k) => (
+                <Link key={to} to={to} className="ho-ui ho-ui-btn" ref={(el) => { uiRefs.current[k + 1] = el; }} style={{ width: ui.bw }}>
+                  <Icon /> <span>{t(label)}</span>
+                </Link>
+              ))}
+            </>
+          ) : null}
         </div>
 
         <div className="ho-bowl ho-bowl-front" ref={bowlFrontRef} style={bowlStyle}><BowlFront /></div>
@@ -602,6 +684,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       {/* Block 0: the orbit, the fall into the bowl and the lit-up scene. */}
       <div className="hb hb-intro" style={{ height: blocks[0].P + size.h }}>
         <div className="hb-stage ho-sticky" style={stageStyle}>
+          {size.compact ? null : (
           <div className="ho-hero" ref={heroRef}>
             <span className="home-eyebrow">
               <IconSparkles /> {t("landing.eyebrow")}
@@ -633,6 +716,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
               <Link to="/bus"><IconBus /> {t("landing.bus")}</Link>
             </div>
           </div>
+          )}
 
           <div className="ho-hint" ref={hintRef} aria-hidden="true">
             <span>{t("landing.scrollHint")}</span>

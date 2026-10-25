@@ -578,3 +578,18 @@
   .ho-title { font-size: 21px; }
   .ho-hero .home-eyebrow { display: none; }
 }
+
+/* ---- phone home: search, three actions and two self-scrolling category strips, all drawn into the bowl ---- */
+.ho-ui { position: absolute; left: 0; top: 0; z-index: 5; will-change: transform; pointer-events: auto; }
+.ho-ui.ho-search { margin: 0; max-width: none; }
+.ho-ui-btn { display: flex; align-items: center; justify-content: center; gap: 5px; height: 46px; padding: 0 4px; border-radius: 999px; background: #fff; border: 1px solid #dbeafe; color: #0b2046; font-size: 11.5px; font-weight: 800; text-decoration: none; box-shadow: 0 14px 28px -18px rgba(11, 32, 70, 0.55); white-space: nowrap; }
+.ho-ui-btn svg { width: 15px; height: 15px; color: #2563eb; flex: none; }
+.ho-ui-btn span { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 759px) {
+  .ho-tile-card { border-width: 2px; border-radius: 15px; }
+  .ho-tile::after { content: ""; position: absolute; inset: 0; border-radius: 15px; background: linear-gradient(to top, rgba(6, 19, 43, 0.82) 0%, rgba(6, 19, 43, 0.15) 50%, transparent 72%); pointer-events: none; }
+  .ho-tile-name { top: auto; bottom: 8px; left: 8px; right: 8px; max-width: none; padding: 0; transform: none; opacity: 1; background: none; color: #fff; font-size: 11px; line-height: 1.2; text-align: left; white-space: normal; z-index: 1; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ho-tile-initial { font-size: 26px; padding-bottom: 14px; }
+}
+@media (max-width: 759px) { .ho-hint { display: none; } }
+@media (max-width: 345px) { .ho-ui-btn { font-size: 10.5px; gap: 3px; } .ho-ui-btn svg { width: 13px; height: 13px; } }

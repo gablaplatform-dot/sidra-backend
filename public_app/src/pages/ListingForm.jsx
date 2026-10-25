@@ -5,13 +5,13 @@ import { loginPath } from "../lib/authRedirect";
 
 import { request } from "../lib/api";
 import { uploadFile } from "../lib/storage";
+import { PhotoField, PhotoGrid } from "../components/PhotoPicker";
 import { clearSession, getSession } from "../lib/session";
 import { findCategoryPath, flattenCategories } from "../lib/categories";
 import { isCustomFieldFilled } from "../lib/customFields";
 import Field from "../components/Field";
 import DynamicField from "../components/DynamicField";
 import SiteHeader from "../components/SiteHeader";
-import { IconClose } from "../components/icons";
 import { FormSkeleton } from "../components/Skeleton";
 
 // One dropdown per level of a category tree; the walk stops at a leaf or an unselected level.
@@ -198,9 +198,6 @@ export default function ListingForm() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [shopCategories, setShopCategories] = useState([]);
-  const [uploadingCover, setUploadingCover] = useState(false);
-  const [uploadingGallery, setUploadingGallery] = useState(false);
-  const galleryFileRef = useRef(null);
   const [form, setForm] = useState({
     type: "service",
     name: "",
@@ -376,37 +373,6 @@ export default function ListingForm() {
       setError(createError.message || t("listing.errCreateSub"));
     } finally {
       setCreatingCategory(false);
-    }
-  };
-
-  const pickCoverImage = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setUploadingCover(true);
-    setError("");
-    try {
-      const url = await uploadFile(file, "provider-listings");
-      setForm((current) => ({ ...current, imageUrl: url }));
-    } catch (uploadError) {
-      setError(uploadError.message || t("listing.errUpload"));
-    } finally {
-      setUploadingCover(false);
-    }
-  };
-
-  const addGalleryPhoto = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setUploadingGallery(true);
-    setError("");
-    try {
-      const url = await uploadFile(file, "provider-listings");
-      setForm((current) => ({ ...current, gallery: [...current.gallery, url] }));
-    } catch (uploadError) {
-      setError(uploadError.message || t("listing.errUpload"));
-    } finally {
-      setUploadingGallery(false);
-      if (galleryFileRef.current) galleryFileRef.current.value = "";
     }
   };
 
@@ -700,35 +666,26 @@ export default function ListingForm() {
 
             <section>
               <h3>{t("listing.coverPhoto")}</h3>
-              {form.imageUrl ? <div className="listing-cover" style={{ backgroundImage: `url("${form.imageUrl}")`, height: 160 }} /> : null}
-              <input type="file" accept="image/*" onChange={pickCoverImage} disabled={uploadingCover} />
-              {uploadingCover ? <small>{t("listing.uploading")}</small> : null}
+              <PhotoField
+                value={form.imageUrl}
+                onChange={(url) => setForm((current) => ({ ...current, imageUrl: url }))}
+                upload={(file) => uploadFile(file, "provider-listings")}
+                onError={setError}
+              />
             </section>
 
             <section>
-              <div className="detail-block-header">
-                <h3>{t("listing.additionalPhotos")}</h3>
-                <button type="button" className="cta-button" onClick={() => galleryFileRef.current?.click()} disabled={uploadingGallery}>
-                  {uploadingGallery ? t("listing.uploading") : t("listing.addPhoto")}
-                </button>
-                <input ref={galleryFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={addGalleryPhoto} />
-              </div>
-              <p className="provider-meta" style={{ marginTop: -8, marginBottom: 12 }}>
+              <h3>{t("listing.additionalPhotos")}</h3>
+              <p className="provider-meta" style={{ marginTop: -4, marginBottom: 12 }}>
                 {t(`listing.galleryHint.${form.type === "product" ? "product" : "service"}`)}
               </p>
-              {form.gallery.length ? (
-                <div className="gallery-grid">
-                  {form.gallery.map((url) => (
-                    <div key={url} className="gallery-item" style={{ backgroundImage: `url("${url}")` }}>
-                      <button type="button" className="gallery-remove" onClick={() => removeGalleryPhoto(url)} aria-label={t("listing.removePhoto")}>
-                        <IconClose />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="provider-meta">{t("listing.noGallery")}</p>
-              )}
+              <PhotoGrid
+                values={form.gallery}
+                onAdd={(url) => setForm((current) => ({ ...current, gallery: [...current.gallery, url] }))}
+                onRemove={removeGalleryPhoto}
+                upload={(file) => uploadFile(file, "provider-listings")}
+                onError={setError}
+              />
             </section>
 
             <button className="primary-button" type="submit" disabled={saving}>

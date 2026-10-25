@@ -1,0 +1,14 @@
+{
+  "photo": {
+    "addCover": "Add a cover photo",
+    "hintCover": "Tap to choose a photo. A bright, wide one works best.",
+    "addMedia": "Add a photo or video",
+    "hintMedia": "Tap to choose an image or an MP4 video.",
+    "change": "Change",
+    "remove": "Remove",
+    "addMore": "Add photo",
+    "uploading": "Uploading…",
+    "errType": "Please choose a photo.",
+    "errUpload": "Unable to upload this file."
+  }
+}
