@@ -227,21 +227,32 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
 
   useEffect(() => {
     const coarse = window.matchMedia("(pointer: coarse)").matches;
+    let tallest = 0;
+    let lastW = 0;
     const update = () => {
       const header = document.querySelector(".site-header");
       const hdr = header ? header.offsetHeight : HDR_FALLBACK;
       const w = document.documentElement.clientWidth;
-      setSize((cur) => {
-        const h = window.innerHeight - hdr;
-        // On touch screens the address bar sliding away (or the keyboard opening) changes the height: ignore that,
-        // otherwise every section would resize and the page would jump. Only a rotation (a width change) re-lays out.
-        if (coarse && cur.w === w && cur.hdr === hdr) return cur;
-        return { w, h, hdr, compact: w < COMPACT_W };
-      });
+      // On touch screens the address bar sliding away (or the keyboard opening) changes the height: never shrink
+      // for that, otherwise every section would resize and the page would jump (or stay squashed once the keyboard
+      // has been up). Only a width change (rotation) re-lays out from scratch.
+      if (w !== lastW) tallest = 0;
+      lastW = w;
+      // Small growth is just the address bar hiding (ignored); a big one means the keyboard closed.
+      if (!tallest || window.innerHeight > tallest + 120) tallest = window.innerHeight;
+      const h = (coarse ? tallest : window.innerHeight) - hdr;
+      setSize((cur) => (cur.w === w && cur.h === h && cur.hdr === hdr ? cur : { w, h, hdr, compact: w < COMPACT_W }));
     };
     update();
+    const onShow = () => { if (!document.hidden) update(); };
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    window.addEventListener("pageshow", update);
+    document.addEventListener("visibilitychange", onShow);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("pageshow", update);
+      document.removeEventListener("visibilitychange", onShow);
+    };
   }, []);
 
   // Block geometry in story coordinates: T is where a block starts, P how long its stage stays pinned.
