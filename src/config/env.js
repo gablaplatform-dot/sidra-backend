@@ -8,6 +8,8 @@ export const env = {
   databaseUrl: process.env.DATABASE_URL ?? "",
   jwtSecret: process.env.JWT_SECRET ?? "",
   jwtIssuer: process.env.JWT_ISSUER ?? "sidra",
+  // Customer, provider, driver and bus-operator sessions: signed in until they choose to sign out (admins keep the short TTL).
+  jwtAppTtlSeconds: Number(process.env.JWT_APP_TTL_SECONDS ?? 365 * 24 * 60 * 60),
   jwtAccessTtlSeconds: Number(process.env.JWT_ACCESS_TTL_SECONDS ?? 60 * 60),
   allowedOrigins: (process.env.ALLOWED_ORIGINS ?? "")
     .split(",")

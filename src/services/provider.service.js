@@ -8,6 +8,7 @@ import { env } from "../config/env.js";
 import { AudienceService, audienceProviderWhere } from "./audience.service.js";
 import { verifyGoogleIdToken } from "../utils/googleAuth.js";
 import { geohashEncode } from "../utils/geohash.js";
+import { signAccessToken } from "../utils/jwt.js";
 
 const GEOHASH_PRECISION_FINE = 6; // ~1.2km x 0.6km cells - the primary search
 const GEOHASH_PRECISION_COARSE = 5; // ~4.9km x 4.9km cells - fallback for wider radii
@@ -678,11 +679,7 @@ export class ProviderService {
       throw e;
     }
 
-    const accessToken = jwt.sign(
-      { sub: updatedUser.id, role: updatedUser.role },
-      env.jwtSecret,
-      { issuer: env.jwtIssuer, expiresIn: env.jwtAccessTtlSeconds }
-    );
+    const accessToken = signAccessToken({ payload: { sub: updatedUser.id, role: updatedUser.role }, secret: env.jwtSecret, issuer: env.jwtIssuer, ttlSeconds: env.jwtAccessTtlSeconds });
 
     const provider = await prisma.provider.findUnique({ where: { userId: updatedUser.id } });
 

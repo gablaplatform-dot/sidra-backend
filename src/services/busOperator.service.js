@@ -8,6 +8,7 @@ import { env } from "../config/env.js";
 import { Roles } from "../constants/enums.js";
 import { verifyGoogleIdToken } from "../utils/googleAuth.js";
 import { slugify } from "../utils/busIds.js";
+import { signAccessToken } from "../utils/jwt.js";
 import { buildFieldSchema } from "../constants/dynamicFieldSchema.js";
 
 const INVITE_DAYS = 7;
@@ -274,7 +275,7 @@ export class BusOperatorService {
       if (used.count === 0) throw bad("This invitation link has already been used or replaced. Ask for a new one.", "INVALID_TOKEN");
       if (password) await prisma.user.update({ where: { id: operator.userId }, data: { passwordHash: await this.hashPassword(password) } });
       const existingUser = await prisma.user.findUnique({ where: { id: operator.userId } });
-      const session = jwt.sign({ sub: existingUser.id, role: existingUser.role }, env.jwtSecret, { issuer: env.jwtIssuer, expiresIn: env.jwtAccessTtlSeconds });
+      const session = signAccessToken({ payload: { sub: existingUser.id, role: existingUser.role }, secret: env.jwtSecret, issuer: env.jwtIssuer, ttlSeconds: env.jwtAccessTtlSeconds });
       return {
         accessToken: session,
         user: { id: existingUser.id, name: existingUser.name, email: existingUser.email, role: existingUser.role, phone: existingUser.phone, authProvider: existingUser.authProvider, avatarUrl: existingUser.avatarUrl, profile: existingUser.profile ?? {} },
@@ -331,7 +332,7 @@ export class BusOperatorService {
     });
     if (used.count === 0) throw bad("This invitation link has already been used or replaced. Ask for a new one.", "INVALID_TOKEN");
     const user = await prisma.user.findUnique({ where: { id: operator.userId } });
-    const accessToken = jwt.sign({ sub: user.id, role: user.role }, env.jwtSecret, { issuer: env.jwtIssuer, expiresIn: env.jwtAccessTtlSeconds });
+    const accessToken = signAccessToken({ payload: { sub: user.id, role: user.role }, secret: env.jwtSecret, issuer: env.jwtIssuer, ttlSeconds: env.jwtAccessTtlSeconds });
     return {
       accessToken,
       user: { id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone, authProvider: user.authProvider, avatarUrl: user.avatarUrl, profile: user.profile ?? {} },
@@ -363,7 +364,7 @@ export class BusOperatorService {
       data: { googleSub, authProvider: "google", avatarUrl: profile.picture ?? user.avatarUrl, name: user.name || profile.name || user.email }
     });
     const operator = await prisma.busOperator.findUnique({ where: { userId: user.id } });
-    const accessToken = jwt.sign({ sub: updated.id, role: updated.role }, env.jwtSecret, { issuer: env.jwtIssuer, expiresIn: env.jwtAccessTtlSeconds });
+    const accessToken = signAccessToken({ payload: { sub: updated.id, role: updated.role }, secret: env.jwtSecret, issuer: env.jwtIssuer, ttlSeconds: env.jwtAccessTtlSeconds });
     return {
       accessToken,
       user: { id: updated.id, name: updated.name, email: updated.email, role: updated.role, phone: updated.phone, authProvider: updated.authProvider, avatarUrl: updated.avatarUrl, profile: updated.profile ?? {} },

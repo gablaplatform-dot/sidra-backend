@@ -82,7 +82,8 @@ export const buildApp = () => {
 
         callback(new Error("Origin is not allowed by CORS"));
       },
-      credentials: true
+      credentials: true,
+      exposedHeaders: ["X-Renewed-Token"]
     })
   );
   app.use(defaultRateLimit);

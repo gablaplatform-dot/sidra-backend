@@ -1,5 +1,5 @@
 import { AppError } from "../utils/AppError.js";
-import { verifyAccessToken } from "../utils/jwt.js";
+import { signAccessToken, verifyAccessToken } from "../utils/jwt.js";
 import { env } from "../config/env.js";
 import { prisma } from "../config/db.js";
 import { Roles } from "../constants/enums.js";
@@ -12,7 +12,7 @@ const sessionFrom = (payload) => {
   if (!payload || typeof payload.sub !== "string" || !payload.sub) return null;
   if (payload.purpose) return null;
   if (!SESSION_ROLES.has(payload.role)) return null;
-  return { id: payload.sub, role: payload.role, roleId: payload.roleId ?? null };
+  return { id: payload.sub, role: payload.role, roleId: payload.roleId ?? null, issuedAt: Number(payload.iat) || 0 };
 };
 
 // Suspending or deactivating an account must stop it working now, not when its token expires. The flag is
@@ -30,8 +30,20 @@ const isUserActive = async (userId) => {
   return active;
 };
 
+// Signed-in customers, providers, drivers and bus operators are handed a fresh token as they use the app, so a
+// session never runs out while it is in use (the client swaps it in from this header). Admin sessions never renew.
+const RENEW_AFTER_SECONDS = 7 * 24 * 60 * 60;
+const renewIfDue = (res, session) => {
+  if (!session || session.role === "admin" || !session.issuedAt) return;
+  if (Date.now() / 1000 - session.issuedAt < RENEW_AFTER_SECONDS) return;
+  res.setHeader(
+    "X-Renewed-Token",
+    signAccessToken({ payload: { sub: session.id, role: session.role }, secret: env.jwtSecret, issuer: env.jwtIssuer, ttlSeconds: env.jwtAccessTtlSeconds })
+  );
+};
+
 export const requireAuth = (allowedRoles = []) => {
-  return async (req, _res, next) => {
+  return async (req, res, next) => {
     const header = req.headers.authorization ?? "";
     const [scheme, token] = header.split(" ");
 
@@ -59,6 +71,7 @@ export const requireAuth = (allowedRoles = []) => {
     if (allowedRoles.length && !allowedRoles.includes(req.user.role)) {
       return next(new AppError({ message: "Forbidden", statusCode: 403, code: "FORBIDDEN" }));
     }
+    renewIfDue(res, session);
     next();
   };
 };

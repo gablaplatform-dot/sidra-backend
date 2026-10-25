@@ -1,5 +1,7 @@
 import React from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+
+import { loginPath } from "./lib/authRedirect";
 
 import ProviderOnboarding from "./pages/ProviderOnboarding";
 import Login from "./pages/Login";
@@ -30,8 +32,29 @@ import BusOnboarding from "./pages/bus/BusOnboarding";
 import BusOperatorLogin from "./pages/bus/BusOperatorLogin";
 import BusOperatorPortal from "./pages/bus/BusOperatorPortal";
 
+// Pages that only make sense signed in: if the API rejects the saved token there, go to sign-in and come back
+// afterwards, instead of leaving a bare "Unauthorized" under a header that still says "Log out".
+const SIGNED_IN_ONLY = ["/profile", "/orders", "/welcome"];
+
+function SessionGuard() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  React.useEffect(() => {
+    const onExpired = () => {
+      if (SIGNED_IN_ONLY.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`))) {
+        navigate(loginPath(location), { replace: true });
+      }
+    };
+    window.addEventListener("gabla-session-expired", onExpired);
+    return () => window.removeEventListener("gabla-session-expired", onExpired);
+  }, [location, navigate]);
+  return null;
+}
+
 export default function App() {
   return (
+    <>
+    <SessionGuard />
     <Routes>
       <Route path="/provider/onboarding" element={<ProviderOnboarding />} />
       <Route path="/login" element={<Login />} />
@@ -68,5 +91,6 @@ export default function App() {
       <Route path="/bus/operator/*" element={<BusOperatorPortal />} />
       <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
+    </>
   );
 }

@@ -101,7 +101,6 @@ export default function SiteHeader({ session, onLogout }) {
           {session ? <Link to="/orders" onClick={closeDrawer}>{t("nav.myOrders")}</Link> : null}
           {isProvider ? <Link to="/profile" onClick={closeDrawer}>{t("nav.profile")}</Link> : null}
         </nav>
-        <LanguageSwitcher />
         {session ? (
           <button type="button" className="cta-button drawer-cta shop-themed-cta" onClick={() => { closeDrawer(); onLogout(); }}>{t("nav.logOut")}</button>
         ) : (

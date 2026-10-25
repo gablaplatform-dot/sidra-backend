@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { todayEat, ugx } from "../../lib/bus";
+import LanguageSwitcher from "../LanguageSwitcher";
 import { BookScreen, FindScreen, UnlockScreen } from "./ContactPhone";
 import { IconArrowRight, IconBike, IconChevronLeft, IconBus, IconCar, IconCart, IconPin, IconSearch, IconSparkles, IconTicket } from "../icons";
 
@@ -792,6 +793,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       {/* Block 0: the orbit, the fall into the bowl and the lit-up scene. */}
       <div className="hb hb-intro" style={{ height: blocks[0].P + size.h }}>
         <div className="hb-stage ho-sticky" style={stageStyle}>
+          {size.compact ? <div className="ho-lang"><LanguageSwitcher /></div> : null}
           {size.compact ? null : (
           <div className="ho-hero" ref={heroRef}>
             <span className="home-eyebrow">
