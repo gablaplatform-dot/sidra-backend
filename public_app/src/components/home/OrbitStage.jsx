@@ -52,6 +52,7 @@ const CHAPTERS = [
 const PHONE_STEPS = ["find", "unlock", "book"];
 const BOWL_SIDE_SCALE = 0.78;
 const HDR_FALLBACK = 76;
+const COMPACT_W = 760; // below this the story is laid out for a portrait phone
 
 const initial = (value) => (value || "G").trim().slice(0, 1).toUpperCase();
 
@@ -179,13 +180,17 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
   const wordRefs = useRef([]);
   const hoverRef = useRef(false);
   const focusRef = useRef(false);
-  const [size, setSize] = useState(() => ({
-    w: typeof window === "undefined" ? 1280 : document.documentElement.clientWidth,
-    h: typeof window === "undefined" ? 700 : window.innerHeight - HDR_FALLBACK,
-    hdr: HDR_FALLBACK
-  }));
+  const [size, setSize] = useState(() => {
+    const w = typeof window === "undefined" ? 1280 : document.documentElement.clientWidth;
+    return {
+      w,
+      h: typeof window === "undefined" ? 700 : window.innerHeight - HDR_FALLBACK,
+      hdr: HDR_FALLBACK,
+      compact: w < COMPACT_W
+    };
+  });
 
-  const tiles = useMemo(() => categories.slice(0, MAX_TILES), [categories]);
+  const tiles = useMemo(() => categories.slice(0, size.compact ? 10 : MAX_TILES), [categories, size.compact]);
   const endWords = useMemo(() => [...t("landing.endTitle1").split(/\s+/), ...t("landing.endTitle2").split(/\s+/)].filter(Boolean), [t]);
   const lineBreakAt = useMemo(() => t("landing.endTitle1").split(/\s+/).filter(Boolean).length, [t]);
 
@@ -217,10 +222,18 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
   }, [shopCards, busRoutes, categoryCards, t]);
 
   useEffect(() => {
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
     const update = () => {
       const header = document.querySelector(".site-header");
       const hdr = header ? header.offsetHeight : HDR_FALLBACK;
-      setSize({ w: document.documentElement.clientWidth, h: window.innerHeight - hdr, hdr });
+      const w = document.documentElement.clientWidth;
+      setSize((cur) => {
+        const h = window.innerHeight - hdr;
+        // On touch screens the address bar sliding away changes the height by a few dozen pixels: ignore that,
+        // otherwise every section would resize (and the page jump) while scrolling.
+        if (coarse && cur.w === w && cur.hdr === hdr && Math.abs(h - cur.h) < 160) return cur;
+        return { w, h, hdr, compact: w < COMPACT_W };
+      });
     };
     update();
     window.addEventListener("resize", update);
@@ -239,7 +252,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
 
   // Bowl placement: centred along the bottom of the stage, its visible base 20px above the edge.
   const bowl = useMemo(() => {
-    const bw = Math.min(size.w * 0.46, 640, size.h * 1.45);
+    const bw = size.compact ? Math.min(size.w * 0.74, size.h * 0.95) : Math.min(size.w * 0.46, 640, size.h * 1.45);
     const bh = (bw * BOWL_H) / BOWL_W;
     return { bw, bh, left: (size.w - bw) / 2, top: size.h - bh * 0.9 - 20 };
   }, [size]);
@@ -252,10 +265,17 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
     const ay = my - bowl.bh * 0.1;
     const rx = Math.min(size.w * 0.34, 430);
     const ry = Math.min(size.h * 0.3, 210);
-    return CHIPS.map((c) => {
+    // On a phone the four chips sit in a 2x2 block above the bowl instead of a wide fan.
+    const compactSpots = [
+      { x: -1, y: 0.58 },
+      { x: -1, y: 0.4 },
+      { x: 1, y: 0.4 },
+      { x: 1, y: 0.58 }
+    ];
+    return CHIPS.map((c, ci) => {
       const rad = (c.angle * Math.PI) / 180;
-      const tx = ax + rx * Math.cos(rad);
-      const ty = ay - ry * Math.sin(rad);
+      const tx = size.compact ? ax + compactSpots[ci].x * size.w * 0.235 : ax + rx * Math.cos(rad);
+      const ty = size.compact ? size.h * compactSpots[ci].y : ay - ry * Math.sin(rad);
       // Out of the mouth straight up, then curving over to the resting place.
       const c1x = mx;
       const c1y = my - bowl.bh * 1.0;
@@ -265,27 +285,36 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
     });
   }, [size, bowl]);
 
-  // Card size follows the stage, and each chapter's cards sit in a 2x2 (or 1x2) block on the side opposite the bowl.
+  // Card size follows the stage. On desktop each chapter's cards sit in a 2x2 block opposite the bowl; on a phone
+  // they sit in a 2x2 block between the chapter's text (above) and the bowl (below).
+  const mouthStage = bowl.top + (MOUTH_Y / BOWL_H) * bowl.bh;
   const cardBox = useMemo(() => {
+    if (size.compact) {
+      const availH = mouthStage - 28 - size.h * 0.4;
+      const cw = clamp(Math.min((size.w - 3 * 14 - 2 * 18) / 2, (availH - 14) / 2 / 1.22), 96, 150);
+      return { cw, ch: cw * 1.22 };
+    }
     const cw = clamp(Math.min(size.w * 0.19, (size.h - 170) / 2 / 1.22), 130, 232);
     return { cw, ch: cw * 1.22 };
-  }, [size]);
-  // The finale's grid: up to two rows of tiles filling the space between the heading and the bowl.
+  }, [size, mouthStage]);
+  // The finale's grid: rows of tiles filling the space between the heading and the bowl.
   const catTiles = useMemo(() => {
     const n = (chapterCards.categories || []).length;
-    const gap = 16;
-    const cols = Math.min(8, Math.max(1, n));
+    const compact = size.compact;
+    const gap = compact ? 8 : 16;
+    const cols = compact ? (n <= 12 ? 3 : 4) : Math.min(8, Math.max(1, n));
     const rows = Math.max(1, Math.ceil(n / cols));
-    const availW = size.w * 0.9;
-    const availH = size.h * 0.46;
-    let tw = Math.min(160, (availW - (cols - 1) * gap) / cols);
+    const availW = size.w * (compact ? 0.92 : 0.9);
+    const top = size.h * (compact ? 0.21 : 0.22);
+    const availH = compact ? mouthStage - 46 - top : size.h * 0.46;
+    let tw = Math.min(compact ? 118 : 160, (availW - (cols - 1) * gap) / cols);
     let th = tw * 1.18;
     if (rows * th + (rows - 1) * gap > availH) {
       th = (availH - (rows - 1) * gap) / rows;
       tw = th / 1.18;
     }
     const totalH = rows * th + (rows - 1) * gap;
-    const y0 = size.h * 0.22 + (availH - totalH) / 2 + th / 2;
+    const y0 = top + (availH - totalH) / 2 + th / 2;
     const geos = Array.from({ length: n }, (_, i) => {
       const row = Math.floor(i / cols);
       const inRow = Math.min(cols, n - row * cols);
@@ -293,36 +322,42 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       return { x: (size.w - rowW) / 2 + tw / 2 + (i % cols) * (tw + gap), y: y0 + row * (th + gap) };
     });
     return { tw, th, geos };
-  }, [chapterCards.categories, size]);
+  }, [chapterCards.categories, size, mouthStage]);
   const cardGeo = useMemo(() => {
-    const gap = 22;
+    const gap = size.compact ? 14 : 22;
     return CHAPTERS.map((chapter) => {
       if (chapter.key === "categories") return catTiles.geos;
       const n = (chapterCards[chapter.key] || []).length;
       const cols = n >= 3 ? 2 : Math.max(1, n);
       const rows = n >= 3 ? 2 : 1;
-      const regionX = chapter.side === "left" ? size.w * 0.5 : size.w * 0.04;
-      const regionW = size.w * 0.46;
+      const compact = size.compact;
+      const regionX = compact ? 0 : chapter.side === "left" ? size.w * 0.5 : size.w * 0.04;
+      const regionW = compact ? size.w : size.w * 0.46;
       const totalW = cols * cardBox.cw + (cols - 1) * gap;
-      const totalH = rows * cardBox.ch + (rows - 1) * gap + (cols > 1 ? 26 : 0);
+      const totalH = rows * cardBox.ch + (rows - 1) * gap + (cols > 1 && !compact ? 26 : 0);
       const x0 = regionX + (regionW - totalW) / 2 + cardBox.cw / 2;
-      const y0 = size.h / 2 - totalH / 2 + cardBox.ch / 2 - 8;
+      // Desktop centres the block on the stage; a phone centres it between the text and the bowl.
+      const y0 = compact
+        ? chapter.key === "phone"
+          ? (size.h * 0.3 + mouthStage - 40) / 2 - cardBox.ch / 2 + cardBox.ch / 2
+          : size.h * 0.4 + (mouthStage - 28 - size.h * 0.4 - totalH) / 2 + cardBox.ch / 2
+        : size.h / 2 - totalH / 2 + cardBox.ch / 2 - 8;
       return Array.from({ length: n }, (_, i) => {
         const col = i % cols;
         const row = Math.floor(i / cols);
-        return { x: x0 + col * (cardBox.cw + gap), y: y0 + row * (cardBox.ch + gap) + (col ? 26 : 0) };
+        return { x: x0 + col * (cardBox.cw + gap), y: y0 + row * (cardBox.ch + gap) + (col && !compact ? 26 : 0) };
       });
     });
-  }, [size, cardBox, chapterCards, catTiles]);
+  }, [size, cardBox, chapterCards, catTiles, mouthStage]);
 
   useEffect(() => {
     const story = storyRef.current;
     if (!story || !size.w) return undefined;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const cx = size.w / 2;
-    const cy = size.h / 2 - 16;
-    const rx = Math.min(size.w * 0.38, 600);
-    const ry = Math.min(size.h * 0.35, 320);
+    const cy = size.h / 2 - (size.compact ? 4 : 16);
+    const rx = size.compact ? size.w * 0.42 : Math.min(size.w * 0.38, 600);
+    const ry = size.compact ? Math.min(size.h * 0.37, 300) : Math.min(size.h * 0.35, 320);
     const n = tiles.length;
     const mouthX = bowl.left + bowl.bw / 2;
     const mouthStageY = bowl.top + (MOUTH_Y / BOWL_H) * bowl.bh;
@@ -330,9 +365,13 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
     const order = tiles.map((_, i) => (i * 0.6180339887) % 1);
     // Bowl anchors per block: centre for the intro, then the side of each chapter (left, right, left).
     // ...and finally the centre, under the category tiles.
-    const anchorX = [cx, ...CHAPTERS.map((c) => (c.side === "left" ? size.w * 0.24 : c.side === "center" ? cx : size.w * 0.76))];
-    const anchorS = [1, ...CHAPTERS.map((c) => (c.side === "center" ? 1 : BOWL_SIDE_SCALE))];
-    const arc = size.h * 0.22;
+    // On a phone the bowl still alternates sides, but only a little way off centre, and a bit smaller.
+    const leftX = size.compact ? size.w * 0.3 : size.w * 0.24;
+    const rightX = size.compact ? size.w * 0.7 : size.w * 0.76;
+    const sideScale = size.compact ? 0.64 : BOWL_SIDE_SCALE;
+    const anchorX = [cx, ...CHAPTERS.map((c) => (c.side === "left" ? leftX : c.side === "center" ? cx : rightX))];
+    const anchorS = [1, ...CHAPTERS.map((c) => (c.side === "center" ? 1 : sideScale))];
+    const arc = size.h * (size.compact ? 0.12 : 0.22);
     const storyH = blocks[blocks.length - 1].T + blocks[blocks.length - 1].P + size.h;
 
     const cubic = (a, b, c, d, t) => {
@@ -594,10 +633,10 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
   };
 
   // Phone-width screens use the mobile home instead, so tile size only has to suit tablets and up.
-  const tileW = clamp(Math.min(size.w, size.h * 1.5) * 0.075, 56, 92);
+  const tileW = size.compact ? clamp(size.w * 0.115, 40, 52) : clamp(Math.min(size.w, size.h * 1.5) * 0.075, 56, 92);
   const bowlStyle = { left: bowl.left, top: bowl.top, width: bowl.bw, height: bowl.bh };
   const stageStyle = { top: size.hdr, height: size.h };
-  const phoneW = clamp(Math.min(size.h * 0.42, size.w * 0.2), 190, 290);
+  const phoneW = size.compact ? clamp(Math.min(size.w * 0.52, (mouthStage - 40 - size.h * 0.3 - 8) / 2.03), 120, 200) : clamp(Math.min(size.h * 0.42, size.w * 0.2), 190, 290);
 
   return (
     <section className="story" ref={storyRef} aria-label={t("landing.orbitAria")} style={{ "--tw": `${tileW}px`, "--th": `${tileW * 1.22}px` }}>

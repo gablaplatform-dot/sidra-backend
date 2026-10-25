@@ -10,12 +10,24 @@ import ProviderCard from "../components/ProviderCard";
 import { IconArrowRight } from "../components/icons";
 import { ProviderCardsSkeleton, Skel } from "../components/Skeleton";
 import { mapCategoryDto, mapProductDto } from "../lib/shopMappers";
-import MobileHome from "../components/mobilehome/MobileHome";
 import OrbitStage from "../components/home/OrbitStage";
 import Reveal from "../components/home/Reveal";
 import { busApi } from "../lib/bus";
 
-const STAGE_CATEGORIES = 16;
+const STAGE_CATEGORIES_DESKTOP = 16;
+const STAGE_CATEGORIES_PHONE = 12;
+
+// The story shows the first N categories; a phone has room for fewer.
+const usePhone = () => {
+  const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 759px)").matches);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 759px)");
+    const update = () => setPhone(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  return phone;
+};
 
 const FOOTER_LINKS = [
   { key: "shop", href: "/shop" },
@@ -38,6 +50,8 @@ function DesktopHome() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchValue, setSearchValue] = useState("");
+  const phone = usePhone();
+  const stageCategories = phone ? STAGE_CATEGORIES_PHONE : STAGE_CATEGORIES_DESKTOP;
   const [busRoutes, setBusRoutes] = useState([]);
 
   // The bus chapter is a bonus: if the bus API is unavailable the rest of Home is unaffected.
@@ -154,8 +168,8 @@ function DesktopHome() {
 
   // The finale of the hero story: the first sixteen categories come back out of the bowl.
   const categoryCards = useMemo(
-    () => categories.slice(0, STAGE_CATEGORIES).map((c) => ({ kind: "tile", id: c.id, to: `/category/${c.id}`, name: c.name, image: c.image })),
-    [categories]
+    () => categories.slice(0, stageCategories).map((c) => ({ kind: "tile", id: c.id, to: `/category/${c.id}`, name: c.name, image: c.image })),
+    [categories, stageCategories]
   );
 
   // Real providers when there are some; until then the phone shows the categories so it is never empty.
@@ -172,10 +186,10 @@ function DesktopHome() {
       <OrbitStage categories={orbitCategories} shopCards={shopCards} categoryCards={categoryCards} busRoutes={busRoutes} phoneProviders={phoneProviders} searchValue={searchValue} onSearchChange={setSearchValue} />
 
       {/* Categories beyond the sixteen the finale shows (when there are that many) continue as a plain grid. */}
-      {categories.length > STAGE_CATEGORIES ? (
+      {categories.length > stageCategories ? (
         <section className="home-section hs-categories hs-more">
           <div className="home-category-grid">
-            {categories.slice(STAGE_CATEGORIES).map((c, idx) => (
+            {categories.slice(stageCategories).map((c, idx) => (
               <Reveal as={Link} delay={(idx % 4) * 90} to={`/category/${c.id}`} key={c.id} className="home-category-card">
                 <div className={`home-category-img ${c.image ? "" : "home-category-img-fallback"}`}>
                   {c.image ? (
@@ -244,28 +258,7 @@ function DesktopHome() {
 }
 
 
-// Phones get an app-style home (quick actions + category cards); larger screens keep the full landing page.
-const PHONE_QUERY = "(max-width: 760px)";
-
+// Phones get the same home as larger screens: the hero story is laid out for a portrait screen (see OrbitStage).
 export default function Home() {
-  const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia(PHONE_QUERY).matches);
-  const [session, setSessionState] = useState(() => getSession());
-
-  useEffect(() => {
-    const media = window.matchMedia(PHONE_QUERY);
-    const update = () => setPhone(media.matches);
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-
-  if (!phone) return <DesktopHome />;
-  return (
-    <MobileHome
-      session={session}
-      onLogout={() => {
-        clearSession();
-        setSessionState(null);
-      }}
-    />
-  );
+  return <DesktopHome />;
 }
