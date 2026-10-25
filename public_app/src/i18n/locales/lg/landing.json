@@ -42,6 +42,19 @@
       "carSub": "Entambula ennungi",
       "fromPrice": "Okuva ku {{price}}",
       "browse": "Laba"
+    },
+    "next": {
+      "more": "Laba ebirala",
+      "keepGoing": "Weyongereyo okunoonyereza",
+      "sections": "Ebitundu"
+    },
+    "beats": {
+      "intro": "Tandika",
+      "shop": "Dduuka",
+      "bus": "Amatikiti ga bbaasi",
+      "ride": "Entambula",
+      "phone": "Engeri gye kikola",
+      "categories": "Ebika"
     }
   }
 }

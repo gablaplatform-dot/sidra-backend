@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { todayEat, ugx } from "../../lib/bus";
 import { BookScreen, FindScreen, UnlockScreen } from "./ContactPhone";
-import { IconArrowRight, IconBike, IconBus, IconCar, IconCart, IconPin, IconSearch, IconSparkles, IconTicket } from "../icons";
+import { IconArrowRight, IconBike, IconChevronLeft, IconBus, IconCar, IconCart, IconPin, IconSearch, IconSparkles, IconTicket } from "../icons";
 
 const MAX_TILES = 16;
 const ORBIT_SECONDS = 70;
@@ -34,6 +34,9 @@ const CHAPTERS = [
   // The finale: the categories come back out of the bowl and stay up; the bowl then drops away below them.
   { key: "categories", side: "center", to: "/home#categories", fall: null }
 ];
+// The scenes the "See more" button glides between: each is the moment a section has fully arrived.
+const BEAT_NAMES = ["intro", "shop", "bus", "ride", "phone", "categories"];
+const RING = 2 * Math.PI * 25;
 const PHONE_STEPS = ["find", "unlock", "book"];
 const BOWL_SIDE_SCALE = 0.78;
 const HDR_FALLBACK = 76;
@@ -152,6 +155,10 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
   const cardRefs = useRef({});
   const phoneScreenRefs = useRef([]);
   const uiRefs = useRef([]);
+  const ringRef = useRef(null);
+  const glideRef = useRef(0);
+  const [beat, setBeat] = useState(0);
+  const [atEnd, setAtEnd] = useState(false);
   const phoneChipRefs = useRef([]);
   const bowlBackRef = useRef(null);
   const bowlFrontRef = useRef(null);
@@ -246,6 +253,15 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       return block;
     });
   }, [size.h]);
+
+  // Story positions (v) of every scene, and where the story ends.
+  const beats = useMemo(() => {
+    const [b0, b1, b2, b3, b4, b5] = blocks;
+    return {
+      list: [0, b0.P * 0.97, b1.T + b1.P * 0.5, b2.T + b2.P * 0.5, b3.T + b3.P * 0.5, b4.T + b4.P * 0.5, b5.T + b5.P * 0.66],
+      end: b5.T + b5.P + size.h
+    };
+  }, [blocks, size.h]);
 
   // Bowl placement: centred along the bottom of the stage, its visible base 20px above the edge.
   const bowl = useMemo(() => {
@@ -368,6 +384,8 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
     };
 
     let raf = 0;
+    let lastBeat = -1;
+    let lastEnd = null;
     let last = performance.now();
     let marq = 0;
     let angle = 0;
@@ -581,6 +599,20 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
           el.style.pointerEvents = g > 0.95 ? "auto" : "none";
         }
       }
+      // Progress ring and current scene for the "See more" control.
+      const prog = clamp(v / Math.max(1, storyH - size.h));
+      if (ringRef.current) ringRef.current.style.strokeDashoffset = (RING * (1 - prog)).toFixed(1);
+      let near = 0;
+      for (let b = 1; b < beats.list.length; b += 1) if (Math.abs(beats.list[b] - v) < Math.abs(beats.list[near] - v)) near = b;
+      if (near !== lastBeat) {
+        lastBeat = near;
+        setBeat(near);
+      }
+      const finished = v > beats.list[beats.list.length - 1] - 14;
+      if (finished !== lastEnd) {
+        lastEnd = finished;
+        setAtEnd(finished);
+      }
       if (bowlGlowRef.current) {
         bowlGlowRef.current.style.opacity = Math.min(1, glowBase * (1 + 0.8 * flare)).toFixed(3);
         bowlGlowRef.current.style.scale = (bs * (1 + 0.16 * flare)).toFixed(3);
@@ -591,7 +623,53 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       cancelAnimationFrame(raf);
       observer.disconnect();
     };
-  }, [tiles, bowl, size, blocks, cardGeo, ui]);
+  }, [tiles, bowl, size, blocks, cardGeo, ui, beats]);
+
+  // Manual trigger: an eased, automatic scroll to a scene. Any wheel, touch or key press takes control straight back.
+  const cancelGlide = useCallback(() => {
+    if (glideRef.current) cancelAnimationFrame(glideRef.current);
+    glideRef.current = 0;
+  }, []);
+  useEffect(() => {
+    window.addEventListener("wheel", cancelGlide, { passive: true });
+    window.addEventListener("touchstart", cancelGlide, { passive: true });
+    window.addEventListener("keydown", cancelGlide);
+    window.addEventListener("mousedown", cancelGlide);
+    return () => {
+      cancelGlide();
+      window.removeEventListener("wheel", cancelGlide);
+      window.removeEventListener("touchstart", cancelGlide);
+      window.removeEventListener("keydown", cancelGlide);
+      window.removeEventListener("mousedown", cancelGlide);
+    };
+  }, [cancelGlide]);
+  const currentV = () => size.hdr - storyRef.current.getBoundingClientRect().top;
+  const glideToV = (target) => {
+    const story = storyRef.current;
+    if (!story) return;
+    cancelGlide();
+    const from = window.scrollY;
+    const to = story.getBoundingClientRect().top + window.scrollY + target - size.hdr;
+    const dist = to - from;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      window.scrollTo({ top: to, behavior: "instant" });
+      return;
+    }
+    const dur = clamp(900 + Math.abs(dist) * 0.55, 1100, 2600);
+    const t0 = performance.now();
+    const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+    const step = (now) => {
+      const k = clamp((now - t0) / dur);
+      window.scrollTo({ top: from + dist * ease(k), behavior: "instant" });
+      glideRef.current = k < 1 ? requestAnimationFrame(step) : 0;
+    };
+    glideRef.current = requestAnimationFrame(step);
+  };
+  const goNext = () => {
+    const v = currentV();
+    const next = beats.list.find((b) => b > v + 14);
+    glideToV(next === undefined ? beats.end : next);
+  };
 
   const submit = (event) => {
     event.preventDefault();
@@ -679,6 +757,25 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
             )
           )}
         </div>
+
+        <div className="ho-next-wrap">
+          <button type="button" className={`ho-next ${atEnd ? "is-last" : ""}`} onClick={goNext} aria-label={atEnd ? t("landing.next.keepGoing") : t("landing.next.more")}>
+            <span className="ho-next-label">{atEnd ? t("landing.next.keepGoing") : t("landing.next.more")}</span>
+            <span className="ho-next-orb">
+              <svg viewBox="0 0 56 56" aria-hidden="true">
+                <circle cx="28" cy="28" r="25" className="ho-next-track" />
+                <circle cx="28" cy="28" r="25" className="ho-next-bar" ref={ringRef} strokeDasharray={RING} strokeDashoffset={RING} />
+              </svg>
+              <span className="ho-next-core"><IconChevronLeft /></span>
+            </span>
+          </button>
+        </div>
+
+        <nav className="ho-dots" aria-label={t("landing.next.sections")}>
+          {BEAT_NAMES.map((name, i) => (
+            <button key={name} type="button" className={i === beat ? "is-active" : ""} data-label={t(`landing.beats.${name}`)} onClick={() => glideToV(beats.list[i])} aria-label={t(`landing.beats.${name}`)} />
+          ))}
+        </nav>
       </div>
       <div className="story-blocks">
       {/* Block 0: the orbit, the fall into the bowl and the lit-up scene. */}

@@ -42,6 +42,19 @@
       "carSub": "Comfortable rides",
       "fromPrice": "From {{price}}",
       "browse": "Browse"
+    },
+    "next": {
+      "more": "See more",
+      "keepGoing": "Keep exploring",
+      "sections": "Sections"
+    },
+    "beats": {
+      "intro": "Start",
+      "shop": "Shop",
+      "bus": "Bus tickets",
+      "ride": "Rides",
+      "phone": "How it works",
+      "categories": "Categories"
     }
   }
 }

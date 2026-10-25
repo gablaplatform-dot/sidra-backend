@@ -42,6 +42,19 @@
       "carSub": "ምቹእ ጉዕዞ",
       "fromPrice": "ካብ {{price}}",
       "browse": "ርአ"
+    },
+    "next": {
+      "more": "ተወሳኺ ርአ",
+      "keepGoing": "ደሊኻ ቀጽል",
+      "sections": "ክፍልታት"
+    },
+    "beats": {
+      "intro": "ጀምር",
+      "shop": "ዕደጋ",
+      "bus": "ትኬት ባስ",
+      "ride": "ጉዕዞ",
+      "phone": "ከመይ ከም ዝሰርሕ",
+      "categories": "ምድባት"
     }
   }
 }

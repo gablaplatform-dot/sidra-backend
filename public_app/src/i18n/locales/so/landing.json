@@ -42,6 +42,19 @@
       "carSub": "Safar raaxo leh",
       "fromPrice": "Laga bilaabo {{price}}",
       "browse": "Daalacasho"
+    },
+    "next": {
+      "more": "Arag wax dheeraad ah",
+      "keepGoing": "Sii wad sahamin",
+      "sections": "Qaybaha"
+    },
+    "beats": {
+      "intro": "Bilow",
+      "shop": "Dukaan",
+      "bus": "Tigidhada baska",
+      "ride": "Safarrada",
+      "phone": "Sida ay u shaqeyso",
+      "categories": "Qaybaha"
     }
   }
 }
