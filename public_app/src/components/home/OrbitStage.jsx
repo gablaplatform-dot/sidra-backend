@@ -256,9 +256,9 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
 
   // Story positions (v) of every scene, and where the story ends.
   const beats = useMemo(() => {
-    const [b0, b1, b2, b3, b4, b5] = blocks;
+    const [, b1, b2, b3, b4, b5] = blocks;
     return {
-      list: [0, b0.P * 0.97, b1.T + b1.P * 0.5, b2.T + b2.P * 0.5, b3.T + b3.P * 0.5, b4.T + b4.P * 0.5, b5.T + b5.P * 0.66],
+      list: [0, b1.T + b1.P * 0.5, b2.T + b2.P * 0.5, b3.T + b3.P * 0.5, b4.T + b4.P * 0.5, b5.T + b5.P * 0.66],
       end: b5.T + b5.P + size.h
     };
   }, [blocks, size.h]);
@@ -655,9 +655,9 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       window.scrollTo({ top: to, behavior: "instant" });
       return;
     }
-    const dur = clamp(900 + Math.abs(dist) * 0.55, 1100, 2600);
+    const dur = clamp(700 + Math.abs(dist) * 0.8, 1100, 4800);
     const t0 = performance.now();
-    const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+    const ease = (x) => 0.5 - Math.cos(Math.PI * x) / 2;
     const step = (now) => {
       const k = clamp((now - t0) / dur);
       window.scrollTo({ top: from + dist * ease(k), behavior: "instant" });
