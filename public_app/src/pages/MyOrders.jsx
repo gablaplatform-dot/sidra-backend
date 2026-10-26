@@ -7,7 +7,8 @@ import { clearSession, getSession } from "../lib/session";
 import { loginPath } from "../lib/authRedirect";
 import { formatUgx } from "../lib/format";
 import { intlLocale } from "../i18n";
-import { ORDER_STATUS, openDocumentPdf } from "../lib/myOrders";
+import { ORDER_STATUS } from "../lib/myOrders";
+import { openDocumentPdf } from "../lib/documents";
 import SiteHeader from "../components/SiteHeader";
 import MyBookings from "../components/booking/MyBookings";
 import PaymentModal from "../components/PaymentModal";
@@ -42,7 +43,7 @@ function OrderCard({ order, onPaid, phone }) {
     setBusy(doc.id);
     setError("");
     try {
-      await openDocumentPdf(doc.id);
+      await openDocumentPdf(doc);
     } catch (e) {
       setError(e.message || t("orders.docOpenFailed"));
     } finally {
