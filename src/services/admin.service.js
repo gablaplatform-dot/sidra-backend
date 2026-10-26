@@ -907,12 +907,29 @@ export class AdminService {
       await prisma.provider.findMany({ where: { id: { in: items.map((i) => i.providerId) } } })
     );
     const providerMap = new Map(providers.map((p) => [p.id, p]));
+    // Buys and revenue come straight from the orders (every order that wasn't rejected or cancelled), so cash orders
+    // count too; the stored soldCount only moves for online payments.
+    const lines = await prisma.orderItem.findMany({
+      where: { listingId: { in: items.map((i) => i.id) }, order: { status: { notIn: ["rejected", "canceled"] } } },
+      select: { listingId: true, quantity: true, total: true }
+    });
+    const salesMap = new Map();
+    for (const line of lines) {
+      const row = salesMap.get(line.listingId) ?? { quantity: 0, total: 0 };
+      row.quantity += Number(line.quantity) || 0;
+      row.total += Number(line.total) || 0;
+      salesMap.set(line.listingId, row);
+    }
     return items.map((i) => {
       const provider = providerMap.get(String(i.providerId));
+      const sold = salesMap.get(i.id);
       return {
         id: i.id,
         providerId: i.providerId,
         provider: provider ? { id: provider.id, businessName: provider.businessName, category: provider.category } : null,
+        views: Number(i.viewCount ?? 0),
+        purchases: Math.max(Number(sold?.quantity ?? 0), Number(i.soldCount ?? 0)),
+        revenueUgx: Number(sold?.total ?? 0),
         name: i.name,
         description: i.description,
         price: moneyString(i.price),
