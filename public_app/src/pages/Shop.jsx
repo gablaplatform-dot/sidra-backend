@@ -9,8 +9,7 @@ import { getCurrentPosition } from "../lib/geolocation";
 import { getPreferredDistrict } from "../lib/userLocation";
 
 import ShopNavbar from "../components/shop/ShopNavbar";
-import ShopHero from "../components/shop/ShopHero";
-import ShopAdsHero from "../components/shop/ShopAdsHero";
+import ShopHeroStage from "../components/shop/ShopHeroStage";
 import { ShopHeroSkeleton } from "../components/Skeleton";
 import ShopForYou from "../components/shop/ShopForYou";
 import ShopCategoryRow from "../components/shop/ShopCategoryRow";
@@ -146,7 +145,7 @@ export default function Shop() {
   return (
     <main className="shop-shell">
       <ShopNavbar session={session} onLogout={logout} />
-      {ads === null ? <ShopHeroSkeleton /> : ads.length ? <ShopAdsHero ads={ads} /> : <ShopHero products={displayNewArrivals.slice(0, 4)} />}
+      {ads === null || (!ads.length && !loaded) ? <ShopHeroSkeleton /> : <ShopHeroStage ads={ads} products={displayNewArrivals.slice(0, 4)} />}
       {!loaded || displayCategories.length ? (
         <ShopCategoryRow categories={displayCategories} loaded={loaded} />
       ) : null}

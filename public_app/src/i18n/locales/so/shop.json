@@ -22,10 +22,22 @@
       "wishlist": "Liiska rabitaanka"
     },
     "trust": {
-      "quality": { "title": "Tayo Sare", "subtitle": "Laga sameeyay alaab tayo wanaagsan" },
-      "delivery": { "title": "Gaarsiin Degdeg ah", "subtitle": "Dirid dhakhso ah oo la isku halleyn karo" },
-      "checkout": { "title": "Bixin Ammaan ah", "subtitle": "Xogtaada waa la ilaaliyaa" },
-      "satisfaction": { "title": "Raaxada Macmiilka", "subtitle": "Dammaanad 100% raaxo ah" }
+      "quality": {
+        "title": "Tayo Sare",
+        "subtitle": "Laga sameeyay alaab tayo wanaagsan"
+      },
+      "delivery": {
+        "title": "Gaarsiin Degdeg ah",
+        "subtitle": "Dirid dhakhso ah oo la isku halleyn karo"
+      },
+      "checkout": {
+        "title": "Bixin Ammaan ah",
+        "subtitle": "Xogtaada waa la ilaaliyaa"
+      },
+      "satisfaction": {
+        "title": "Raaxada Macmiilka",
+        "subtitle": "Dammaanad 100% raaxo ah"
+      }
     },
     "hero": {
       "eyebrow": "HADDA KU SOCDA",
@@ -241,6 +253,27 @@
       "label": "Habaynta alaabta",
       "grid": "Muuqaal shabakad",
       "list": "Muuqaal liis"
+    },
+    "stage": {
+      "prev": "Xayeysiiskii hore",
+      "next": "Xayeysiiska xiga",
+      "productsEyebrow": "Alaab cusub",
+      "productsTitle": "Wax cusub oo Gabla ah",
+      "productsSubtitle": "Iibiyayaal run ah, qiimo run ah. Arag waxa hadda yimid.",
+      "productsCta": "Eeg dhammaan alaabta",
+      "emptyEyebrow": "Dukaanka Gabla",
+      "emptyTitle": "Hel. Iibso. Gaadhsiis.",
+      "emptySubtitle": "Ka iibso iibiyayaal kuu dhow oo hel bixiyayaal adeeg oo la aamini karo, meel keliya.",
+      "emptyCta": "Eeg qaybaha",
+      "emptyCta2": "Raadi adeeg",
+      "tileNew": "Alaab cusub",
+      "tileNewSub": "Liisaska ugu dambeeyay",
+      "tileBest": "Kuwa ugu iibsada",
+      "tileBestSub": "Waxa macaamiisha jecel yihiin",
+      "tileCats": "Dhammaan qaybaha",
+      "tileCatsSub": "Ka raadi waxaad u baahan tahay",
+      "tileServices": "Adeegyo",
+      "tileServicesSub": "Hel khabiir la aamini karo"
     }
   },
   "product": {

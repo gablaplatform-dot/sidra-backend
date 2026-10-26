@@ -22,10 +22,22 @@
       "wishlist": "Ebyo by'oyagala"
     },
     "trust": {
-      "quality": { "title": "Omutindo Ogwa Waggulu", "subtitle": "Bikoleddwa mu bintu ebisinga obulungi" },
-      "delivery": { "title": "Okutuusa Mangu", "subtitle": "Okutuusa okwangu era okwesigika" },
-      "checkout": { "title": "Okusasula Okukuumibwa", "subtitle": "Amawulire go gakuumibwa" },
-      "satisfaction": { "title": "Essanyu ly'Omuguzi", "subtitle": "Ekakasa essanyu lya 100%" }
+      "quality": {
+        "title": "Omutindo Ogwa Waggulu",
+        "subtitle": "Bikoleddwa mu bintu ebisinga obulungi"
+      },
+      "delivery": {
+        "title": "Okutuusa Mangu",
+        "subtitle": "Okutuusa okwangu era okwesigika"
+      },
+      "checkout": {
+        "title": "Okusasula Okukuumibwa",
+        "subtitle": "Amawulire go gakuumibwa"
+      },
+      "satisfaction": {
+        "title": "Essanyu ly'Omuguzi",
+        "subtitle": "Ekakasa essanyu lya 100%"
+      }
     },
     "hero": {
       "eyebrow": "EBYETTANIRWA KATI",
@@ -241,6 +253,27 @@
       "label": "Engeri y'okulaga ebintu",
       "grid": "Okulaba nga gridi",
       "list": "Okulaba nga lisiti"
+    },
+    "stage": {
+      "prev": "Eky'emabega",
+      "next": "Ekiddako",
+      "productsEyebrow": "Ebipya ebituuse",
+      "productsTitle": "Ebipya ku Gabla",
+      "productsSubtitle": "Abatunzi ab'amazima, ebbeeyi ez'amazima. Laba ekituuse kati.",
+      "productsCta": "Laba ebintu byonna",
+      "emptyEyebrow": "Edduuka lya Gabla",
+      "emptyTitle": "Kizuule. Kigule. Kituusibwe.",
+      "emptySubtitle": "Gula ku batunzi abakuli okumpi era ozuule abaweereza abeesigika, byonna mu kifo kimu.",
+      "emptyCta": "Laba ebika",
+      "emptyCta2": "Noonya obuweereza",
+      "tileNew": "Ebipya ebituuse",
+      "tileNewSub": "Ebiwandiikiddwa ebisembyeyo",
+      "tileBest": "Ebitunzibwa ennyo",
+      "tileBestSub": "Abaguzi bye baagala",
+      "tileCats": "Ebika byonna",
+      "tileCatsSub": "Noonya ky'oyagala",
+      "tileServices": "Obuweereza",
+      "tileServicesSub": "Zuula omukugu omwesigwa"
     }
   },
   "product": {

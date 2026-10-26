@@ -22,10 +22,22 @@
       "wishlist": "Wishlist"
     },
     "trust": {
-      "quality": { "title": "Premium Quality", "subtitle": "Made with the finest materials" },
-      "delivery": { "title": "Fast Delivery", "subtitle": "Quick and reliable shipping" },
-      "checkout": { "title": "Secure Checkout", "subtitle": "Your data is protected" },
-      "satisfaction": { "title": "Customer Satisfaction", "subtitle": "100% satisfaction guarantee" }
+      "quality": {
+        "title": "Premium Quality",
+        "subtitle": "Made with the finest materials"
+      },
+      "delivery": {
+        "title": "Fast Delivery",
+        "subtitle": "Quick and reliable shipping"
+      },
+      "checkout": {
+        "title": "Secure Checkout",
+        "subtitle": "Your data is protected"
+      },
+      "satisfaction": {
+        "title": "Customer Satisfaction",
+        "subtitle": "100% satisfaction guarantee"
+      }
     },
     "hero": {
       "eyebrow": "TRENDING NOW",
@@ -241,6 +253,27 @@
       "label": "Product layout",
       "grid": "Grid view",
       "list": "List view"
+    },
+    "stage": {
+      "prev": "Previous ad",
+      "next": "Next ad",
+      "productsEyebrow": "New arrivals",
+      "productsTitle": "Fresh on Gabla",
+      "productsSubtitle": "Real sellers, real prices. See what just landed.",
+      "productsCta": "Browse all products",
+      "emptyEyebrow": "Gabla Shop",
+      "emptyTitle": "Find it. Buy it. Get it delivered.",
+      "emptySubtitle": "Shop from sellers near you and find trusted service providers, all in one place.",
+      "emptyCta": "Browse categories",
+      "emptyCta2": "Find a service",
+      "tileNew": "New arrivals",
+      "tileNewSub": "The latest listings",
+      "tileBest": "Best sellers",
+      "tileBestSub": "What shoppers love",
+      "tileCats": "All categories",
+      "tileCatsSub": "Browse by what you need",
+      "tileServices": "Services",
+      "tileServicesSub": "Find a trusted pro"
     }
   },
   "product": {

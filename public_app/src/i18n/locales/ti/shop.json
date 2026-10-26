@@ -22,10 +22,22 @@
       "wishlist": "ዝደልዮም ዝርዝር"
     },
     "trust": {
-      "quality": { "title": "ልዑል ጽሬት", "subtitle": "ካብ ምርጫ ቁሳቁስ ዝተሰርሐ" },
-      "delivery": { "title": "ቅልጡፍ ኣቕሮቦት", "subtitle": "ፈጣንን ዝተኣማመነን ምጽዋዕ" },
-      "checkout": { "title": "ውሑስ ክፍሊት", "subtitle": "ሓበሬታኻ ዝተሓሎ እዩ" },
-      "satisfaction": { "title": "ዕግበት ዓሚል", "subtitle": "100% ዕግበት ዘረጋግጽ" }
+      "quality": {
+        "title": "ልዑል ጽሬት",
+        "subtitle": "ካብ ምርጫ ቁሳቁስ ዝተሰርሐ"
+      },
+      "delivery": {
+        "title": "ቅልጡፍ ኣቕሮቦት",
+        "subtitle": "ፈጣንን ዝተኣማመነን ምጽዋዕ"
+      },
+      "checkout": {
+        "title": "ውሑስ ክፍሊት",
+        "subtitle": "ሓበሬታኻ ዝተሓሎ እዩ"
+      },
+      "satisfaction": {
+        "title": "ዕግበት ዓሚል",
+        "subtitle": "100% ዕግበት ዘረጋግጽ"
+      }
     },
     "hero": {
       "eyebrow": "ሕጂ ዝተፈላለየ",
@@ -241,6 +253,27 @@
       "label": "ኣመዳድባ ኣቑሑት",
       "grid": "ብመልከዓ ሰሌዳ",
       "list": "ብዝርዝር"
+    },
+    "stage": {
+      "prev": "ቀዳማይ ማስተዋዋቕያ",
+      "next": "ዝቕጽል ማስተዋዋቕያ",
+      "productsEyebrow": "ሓደስቲ መጽኢት",
+      "productsTitle": "ሓድሽ ኣብ ጋብላ",
+      "productsSubtitle": "ሓቀኛ ሸየጥቲ፣ ሓቀኛ ዋጋ። እንታይ ከም ዝመጸ ርአ።",
+      "productsCta": "ኩሉ ኣቑሑት ርአ",
+      "emptyEyebrow": "ጋብላ ዕዳጋ",
+      "emptyTitle": "ርከብ። ግዛእ። ኣብ ገዛኻ ተቐበል።",
+      "emptySubtitle": "ካብ ጥቓኻ ዘለዉ ሸየጥቲ ግዛእ፣ ዝተኣመኑ ኣቕራብቲ ኣገልግሎት ድማ ርከብ፣ ኩሉ ኣብ ሓደ ቦታ።",
+      "emptyCta": "ዓይነታት ርአ",
+      "emptyCta2": "ኣገልግሎት ድለ",
+      "tileNew": "ሓደስቲ መጽኢት",
+      "tileNewSub": "ናይ ቀረባ ዝርዝራት",
+      "tileBest": "ዝበለጹ ዝሸጡ",
+      "tileBestSub": "ገዛእቲ ዝፈትውዎም",
+      "tileCats": "ኩሉ ዓይነታት",
+      "tileCatsSub": "ብዘድልየካ ድለ",
+      "tileServices": "ኣገልግሎታት",
+      "tileServicesSub": "ዝተኣመነ ክኢላ ርከብ"
     }
   },
   "product": {
