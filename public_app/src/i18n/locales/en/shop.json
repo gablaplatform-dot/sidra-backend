@@ -21,24 +21,6 @@
       "searchNearby": "Search nearby",
       "wishlist": "Wishlist"
     },
-    "trust": {
-      "quality": {
-        "title": "Premium Quality",
-        "subtitle": "Made with the finest materials"
-      },
-      "delivery": {
-        "title": "Fast Delivery",
-        "subtitle": "Quick and reliable shipping"
-      },
-      "checkout": {
-        "title": "Secure Checkout",
-        "subtitle": "Your data is protected"
-      },
-      "satisfaction": {
-        "title": "Customer Satisfaction",
-        "subtitle": "100% satisfaction guarantee"
-      }
-    },
     "hero": {
       "eyebrow": "TRENDING NOW",
       "titleLine1": "Discover Products",

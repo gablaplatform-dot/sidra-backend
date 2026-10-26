@@ -8,7 +8,6 @@ import { mapCategoryDto } from "../lib/shopMappers";
 
 import ShopNavbar from "../components/shop/ShopNavbar";
 import { CategoryCard } from "../components/shop/ShopCategoryRow";
-import ShopFooterTrust from "../components/shop/ShopFooterTrust";
 import { CategoryTilesSkeleton } from "../components/Skeleton";
 
 export default function ShopAllCategories() {
@@ -65,7 +64,6 @@ export default function ShopAllCategories() {
         )}
       </section>
 
-      <ShopFooterTrust />
     </main>
   );
 }

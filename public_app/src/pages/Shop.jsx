@@ -16,7 +16,6 @@ import ShopCategoryRow from "../components/shop/ShopCategoryRow";
 import ShopNewArrivals from "../components/shop/ShopNewArrivals";
 import ShopBestSellers from "../components/shop/ShopBestSellers";
 import ShopPromoBanners from "../components/shop/ShopPromoBanners";
-import ShopFooterTrust from "../components/shop/ShopFooterTrust";
 import ShopBrowse from "./ShopBrowse";
 
 const safeFetch = async (path, fallback) => {
@@ -159,7 +158,6 @@ export default function Shop() {
       {!loaded || flashSale || newCollection ? (
         <ShopPromoBanners flashSale={flashSale} newCollection={newCollection} loaded={loaded} />
       ) : null}
-      <ShopFooterTrust />
     </main>
   );
 }

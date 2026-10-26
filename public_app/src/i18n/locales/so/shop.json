@@ -21,24 +21,6 @@
       "searchNearby": "Raadi meel u dhow",
       "wishlist": "Liiska rabitaanka"
     },
-    "trust": {
-      "quality": {
-        "title": "Tayo Sare",
-        "subtitle": "Laga sameeyay alaab tayo wanaagsan"
-      },
-      "delivery": {
-        "title": "Gaarsiin Degdeg ah",
-        "subtitle": "Dirid dhakhso ah oo la isku halleyn karo"
-      },
-      "checkout": {
-        "title": "Bixin Ammaan ah",
-        "subtitle": "Xogtaada waa la ilaaliyaa"
-      },
-      "satisfaction": {
-        "title": "Raaxada Macmiilka",
-        "subtitle": "Dammaanad 100% raaxo ah"
-      }
-    },
     "hero": {
       "eyebrow": "HADDA KU SOCDA",
       "titleLine1": "Hel Alaab",

@@ -21,7 +21,6 @@ import {
 import { audienceName, useAudienceCatalog } from "../components/AudienceFilter";
 import ShopNavbar from "../components/shop/ShopNavbar";
 import SiteHeader from "../components/SiteHeader";
-import ShopFooterTrust from "../components/shop/ShopFooterTrust";
 import BrowseSidebar from "../components/shop/browse/BrowseSidebar";
 import BrowseCard from "../components/shop/browse/BrowseCard";
 import LocationPicker from "../components/shop/browse/LocationPicker";
@@ -363,7 +362,6 @@ export default function ShopBrowse({ categoryId, collection, session, onLogout, 
         />
       ) : null}
 
-      {isService ? null : <ShopFooterTrust />}
     </main>
   );
 }

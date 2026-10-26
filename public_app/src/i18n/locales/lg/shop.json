@@ -21,24 +21,6 @@
       "searchNearby": "Noonya okumpi",
       "wishlist": "Ebyo by'oyagala"
     },
-    "trust": {
-      "quality": {
-        "title": "Omutindo Ogwa Waggulu",
-        "subtitle": "Bikoleddwa mu bintu ebisinga obulungi"
-      },
-      "delivery": {
-        "title": "Okutuusa Mangu",
-        "subtitle": "Okutuusa okwangu era okwesigika"
-      },
-      "checkout": {
-        "title": "Okusasula Okukuumibwa",
-        "subtitle": "Amawulire go gakuumibwa"
-      },
-      "satisfaction": {
-        "title": "Essanyu ly'Omuguzi",
-        "subtitle": "Ekakasa essanyu lya 100%"
-      }
-    },
     "hero": {
       "eyebrow": "EBYETTANIRWA KATI",
       "titleLine1": "Kizuula Ebintu",

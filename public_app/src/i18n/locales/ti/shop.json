@@ -21,24 +21,6 @@
       "searchNearby": "ኣብ ጥቓኻ ድለይ",
       "wishlist": "ዝደልዮም ዝርዝር"
     },
-    "trust": {
-      "quality": {
-        "title": "ልዑል ጽሬት",
-        "subtitle": "ካብ ምርጫ ቁሳቁስ ዝተሰርሐ"
-      },
-      "delivery": {
-        "title": "ቅልጡፍ ኣቕሮቦት",
-        "subtitle": "ፈጣንን ዝተኣማመነን ምጽዋዕ"
-      },
-      "checkout": {
-        "title": "ውሑስ ክፍሊት",
-        "subtitle": "ሓበሬታኻ ዝተሓሎ እዩ"
-      },
-      "satisfaction": {
-        "title": "ዕግበት ዓሚል",
-        "subtitle": "100% ዕግበት ዘረጋግጽ"
-      }
-    },
     "hero": {
       "eyebrow": "ሕጂ ዝተፈላለየ",
       "titleLine1": "ትፈትዎም ኣቑሑት",
