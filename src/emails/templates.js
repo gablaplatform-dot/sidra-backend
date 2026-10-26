@@ -15,6 +15,7 @@ const withStrong = (parts) => raw(parts.map((x) => (typeof x === "string" ? esca
 
 export const providerInvite = ({ businessName, link }) =>
   renderEmail({
+    alias: "gabla-provider-invite",
     subject: `You're invited to bring ${businessName} to Gabla`,
     preheader: "Complete your Gabla provider profile and get ready to be discovered.",
     badge: "Provider invitation",
@@ -35,6 +36,7 @@ export const providerInvite = ({ businessName, link }) =>
 
 export const providerRelink = ({ businessName, link }) =>
   renderEmail({
+    alias: "gabla-provider-relink",
     subject: `Reconnect Google sign-in for ${businessName}`,
     preheader: "One tap to get back into your Gabla provider dashboard.",
     badge: "Account access",
@@ -48,6 +50,7 @@ export const providerRelink = ({ businessName, link }) =>
 
 export const adminInvite = ({ name, roleName, link }) =>
   renderEmail({
+    alias: "gabla-admin-invite",
     subject: "You're invited to the Gabla admin panel",
     preheader: `Set your password to join the Gabla team as ${roleName}.`,
     badge: "Team invitation",
@@ -61,6 +64,7 @@ export const adminInvite = ({ name, roleName, link }) =>
 
 export const busOperatorInvite = ({ companyName, link }) =>
   renderEmail({
+    alias: "gabla-bus-operator-invite",
     subject: `You're invited to sell bus tickets on Gabla — ${companyName}`,
     preheader: "Complete your bus company profile and start selling tickets online.",
     badge: "Bus partner invitation",
@@ -95,6 +99,7 @@ export const orderNewForSeller = ({ order }) => {
   const online = order.metadata?.paymentMethod === "online" && !order.transactionId;
   const cash = !order.transactionId && !online;
   return renderEmail({
+    alias: "gabla-order-new-seller",
     subject: `New order on Gabla — ${ugx(order.total)}`,
     preheader: `${c.name || "A customer"} ordered ${(order.items || []).length} item(s). Accept it to get going.`,
     badge: "New order",
@@ -123,6 +128,7 @@ export const orderNewForSeller = ({ order }) => {
 
 export const orderApprovedForBuyer = ({ order }) =>
   renderEmail({
+    alias: "gabla-order-approved-buyer",
     subject: `${order.provider.businessName} accepted your order. Pay now`,
     preheader: "Good news: your order is available. You can pay by mobile money now.",
     badge: "Order accepted",
@@ -136,6 +142,7 @@ export const orderApprovedForBuyer = ({ order }) =>
 
 export const orderPaidForSeller = ({ order }) =>
   renderEmail({
+    alias: "gabla-order-paid-seller",
     subject: `Order paid on Gabla: ${ugx(order.total)}`,
     preheader: "The buyer has paid. You can go ahead and fulfil the order.",
     badge: "Payment received",
@@ -155,6 +162,8 @@ const STATUS_COPY = {
   canceled: (o) => ({ subject: `Your order from ${o.provider.businessName} was cancelled`, badge: "Order cancelled", tone: "danger", title: "Your order was cancelled", intro: `${o.provider.businessName} cancelled your order.` })
 };
 
+const STATUS_ALIAS = { accepted: "accepted", delivering: "delivering", fulfilled: "delivered", rejected: "declined", canceled: "cancelled" };
+
 export const orderStatusForBuyer = ({ order, status }) => {
   const pickup = order.fulfillment?.method === "pickup";
   const online = order.metadata?.paymentMethod === "online" && !order.transactionId;
@@ -162,6 +171,7 @@ export const orderStatusForBuyer = ({ order, status }) => {
   if (!copy) return null;
   const closed = status === "rejected" || status === "canceled";
   return renderEmail({
+    alias: `gabla-order-${STATUS_ALIAS[status]}`,
     subject: copy.subject,
     preheader: copy.intro,
     badge: copy.badge,
@@ -215,7 +225,8 @@ export const bookingEmail = ({ event, to, ctx }) => {
   };
   const copy = copies[`${event}:${to}`];
   if (!copy) return null;
-  return renderEmail({ subject: copy.subject, preheader: copy.intro, badge: copy.badge, badgeTone: copy.tone, title: copy.title, intro: copy.intro, blocks: copy.blocks, cta: copy.cta, footer: "You can see this booking any time under Orders, then Bookings, on Gabla." });
+  const alias = `gabla-booking-${event.replace(/_/g, "-")}-${to}${event === "created" ? (c.status === "confirmed" ? "-instant" : "-request") : ""}`;
+  return renderEmail({ alias, subject: copy.subject, preheader: copy.intro, badge: copy.badge, badgeTone: copy.tone, title: copy.title, intro: copy.intro, blocks: copy.blocks, cta: copy.cta, footer: "You can see this booking any time under Orders, then Bookings, on Gabla." });
 };
 
 // ======================================================================================= bus
@@ -254,6 +265,7 @@ const ticketCard = (ticket, trip, route, operator) => {
 export const busTicket = ({ booking, trip, route, operator, tickets }) => {
   const departure = new Date(trip.departureAt);
   return renderEmail({
+    alias: "gabla-bus-ticket",
     subject: `Your bus ticket: ${route.originName} to ${route.destinationName}, ${formatEatDate(departure)}`,
     preheader: `${tickets.length} ticket${tickets.length === 1 ? "" : "s"} confirmed for ${route.originName} to ${route.destinationName}.`,
     badge: "Payment confirmed",
@@ -277,6 +289,7 @@ export const busAnnouncement = ({ operator, title, message, kind, trip, route })
   const tone = kind === "cancellation" ? "danger" : kind === "delay" ? "warn" : "info";
   const badge = kind === "notice" || !kind ? "Message from your bus company" : kind === "cancellation" ? "Trip cancelled" : kind === "delay" ? "Trip delayed" : kind;
   return renderEmail({
+    alias: "gabla-bus-announcement",
     subject: `${operator.companyName}: ${title}`,
     preheader: String(message).slice(0, 110),
     badge,
@@ -305,6 +318,7 @@ export const documentEmail = ({ doc, business, accent, ordersUrl }) => {
   const shown = (snap.items || []).slice(0, 6);
   const more = (snap.items || []).length - shown.length;
   return renderEmail({
+    alias: isReceipt ? "gabla-receipt" : "gabla-quotation",
     subject: isReceipt ? `Receipt ${doc.number} from ${business}` : `Your quotation ${doc.number} from ${business}`,
     preheader: isReceipt ? `Receipt for ${ugx(doc.total)}` : `Quotation for ${ugx(doc.total)}`,
     badge: isReceipt ? "Payment received" : "Quotation",

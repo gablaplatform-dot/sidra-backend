@@ -78,26 +78,41 @@ export const steps = (list) => ({
 // Anything template-specific (a bus ticket, a QR code): supply the html and a text twin yourself.
 export const custom = (html, text = "") => ({ html, text });
 
-// ---------------------------------------------------------------- the frame
-
 const button = (cta) =>
   `<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:8px auto 4px;"><tr><td align="center" style="border-radius:10px;background:${cta.color || BRAND.navy};"><a href="${escapeHtml(cta.url)}" style="display:inline-block;padding:15px 28px;color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:700;line-height:1;">${escapeHtml(cta.label)}&nbsp;&nbsp;&rarr;</a></td></tr></table>`;
 
-// `accent` re-colours the top band (documents use the seller's colour). `badge` is the little pill over the title.
-export const renderEmail = ({ subject, preheader = "", badge, badgeTone = "info", title, intro, blocks = [], cta, ctaNote, hero, accent, footer, sender }) => {
-  const tone = TONES[badgeTone] || TONES.info;
-  const bodyBlocks = [...(intro ? [p(intro)] : []), ...blocks.filter(Boolean)];
-  const html = `<!doctype html>
+// ---------------------------------------------------------------- the frame
+// One frame, filled either with real values (sent inline) or with {{{TOKENS}}} (published to Resend as a
+// template, whose variables get the real values at send time). Keeping both in one function means the Resend
+// dashboard copy and the in-code copy cannot drift apart.
+
+// Resend accepts at most 2,000 characters per variable, so the body travels as up to 8 consecutive pieces that the
+// template joins back together. An email whose body is longer than that is sent as plain html instead.
+export const BODY_PIECES = 8;
+const PIECE_SIZE = 1800;
+const BODY_KEYS = Array.from({ length: BODY_PIECES }, (_, i) => `BODY_${i + 1}`);
+export const TOKEN_KEYS = ["PREHEADER", "BADGE_BLOCK", "TITLE", ...BODY_KEYS, "CTA_BLOCK", "CTA_NOTE", "HERO_BLOCK", "SENDER_LINE", "FOOTER", "ACCENT"];
+export const tokens = () => ({
+  ...Object.fromEntries(TOKEN_KEYS.map((k) => [k, `{{{${k}}}}`])),
+  BODY: BODY_KEYS.map((k) => `{{{${k}}}}`).join("")
+});
+const pieces = (html) => {
+  const out = [];
+  for (let i = 0; i < html.length; i += PIECE_SIZE) out.push(html.slice(i, i + PIECE_SIZE));
+  return out;
+};
+
+export const frame = (v) => `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>${escapeHtml(subject)}</title>
+<title>Gabla</title>
 </head>
 <body style="margin:0;padding:0;background:${BRAND.page};font-family:-apple-system,'Segoe UI',Roboto,Arial,Helvetica,sans-serif;color:${BRAND.ink};-webkit-text-size-adjust:100%;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${escapeHtml(preheader)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${v.PREHEADER}</div>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:${BRAND.page};">
 <tr><td align="center" style="padding:28px 12px 36px;">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;">
@@ -109,19 +124,19 @@ export const renderEmail = ({ subject, preheader = "", badge, badgeTone = "info"
   </td></tr>
   <tr><td style="background:#FFFFFF;border:1px solid ${BRAND.line};border-radius:18px;overflow:hidden;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-      <tr><td style="height:6px;background:${accent || BRAND.yellow};font-size:0;line-height:0;">&nbsp;</td></tr>
-      ${hero ? `<tr><td align="center" style="padding:26px 30px 0;"><img src="${escapeHtml(hero.url)}" width="${hero.width || 340}" alt="${escapeHtml(hero.alt || "")}" style="display:block;width:100%;max-width:${hero.width || 340}px;height:auto;border:0;"></td></tr>` : ""}
-      <tr><td style="padding:${hero ? 18 : 30}px 34px 6px;">
-        ${badge ? `<div style="display:inline-block;padding:5px 12px;border-radius:999px;background:${tone.bg};border:1px solid ${tone.border};color:${tone.ink};font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;">${escapeHtml(badge)}</div>` : ""}
-        <h1 style="margin:${badge ? 14 : 0}px 0 14px;color:${BRAND.navy};font-size:26px;line-height:1.25;font-weight:800;letter-spacing:-0.01em;">${escapeHtml(title)}</h1>
-        ${bodyBlocks.map((b) => b.html).join("\n")}
+      <tr><td style="height:6px;background:${v.ACCENT};font-size:0;line-height:0;">&nbsp;</td></tr>
+      ${v.HERO_BLOCK}
+      <tr><td style="padding:26px 34px 6px;">
+        ${v.BADGE_BLOCK}
+        <h1 style="margin:14px 0 14px;color:${BRAND.navy};font-size:26px;line-height:1.25;font-weight:800;letter-spacing:-0.01em;">${v.TITLE}</h1>
+        ${v.BODY}
       </td></tr>
-      ${cta ? `<tr><td style="padding:6px 34px ${ctaNote ? 6 : 34}px;">${button(cta)}</td></tr>` : ""}
-      ${ctaNote ? `<tr><td align="center" style="padding:6px 34px 30px;color:${BRAND.faint};font-size:12px;line-height:1.6;">${escapeHtml(ctaNote)}</td></tr>` : ""}
+      ${v.CTA_BLOCK}
+      ${v.CTA_NOTE}
     </table>
   </td></tr>
   <tr><td align="center" style="padding:22px 18px 0;color:${BRAND.faint};font-size:12px;line-height:1.7;">
-    ${sender ? `${escapeHtml(sender)}<br>` : ""}${escapeHtml(footer || "You are receiving this email because of activity on your Gabla account.")}
+    ${v.SENDER_LINE}${v.FOOTER}
     <br><span style="color:${BRAND.navy};font-weight:700;">Gabla</span> &middot; Helping people find trusted shops, services and rides across Uganda.
   </td></tr>
 </table>
@@ -129,6 +144,33 @@ export const renderEmail = ({ subject, preheader = "", badge, badgeTone = "info"
 </table>
 </body>
 </html>`;
+
+// What each slot holds, for one email.
+const slots = ({ preheader = "", badge, badgeTone = "info", title, bodyHtml, cta, ctaNote, hero, accent, footer, sender }) => {
+  const tone = TONES[badgeTone] || TONES.info;
+  return {
+    PREHEADER: `${escapeHtml(preheader)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;`,
+    BADGE_BLOCK: badge ? `<div style="display:inline-block;padding:5px 12px;border-radius:999px;background:${tone.bg};border:1px solid ${tone.border};color:${tone.ink};font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;">${escapeHtml(badge)}</div>` : "",
+    TITLE: escapeHtml(title),
+    BODY: bodyHtml,
+    CTA_BLOCK: cta ? `<tr><td style="padding:6px 34px ${ctaNote ? 6 : 34}px;">${button(cta)}</td></tr>` : "",
+    CTA_NOTE: ctaNote ? `<tr><td align="center" style="padding:6px 34px 30px;color:${BRAND.faint};font-size:12px;line-height:1.6;">${escapeHtml(ctaNote)}</td></tr>` : "",
+    HERO_BLOCK: hero ? `<tr><td align="center" style="padding:26px 30px 0;"><img src="${escapeHtml(hero.url)}" width="${hero.width || 340}" alt="${escapeHtml(hero.alt || "")}" style="display:block;width:100%;max-width:${hero.width || 340}px;height:auto;border:0;"></td></tr>` : "",
+    SENDER_LINE: sender ? `${escapeHtml(sender)}<br>` : "",
+    FOOTER: escapeHtml(footer || "You are receiving this email because of activity on your Gabla account."),
+    ACCENT: accent || BRAND.yellow
+  };
+};
+
+// `alias` names the template published to Resend for this email (see scripts/publish-resend-templates.mjs).
+// `accent` re-colours the top band (documents use the seller's colour). `badge` is the little pill over the title.
+export const renderEmail = ({ subject, alias, preheader = "", badge, badgeTone = "info", title, intro, blocks = [], cta, ctaNote, hero, accent, footer, sender }) => {
+  const bodyBlocks = [...(intro ? [p(intro)] : []), ...blocks.filter(Boolean)];
+  const filled = slots({ preheader, badge, badgeTone, title, bodyHtml: bodyBlocks.map((b) => b.html).join("\n"), cta, ctaNote, hero, accent, footer, sender });
+  const html = frame(filled).replace("<title>Gabla</title>", `<title>${escapeHtml(subject)}</title>`);
+  // Values for the template published in Resend (null when the body is too long to fit its variables).
+  const parts = pieces(filled.BODY);
+  const variables = parts.length > BODY_PIECES ? null : Object.fromEntries(TOKEN_KEYS.map((k) => [k, k.startsWith("BODY_") ? parts[Number(k.slice(5)) - 1] ?? "" : filled[k]]));
 
   const text = [
     title,
@@ -143,5 +185,5 @@ export const renderEmail = ({ subject, preheader = "", badge, badgeTone = "info"
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-  return { subject, html, text };
+  return { subject, alias, html, text, variables };
 };

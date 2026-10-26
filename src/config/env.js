@@ -24,6 +24,8 @@ export const env = {
   providerOnboardingBaseUrl: process.env.PROVIDER_ONBOARDING_BASE_URL ?? "",
   adminInviteBaseUrl: process.env.ADMIN_INVITE_BASE_URL ?? "",
   resendApiKey: process.env.RESEND_API_KEY ?? "",
+  // Send through the templates published to Resend (set to "false" to always send the in-code copy).
+  resendUseTemplates: String(process.env.RESEND_USE_TEMPLATES ?? "true").toLowerCase() !== "false",
   resendFromEmail: process.env.RESEND_FROM_EMAIL ?? "",
   emailAssetBaseUrl: process.env.EMAIL_ASSET_BASE_URL ?? "https://gabla-admin.pages.dev/email",
   r2Endpoint: process.env.R2_ENDPOINT ?? "",
