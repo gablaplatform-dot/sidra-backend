@@ -320,6 +320,35 @@
       "topListings": "Top viewed listings",
       "view_one": "view",
       "view_other": "views"
+    },
+    "mine": {
+      "search": "Search",
+      "searchPlaceholder": "Search your catalogue…",
+      "allProducts": "All products",
+      "allServices": "All services",
+      "statusTitle": "Status",
+      "status": {
+        "approved": "Live",
+        "pending": "Pending review",
+        "suspended": "Hidden"
+      },
+      "addProduct": "Add product",
+      "addService": "Add service",
+      "noProducts": "You haven't added any products yet.",
+      "noServices": "You haven't added any services yet.",
+      "showResults": "Show results ({{count}})",
+      "productCount_one": "{{count}} product",
+      "productCount_other": "{{count}} products",
+      "serviceCount_one": "{{count}} service",
+      "serviceCount_other": "{{count}} services",
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "priceLow": "Price: low to high",
+        "priceHigh": "Price: high to low",
+        "name": "Name A–Z"
+      },
+      "view": "View"
     }
   },
   "onboarding": {

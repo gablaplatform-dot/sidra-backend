@@ -320,6 +320,35 @@
       "topListings": "Ebintu ebisinga okulabibwa",
       "view_one": "okulaba",
       "view_other": "okulaba"
+    },
+    "mine": {
+      "search": "Noonya",
+      "searchPlaceholder": "Noonya mu bintu byo…",
+      "allProducts": "Ebintu byonna",
+      "allServices": "Obuweereza bwonna",
+      "statusTitle": "Embeera",
+      "status": {
+        "approved": "Biri bulamu",
+        "pending": "Birindiridde okwekebejjebwa",
+        "suspended": "Bikise"
+      },
+      "addProduct": "Gattako ekintu",
+      "addService": "Gattako obuweereza",
+      "noProducts": "Tonnagattako kintu kyonna.",
+      "noServices": "Tonnagattako buweereza bwonna.",
+      "showResults": "Laga ebivuddemu ({{count}})",
+      "productCount_one": "{{count}} ekintu",
+      "productCount_other": "{{count}} ebintu",
+      "serviceCount_one": "{{count}} obuweereza",
+      "serviceCount_other": "{{count}} obuweereza",
+      "sort": {
+        "newest": "Ebipya ebisooka",
+        "oldest": "Ebikadde ebisooka",
+        "priceLow": "Ebbeeyi: wansi okudda waggulu",
+        "priceHigh": "Ebbeeyi: waggulu okudda wansi",
+        "name": "Erinnya A–Z"
+      },
+      "view": "Laba"
     }
   },
   "onboarding": {

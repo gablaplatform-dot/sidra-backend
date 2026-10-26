@@ -320,6 +320,35 @@
       "topListings": "ብዝበዝሑ ዝተራእዩ ዝርዝራት",
       "view_one": "ምርኣይ",
       "view_other": "ምርኣያት"
+    },
+    "mine": {
+      "search": "ድለ",
+      "searchPlaceholder": "ኣብ ዕቑባትካ ድለ…",
+      "allProducts": "ኩሉ ኣቑሑት",
+      "allServices": "ኩሉ ኣገልግሎታት",
+      "statusTitle": "ኩነታት",
+      "status": {
+        "approved": "ህያው",
+        "pending": "ምርምር ይጽበ",
+        "suspended": "ተሓቢኡ"
+      },
+      "addProduct": "ኣቕሓ ወስኽ",
+      "addService": "ኣገልግሎት ወስኽ",
+      "noProducts": "ክሳብ ሕጂ ዝወሰኽካዮ ኣቕሓ የለን።",
+      "noServices": "ክሳብ ሕጂ ዝወሰኽካዮ ኣገልግሎት የለን።",
+      "showResults": "ውጽኢት ርአ ({{count}})",
+      "productCount_one": "{{count}} ኣቕሓ",
+      "productCount_other": "{{count}} ኣቑሑት",
+      "serviceCount_one": "{{count}} ኣገልግሎት",
+      "serviceCount_other": "{{count}} ኣገልግሎታት",
+      "sort": {
+        "newest": "ኣዲስ ቅድም",
+        "oldest": "ኣረጊት ቅድም",
+        "priceLow": "ዋጋ፦ ካብ ትሑት ናብ ላዕሊ",
+        "priceHigh": "ዋጋ፦ ካብ ላዕሊ ናብ ትሑት",
+        "name": "ስም ኣ–ፐ"
+      },
+      "view": "ርአ"
     }
   },
   "onboarding": {

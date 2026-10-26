@@ -4809,3 +4809,14 @@ textarea.docs-input { min-height: 84px; }
   .po-filter-btn { padding: 0 14px; }
   .pov-steps li { font-size: 11px; }
 }
+
+/* ---- Owner catalogue (Products / Services tabs on the provider profile) ---- */
+.pm-card { position: relative; }
+.pm-card:hover { transform: none; }
+.pm-status { position: absolute; left: 10px; bottom: 10px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 800; background: #fef3c7; color: #92400e; }
+.pm-status.is-approved { background: #dcfce7; color: #166534; }
+.pm-status.is-suspended { background: #fee2e2; color: #b91c1c; }
+.pm-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 10px; }
+.pm-actions a, .pm-actions button { flex: 1 1 auto; height: 38px; display: inline-grid; place-items: center; padding: 0 12px; border-radius: 10px; font-size: 13px; text-decoration: none; }
+.pm-tab .detail-block-header { margin-bottom: 8px; }
+.pm-tab .pl-tabs { margin-top: 6px; }

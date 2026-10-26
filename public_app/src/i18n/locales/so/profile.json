@@ -320,6 +320,35 @@
       "topListings": "Liisaska ugu badan la eego",
       "view_one": "eegis",
       "view_other": "eegis"
+    },
+    "mine": {
+      "search": "Raadi",
+      "searchPlaceholder": "Ka raadi liiskaaga…",
+      "allProducts": "Dhammaan alaabta",
+      "allServices": "Dhammaan adeegyada",
+      "statusTitle": "Xaalad",
+      "status": {
+        "approved": "Tooska ah",
+        "pending": "Dib-u-eegis ayaa sugaya",
+        "suspended": "La qariyay"
+      },
+      "addProduct": "Ku dar alaab",
+      "addService": "Ku dar adeeg",
+      "noProducts": "Weli alaab ma aadan darin.",
+      "noServices": "Weli adeeg ma aadan darin.",
+      "showResults": "Muuji natiijooyinka ({{count}})",
+      "productCount_one": "{{count}} alaab",
+      "productCount_other": "{{count}} alaab",
+      "serviceCount_one": "{{count}} adeeg",
+      "serviceCount_other": "{{count}} adeeg",
+      "sort": {
+        "newest": "Kuwa cusub marka hore",
+        "oldest": "Kuwa hore marka hore",
+        "priceLow": "Qiimaha: hoose ilaa sare",
+        "priceHigh": "Qiimaha: sare ilaa hoose",
+        "name": "Magaca A–Z"
+      },
+      "view": "Eeg"
     }
   },
   "onboarding": {

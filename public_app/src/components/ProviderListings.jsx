@@ -26,7 +26,7 @@ const containsId = (node, id) => node.id === id || (node.children || []).some((c
 
 // Provider-page category filter: selects in place (no navigation), shows only branches that hold
 // products, and opens the branch that contains the current selection.
-function ProviderCategoryBlock({ tree, counts, selectedId, total, onSelect }) {
+export function ProviderCategoryBlock({ tree, counts, selectedId, total, onSelect, allLabel }) {
   const { t } = useTranslation();
   const branches = tree.map((node) => ({ node, count: subtreeCount(node, counts) })).filter((b) => b.count > 0);
   if (!branches.length) return null;
@@ -35,7 +35,7 @@ function ProviderCategoryBlock({ tree, counts, selectedId, total, onSelect }) {
       <h2 className="sb-block-head">{t("provider.listings.categories")}</h2>
       <div className="sb-block-body">
         <button type="button" className={`sb-cat-link sb-cat-btn ${!selectedId ? "is-active" : ""}`} onClick={() => onSelect(null)}>
-          <span>{t("provider.listings.allProducts")}</span>
+          <span>{allLabel || t("provider.listings.allProducts")}</span>
           <em>{total.toLocaleString()}</em>
         </button>
         <ul className="sb-cat-plain">

@@ -199,7 +199,7 @@ export default function ListingForm() {
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [shopCategories, setShopCategories] = useState([]);
   const [form, setForm] = useState({
-    type: "service",
+    type: new URLSearchParams(location.search).get("type") === "product" ? "product" : "service",
     name: "",
     description: "",
     price: "",

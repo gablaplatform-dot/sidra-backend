@@ -10,6 +10,7 @@ import { uploadFile } from "../lib/storage";
 import { clearSession, getSession } from "../lib/session";
 import SiteHeader from "../components/SiteHeader";
 import Field from "../components/Field";
+import ProfileListingsTab from "../components/profile/ProfileListingsTab";
 import ProfileOrdersTab from "../components/profile/ProfileOrdersTab";
 import ProfileBookingsTab from "../components/profile/ProfileBookingsTab";
 import ProfileWalletTab from "../components/profile/ProfileWalletTab";
@@ -364,47 +365,7 @@ export default function Profile() {
 
             {activeTab === "analytics" ? <ProfileAnalyticsTab /> : null}
 
-            {activeTab === "listings" ? (
-              <section className="detail-block">
-                <div className="detail-block-header">
-                  <h2>{t("profile.tabs.listings")}</h2>
-                  <Link to="/profile/listings/new" className="cta-button">{t("profile.add")}</Link>
-                </div>
-                {listings.length ? (
-                  <div className="listing-grid">
-                    {listings.map((item) => (
-                      <div key={item.id} className="listing-card">
-                        <div
-                          className="listing-cover"
-                          style={item.media?.imageUrl ? { backgroundImage: `url("${item.media.imageUrl}")` } : undefined}
-                        >
-                          {!item.media?.imageUrl ? <IconBox /> : null}
-                        </div>
-                        <div className="listing-body">
-                          <h3>{item.name}</h3>
-                          {Number(item.price) > 0 ? <div className="listing-price">{formatUgx(item.price)}</div> : null}
-                          <div style={{ margin: "8px 0" }}>
-                            <span className={`status-badge status-${item.status === "approved" ? "fulfilled" : "pending"}`}>
-                              {item.status === "approved" ? t("profile.live") : t("profile.pendingReview")}
-                            </span>
-                          </div>
-                          <div className="listing-actions">
-                            <Link to={`/profile/listings/${item.id}/edit`}>{t("profile.edit")}</Link>
-                            <button type="button" onClick={() => deleteListing(item)}>{t("profile.remove")}</button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="empty-state">
-                    <IconBox />
-                    <p>{t("profile.noListings")}</p>
-                    <Link to="/profile/listings/new" className="cta-button">{t("profile.addFirst")}</Link>
-                  </div>
-                )}
-              </section>
-            ) : null}
+            {activeTab === "listings" ? <ProfileListingsTab listings={listings} onDelete={deleteListing} /> : null}
 
             {activeTab === "shopCategories" ? <ProfileShopCategoriesTab /> : null}
 
