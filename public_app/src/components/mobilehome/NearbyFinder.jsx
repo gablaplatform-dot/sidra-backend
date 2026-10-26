@@ -128,9 +128,13 @@ function ResultCard({ item, selected, onPick, innerRef }) {
 }
 
 // The home search: type what you want and see where nearby it is, on a map or as a list ordered by distance.
-export default function NearbyFinder({ session }) {
+export default function NearbyFinder({ session, initialText = "", onTextChange, autoFocus = false }) {
   const { t } = useTranslation();
-  const [text, setText] = useState("");
+  const [text, setTextState] = useState(initialText);
+  const setText = (value) => {
+    setTextState(value);
+    onTextChange?.(value);
+  };
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState("map");
   const [data, setData] = useState(null);
@@ -244,7 +248,7 @@ export default function NearbyFinder({ session }) {
         }}
       >
         <IconFind />
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t("nearby.placeholder")} aria-label={t("nearby.ariaLabel")} enterKeyHint="search" autoComplete="off" />
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t("nearby.placeholder")} aria-label={t("nearby.ariaLabel")} enterKeyHint="search" autoComplete="off" autoFocus={autoFocus} />
         {text ? (
           <button type="button" className="mh-search-clear" onClick={() => setText("")} aria-label={t("nearby.clear")}><IconClose width={16} height={16} /></button>
         ) : null}

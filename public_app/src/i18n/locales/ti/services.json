@@ -334,6 +334,7 @@
     "useMyLocation": "ቦታይ ተጠቐም",
     "nothingFound": "ን“{{query}}” ዝተረኽበ የለን",
     "tryShorter": "ሓጸር ቃል ፈትን፣ ወይ ኩሉ ድለይ።",
-    "searchAll": "ኣብ ኩሉ ጋብላ ድለይ"
+    "searchAll": "ኣብ ኩሉ ጋብላ ድለይ",
+    "close": "ዕጾ"
   }
 }

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { todayEat, ugx } from "../../lib/bus";
 import LanguageSwitcher from "../LanguageSwitcher";
+import NearbyOverlay from "./NearbyOverlay";
 import { BookScreen, FindScreen, UnlockScreen } from "./ContactPhone";
 import { IconArrowRight, IconBike, IconChevronLeft, IconBus, IconCar, IconCart, IconPin, IconSearch, IconSparkles, IconTicket } from "../icons";
 
@@ -159,6 +160,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
   const ringRef = useRef(null);
   const glideRef = useRef(0);
   const [beat, setBeat] = useState(0);
+  const [nearbyOpen, setNearbyOpen] = useState(false);
   const [atEnd, setAtEnd] = useState(false);
   const phoneChipRefs = useRef([]);
   const bowlBackRef = useRef(null);
@@ -683,10 +685,13 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
     glideToV(next === undefined ? beats.end : next);
   };
 
+  // The home search finds things near the visitor: submitting opens the nearby map + list.
   const submit = (event) => {
     event.preventDefault();
-    const trimmed = searchValue.trim();
-    if (trimmed) navigate(`/search?q=${encodeURIComponent(trimmed)}`);
+    if (searchValue.trim().length >= 2) {
+      document.activeElement?.blur?.();
+      setNearbyOpen(true);
+    }
   };
 
   // Phone-width screens use the mobile home instead, so tile size only has to suit tablets and up.
@@ -733,7 +738,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
             <>
               <form className="ho-search ho-ui ho-ui-search" ref={(el) => { uiRefs.current[0] = el; }} style={{ width: ui.full }} onSubmit={submit}>
                 <span className="ho-search-icon"><IconSearch /></span>
-                <input type="text" value={searchValue} onChange={(e) => onSearchChange(e.target.value)} placeholder={t("landing.searchPlaceholder")} aria-label={t("landing.searchPlaceholder")} />
+                <input type="text" value={searchValue} onChange={(e) => onSearchChange(e.target.value)} placeholder={t("nearby.placeholder")} aria-label={t("nearby.ariaLabel")} />
                 <button type="submit" className="ho-search-go" aria-label={t("landing.searchButton")}><IconArrowRight /></button>
               </form>
               {[["/shop", IconCart, "landing.shop"], ["/ride", IconCar, "landing.ride"], ["/bus", IconBus, "landing.bus"]].map(([to, Icon, label], k) => (
@@ -813,8 +818,8 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
                 onChange={(e) => onSearchChange(e.target.value)}
                 onFocus={() => { focusRef.current = true; }}
                 onBlur={() => { focusRef.current = false; }}
-                placeholder={t("landing.searchPlaceholder")}
-                aria-label={t("landing.searchPlaceholder")}
+                placeholder={t("nearby.placeholder")}
+                aria-label={t("nearby.ariaLabel")}
               />
               <button type="submit" className="ho-search-go">{t("landing.searchButton")} <IconArrowRight /></button>
             </form>
@@ -870,6 +875,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       ))}
 
       </div>
+      {nearbyOpen ? <NearbyOverlay text={searchValue} onTextChange={onSearchChange} onClose={() => setNearbyOpen(false)} /> : null}
     </section>
   );
 }

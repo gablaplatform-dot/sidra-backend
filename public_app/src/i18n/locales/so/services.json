@@ -334,6 +334,7 @@
     "useMyLocation": "Isticmaal goobtayda",
     "nothingFound": "Waxba lagama helin “{{query}}”",
     "tryShorter": "Isku day erey ka gaaban, ama wax walba raadi.",
-    "searchAll": "Ka raadi Gabla oo dhan"
+    "searchAll": "Ka raadi Gabla oo dhan",
+    "close": "Xidh"
   }
 }

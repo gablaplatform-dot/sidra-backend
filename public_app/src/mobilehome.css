@@ -119,3 +119,13 @@
 .mh-find-empty p { margin: 0 0 10px; }
 .mh-find-empty a { color: var(--mh-orange) !important; font-weight: 800; }
 .mh-find-skel { display: grid; gap: 12px; }
+
+/* Home search -> nearby results, full screen */
+.nb-overlay { position: fixed; inset: 0; z-index: 300; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
+.nb-overlay-inner { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; position: relative; }
+.nb-overlay-close {
+  justify-self: end; width: 42px; height: 42px; border: 0; border-radius: 50%; background: #fff; color: #0b2046;
+  box-shadow: 0 8px 20px -10px rgba(11, 32, 70, 0.45); display: grid; place-items: center; cursor: pointer;
+}
+.nb-overlay-close svg { width: 18px; height: 18px; }
+@media (min-width: 760px) { .nb-overlay { padding-left: 24px; padding-right: 24px; } }

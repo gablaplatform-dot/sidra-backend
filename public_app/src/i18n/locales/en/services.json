@@ -334,6 +334,7 @@
     "useMyLocation": "Use my location",
     "nothingFound": "Nothing found for “{{query}}”",
     "tryShorter": "Try a shorter word, or search everything.",
-    "searchAll": "Search all of Gabla"
+    "searchAll": "Search all of Gabla",
+    "close": "Close"
   }
 }

@@ -334,6 +334,7 @@
     "useMyLocation": "Kozesa ekifo kyange",
     "nothingFound": "Tewali kizuuliddwa ku “{{query}}”",
     "tryShorter": "Gezaako ekigambo ekimpi, oba noonya buli kimu.",
-    "searchAll": "Noonya ku Gabla yonna"
+    "searchAll": "Noonya ku Gabla yonna",
+    "close": "Ggala"
   }
 }
