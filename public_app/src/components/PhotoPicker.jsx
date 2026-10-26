@@ -3,10 +3,11 @@ import { useTranslation } from "react-i18next";
 
 import { IconClose, IconImage } from "./icons";
 
-// Phone photos are often 5-10 MB: shrink them (longest side 1800px, JPEG) before they go up. Anything that cannot be
-// read as an image here (or is already small, a GIF, a video) is sent untouched.
-const shrink = async (file, maxDim = 1800, quality = 0.86) => {
-  if (!file.type.startsWith("image/") || file.type === "image/gif" || file.size < 700 * 1024) return file;
+// Phone photos are often 5-10 MB: shrink them (longest side 1280px, WebP or JPEG) before they go up - shoppers on a
+// mobile connection load many of these at once. Anything that cannot be read as an image here (or is already small,
+// a GIF, a video) is sent untouched.
+const shrink = async (file, maxDim = 1280, quality = 0.8) => {
+  if (!file.type.startsWith("image/") || file.type === "image/gif" || file.size < 250 * 1024) return file;
   try {
     const bitmap = await createImageBitmap(file);
     const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
@@ -17,9 +18,11 @@ const shrink = async (file, maxDim = 1800, quality = 0.86) => {
     canvas.height = h;
     canvas.getContext("2d").drawImage(bitmap, 0, 0, w, h);
     bitmap.close?.();
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+    let blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", quality));
+    if (!blob || blob.type !== "image/webp") blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality)); // Safari cannot write WebP
     if (!blob || blob.size >= file.size) return file;
-    return new File([blob], `${file.name.replace(/\.\w+$/, "") || "photo"}.jpg`, { type: "image/jpeg" });
+    const ext = blob.type === "image/webp" ? "webp" : "jpg";
+    return new File([blob], `${file.name.replace(/\.\w+$/, "") || "photo"}.${ext}`, { type: blob.type });
   } catch {
     return file;
   }

@@ -1,6 +1,9 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
+// Every upload has a unique name, so the browser may keep a copy for good instead of asking the server again each time.
+const IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
+
 import { env } from "../config/env.js";
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
@@ -72,7 +75,7 @@ export class StorageService {
     }
 
     const key = this.buildKey({ actorUserId, role, contentType, folder, filename });
-    await this.getClient().send(new PutObjectCommand({ Bucket: env.r2Bucket, Key: key, ContentType: contentType, Body: body }));
+    await this.getClient().send(new PutObjectCommand({ Bucket: env.r2Bucket, Key: key, ContentType: contentType, CacheControl: IMAGE_CACHE_CONTROL, Body: body }));
     const publicUrl = env.r2PublicBaseUrl ? `${env.r2PublicBaseUrl.replace(/\/$/, "")}/${key}` : null;
     return { key, publicUrl };
   }

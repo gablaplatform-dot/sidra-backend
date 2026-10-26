@@ -4820,3 +4820,9 @@ textarea.docs-input { min-height: 84px; }
 .pm-actions a, .pm-actions button { flex: 1 1 auto; height: 38px; display: inline-grid; place-items: center; padding: 0 12px; border-radius: 10px; font-size: 13px; text-decoration: none; }
 .pm-tab .detail-block-header { margin-bottom: 8px; }
 .pm-tab .pl-tabs { margin-top: 6px; }
+
+/* Shown while a page's code is being fetched. */
+.route-loading { min-height: 60vh; display: grid; place-items: center; }
+.route-loading span { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #dbe3f0; border-top-color: #2563eb; animation: route-spin 0.8s linear infinite; }
+@keyframes route-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .route-loading span { animation-duration: 2.4s; } }

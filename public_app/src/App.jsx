@@ -1,38 +1,38 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import { loginPath } from "./lib/authRedirect";
 
-import ProviderOnboarding from "./pages/ProviderOnboarding";
-import Login from "./pages/Login";
-import Welcome from "./pages/Welcome";
+const ProviderOnboarding = lazy(() => import("./pages/ProviderOnboarding"));
+const Login = lazy(() => import("./pages/Login"));
+const Welcome = lazy(() => import("./pages/Welcome"));
 import Home from "./pages/Home";
-import CategoryDetail from "./pages/CategoryDetail";
-import ProviderDetail from "./pages/ProviderDetail";
-import Profile from "./pages/Profile";
-import DeleteAccount from "./pages/DeleteAccount";
-import ProviderOrderView from "./pages/ProviderOrderView";
-import ListingForm from "./pages/ListingForm";
-import SearchResults from "./pages/SearchResults";
-import Cart from "./pages/Cart";
-import Ride from "./pages/Ride";
-import Shop from "./pages/Shop";
-import ShopAllCategories from "./pages/ShopAllCategories";
-import ShopCollection from "./pages/ShopCollection";
-import ProductDetail from "./pages/ProductDetail";
-import MyOrders from "./pages/MyOrders";
-import Services from "./pages/Services";
-import ServiceBrowse from "./pages/ServiceBrowse";
-import BusHome from "./pages/bus/BusHome";
-import BusSearch from "./pages/bus/BusSearch";
-import BusParks from "./pages/bus/BusParks";
-import BusPark from "./pages/bus/BusPark";
-import BusTrip from "./pages/bus/BusTrip";
-import BusTickets from "./pages/bus/BusTickets";
-import BusTicket from "./pages/bus/BusTicket";
-import BusOnboarding from "./pages/bus/BusOnboarding";
-import BusOperatorLogin from "./pages/bus/BusOperatorLogin";
-import BusOperatorPortal from "./pages/bus/BusOperatorPortal";
+const CategoryDetail = lazy(() => import("./pages/CategoryDetail"));
+const ProviderDetail = lazy(() => import("./pages/ProviderDetail"));
+const Profile = lazy(() => import("./pages/Profile"));
+const DeleteAccount = lazy(() => import("./pages/DeleteAccount"));
+const ProviderOrderView = lazy(() => import("./pages/ProviderOrderView"));
+const ListingForm = lazy(() => import("./pages/ListingForm"));
+const SearchResults = lazy(() => import("./pages/SearchResults"));
+const Cart = lazy(() => import("./pages/Cart"));
+const Ride = lazy(() => import("./pages/Ride"));
+const Shop = lazy(() => import("./pages/Shop"));
+const ShopAllCategories = lazy(() => import("./pages/ShopAllCategories"));
+const ShopCollection = lazy(() => import("./pages/ShopCollection"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
+const MyOrders = lazy(() => import("./pages/MyOrders"));
+const Services = lazy(() => import("./pages/Services"));
+const ServiceBrowse = lazy(() => import("./pages/ServiceBrowse"));
+const BusHome = lazy(() => import("./pages/bus/BusHome"));
+const BusSearch = lazy(() => import("./pages/bus/BusSearch"));
+const BusParks = lazy(() => import("./pages/bus/BusParks"));
+const BusPark = lazy(() => import("./pages/bus/BusPark"));
+const BusTrip = lazy(() => import("./pages/bus/BusTrip"));
+const BusTickets = lazy(() => import("./pages/bus/BusTickets"));
+const BusTicket = lazy(() => import("./pages/bus/BusTicket"));
+const BusOnboarding = lazy(() => import("./pages/bus/BusOnboarding"));
+const BusOperatorLogin = lazy(() => import("./pages/bus/BusOperatorLogin"));
+const BusOperatorPortal = lazy(() => import("./pages/bus/BusOperatorPortal"));
 
 // Pages that only make sense signed in: if the API rejects the saved token there, go to sign-in and come back
 // afterwards, instead of leaving a bare "Unauthorized" under a header that still says "Log out".
@@ -57,6 +57,7 @@ export default function App() {
   return (
     <>
     <SessionGuard />
+    <Suspense fallback={<div className="route-loading" role="status" aria-label="Loading"><span /></div>}>
     <Routes>
       <Route path="/provider/onboarding" element={<ProviderOnboarding />} />
       <Route path="/login" element={<Login />} />
@@ -95,6 +96,7 @@ export default function App() {
       <Route path="/bus/operator/*" element={<BusOperatorPortal />} />
       <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
+    </Suspense>
     </>
   );
 }

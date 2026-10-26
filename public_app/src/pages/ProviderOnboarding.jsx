@@ -277,7 +277,7 @@ export default function ProviderOnboarding() {
 
       <div className="onboarding-grid">
         <aside className="welcome-pane">
-          <img src="/assets/gabla-provider-welcome.png" alt="" />
+          <img src="/assets/gabla-provider-welcome.jpg" alt="" />
           <p className="eyebrow">{t("onboarding.invited")}</p>
           <h1>{t("onboarding.headline")}</h1>
           <p>{t("onboarding.completeFor")} <strong>{invitation?.provider?.businessName}</strong>. {t("onboarding.savedSecurely")}</p>

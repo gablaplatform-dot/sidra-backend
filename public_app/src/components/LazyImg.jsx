@@ -20,6 +20,7 @@ export default function LazyImg({ src, alt = "", className = "", wrapClassName =
         src={src}
         alt={alt}
         className={className}
+        decoding="async"
         onLoad={() => setState("loaded")}
         onError={() => setState("failed")}
         {...rest}

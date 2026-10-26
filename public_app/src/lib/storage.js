@@ -24,8 +24,9 @@ export const uploadFile = async (file, folder = "provider-media", { register = t
 
   let key;
   let publicUrl;
-  if (isNativeApp()) {
-    // The bucket only allows the website's origin, so the app sends the file through the API instead.
+  if (isNativeApp() || contentType.startsWith("image/")) {
+    // Photos go through the API (the app's origin is not allowed by the bucket, and files we write ourselves are
+    // stored with a long cache lifetime so shoppers' phones keep them). Videos are large and go straight to the bucket.
     const query = new URLSearchParams({ folder, filename: file.name || "photo" });
     const sent = await request(`/storage/upload?${query}`, { method: "POST", body: file, headers: { "Content-Type": contentType } });
     ({ key, publicUrl } = sent);
