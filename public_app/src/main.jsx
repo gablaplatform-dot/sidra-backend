@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import "./i18n";
 import App from "./App.jsx";
 import AppSplash from "./components/AppSplash";
+import PdfViewer from "./components/PdfViewer";
 import "@fontsource/noto-sans-ethiopic/ethiopic-400.css";
 import "@fontsource/noto-sans-ethiopic/ethiopic-700.css";
 import "./styles.css";
@@ -25,6 +26,7 @@ function Root() {
   return (
     <>
       <App key={i18n.resolvedLanguage} />
+      <PdfViewer />
       <AppSplash />
     </>
   );

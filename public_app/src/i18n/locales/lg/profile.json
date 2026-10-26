@@ -729,6 +729,13 @@
       "discard": "Ggyawo",
       "saveChanges": "Tereka enkyukakyuka",
       "dismiss": "Ggyawo obubaka"
+    },
+    "viewer": {
+      "close": "Ggala",
+      "zoomIn": "Zimbuluusa",
+      "zoomOut": "Kendeeza",
+      "loading": "Ekiwandiiko kyo kiggulwa…",
+      "error": "Tetusobodde kuggulawo ekiwandiiko kino. Gezaako nate."
     }
   }
 }

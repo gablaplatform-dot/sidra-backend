@@ -1,6 +1,8 @@
 import i18n, { intlLocale } from "../i18n";
 import { API_BASE, request } from "./api";
 import { clearSession, getSession } from "./session";
+import { isNativeApp } from "./google";
+import { OPEN_PDF_EVENT } from "../components/PdfViewer";
 
 // Quotations & receipts. Everything here talks to /documents. The PDF endpoints return a binary body, so they
 // can't go through request() (which parses JSON) - fetchPdfBlob does the same auth + error handling for blobs.
@@ -36,6 +38,14 @@ export const fetchPdfBlob = async (path, { method = "GET", body, signal } = {}) 
 // Opens a PDF in a new tab. The tab is opened synchronously (inside the click) and pointed at the blob once it
 // has loaded - that keeps pop-up blockers and iOS Safari happy. If the browser refuses the tab, it downloads.
 export const openPdfWith = async (getBlob, filename = "document.pdf") => {
+  // The app's web view (and phones in general) can't show a PDF in a new tab: read it inside the app instead.
+  if (isNativeApp() || window.matchMedia?.("(pointer: coarse)").matches) {
+    const blob = getBlob();
+    blob.catch(() => {}); // the viewer shows the failure itself
+    window.dispatchEvent(new CustomEvent(OPEN_PDF_EVENT, { detail: { blob, title: filename.replace(/\.pdf$/i, "") } }));
+    await blob.catch(() => {});
+    return;
+  }
   const tab = window.open("", "_blank");
   if (tab) {
     try {

@@ -4643,3 +4643,23 @@ textarea.docs-input { min-height: 84px; }
   font: inherit; font-weight: 800; cursor: pointer;
 }
 .da-danger:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ---- In-app PDF viewer ---- */
+.pdfv { position: fixed; inset: 0; z-index: 400; display: flex; flex-direction: column; background: #e9edf5; }
+.pdfv-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px; background: #0b2046; color: #fff;
+}
+.pdfv-bar strong { font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdfv-tools { display: flex; gap: 8px; flex: none; }
+.pdfv-tools button {
+  width: 38px; height: 38px; border-radius: 12px; border: 0; background: rgba(255, 255, 255, 0.14); color: #fff;
+  font: inherit; font-size: 20px; font-weight: 700; display: grid; place-items: center; cursor: pointer;
+}
+.pdfv-tools button:disabled { opacity: 0.4; }
+.pdfv-tools svg { width: 18px; height: 18px; }
+.pdfv-body { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding: 12px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); }
+.pdfv-pages { display: grid; gap: 12px; justify-content: start; width: max-content; min-width: 100%; justify-items: center; }
+.pdfv-page { background: #fff; border-radius: 6px; box-shadow: 0 4px 18px rgba(11, 32, 70, 0.18); display: block; }
+.pdfv-note { margin: 60px 0; text-align: center; color: #475569; font-weight: 600; }
+.pdfv-error { color: #b91c1c; }

@@ -729,6 +729,13 @@
       "discard": "Tuur",
       "saveChanges": "Keydi isbeddellada",
       "dismiss": "Xir farriinta"
+    },
+    "viewer": {
+      "close": "Xidh",
+      "zoomIn": "Weynee",
+      "zoomOut": "Yaree",
+      "loading": "Waa la furayaa waraaqdaada…",
+      "error": "Ma furi karno waraaqdan. Fadlan mar kale isku day."
     }
   }
 }

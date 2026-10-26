@@ -729,6 +729,13 @@
       "discard": "Discard",
       "saveChanges": "Save changes",
       "dismiss": "Dismiss message"
+    },
+    "viewer": {
+      "close": "Close",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "loading": "Opening your document…",
+      "error": "We couldn't open this document. Please try again."
     }
   }
 }
