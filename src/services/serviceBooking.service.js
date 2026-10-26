@@ -4,6 +4,8 @@ import { prisma } from "../config/db.js";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/AppError.js";
 import { flagRefundDue } from "../utils/refunds.js";
+import { sendMail } from "../emails/mailer.js";
+import { bookingEmail } from "../emails/templates.js";
 import { addDaysToDateString, eatDateString, eatTimeString, eatToUtc, isDateString, isTimeString, todayEat } from "../utils/busTime.js";
 
 const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
@@ -26,8 +28,6 @@ const int = (v, fallback, min, max) => {
   const n = Math.round(Number(v));
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
 };
-const ugx = (n) => `UGX ${Number(n ?? 0).toLocaleString()}`;
-const escapeHtml = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 // What a provider sets when they mark a service as a booking service. Anything missing or out of range falls
 // back to a sensible value so a half-filled form can never produce an unbookable listing.
@@ -425,15 +425,9 @@ export class ServiceBookingService {
 
   // ----- emails (best effort, never block a booking) ----------------------------------------------
 
-  async _send({ to, subject, lines, footer }) {
-    if (!to || !env.resendApiKey || !env.resendFromEmail) return;
-    const text = `${lines.join("\n")}${footer ? `\n\n${footer}` : ""}`;
-    const html = `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#0F172A;line-height:1.5;">${lines.map((l) => `<p style="margin:6px 0">${escapeHtml(l)}</p>`).join("")}${footer ? `<p style="color:#64748B;margin-top:16px">${escapeHtml(footer)}</p>` : ""}</body></html>`;
-    await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${env.resendApiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: env.resendFromEmail, to, subject, text, html })
-    });
+  async _send({ to, email }) {
+    if (!to || !email) return;
+    await sendMail({ to, email });
   }
 
   notifyPaid(id) {
@@ -450,38 +444,34 @@ export class ServiceBookingService {
     if (!b) return;
     const providerEmail = b.provider?.user?.email;
     const customerEmail = b.customer?.email || b.user?.email;
-    const summary = `${b.listingName} · ${this._when(b)} · ${b.quantity > 1 ? `${b.quantity} × ` : ""}${b.units} ${b.unit}${b.units > 1 ? "s" : ""} · ${ugx(b.total)} (ref ${b.reference})`;
-    const guest = `${b.customer?.name} (${b.customer?.phone})${b.customer?.notes ? ` — “${b.customer.notes}”` : ""}`;
-
-    if (event === "created") {
-      await this._send({
-        to: providerEmail,
-        subject: b.status === "confirmed" ? `New booking on Gabla — ${b.listingName}` : `Booking request on Gabla — ${b.listingName}`,
-        lines: [b.status === "confirmed" ? "A guest just booked and it was confirmed automatically." : `You have a new booking request. Please accept or decline within ${Math.round((b.expiresAt - b.createdAt) / HOUR_MS)} hours or it will expire.`, summary, `Guest: ${guest}`],
-        footer: "Open your Gabla profile, then the Bookings tab."
-      });
-      await this._send({
-        to: customerEmail,
-        subject: b.status === "confirmed" ? `Your booking is confirmed — ${b.listingName}` : `We've sent your request — ${b.listingName}`,
-        lines: [b.status === "confirmed" ? "Your booking is confirmed." : "Your request was sent. The provider will answer shortly and we'll email you.", summary, ...(b.paymentStatus === "payable" ? [`Pay ${ugx(b.amountDue)} within ${Math.round((b.payBy - Date.now()) / HOUR_MS)} hours to keep it: open Orders → Bookings on Gabla.`] : b.paymentStatus === "awaiting_approval" ? [`Once the provider accepts you can pay ${ugx(b.amountDue)} online. Nothing is charged before that.`] : []), POLICIES[b.policy]],
-        footer: "You can see this booking any time under Orders → Bookings on Gabla."
-      });
-    } else if (event === "confirmed") {
-      const c = this.toDto(b, { viewer: "customer" }).contact;
-      await this._send({
-        to: customerEmail,
-        subject: `Booking confirmed — ${b.listingName}`,
-        lines: ["Good news: the provider accepted your booking.", summary, ...(c?.address ? [`Where: ${c.address}`] : []), ...(c?.phone ? [`Phone: ${c.phone}`] : []), ...(b.providerNote ? [`Note from the provider: ${b.providerNote}`] : []), ...(b.paymentStatus === "payable" ? [`Pay ${ugx(b.amountDue)} within ${Math.max(1, Math.round((b.payBy - Date.now()) / HOUR_MS))} hours to keep your booking: open Orders → Bookings on Gabla.`] : []), ...(b.listing?.booking?.depositNote ? [`Note: ${b.listing.booking.depositNote}`] : []), POLICIES[b.policy]]
-      });
-    } else if (event === "paid") {
-      await this._send({ to: providerEmail, subject: `Booking paid: ${b.listingName}`, lines: [`The guest paid ${ugx(b.amountPaid)} for this booking (minus Gabla's fee, credited to your wallet).`, summary] });
-      await this._send({ to: customerEmail, subject: `Payment received: ${b.listingName}`, lines: [`We received your payment of ${ugx(b.amountPaid)}.`, summary, "See you there!"] });
-    } else if (event === "declined") {
-      await this._send({ to: customerEmail, subject: `Booking request declined — ${b.listingName}`, lines: ["Sorry, the provider couldn't take this booking.", summary, ...(b.providerNote ? [`Note from the provider: ${b.providerNote}`] : []), "You can try other dates or another provider on Gabla."] });
-    } else if (event === "cancelled_by_provider") {
-      await this._send({ to: customerEmail, subject: `Booking cancelled — ${b.listingName}`, lines: ["The provider had to cancel this booking.", summary, ...(b.providerNote ? [`Note from the provider: ${b.providerNote}`] : [])] });
-    } else if (event === "cancelled_by_customer") {
-      await this._send({ to: providerEmail, subject: `Booking cancelled by the guest — ${b.listingName}`, lines: ["The guest cancelled this booking; the dates are free again.", summary] });
-    }
+    const contact = event === "confirmed" ? this.toDto(b, { viewer: "customer" }).contact : null;
+    const ctx = {
+      listingName: b.listingName,
+      when: this._when(b),
+      size: `${b.quantity > 1 ? `${b.quantity} × ` : ""}${b.units} ${b.unit}${b.units > 1 ? "s" : ""}`,
+      total: b.total,
+      reference: b.reference,
+      status: b.status,
+      paymentStatus: b.paymentStatus,
+      guest: { name: b.customer?.name, phone: b.customer?.phone, notes: b.customer?.notes },
+      hoursToAnswer: b.expiresAt && b.createdAt ? Math.round((b.expiresAt - b.createdAt) / HOUR_MS) : null,
+      hoursToPay: b.payBy ? Math.max(1, Math.round((b.payBy - Date.now()) / HOUR_MS)) : null,
+      amountDue: b.amountDue,
+      amountPaid: b.amountPaid,
+      policy: POLICIES[b.policy],
+      providerNote: b.providerNote,
+      address: contact?.address,
+      phone: contact?.phone,
+      depositNote: b.listing?.booking?.depositNote
+    };
+    const jobs = {
+      created: [["provider", providerEmail], ["customer", customerEmail]],
+      confirmed: [["customer", customerEmail]],
+      paid: [["provider", providerEmail], ["customer", customerEmail]],
+      declined: [["customer", customerEmail]],
+      cancelled_by_provider: [["customer", customerEmail]],
+      cancelled_by_customer: [["provider", providerEmail]]
+    }[event] || [];
+    for (const [audience, to] of jobs) await this._send({ to, email: bookingEmail({ event, to: audience, ctx }) });
   }
 }

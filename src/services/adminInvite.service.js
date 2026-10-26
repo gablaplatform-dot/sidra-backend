@@ -4,6 +4,8 @@ import jwt from "jsonwebtoken";
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 import { env } from "../config/env.js";
+import { sendMail } from "../emails/mailer.js";
+import { adminInvite as adminInviteEmail } from "../emails/templates.js";
 
 const tokenHash = (token) => crypto.createHash("sha256").update(token).digest("hex");
 const escapeHtml = (value) =>
@@ -54,47 +56,7 @@ export class AdminInviteService {
   }
 
   async sendInviteEmail({ to, name, roleName, token }) {
-    if (!env.resendApiKey || !env.resendFromEmail) {
-      return { sent: false, deliveryStatus: "not_configured" };
-    }
-    const link = this.inviteUrl(token);
-    const safeName = escapeHtml(name);
-    const safeRole = escapeHtml(roleName);
-    const safeLink = escapeHtml(link);
-    const subject = "You're invited to the Gabla admin panel";
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${env.resendApiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: env.resendFromEmail,
-        to,
-        subject,
-        text: `Hi ${name}, you've been invited to the Gabla admin panel as ${roleName}. Set your password to get started: ${link}\n\nThis link expires in 7 days.`,
-        html: `<!doctype html><html><body style="margin:0;padding:0;background:#F2F5F9;font-family:Arial,Helvetica,sans-serif;color:#0F172A;">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#F2F5F9;">
-<tr><td align="center" style="padding:28px 12px;">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
-<tr><td style="height:8px;background:#FACC15;font-size:0;line-height:0;">&nbsp;</td></tr>
-<tr><td align="center" style="padding:30px 32px 8px;">
-<table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr>
-<td align="center" valign="middle" style="width:42px;height:42px;background:#FACC15;border-radius:8px;color:#0B2046;font-size:25px;font-weight:800;">G</td>
-<td style="padding-left:12px;color:#0B2046;font-size:25px;font-weight:800;">Gabla</td>
-</tr></table></td></tr>
-<tr><td align="center" style="padding:20px 40px 8px;">
-<h1 style="margin:0 0 10px;color:#0B2046;font-size:24px;line-height:1.3;font-weight:800;">You're invited as ${safeRole}</h1>
-<p style="margin:0;color:#526174;font-size:15px;line-height:1.65;">Hi ${safeName}, set your password to activate your Gabla admin account.</p>
-</td></tr>
-<tr><td align="center" style="padding:20px 40px 34px;">
-<a href="${safeLink}" style="display:inline-block;background:#0B2046;color:#FFFFFF;text-decoration:none;font-size:16px;font-weight:700;line-height:1;padding:16px 26px;border-radius:7px;">Set your password&nbsp;&nbsp;&rarr;</a>
-<p style="margin:14px 0 0;color:#8491A3;font-size:12px;line-height:1.5;">This secure link expires in 7 days. If you weren't expecting this, you can ignore this email.</p>
-</td></tr>
-<tr><td align="center" style="padding:20px 32px;background:#0B2046;"><p style="margin:0;color:#FFFFFF;font-size:14px;font-weight:700;">Gabla</p></td></tr>
-</table></td></tr></table></body></html>`
-      })
-    });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) return { sent: false, deliveryStatus: "failed", providerResponse: body };
-    return { sent: true, deliveryStatus: "sent", providerResponse: body };
+    return sendMail({ to, email: adminInviteEmail({ name, roleName, link: this.inviteUrl(token) }) });
   }
 
   async createInvite({ name, email, roleId, invitedById }) {
