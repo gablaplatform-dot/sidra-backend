@@ -45,7 +45,10 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [activeTab, setActiveTab] = useState("info");
+  const [activeTab, setActiveTab] = useState(() => {
+    const wanted = new URLSearchParams(location.search).get("tab");
+    return TABS.some((tab) => tab.key === wanted) ? wanted : "info";
+  });
   const [docsDirty, setDocsDirty] = useState(false);
   const [focusOrderId, setFocusOrderId] = useState(null);
 

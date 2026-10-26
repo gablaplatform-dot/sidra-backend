@@ -30,6 +30,7 @@ export class TransactionService {
     status,
     type,
     types,
+    excludeTypes,
     excludeReferencePrefix,
     userId,
     providerId,
@@ -49,6 +50,7 @@ export class TransactionService {
     const typeFilter = normalizeTypeFilter(type);
     if (typeFilter) filter.type = typeFilter;
     else if (Array.isArray(types) && types.length) filter.type = { in: types };
+    if (!filter.type && Array.isArray(excludeTypes) && excludeTypes.length) filter.type = { notIn: excludeTypes };
     if (excludeReferencePrefix) filter.NOT = { reference: { startsWith: excludeReferencePrefix } };
 
     if (userId !== undefined) {

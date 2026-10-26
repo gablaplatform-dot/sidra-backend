@@ -155,6 +155,14 @@ export class EngagementController {
     }
   };
 
+  getProviderOrder = async (req, res, next) => {
+    try {
+      res.status(200).json({ data: await this.engagementService.getProviderOrder({ actorUserId: req.user.id, orderId: req.params.orderId }) });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   getProviderAnalytics = async (req, res, next) => {
     try {
       res.status(200).json({

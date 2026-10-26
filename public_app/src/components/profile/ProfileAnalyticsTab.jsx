@@ -238,7 +238,6 @@ export default function ProfileAnalyticsTab() {
               Icon={IconLock}
               label={t("profile.analytics.contactUnlocks")}
               value={formatNumber(totals.contactUnlocks)}
-              sub={Number(totals.contactUnlockRevenue) > 0 ? t("profile.analytics.earned", { amount: formatUgx(totals.contactUnlockRevenue) }) : null}
             />
             <StatTile tone="blue" Icon={IconImage} label={t("profile.analytics.listingViews")} value={formatNumber(totals.listingViews)} />
             <StatTile

@@ -177,13 +177,22 @@ export const buildEngagementRoutes = ({ engagementController }) => {
     requireAuth([Roles.PROVIDER]),
     validate(
       Joi.object({
-        status: Joi.string().trim().max(80).optional(),
+        status: Joi.string().trim().max(120).optional(), // one status, or several separated by commas
+        q: Joi.string().trim().max(120).allow("").optional(),
+        from: Joi.string().isoDate().optional(),
+        to: Joi.string().isoDate().optional(),
         page: Joi.number().integer().min(1).optional(),
         limit: Joi.number().integer().min(1).max(100).optional()
       }),
       "query"
     ),
     engagementController.listProviderOrders
+  );
+  router.get(
+    "/provider/orders/:orderId",
+    requireAuth([Roles.PROVIDER]),
+    validate(Joi.object({ orderId: id.required() }), "params"),
+    engagementController.getProviderOrder
   );
   router.get(
     "/provider/analytics",
@@ -195,7 +204,7 @@ export const buildEngagementRoutes = ({ engagementController }) => {
     "/provider/orders/:orderId",
     requireAuth([Roles.PROVIDER]),
     validate(Joi.object({ orderId: id.required() }), "params"),
-    validate(Joi.object({ status: Joi.string().valid("pending", "accepted", "fulfilled", "canceled", "rejected").required() })),
+    validate(Joi.object({ status: Joi.string().valid("pending", "accepted", "delivering", "fulfilled", "canceled", "rejected").required() })),
     engagementController.updateProviderOrder
   );
 

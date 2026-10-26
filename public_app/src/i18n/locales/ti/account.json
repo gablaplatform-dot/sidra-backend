@@ -95,6 +95,7 @@
     "status": {
       "pending": "ትዕዛዝ ተኣዚዙ",
       "accepted": "ብሸያጢ ተቐቢሉ",
+      "delivering": "ኣብ መገዲ ኣሎ",
       "fulfilled": "ተወዲኡ",
       "rejected": "ብሸያጢ ተነጺጉ",
       "canceled": "ተሰሪዙ"
@@ -103,6 +104,7 @@
       "placed": "ተኣዚዙ",
       "accepted": "ተቐቢሉ",
       "acceptedPaid": "ተቐቢሉ ተኸፊሉ",
+      "delivering": "ኣብ መገዲ",
       "completed": "ተወዲኡ",
       "deliveredPaid": "በጺሑ ተኸፊሉ"
     },

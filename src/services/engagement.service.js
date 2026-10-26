@@ -374,44 +374,70 @@ export class EngagementService {
     };
   }
 
-  async listProviderOrders({ actorUserId, status, page = 1, limit = 50 }) {
+  providerOrderDto(order, documents) {
+    return {
+      documents: documents.get(order.id) ?? [],
+      id: order.id,
+      status: order.status,
+      subtotal: moneyString(order.subtotal),
+      fee: moneyString(order.fee),
+      total: moneyString(order.total),
+      customer: order.customer,
+      fulfillment: order.fulfillment,
+      ...orderPayment(order),
+      items: order.items,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt
+    };
+  }
+
+  async listProviderOrders({ actorUserId, status, q, from, to, page = 1, limit = 50 }) {
     const provider = await prisma.provider.findUnique({ where: { userId: actorUserId } });
     if (!provider) throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
 
     const normalizedPage = Math.max(1, Number(page) || 1);
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 50));
-    const where = { providerId: provider.id, ...(status ? { status } : {}) };
-    const [items, total] = await Promise.all([
-      prisma.order.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: (normalizedPage - 1) * normalizedLimit,
-        take: normalizedLimit,
-        include: { items: true }
-      }),
-      prisma.order.count({ where })
-    ]);
+    const statuses = String(status ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    const created = {};
+    if (from) created.gte = new Date(`${String(from).slice(0, 10)}T00:00:00.000Z`);
+    if (to) created.lte = new Date(`${String(to).slice(0, 10)}T23:59:59.999Z`);
+    const where = {
+      providerId: provider.id,
+      ...(statuses.length ? { status: { in: statuses } } : {}),
+      ...(created.gte || created.lte ? { createdAt: created } : {})
+    };
+    const needle = String(q ?? "").trim().toLowerCase();
+
+    let items;
+    let total;
+    if (needle) {
+      // Buyer details live in JSON, so the text search runs over the (already status/date filtered) orders in memory.
+      const all = await prisma.order.findMany({ where, orderBy: { createdAt: "desc" }, take: 2000, include: { items: true } });
+      const hit = all.filter((o) => {
+        const c = o.customer ?? {};
+        const hay = [o.id, o.id.slice(-6), c.name, c.phone, c.email, c.notes, o.fulfillment?.address, ...o.items.map((i) => i.name)].filter(Boolean).join(" ").toLowerCase();
+        return hay.includes(needle);
+      });
+      total = hit.length;
+      items = hit.slice((normalizedPage - 1) * normalizedLimit, normalizedPage * normalizedLimit);
+    } else {
+      [items, total] = await Promise.all([
+        prisma.order.findMany({ where, orderBy: { createdAt: "desc" }, skip: (normalizedPage - 1) * normalizedLimit, take: normalizedLimit, include: { items: true } }),
+        prisma.order.count({ where })
+      ]);
+    }
 
     const documents = this.documentService ? await this.documentService.forOrders(items.map((o) => o.id)) : new Map();
-    return {
-      items: items.map((order) => ({
-        documents: documents.get(order.id) ?? [],
-        id: order.id,
-        status: order.status,
-        subtotal: moneyString(order.subtotal),
-        fee: moneyString(order.fee),
-        total: moneyString(order.total),
-        customer: order.customer,
-        fulfillment: order.fulfillment,
-        ...orderPayment(order),
-        items: order.items,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt
-      })),
-      page: normalizedPage,
-      limit: normalizedLimit,
-      total
-    };
+    return { items: items.map((order) => this.providerOrderDto(order, documents)), page: normalizedPage, limit: normalizedLimit, total };
+  }
+
+  async getProviderOrder({ actorUserId, orderId }) {
+    const provider = await prisma.provider.findUnique({ where: { userId: actorUserId } });
+    if (!provider) throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+    const order = await prisma.order.findFirst({ where: { id: orderId, providerId: provider.id }, include: { items: true } });
+    if (!order) throw new AppError({ message: "Order not found", statusCode: 404, code: "ORDER_NOT_FOUND" });
+    const documents = this.documentService ? await this.documentService.forOrders([order.id]) : new Map();
+    return this.providerOrderDto(order, documents);
   }
 
   async updateProviderOrder({ actorUserId, orderId, status }) {
@@ -420,13 +446,17 @@ export class EngagementService {
 
     const order = await prisma.order.findFirst({ where: { id: orderId, providerId: provider.id } });
     if (!order) throw new AppError({ message: "Order not found", statusCode: 404, code: "ORDER_NOT_FOUND" });
+    if (order.status === status) return order;
+    if (["fulfilled", "canceled", "rejected"].includes(order.status)) {
+      throw new AppError({ message: "This order is already closed.", statusCode: 409, code: "ORDER_CLOSED" });
+    }
 
     const payment = orderPayment(order);
     const data = { status };
     if (payment.paymentMethod === "online" && !order.transactionId) {
-      // Online orders: accepting opens payment; completing needs the money in; declining closes it.
+      // Online orders: accepting opens payment; delivering or completing needs the money in; declining closes it.
       if (status === "accepted") data.metadata = { ...(order.metadata ?? {}), paymentStatus: "payable", approvedAt: new Date().toISOString() };
-      else if (status === "fulfilled") throw new AppError({ message: "This order hasn't been paid yet. You can complete it once the buyer pays.", statusCode: 409, code: "ORDER_NOT_PAID" });
+      else if (status === "delivering" || status === "fulfilled") throw new AppError({ message: "This order hasn't been paid yet. You can deliver it once the buyer pays.", statusCode: 409, code: "ORDER_NOT_PAID" });
       else if (status === "pending") data.metadata = { ...(order.metadata ?? {}), paymentStatus: "awaiting_approval" };
     } else if (status === "fulfilled" && payment.paymentMethod === "cash") {
       data.metadata = { ...(order.metadata ?? {}), paymentStatus: "paid_cash" };
@@ -438,8 +468,9 @@ export class EngagementService {
     }
     // Cash collected on delivery: the buyer gets their receipt now.
     if (data.metadata?.paymentStatus === "paid_cash") this.documentService?.issueReceipt({ orderId: order.id }).catch(() => {});
-    // Accepted online order: tell the buyer they can pay now.
+    // The buyer hears about every change: accepted (online orders also learn they can pay now), delivering, delivered, declined, cancelled.
     if (status === "accepted" && data.metadata?.paymentStatus === "payable") this.orderNotificationService.notifyBuyerOrderApproved({ orderId: order.id }).catch(() => {});
+    else if (["accepted", "delivering", "fulfilled", "rejected", "canceled"].includes(status)) this.orderNotificationService.notifyBuyerOrderStatus({ orderId: order.id, status }).catch(() => {});
     return updated;
   }
 

@@ -118,4 +118,40 @@ export class OrderNotificationService {
       lines: [`The buyer paid for the order you accepted (${ugx(order.total)}, minus Gabla's fee).`, order.items.map((i) => `${i.name} x${i.quantity}`).join(", "), "Fulfil it, then mark it fulfilled in the Orders tab."]
     });
   }
+
+  // Every change the seller makes to an order is mailed to the buyer: accepted, on its way, delivered, declined, cancelled.
+  async notifyBuyerOrderStatus({ orderId, status }) {
+    const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true, provider: true, user: { select: { email: true } } } });
+    const to = order?.customer?.email || order?.user?.email;
+    if (!to) return { sent: false, reason: "no_email" };
+    const seller = order.provider.businessName;
+    const items = order.items.map((i) => `${i.name} x${i.quantity}`).join(", ");
+    const pickup = order.fulfillment?.method === "pickup";
+    const online = order.metadata?.paymentMethod === "online" && !order.transactionId;
+    const ref = `Order ${order.id.slice(-6).toUpperCase()}`;
+    const copy = {
+      accepted: {
+        subject: `${seller} accepted your order`,
+        lines: [`${seller} accepted your order.`, items, `Total: ${ugx(order.total)}`, online ? "You can pay now by mobile money from Orders on Gabla." : pickup ? "They will let you know when it is ready for pickup." : "They will let you know when it is on its way."]
+      },
+      delivering: {
+        subject: pickup ? `Your order from ${seller} is ready for pickup` : `Your order from ${seller} is on its way`,
+        lines: [pickup ? `${seller} has your order ready for pickup.` : `${seller} is delivering your order now.`, items, order.fulfillment?.address ? `Delivery address: ${order.fulfillment.address}` : null].filter(Boolean)
+      },
+      fulfilled: {
+        subject: `Your order from ${seller} was delivered`,
+        lines: [`${seller} marked your order as delivered.`, items, `Total: ${ugx(order.total)}`, "Thank you for shopping on Gabla."]
+      },
+      rejected: {
+        subject: `${seller} could not take your order`,
+        lines: [`${seller} declined your order.`, items, order.transactionId ? "Your payment will be refunded." : "You were not charged anything."]
+      },
+      canceled: {
+        subject: `Your order from ${seller} was cancelled`,
+        lines: [`${seller} cancelled your order.`, items, order.transactionId ? "Your payment will be refunded." : "You were not charged anything."]
+      }
+    }[status];
+    if (!copy) return { sent: false, reason: "no_template" };
+    return this._send({ to, subject: copy.subject, lines: [...copy.lines, ref], footer: "You can follow all your orders in the Gabla app under Orders." });
+  }
 }

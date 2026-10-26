@@ -95,6 +95,7 @@
     "status": {
       "pending": "Dalabka waa la gudbiyay",
       "accepted": "Iibiyuhu wuu aqbalay",
+      "delivering": "Waa ku socotaa",
       "fulfilled": "Waa dhammaaday",
       "rejected": "Iibiyuhu wuu diiday",
       "canceled": "La joojiyay"
@@ -103,6 +104,7 @@
       "placed": "La gudbiyay",
       "accepted": "La aqbalay",
       "acceptedPaid": "La aqbalay & la bixiyay",
+      "delivering": "Waa socotaa",
       "completed": "La dhammeeyay",
       "deliveredPaid": "La keenay & la bixiyay"
     },

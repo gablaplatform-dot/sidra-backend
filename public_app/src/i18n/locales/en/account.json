@@ -95,6 +95,7 @@
     "status": {
       "pending": "Order placed",
       "accepted": "Accepted by seller",
+      "delivering": "On its way",
       "fulfilled": "Completed",
       "rejected": "Declined by seller",
       "canceled": "Cancelled"
@@ -103,6 +104,7 @@
       "placed": "Placed",
       "accepted": "Accepted",
       "acceptedPaid": "Accepted & paid",
+      "delivering": "On its way",
       "completed": "Completed",
       "deliveredPaid": "Delivered & paid"
     },

@@ -333,7 +333,7 @@ export class AuthService {
     if (openRide) throw blocked("You have a ride in progress. Finish or cancel it first.", "DELETE_BLOCKED_RIDE");
     const tickets = await prisma.busBooking.count({ where: { userId: user.id, status: "confirmed", trip: { departureAt: { gt: now } } } });
     if (tickets) throw blocked("You have bus tickets for upcoming trips. Cancel them or travel first.", "DELETE_BLOCKED_TICKETS");
-    const openOrders = await prisma.order.count({ where: { userId: user.id, status: { in: ["pending", "confirmed", "shipped"] } } });
+    const openOrders = await prisma.order.count({ where: { userId: user.id, status: { in: ["pending", "accepted", "delivering"] } } });
     if (openOrders) throw blocked("You have orders that are not delivered yet. Wait until they are completed or cancel them.", "DELETE_BLOCKED_ORDERS");
     const openBookings = await prisma.serviceBooking.count({ where: { userId: user.id, status: { in: ["pending", "confirmed"] } } });
     if (openBookings) throw blocked("You have service bookings that are still open. Cancel them or wait until they are done.", "DELETE_BLOCKED_BOOKINGS");
@@ -343,7 +343,7 @@ export class AuthService {
       if (balance > 0) throw blocked("Withdraw your wallet balance before deleting the account.", "DELETE_BLOCKED_BALANCE");
       const pendingPayouts = await prisma.withdrawalRequest.count({ where: { providerId: provider.id, status: { in: ["requested", "approved"] } } });
       if (pendingPayouts) throw blocked("You have a withdrawal that is still being processed.", "DELETE_BLOCKED_PAYOUT");
-      const incomingOrders = await prisma.order.count({ where: { providerId: provider.id, status: { in: ["pending", "confirmed", "shipped"] } } });
+      const incomingOrders = await prisma.order.count({ where: { providerId: provider.id, status: { in: ["pending", "accepted", "delivering"] } } });
       if (incomingOrders) throw blocked("You have customer orders that are not completed yet.", "DELETE_BLOCKED_CUSTOMER_ORDERS");
       const incomingBookings = await prisma.serviceBooking.count({ where: { providerId: provider.id, status: { in: ["pending", "confirmed"] } } });
       if (incomingBookings) throw blocked("You have customer bookings that are still open.", "DELETE_BLOCKED_CUSTOMER_BOOKINGS");

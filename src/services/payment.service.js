@@ -82,7 +82,8 @@ export class PaymentService {
     if (!provider) {
       throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
     }
-    return this.transactionService.adminList({ page, limit, status, type, providerId: provider.id });
+    // Contact-unlock fees are Gabla's revenue, not the provider's money, so they never show on a provider's own history.
+    return this.transactionService.adminList({ page, limit, status, type, providerId: provider.id, excludeTypes: ["contact_unlock", "platform_withdrawal"] });
   }
 
   // Lets the customer who initiated a deposit poll for its outcome while they approve the

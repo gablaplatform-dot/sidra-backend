@@ -50,7 +50,7 @@ function OrderCard({ order, onPaid, phone }) {
     }
   };
 
-  const stepKeys = online || order.paymentMethod === "mobile_money" ? ["placed", paid ? "acceptedPaid" : "accepted", "completed"] : ["placed", "accepted", paid && order.status === "fulfilled" ? "deliveredPaid" : "completed"];
+  const stepKeys = ["placed", online || order.paymentMethod === "mobile_money" ? (paid ? "acceptedPaid" : "accepted") : "accepted", "delivering", paid && order.status === "fulfilled" ? "deliveredPaid" : "completed"];
 
   return (
     <article className="mo-card">

@@ -23,8 +23,8 @@
 .mo-chip-amber { background: #fef3c7; color: #b45309; }
 .mo-chip-blue { background: #dbeafe; color: #1d4ed8; }
 .mo-chip-red { background: #fee2e2; color: #b91c1c; }
-.mo-steps { list-style: none; margin: 18px 0 4px; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.mo-steps li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: #94a3b8; }
+.mo-steps { list-style: none; margin: 18px 0 4px; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.mo-steps li { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #94a3b8; }
 .mo-steps li span { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #f1f5f9; font-size: 11px; }
 .mo-steps li.is-done { color: #0b2046; }
 .mo-steps li.is-done span { background: #16a34a; color: #fff; }

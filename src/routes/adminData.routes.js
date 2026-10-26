@@ -286,7 +286,7 @@ export const buildAdminDataRoutes = ({ adminController }) => {
     requirePermission("orders"),
     validate(
       Joi.object({
-        status: Joi.string().valid("pending", "accepted", "fulfilled", "canceled", "rejected").optional(),
+        status: Joi.string().valid("pending", "accepted", "delivering", "fulfilled", "canceled", "rejected").optional(),
         providerId: id.optional(),
         page: Joi.number().integer().min(1).optional(),
         limit: Joi.number().integer().min(1).max(200).optional()
@@ -299,7 +299,7 @@ export const buildAdminDataRoutes = ({ adminController }) => {
     "/orders/:orderId",
     requirePermission("orders"),
     validate(Joi.object({ orderId: id.required() }), "params"),
-    validate(Joi.object({ status: Joi.string().valid("pending", "accepted", "fulfilled", "canceled", "rejected").required() })),
+    validate(Joi.object({ status: Joi.string().valid("pending", "accepted", "delivering", "fulfilled", "canceled", "rejected").required() })),
     adminController.updateOrder
   );
   router.get(
