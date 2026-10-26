@@ -37,9 +37,10 @@ export default function PdfViewer() {
         const [blob, pdfjs, worker] = await Promise.all([
           request.blob,
           import("pdfjs-dist/legacy/build/pdf.min.mjs"),
-          import("pdfjs-dist/legacy/build/pdf.worker.min.mjs?url")
+          import("pdfjs-dist/legacy/build/pdf.worker.min.mjs?worker")
         ]);
-        pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+        // Bundled as a .js worker (a .mjs file is not always served as JavaScript by the app's local web server).
+        if (!pdfjs.GlobalWorkerOptions.workerPort) pdfjs.GlobalWorkerOptions.workerPort = new worker.default();
         const data = new Uint8Array(await blob.arrayBuffer());
         const doc = await pdfjs.getDocument({ data }).promise;
         if (cancelled) {
