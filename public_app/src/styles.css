@@ -827,7 +827,7 @@ button { cursor: pointer; }
 .photo-edit-button:hover { background: rgba(11, 32, 70, 0.9); }
 .photo-edit-button:disabled { opacity: 0.7; cursor: wait; }
 .photo-edit-button svg { width: 15px; height: 15px; }
-.cover-edit-button { position: absolute; top: 16px; right: 16px; z-index: 1; }
+.cover-edit-button { position: absolute; top: 16px; right: 16px; z-index: 3; }
 .avatar-edit-button {
   position: absolute;
   bottom: -2px;
@@ -992,7 +992,10 @@ button { cursor: pointer; }
 
 @media (max-width: 640px) {
   .profile-identity-row { flex-direction: column; align-items: flex-start; gap: 14px; }
+  /* The identity row fills the whole banner on phones and sat on top of this button, so taps never reached it. */
+  .cover-edit-button { top: 12px; right: 12px; padding: 12px; }
   .cover-edit-button span { display: none; }
+  .cover-edit-button svg { width: 20px; height: 20px; }
   .wallet-balance-card { flex-wrap: wrap; }
   .wallet-withdraw-button { margin-left: 0; width: 100%; }
 }
