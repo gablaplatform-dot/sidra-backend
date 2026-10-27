@@ -39,7 +39,8 @@ export default function ProviderDetail() {
   const [error, setError] = useState("");
   const [unlockOpen, setUnlockOpen] = useState(false);
 
-  const revealContact = () => {
+  const revealContact = (known) => {
+    if (known?.contact) setProvider((prev) => (prev ? { ...prev, contactLocked: false, contact: known.contact, location: known.location ?? prev.location } : prev));
     const request_ = fetchUnlockedContact(providerId, session);
     return request_
       .then((result) => {

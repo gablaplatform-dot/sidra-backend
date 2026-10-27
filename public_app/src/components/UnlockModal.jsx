@@ -35,7 +35,8 @@ export default function UnlockModal({ providerId, providerName, fee, onClose, on
         if (contactUnlockIdRef.current) {
           saveUnlockedContactId(providerId, contactUnlockIdRef.current);
         }
-        onUnlocked?.();
+        // Hand over what the payment just revealed, so the page shows it at once instead of asking the server again.
+        onUnlocked?.({ contact: result.contact, location: result.location });
         return;
       }
       if (result.status === "failed") {

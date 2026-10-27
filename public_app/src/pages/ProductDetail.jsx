@@ -162,13 +162,15 @@ export default function ProductDetail() {
     setTimeout(() => setShareNote(""), 2000);
   };
 
-  const revealContact = () =>
-    fetchUnlockedContact(listing.providerId, session)
+  const revealContact = (known) => {
+    if (known?.contact) setProviderRecord((prev) => (prev ? { ...prev, contactLocked: false, contact: known.contact, location: known.location ?? prev.location } : prev));
+    return fetchUnlockedContact(listing.providerId, session)
       .then((unlocked) => {
         setProviderRecord((prev) => (prev ? { ...prev, contactLocked: false, contact: unlocked.contact, location: unlocked.location } : prev));
         return true;
       })
       .catch(() => false);
+  };
 
   const onlinePaymentsAllowed = listing?.provider?.onlinePaymentsEnabled !== false;
   const canBuyNow = listing?.type === "product" && onlinePaymentsAllowed && listing?.onlinePaymentEnabled !== false;
