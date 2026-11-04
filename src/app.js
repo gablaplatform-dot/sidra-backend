@@ -1,3 +1,4 @@
+import { buildShareRoutes } from "./sharing/sharePreview.js";
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
@@ -226,6 +227,8 @@ export const buildApp = () => {
       serviceBookingService
     })
   );
+
+  app.use(buildShareRoutes());
 
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const publicDist = path.resolve(__dirname, "..", "public_dist");

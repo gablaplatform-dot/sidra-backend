@@ -4,7 +4,6 @@ import express from 'express';
 import {PrismaClient} from '@prisma/client';
 import {buildCommunityRoutes} from '../src/routes/community.routes.js';
 import {CommunityService} from '../src/services/community.service.js';
-import {buildTaxonomyPlan} from '../src/domain/taxonomyMigration.js';
 import {scopedProductTree} from '../src/domain/productTaxonomy.js';
 import {signAccessToken} from '../src/utils/jwt.js';
 import {env} from '../src/config/env.js';
@@ -26,11 +25,12 @@ before(async()=>{
 });
 after(async()=>{await new Promise((r)=>server.close(r));await db.$disconnect();});
 async function call(path,{user,method='GET',body}={}){const response=await fetch(base+path,{method,headers:{'Content-Type':'application/json',...(user?{Authorization:`Bearer ${tokens[user]}`}:{})},body:body?JSON.stringify(body):undefined});return {status:response.status,...await response.json()};}
-const job={title:'Sound engineer for live shows',description:'Help set up sound and run a live stage for community concerts.',organization:'Fixture Stage',category:'Creative',jobType:'task',payMin:150000,payMax:200000,details:{payPeriod:'task'},media:[]};
+const job={address:'Kampala, Uganda',title:'Sound engineer for live shows',description:'Help set up sound and run a live stage for community concerts.',organization:'Fixture Stage',category:'Creative',jobType:'task',payMin:150000,payMax:200000,details:{payPeriod:'task'},media:[]};
 test('job posting, moderation, private application workflow and owner isolation',async()=>{
  assert.equal((await call('/jobs',{method:'POST',body:job})).status,401);
  const injected=await call('/jobs',{user:'poster',method:'POST',body:{...job,ownerId:'outsider'}});
  assert.equal(injected.data.ownerId,'poster');
+ const withoutLocation={...job};delete withoutLocation.address;assert.equal((await call('/jobs',{user:'poster',method:'POST',body:withoutLocation})).status,400);
  const created=await call('/jobs',{user:'poster',method:'POST',body:job});assert.equal(created.status,200);assert.equal(created.data.status,'pending');const id=created.data.id;
  assert.equal((await call('/jobs')).data.total,0);
  assert.equal((await call(`/jobs/${id}`)).status,404);
@@ -53,7 +53,7 @@ test('job posting, moderation, private application workflow and owner isolation'
 });
 test('event validation, RSVP, saved list and cancellation without ticket sales',async()=>{
  const start=new Date(Date.now()+86400000),end=new Date(start.getTime()+7200000);
- const event={title:'Live band at the garden',description:'An evening of live music, friends and local food in the garden.',organization:'Garden Sessions',category:'Music',payMin:25000,payMax:25000,startsAt:start.toISOString(),endsAt:end.toISOString(),media:[{url:'https://example.test/poster.png',type:'image'},{url:'https://example.test/trailer.mp4',type:'video'}],details:{entranceNote:'Pay at the door'}};
+ const event={address:'The Garden, Kampala',title:'Live band at the garden',description:'An evening of live music, friends and local food in the garden.',organization:'Garden Sessions',category:'Music',payMin:25000,payMax:25000,startsAt:start.toISOString(),endsAt:end.toISOString(),media:[{url:'https://example.test/poster.png',type:'image'},{url:'https://example.test/trailer.mp4',type:'video'}],details:{entranceNote:'Pay at the door'}};
  assert.equal((await call('/events',{user:'poster',method:'POST',body:{...event,endsAt:start.toISOString()}})).status,400);
  const post=(await call('/events',{user:'poster',method:'POST',body:event})).data;
  await call(`/events/admin/${post.id}`,{user:'reviewer',method:'PATCH',body:{status:'approved'}});
@@ -65,11 +65,11 @@ test('event validation, RSVP, saved list and cancellation without ticket sales',
  assert.equal((await call('/events')).data.total,0);
  assert.equal((await call(`/events/${post.id}/response`,{user:'applicant',method:'PUT',body:{status:'going'}})).status,404);
 });
-test('product branches inherit business scope; migration leaves ambiguous relationships for review',()=>{
- const directory=[{id:'shop',name:'Shop',parentId:null},{id:'electronics',name:'Electronics',parentId:'shop'},{id:'phones',name:'Phone shops',parentId:'electronics'},{id:'cars',name:'Cars',parentId:'shop'}];
- const products=[{id:'pc-electronics',name:'Electronics',parentId:null,providerCategoryId:'electronics',children:[{id:'mobile',name:'Phones',parentId:'pc-electronics',children:[]}]},{id:'pc-cars',name:'Vehicles',parentId:null,providerCategoryId:'cars',children:[]}];
- assert.deepEqual(scopedProductTree(products,directory,'phones').map((p)=>p.id),['pc-electronics']);
- assert.equal(scopedProductTree(products,directory,'phones')[0].children[0].effectiveProviderCategoryId,'electronics');
- const plan=buildTaxonomyPlan({categories:directory,products:products.map((p)=>({...p,providerCategoryId:null})),usage:[{productCategoryId:'pc-cars',providerCategoryId:'cars'},{productCategoryId:'pc-cars',providerCategoryId:'electronics'}]});
- assert.equal(plan[0].providerCategoryId,'electronics');assert.equal(plan[1].action,'review');
+test('provider choices include descendants and breadcrumbs, excluding sibling branches',()=>{
+ const directory=[{id:'electronics',parentId:null},{id:'phones',parentId:'electronics'},{id:'laptops',parentId:'electronics'},{id:'cars',parentId:null}];
+ const products=[{id:'electronics',providerCategoryId:'electronics',children:[{id:'phones',providerCategoryId:'phones',children:[]},{id:'laptops',providerCategoryId:'laptops',children:[]}]},{id:'cars',providerCategoryId:'cars',children:[]}];
+ const own=scopedProductTree(products,directory,'phones');assert.deepEqual(own.map(p=>p.id),['electronics']);assert.deepEqual(own[0].children.map(p=>p.id),['phones']);
+ assert.equal(own[0].children[0].effectiveProviderCategoryId,'phones');
+ assert.deepEqual(scopedProductTree(products,directory,'cars').map(p=>p.id),['cars']);
+ assert.deepEqual(scopedProductTree(products,directory,'unassigned'),[]);
 });

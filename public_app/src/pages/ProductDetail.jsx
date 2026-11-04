@@ -148,7 +148,7 @@ export default function ProductDetail() {
   };
 
   const share = async () => {
-    const url = window.location.href;
+    const url = `https://gogabla.com/share/${listing.type === "service" ? "service" : "product"}/${encodeURIComponent(listing.id)}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: listing.name, url });
