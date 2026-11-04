@@ -7,6 +7,8 @@ export const BOOKING_UNITS = ["night", "day", "hour"];
 // add subcategories, each node carries the questions a provider answers) on its own table, plus a
 // hint that services in a node are normally booked, and by which unit.
 export class ServiceCategoryService extends ProductCategoryService {
+  get supportsProviderCategories() { return false; }
+
   get db() {
     return prisma.serviceCategory;
   }

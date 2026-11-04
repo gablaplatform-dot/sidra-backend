@@ -5,6 +5,8 @@ import { haversineDistanceKm } from "../utils/geohash.js";
 import { AudienceService, audienceProviderWhere } from "./audience.service.js";
 import { BOOKING_MODES, normalizeBookingConfig } from "./serviceBooking.service.js";
 
+import { effectiveProviderCategory, categoryRelated } from "../domain/productTaxonomy.js";
+
 const GEOHASH_SAFE_RADIUS_KM = 20; // a 3x3 geohash5 cell grid covers ~15km across - beyond this,
 // cell lookup would silently miss real matches, so wider radii fall back to a full provider scan
 const MAX_GEO_PRODUCTS = 500; // secondary safety cap on the product fetch itself
@@ -187,7 +189,7 @@ export class ListingService {
   // /product-categories/mine) rather than leave the product sitting one level too high. Services
   // keep using the general directory category (optional, inherited from the provider), unaffected
   // by this rule.
-  async assertProductCategory(productCategoryId) {
+  async assertProductCategory(productCategoryId, providerCategoryId) {
     if (!productCategoryId) {
       throw new AppError({ message: "Choose a category for this product", statusCode: 400, code: "CATEGORY_REQUIRED" });
     }
@@ -195,6 +197,13 @@ export class ListingService {
     if (!category) {
       throw new AppError({ message: "Category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
     }
+    const products = await prisma.productCategory.findMany({select:{id:true,parentId:true,providerCategoryId:true}});
+    const owner = effectiveProviderCategory(products, productCategoryId);
+    if (owner) {
+      const directory = await prisma.category.findMany({select:{id:true,parentId:true}});
+      if (!categoryRelated(directory, owner, providerCategoryId)) throw new AppError({message:"Choose a product category linked to your business category",statusCode:400,code:"PRODUCT_CATEGORY_OUTSIDE_BUSINESS"});
+    }
+    if (!category.isActive) throw new AppError({message:"This category is inactive",statusCode:400,code:"CATEGORY_INACTIVE"});
     const childCount = await prisma.productCategory.count({ where: { parentId: productCategoryId } });
     if (childCount > 0) {
       throw new AppError({ message: "Choose a more specific subcategory", statusCode: 400, code: "CATEGORY_NOT_LEAF" });
@@ -211,7 +220,7 @@ export class ListingService {
     await this.assertShopCategoryOwnership({ shopCategoryId, providerId: provider.id });
     let bookingFields = { bookingMode: "none", booking: {} };
     if (normalizedType === "product") {
-      await this.assertProductCategory(productCategoryId);
+      await this.assertProductCategory(productCategoryId, provider.categoryId);
     } else {
       await this.assertServiceCategory(serviceCategoryId);
       await this.assertRequiredAnswers(serviceCategoryId, customFields);
@@ -317,7 +326,7 @@ export class ListingService {
     const becomingProduct = effectiveType === "product" && listing.type !== "product";
     const becomingService = effectiveType === "service" && listing.type !== "service";
     if (effectiveType === "product" && (productCategoryChanging || becomingProduct)) {
-      await this.assertProductCategory(update.productCategoryId !== undefined ? update.productCategoryId : listing.productCategoryId);
+      await this.assertProductCategory(update.productCategoryId !== undefined ? update.productCategoryId : listing.productCategoryId, provider.categoryId);
     }
     if (becomingProduct) update.categoryId = null;
     if (becomingProduct) {

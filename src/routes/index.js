@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { buildCommunityRoutes } from "./community.routes.js";
 import { Router } from "express";
 import { buildAuthRoutes } from "./auth.routes.js";
 import { buildProviderRoutes } from "./provider.routes.js";
@@ -54,10 +55,12 @@ export const buildRoutes = ({
   const router = Router();
 
   router.get("/health", (_req, res) => res.status(200).json({ data: { ok: true } }));
+  router.use("/jobs", buildCommunityRoutes("job"));
+  router.use("/events", buildCommunityRoutes("event"));
   router.use("/auth", buildAuthRoutes({ authController }));
   router.use("/providers", buildProviderRoutes({ providerController }));
   router.use("/categories", buildCategoryRoutes({ categoryController }));
-  router.use("/product-categories", buildProductCategoryRoutes({ productCategoryController }));
+  router.use("/product-categories", buildProductCategoryRoutes({ productCategoryController, extra: {providerCategoryId:Joi.string().trim().min(1).max(64).allow(null).optional()} }));
   router.use(
     "/service-categories",
     buildProductCategoryRoutes({

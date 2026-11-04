@@ -1,3 +1,4 @@
+import './community/community.css';
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -220,6 +221,9 @@ function DesktopHome() {
         </section>
       ) : null}
 
+      <section className="home-section community-home-entries" aria-label="Jobs and events">
+        {[['jobs','Make your next move.','Vacancies and paid tasks, all in one place.'],['events','Make a night of it.','Live music, local gatherings and great company.']].map(([kind,title,subtitle])=><Reveal key={kind}><Link to={`/${kind}`} className="community-home-entry"><img src={`/artwork/${kind}.png`} alt=""/><div><p>{kind.toUpperCase()}</p><h2>{title}</h2><span>{subtitle}</span></div></Link></Reveal>)}
+      </section>
       {error ? <div className="error-message home-error">{error}</div> : null}
 
       {/* ============ FEATURED PROVIDERS ============ */}

@@ -1,11 +1,10 @@
 import { env } from "../config/env.js";
 import { formatEatDate, formatEatTime } from "../utils/busTime.js";
-import { BRAND, callout, custom, details, escapeHtml, lines, p, raw, renderEmail, siteUrl, steps, ugx } from "./kit.js";
+import { BRAND, callout, custom, details, escapeHtml, lines, raw, renderEmail, siteUrl, steps, ugx } from "./kit.js";
 
 // Every email Gabla sends, one function each. A function takes plain data and returns { subject, html, text };
 // services pass that to sendMail(). Wording lives here, in one place, so tone and look stay consistent.
 
-const strong = (value) => raw(`<strong style="color:${BRAND.ink};">${escapeHtml(value)}</strong>`);
 const firstName = (name, fallback = "there") => String(name || fallback).trim().split(/\s+/)[0] || fallback;
 const shortRef = (id) => `#${String(id).slice(-6).toUpperCase()}`;
 const itemsOf = (order) => (order.items || []).map((i) => ({ name: i.name, quantity: i.quantity, amount: ugx(i.total) }));

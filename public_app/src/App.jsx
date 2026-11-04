@@ -1,3 +1,4 @@
+import {CommunityHub,CommunityDetail,CommunityEditor,CommunityApplications} from './pages/community/Community';
 import React, { Suspense, lazy } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
@@ -71,6 +72,16 @@ export default function App() {
       <Route path="/profile/listings/new" element={<ListingForm />} />
       <Route path="/profile/listings/:listingId/edit" element={<ListingForm />} />
       <Route path="/search" element={<SearchResults />} />
+      {['jobs','events'].map((kind)=><React.Fragment key={kind}>
+        <Route path={`/${kind}`} element={<CommunityHub kind={kind}/>}/>
+        <Route path={`/${kind}/mine`} element={<CommunityHub kind={kind} scope="mine"/>}/>
+        <Route path={`/${kind}/saved`} element={<CommunityHub kind={kind} scope="saved"/>}/>
+        <Route path={`/${kind}/new`} element={<CommunityEditor kind={kind}/>}/>
+        <Route path={`/${kind}/edit/:id`} element={<CommunityEditor kind={kind}/>}/>
+        <Route path={`/${kind}/p/:id`} element={<CommunityDetail kind={kind}/>}/>
+      </React.Fragment>)}
+      <Route path="/jobs/applications" element={<CommunityApplications/>}/>
+      <Route path="/jobs/applicants/:id" element={<CommunityApplications/>}/>
       <Route path="/cart" element={<Cart />} />
       <Route path="/orders" element={<MyOrders />} />
       <Route path="/services" element={<Services />} />

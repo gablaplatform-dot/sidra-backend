@@ -8,13 +8,6 @@ import { sendMail } from "../emails/mailer.js";
 import { adminInvite as adminInviteEmail } from "../emails/templates.js";
 
 const tokenHash = (token) => crypto.createHash("sha256").update(token).digest("hex");
-const escapeHtml = (value) =>
-  String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 // Email-invite admin account creation, modeled directly on ProviderService's onboarding-invite

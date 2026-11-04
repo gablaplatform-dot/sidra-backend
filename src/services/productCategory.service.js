@@ -1,6 +1,8 @@
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 
+import { scopedProductTree, effectiveProviderCategory, categoryRelated } from "../domain/productTaxonomy.js";
+
 const uniqueError = (e) => e?.code === "P2002";
 
 // The dedicated shop/product category tree - separate from the directory Category tree (which is
@@ -14,11 +16,21 @@ export class ProductCategoryService {
   }
 
   // Extra columns a subclass stores on a node (none for products).
-  pickExtra() {
-    return {};
+  get supportsProviderCategories() { return true; }
+
+  pickExtra(input = {}) {
+    return input.providerCategoryId === undefined ? {} : {providerCategoryId: input.providerCategoryId || null};
+  }
+
+  async validateAssociation(input) {
+    if (this.supportsProviderCategories && input.providerCategoryId) {
+      const category = await prisma.category.findUnique({where: {id: input.providerCategoryId}});
+      if (!category || !category.isActive) throw new AppError({message: "Choose an active provider category", statusCode:400, code:"INVALID_PROVIDER_CATEGORY"});
+    }
   }
 
   async createCategory(input) {
+    await this.validateAssociation(input);
     const { name, imageUrl, isActive, listingFields } = input;
     try {
       const sortOrder = await this.getNextSortOrder(null);
@@ -43,6 +55,7 @@ export class ProductCategoryService {
   }
 
   async createSubcategory(input) {
+    await this.validateAssociation(input);
     const { name, parentId, imageUrl, isActive, listingFields } = input;
     if (!parentId) {
       throw new AppError({ message: "Invalid parentId", statusCode: 400, code: "INVALID_PARENT_ID" });
@@ -82,6 +95,11 @@ export class ProductCategoryService {
     return provider;
   }
 
+  async getMine(userId) {
+    const provider = await this.getProviderForUser(userId);
+    return this.getNestedCategories({providerCategoryId:provider.categoryId || '__unassigned__'});
+  }
+
   // Providers may only extend the tree with a subcategory under an existing node - never a new
   // top-level shop category, which stays admin-only.
   async createFromProvider({ actorUserId, name, parentId, imageUrl }) {
@@ -94,6 +112,12 @@ export class ProductCategoryService {
       throw new AppError({ message: "Parent category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
     }
 
+    if (!parent.isActive) throw new AppError({message:"Choose an active parent category",statusCode:400,code:"CATEGORY_INACTIVE"});
+    if (this.supportsProviderCategories) {
+      const products=await this.db.findMany({select:{id:true,parentId:true,providerCategoryId:true}});
+      const owner=effectiveProviderCategory(products,parentId);
+      if (owner && !categoryRelated(await prisma.category.findMany({select:{id:true,parentId:true}}),owner,provider.categoryId)) throw new AppError({message:"Choose a category linked to your business",statusCode:400,code:"PRODUCT_CATEGORY_OUTSIDE_BUSINESS"});
+    }
     try {
       const sortOrder = await this.getNextSortOrder(parentId);
       const created = await this.db.create({
@@ -117,6 +141,7 @@ export class ProductCategoryService {
   }
 
   async updateCategory(input) {
+    await this.validateAssociation(input);
     const { id, name, parentId, imageUrl, isActive, moderationStatus, listingFields } = input;
     if (!id) {
       throw new AppError({ message: "Invalid id", statusCode: 400, code: "INVALID_CATEGORY_ID" });
@@ -218,7 +243,7 @@ export class ProductCategoryService {
     return { reordered: true, parentId: normalizedParentId, orderedIds };
   }
 
-  async getNestedCategories() {
+  async getNestedCategories({providerCategoryId} = {}) {
     // Same shape as category.service.js#getNestedCategories: an inactive node drops its whole
     // subtree; a pending (provider-submitted) subcategory stays live, only flagged for review.
     const categories = await this.db.findMany({
@@ -258,7 +283,13 @@ export class ProductCategoryService {
       };
     };
 
-    return { items: top.map((c) => toDto(c)), total: categories.length };
+    let items = top.map((c) => toDto(c));
+    if (this.supportsProviderCategories) {
+      const directory = await prisma.category.findMany({select:{id:true,parentId:true}});
+      const annotate = (nodes, inherited = null) => nodes.map((n) => ({...n, effectiveProviderCategoryId:n.providerCategoryId || inherited, children:annotate(n.children, n.providerCategoryId || inherited)}));
+      items = providerCategoryId ? scopedProductTree(items, directory, providerCategoryId) : annotate(items);
+    }
+    return { items, total: categories.length };
   }
 
   async listRoots({ limit = 6 } = {}) {
@@ -276,6 +307,7 @@ export class ProductCategoryService {
       id: category.id,
       name: category.name,
       parentId: category.parentId ?? null,
+      ...(this.supportsProviderCategories ? {providerCategoryId:category.providerCategoryId ?? null} : {}),
       imageUrl: category.imageUrl ?? null,
       listingFields: Array.isArray(category.listingFields) ? category.listingFields : [],
       isActive: category.isActive ?? true,

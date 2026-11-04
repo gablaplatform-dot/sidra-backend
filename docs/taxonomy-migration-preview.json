@@ -1,0 +1,112 @@
+{
+  "mode": "dry-run",
+  "productCount": 172,
+  "listingCount": 6,
+  "plan": [
+    {
+      "productCategoryId": "cmul6cmx6006pubm8ogaphep9",
+      "name": "Babies & Kids",
+      "action": "create-business-category",
+      "parent": "Shop"
+    },
+    {
+      "productCategoryId": "cmul6cmuk003xubm89dnzcyd6",
+      "name": "Beauty & Personal Care",
+      "action": "create-business-category",
+      "parent": "Shop"
+    },
+    {
+      "productCategoryId": "cmul6cmy2007vubm81rkezcen",
+      "name": "Business & Industry",
+      "action": "create-business-category",
+      "parent": "Shop"
+    },
+    {
+      "productCategoryId": "cmul6cmwc005nubm8puyk9c89",
+      "name": "Commercial Equipment & Tools",
+      "action": "create-business-category",
+      "parent": "Shop"
+    },
+    {
+      "productCategoryId": "cmu5s1vfu0003ublbtwy3vnus",
+      "name": "Electronics",
+      "action": "link",
+      "providerCategoryId": "cmv9j4ftk000eubm3ef607b9m",
+      "reason": "existing listing/business relationship"
+    },
+    {
+      "productCategoryId": "cmul6cmtb002rubm82stf14f8",
+      "name": "Fashion",
+      "action": "link",
+      "providerCategoryId": "cmrf317r40019ubkmizi1v8sv",
+      "reason": "existing listing/business relationship"
+    },
+    {
+      "productCategoryId": "cmul6cmxk0075ubm8krk9b9mw",
+      "name": "Food, Agriculture & Farming",
+      "action": "create-business-category",
+      "parent": "Shop"
+    },
+    {
+      "productCategoryId": "cmul6cmsr0027ubm85ankn8v2",
+      "name": "Home, Furniture & Appliances",
+      "action": "create-business-category",
+      "parent": "Shop"
+    },
+    {
+      "productCategoryId": "cmul6cmwu0069ubm8t0s4fm45",
+      "name": "Leisure & Activities",
+      "action": "create-business-category",
+      "parent": "Shop"
+    },
+    {
+      "productCategoryId": "cmul6cmrp0013ubm8cayb4ff4",
+      "name": "Phones & Tablets",
+      "action": "create-business-category",
+      "parent": "Shop"
+    },
+    {
+      "productCategoryId": "cmul6cmr6000jubm80xdtalbh",
+      "name": "Property",
+      "action": "create-business-category",
+      "parent": "Shop"
+    },
+    {
+      "productCategoryId": "cmul6cmv9004jubm8flyqqlqu",
+      "name": "Repair & Construction",
+      "action": "create-business-category",
+      "parent": "Shop"
+    },
+    {
+      "productCategoryId": "cmul6cmqi0001ubm8v73o30ju",
+      "name": "Vehicles",
+      "action": "link",
+      "providerCategoryId": "cmqchxfv1002pubkdwh2pcb3q",
+      "reason": "existing listing/business relationship"
+    },
+    {
+      "productCategoryId": "cmufybih2001dubln16dt40z0",
+      "name": "Fashion and Apparels",
+      "action": "create-business-category",
+      "parent": "Shop"
+    },
+    {
+      "productCategoryId": "cmufyswry002jublnts2r1xq4",
+      "name": "Home Appliances",
+      "action": "create-business-category",
+      "parent": "Shop"
+    },
+    {
+      "productCategoryId": "cmufyteq4002nublnmiein2yu",
+      "name": "Furniture",
+      "action": "create-business-category",
+      "parent": "Shop"
+    },
+    {
+      "productCategoryId": "cmufyudb1002rublngd3bslnv",
+      "name": "Kitchen Appliances",
+      "action": "create-business-category",
+      "parent": "Shop"
+    }
+  ]
+}

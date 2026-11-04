@@ -13,6 +13,8 @@ export const buildProductCategoryRoutes = ({ productCategoryController, extra = 
   const imageUrlField = Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null).optional();
   const listingFieldsField = Joi.array().items(buildFieldSchema()).optional();
 
+  router.get("/mine", requireAuth([Roles.PROVIDER]), productCategoryController.listMine);
+
   router.get("/", productCategoryController.listNested);
 
   router.get(

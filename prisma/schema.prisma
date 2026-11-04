@@ -26,6 +26,10 @@ model User {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  communityPosts CommunityPost[]
+  communityApplications CommunityApplication[]
+  communityResponses CommunityResponse[]
+
   provider Provider?
   rideDriver RideDriver?
   adminRole AdminRole? @relation(fields: [adminRoleId], references: [id], onDelete: SetNull)
@@ -220,6 +224,7 @@ model Category {
   children Category[] @relation("CategoryToCategory")
 
   providers Provider[]
+  productCategories ProductCategory[]
   serviceProducts ServiceProduct[]
   promotions Promotion[]
   createdByProvider Provider? @relation("CategoryCreatedBy", fields: [createdByProviderId], references: [id], onDelete: SetNull)
@@ -238,6 +243,8 @@ model Category {
 // Providers can add subcategories here (never top-level ones) when creating a product.
 model ProductCategory {
   id                  String            @id @default(cuid())
+  providerCategoryId  String?
+  providerCategory Category? @relation(fields: [providerCategoryId], references: [id], onDelete: SetNull)
   name                String
   parentId            String?
   imageUrl            String?
@@ -262,6 +269,7 @@ model ProductCategory {
   serviceProducts   ServiceProduct[]
 
   @@unique([parentId, name])
+  @@index([providerCategoryId])
   @@index([parentId])
   @@index([isActive, sortOrder])
   @@map("product_categories")
@@ -1393,4 +1401,68 @@ model OrderDocument {
   @@index([providerId, type, issuedAt])
   @@index([userId, issuedAt])
   @@map("order_documents")
+}
+
+// Community modules are owned by customer accounts, independently of provider subscriptions.
+model CommunityPost {
+  id String @id @default(cuid())
+  ownerId String
+  kind String
+  title String
+  description String
+  organization String @default("")
+  category String
+  district String @default("")
+  address String @default("")
+  lat Float?
+  lng Float?
+  jobType String?
+  employmentType String?
+  workplace String?
+  payMin Decimal @default(0)
+  payMax Decimal @default(0)
+  currency String @default("UGX")
+  startsAt DateTime?
+  endsAt DateTime?
+  deadline DateTime?
+  status String @default("pending")
+  moderationNote String @default("")
+  media Json @default("[]")
+  details Json @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  owner User @relation(fields:[ownerId], references:[id], onDelete:Cascade)
+  applications CommunityApplication[]
+  responses CommunityResponse[]
+  @@index([kind,status,createdAt])
+  @@index([kind,status,startsAt])
+  @@index([ownerId,kind,createdAt])
+  @@map("community_posts")
+}
+model CommunityApplication {
+  id String @id @default(cuid())
+  postId String
+  userId String
+  coverLetter String
+  phone String @default("")
+  portfolioUrl String @default("")
+  status String @default("submitted")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  post CommunityPost @relation(fields:[postId], references:[id], onDelete:Cascade)
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@unique([postId,userId])
+  @@index([userId,createdAt])
+  @@map("community_applications")
+}
+model CommunityResponse {
+  id String @id @default(cuid())
+  postId String
+  userId String
+  status String @default("saved")
+  createdAt DateTime @default(now())
+  post CommunityPost @relation(fields:[postId], references:[id], onDelete:Cascade)
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@unique([postId,userId])
+  @@map("community_responses")
 }

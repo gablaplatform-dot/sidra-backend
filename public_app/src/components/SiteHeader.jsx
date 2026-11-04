@@ -13,6 +13,8 @@ const NAV_LINKS = [
   { key: "shop", href: "/shop" },
   { key: "ride", href: "/ride" },
   { key: "busTickets", href: "/bus" },
+  { key: "jobs", href: "/jobs", label: "Jobs" },
+  { key: "events", href: "/events", label: "Events" },
   { key: "categories", href: "/home#categories" },
   { key: "providers", href: "/home#providers" },
   { key: "about", href: "/home#about" }
@@ -48,7 +50,7 @@ export default function SiteHeader({ session, onLogout }) {
 
         <nav className="site-nav shop-themed-nav">
           {NAV_LINKS.map((link) => (
-            <Link key={link.key} to={link.href}>{t(`nav.${link.key}`)}</Link>
+            <Link key={link.key} to={link.href}>{link.label || t(`nav.${link.key}`)}</Link>
           ))}
           {session ? <Link to="/orders">{t("nav.myOrders")}</Link> : null}
           {isProvider ? <Link to="/profile">{t("nav.profile")}</Link> : null}
@@ -95,7 +97,7 @@ export default function SiteHeader({ session, onLogout }) {
         </div>
         <nav className="drawer-links shop-themed-drawer-links">
           {NAV_LINKS.map((link) => (
-            <Link key={link.key} to={link.href} onClick={closeDrawer}>{t(`nav.${link.key}`)}</Link>
+            <Link key={link.key} to={link.href} onClick={closeDrawer}>{link.label || t(`nav.${link.key}`)}</Link>
           ))}
           <Link to="/cart" onClick={closeDrawer}>{t("nav.cart")}{cartCount > 0 ? ` (${cartCount})` : ""}</Link>
           {session ? <Link to="/orders" onClick={closeDrawer}>{t("nav.myOrders")}</Link> : null}

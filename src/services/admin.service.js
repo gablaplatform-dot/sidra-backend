@@ -354,6 +354,7 @@ export class AdminService {
         name: c.name,
         parentId: c.parentId ? String(c.parentId) : null,
         imageUrl: c.imageUrl ?? null,
+        ...(!isService ? {providerCategoryId:c.providerCategoryId ?? null} : {}),
         products: listingMap.get(String(c.id)) ?? 0,
         isActive: c.isActive ?? true,
         status: c.isActive ? "active" : "paused",

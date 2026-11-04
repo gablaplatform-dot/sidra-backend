@@ -4,6 +4,8 @@ COPY public_app/package*.json ./
 RUN npm ci
 COPY public_app ./
 ENV VITE_API_URL=/api/v1
+ARG VITE_GOOGLE_CLIENT_ID=478189678916-l0t6k527ok7rra3p7tcpq8445suh46qj.apps.googleusercontent.com
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 RUN npm run build
 
 FROM node:22-bookworm-slim

@@ -21,6 +21,8 @@ export class ProductCategoryController {
     }
   };
 
+  listMine = async (req,res,next) => { try { res.json({data:await this.productCategoryService.getMine(req.user.id)}); } catch(e) {next(e);} };
+
   createMine = async (req, res, next) => {
     try {
       const result = await this.productCategoryService.createFromProvider({ actorUserId: req.user.id, ...req.body });
@@ -59,7 +61,7 @@ export class ProductCategoryController {
 
   listNested = async (req, res, next) => {
     try {
-      const result = await this.productCategoryService.getNestedCategories();
+      const result = await this.productCategoryService.getNestedCategories(req.query);
       res.status(200).json({ data: result });
     } catch (e) {
       next(e);

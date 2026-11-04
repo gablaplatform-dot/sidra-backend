@@ -1045,6 +1045,32 @@ CREATE INDEX IF NOT EXISTS audit_logs_entity_entityId_idx ON audit_logs(entity, 
 CREATE INDEX IF NOT EXISTS audit_logs_action_idx ON audit_logs(action);
 `;
 
+// Additive community tables: no existing category/listing/order tables are rebuilt.
+const communitySql = `
+CREATE TABLE IF NOT EXISTS community_posts (
+ id TEXT PRIMARY KEY NOT NULL, ownerId TEXT NOT NULL, kind TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL,
+ organization TEXT NOT NULL DEFAULT '', category TEXT NOT NULL, district TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', lat REAL, lng REAL,
+ jobType TEXT, employmentType TEXT, workplace TEXT, payMin DECIMAL NOT NULL DEFAULT 0, payMax DECIMAL NOT NULL DEFAULT 0, currency TEXT NOT NULL DEFAULT 'UGX',
+ startsAt DATETIME, endsAt DATETIME, deadline DATETIME, status TEXT NOT NULL DEFAULT 'pending', moderationNote TEXT NOT NULL DEFAULT '',
+ media JSONB NOT NULL DEFAULT '[]', details JSONB NOT NULL DEFAULT '{}', createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY(ownerId) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS community_posts_kind_status_createdAt_idx ON community_posts(kind,status,createdAt);
+CREATE INDEX IF NOT EXISTS community_posts_kind_status_startsAt_idx ON community_posts(kind,status,startsAt);
+CREATE INDEX IF NOT EXISTS community_posts_ownerId_kind_createdAt_idx ON community_posts(ownerId,kind,createdAt);
+CREATE TABLE IF NOT EXISTS community_applications (
+ id TEXT PRIMARY KEY NOT NULL, postId TEXT NOT NULL, userId TEXT NOT NULL, coverLetter TEXT NOT NULL, phone TEXT NOT NULL DEFAULT '', portfolioUrl TEXT NOT NULL DEFAULT '',
+ status TEXT NOT NULL DEFAULT 'submitted', createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY(postId) REFERENCES community_posts(id) ON DELETE CASCADE, FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS community_applications_postId_userId_key ON community_applications(postId,userId);
+CREATE INDEX IF NOT EXISTS community_applications_userId_createdAt_idx ON community_applications(userId,createdAt);
+CREATE TABLE IF NOT EXISTS community_responses (
+ id TEXT PRIMARY KEY NOT NULL, postId TEXT NOT NULL, userId TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'saved', createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY(postId) REFERENCES community_posts(id) ON DELETE CASCADE, FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS community_responses_postId_userId_key ON community_responses(postId,userId);
+`;
 const sqlite = findSqlite();
 const result = spawnSync(sqlite, [databasePath], { input: sql, encoding: "utf8" });
 
@@ -1312,5 +1338,12 @@ if (adminInvitesColumnInfo.length) {
   "CREATE INDEX IF NOT EXISTS admin_invites_tokenHash_idx ON admin_invites(tokenHash);",
   "CREATE INDEX IF NOT EXISTS admin_invites_expiresAt_idx ON admin_invites(expiresAt);"
 ].forEach(runSql);
+
+
+// Product taxonomy belongs to a provider-business category; existing IDs remain valid.
+ensureColumn("product_categories", "providerCategoryId", "TEXT REFERENCES categories(id) ON DELETE SET NULL");
+runSql("CREATE INDEX IF NOT EXISTS product_categories_providerCategoryId_idx ON product_categories(providerCategoryId);");
+
+runSql(communitySql);
 
 process.stdout.write(`SQLite schema is ready at ${databasePath}\n`);

@@ -231,7 +231,7 @@ export default function ListingForm() {
     if (!session?.provider) return;
     let active = true;
     Promise.all([
-      request("/product-categories"),
+      request("/product-categories/mine"),
       request("/service-categories"),
       request("/providers/me"),
       request("/shop-categories/mine"),
