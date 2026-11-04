@@ -1,3 +1,6 @@
+import express from 'express';
+import {CategoryController} from '../src/controllers/category.controller.js';
+import {buildCategoryRoutes} from '../src/routes/category.routes.js';
 import {test,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
@@ -41,6 +44,9 @@ test('category migration preserves data, scopes services and shops, and remains 
  assert.equal((await db.category.findUnique({where:{id:electronicsOld.id}})).isActive,false);
  assert.deepEqual((await db.category.findUnique({where:{id:plumbing.id}})).listingFields[0],field);
  assert.equal((await db.category.findUnique({where:{id:electronics.id}})).taxonomyKind,'shop');
+ const app=express();app.use('/categories',buildCategoryRoutes({categoryController:new CategoryController({categoryService:categories})}));
+ const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
+ try{for(const kind of ['service','shop']){const response=await fetch(`http://127.0.0.1:${server.address().port}/categories?taxonomyKind=${kind}`);assert.equal(response.status,200);const body=await response.json();assert(body.data.items.length>0);assert(body.data.items.every(c=>c.taxonomyKind===kind));}}finally{await new Promise(r=>server.close(r));}
  const pScope=ids((await products.getMine('electronics')).items);assert(pScope.includes(phones.id));assert(pScope.includes(laptops.id));assert(!pScope.includes(cars.id));
  const sScope=ids((await services.getMine('plumber')).items);assert(sScope.includes(plumbing.id));assert(!sScope.includes(electrical.id));assert(!sScope.includes(photography.id));assert(!sScope.includes(electronics.id));
  const schoolScope=ids((await services.getMine('school')).items);assert(schoolScope.includes(language.id));

@@ -53,7 +53,7 @@ export class CategoryController {
 
   listNested = async (req, res, next) => {
     try {
-      const result = await this.categoryService.getNestedCategories({ viewType: req.query.viewType });
+      const result = await this.categoryService.getNestedCategories({ viewType: req.query.viewType, taxonomyKind: req.query.taxonomyKind });
       res.status(200).json({ data: result });
     } catch (e) {
       next(e);
