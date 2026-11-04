@@ -16,6 +16,7 @@ export const buildCategoryRoutes = ({ categoryController }) => {
     "/",
     validate(
       Joi.object({
+        taxonomyKind: Joi.string().valid("service", "shop").optional(),
         viewType: Joi.string().valid(...Object.values(CategoryViewType)).optional()
       }),
       "query"

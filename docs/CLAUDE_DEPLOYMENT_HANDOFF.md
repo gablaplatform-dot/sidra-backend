@@ -1,3 +1,7 @@
+# Superseded category instructions
+
+The user replaced the name-association plan. Read `CATEGORIES_JOBS_EVENTS.md` and use `scripts/migrate-category-workspace.js`, not the old product-taxonomy script. Fly authentication was restored through the CLI browser login on 4 November 2026. Codex is handling the release; do not deploy concurrently. The historical handoff below is retained for context only.
+
 # Claude deployment handoff — Gabla categories, Jobs and Events
 
 The user explicitly asked Codex to instruct the open Claude app to use its Fly access, and to find out how that access works. This handoff is limited to deploying the existing verified Gabla changes and migrating the category associations with backups. Preserve all unrelated work and all live user/business/order/payment data.

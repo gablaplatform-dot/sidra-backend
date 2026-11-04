@@ -5,7 +5,7 @@ import { haversineDistanceKm } from "../utils/geohash.js";
 import { AudienceService, audienceProviderWhere } from "./audience.service.js";
 import { BOOKING_MODES, normalizeBookingConfig } from "./serviceBooking.service.js";
 
-import { effectiveProviderCategory, categoryRelated } from "../domain/productTaxonomy.js";
+import { effectiveProviderCategory, categoryWithin, lineage } from "../domain/productTaxonomy.js";
 
 const GEOHASH_SAFE_RADIUS_KM = 20; // a 3x3 geohash5 cell grid covers ~15km across - beyond this,
 // cell lookup would silently miss real matches, so wider radii fall back to a full provider scan
@@ -73,13 +73,17 @@ export class ListingService {
   }
 
   // A service must sit in a leaf of the service-category tree, like a product does in the product tree.
-  async assertServiceCategory(serviceCategoryId) {
+  async assertServiceCategory(serviceCategoryId, providerCategoryId) {
     if (!serviceCategoryId) {
       throw new AppError({ message: "Choose a category for this service", statusCode: 400, code: "CATEGORY_REQUIRED" });
     }
     const category = await prisma.serviceCategory.findUnique({ where: { id: serviceCategoryId } });
     if (!category) throw new AppError({ message: "Category not found", statusCode: 404, code: "CATEGORY_NOT_FOUND" });
-    const childCount = await prisma.serviceCategory.count({ where: { parentId: serviceCategoryId } });
+    const directory=await prisma.category.findMany();
+    const canonical=directory.find(c=>c.id===serviceCategoryId);
+    if(!canonical || canonical.taxonomyKind!=="service" || !categoryWithin(directory,serviceCategoryId,providerCategoryId)) throw new AppError({message:"Choose a service subcategory within your business category",statusCode:400,code:"SERVICE_CATEGORY_OUTSIDE_BUSINESS"});
+    if(!canonical.isActive || directory.some(c=>lineage(directory,serviceCategoryId).includes(c.id) && !c.isActive)) throw new AppError({message:"This category is inactive",statusCode:400,code:"CATEGORY_INACTIVE"});
+    const childCount = await prisma.category.count({ where: { parentId: serviceCategoryId, isActive:true } });
     if (childCount > 0) throw new AppError({ message: "Choose a more specific subcategory", statusCode: 400, code: "CATEGORY_NOT_LEAF" });
     return category;
   }
@@ -199,12 +203,13 @@ export class ListingService {
     }
     const products = await prisma.productCategory.findMany({select:{id:true,parentId:true,providerCategoryId:true}});
     const owner = effectiveProviderCategory(products, productCategoryId);
+    if (!owner) throw new AppError({message:"This shop category is not configured yet",statusCode:400,code:"PRODUCT_CATEGORY_OUTSIDE_BUSINESS"});
     if (owner) {
       const directory = await prisma.category.findMany({select:{id:true,parentId:true}});
-      if (!categoryRelated(directory, owner, providerCategoryId)) throw new AppError({message:"Choose a product category linked to your business category",statusCode:400,code:"PRODUCT_CATEGORY_OUTSIDE_BUSINESS"});
+      if (!categoryWithin(directory, owner, providerCategoryId)) throw new AppError({message:"Choose a product category linked to your business category",statusCode:400,code:"PRODUCT_CATEGORY_OUTSIDE_BUSINESS"});
     }
-    if (!category.isActive) throw new AppError({message:"This category is inactive",statusCode:400,code:"CATEGORY_INACTIVE"});
-    const childCount = await prisma.productCategory.count({ where: { parentId: productCategoryId } });
+    if (!category.isActive || (await prisma.category.findMany()).some(c=>lineage(products,productCategoryId).includes(c.id) && !c.isActive)) throw new AppError({message:"This category is inactive",statusCode:400,code:"CATEGORY_INACTIVE"});
+    const childCount = await prisma.productCategory.count({ where: { parentId: productCategoryId, isActive:true } });
     if (childCount > 0) {
       throw new AppError({ message: "Choose a more specific subcategory", statusCode: 400, code: "CATEGORY_NOT_LEAF" });
     }
@@ -222,7 +227,7 @@ export class ListingService {
     if (normalizedType === "product") {
       await this.assertProductCategory(productCategoryId, provider.categoryId);
     } else {
-      await this.assertServiceCategory(serviceCategoryId);
+      await this.assertServiceCategory(serviceCategoryId, provider.categoryId);
       await this.assertRequiredAnswers(serviceCategoryId, customFields);
       bookingFields = this.normalizeBooking({ bookingMode, booking, price });
       await this.guardService({ name, description, customFields, booking: bookingFields.booking, imageUrls: [media?.imageUrl, ...(media?.gallery ?? [])].filter(Boolean) });
@@ -338,7 +343,7 @@ export class ListingService {
 
     if (effectiveType === "service") {
       const nextCategoryId = update.serviceCategoryId !== undefined ? update.serviceCategoryId : listing.serviceCategoryId;
-      if (update.serviceCategoryId !== undefined || becomingService) await this.assertServiceCategory(nextCategoryId);
+      if (update.serviceCategoryId !== undefined || becomingService) await this.assertServiceCategory(nextCategoryId, provider.categoryId);
       const nextFields = update.customFields !== undefined ? update.customFields : listing.customFields;
       if (nextCategoryId && (update.customFields !== undefined || update.serviceCategoryId !== undefined)) await this.assertRequiredAnswers(nextCategoryId, nextFields);
 

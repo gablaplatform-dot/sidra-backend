@@ -1,7 +1,8 @@
+import { syncShopNode } from "../domain/categoryMirrors.js";
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 
-import { scopedProductTree, effectiveProviderCategory, categoryRelated } from "../domain/productTaxonomy.js";
+import { scopedProductTree, effectiveProviderCategory, categoryWithin } from "../domain/productTaxonomy.js";
 
 const uniqueError = (e) => e?.code === "P2002";
 
@@ -30,11 +31,11 @@ export class ProductCategoryService {
   }
 
   async createCategory(input) {
-    await this.validateAssociation(input);
+    // Shop/provider associations are maintained automatically by stable ID.
     const { name, imageUrl, isActive, listingFields } = input;
     try {
       const sortOrder = await this.getNextSortOrder(null);
-      const created = await this.db.create({
+      const created = await prisma.$transaction(async(tx) => { const node = await tx.productCategory.create({
         data: {
           name,
           parentId: null,
@@ -45,6 +46,7 @@ export class ProductCategoryService {
           sortOrder
         }
       });
+      return syncShopNode(tx,node); });
       return this.toDto(created);
     } catch (e) {
       if (uniqueError(e)) {
@@ -55,7 +57,7 @@ export class ProductCategoryService {
   }
 
   async createSubcategory(input) {
-    await this.validateAssociation(input);
+    // Shop/provider associations are maintained automatically by stable ID.
     const { name, parentId, imageUrl, isActive, listingFields } = input;
     if (!parentId) {
       throw new AppError({ message: "Invalid parentId", statusCode: 400, code: "INVALID_PARENT_ID" });
@@ -67,7 +69,7 @@ export class ProductCategoryService {
 
     try {
       const sortOrder = await this.getNextSortOrder(parentId);
-      const created = await this.db.create({
+      const created = await prisma.$transaction(async(tx) => { const node = await tx.productCategory.create({
         data: {
           name,
           parentId,
@@ -78,6 +80,7 @@ export class ProductCategoryService {
           sortOrder
         }
       });
+      return syncShopNode(tx,node); });
       return this.toDto(created);
     } catch (e) {
       if (uniqueError(e)) {
@@ -95,9 +98,17 @@ export class ProductCategoryService {
     return provider;
   }
 
-  async getMine(userId) {
+  async getMine(userId, {listingId} = {}) {
     const provider = await this.getProviderForUser(userId);
-    return this.getNestedCategories({providerCategoryId:provider.categoryId || '__unassigned__'});
+    const scoped = await this.getNestedCategories({providerCategoryId:provider.categoryId || '__unassigned__'});
+    if (!listingId || typeof listingId !== 'string') return scoped;
+    const listing=await prisma.serviceProduct.findFirst({where:{id:listingId,providerId:provider.id,type:this.supportsProviderCategories?'product':'service'}});
+    const selected=this.supportsProviderCategories?listing?.productCategoryId:listing?.serviceCategoryId;
+    if(!selected) return scoped;
+    const full=await this.getNestedCategories();
+    const retain=nodes=>nodes.flatMap(n=>{const children=retain(n.children || []);return n.id===selected || children.length ? [{...n,children}] : [];});
+    const merge=(a,b)=>{const rows=new Map(a.map(n=>[n.id,n]));for(const n of b){const prior=rows.get(n.id);rows.set(n.id,prior?{...prior,children:merge(prior.children || [],n.children || [])}:n);}return [...rows.values()];};
+    return {...scoped,items:merge(scoped.items,retain(full.items))};
   }
 
   // Providers may only extend the tree with a subcategory under an existing node - never a new
@@ -116,11 +127,11 @@ export class ProductCategoryService {
     if (this.supportsProviderCategories) {
       const products=await this.db.findMany({select:{id:true,parentId:true,providerCategoryId:true}});
       const owner=effectiveProviderCategory(products,parentId);
-      if (owner && !categoryRelated(await prisma.category.findMany({select:{id:true,parentId:true}}),owner,provider.categoryId)) throw new AppError({message:"Choose a category linked to your business",statusCode:400,code:"PRODUCT_CATEGORY_OUTSIDE_BUSINESS"});
+      if (!owner || !categoryWithin(await prisma.category.findMany({select:{id:true,parentId:true}}),owner,provider.categoryId)) throw new AppError({message:"Choose a category linked to your business",statusCode:400,code:"PRODUCT_CATEGORY_OUTSIDE_BUSINESS"});
     }
     try {
       const sortOrder = await this.getNextSortOrder(parentId);
-      const created = await this.db.create({
+      const created = await prisma.$transaction(async(tx) => { const node = await tx.productCategory.create({
         data: {
           name,
           parentId,
@@ -131,6 +142,7 @@ export class ProductCategoryService {
           sortOrder
         }
       });
+      return syncShopNode(tx,node); });
       return this.toDto(created);
     } catch (e) {
       if (uniqueError(e)) {
@@ -141,7 +153,7 @@ export class ProductCategoryService {
   }
 
   async updateCategory(input) {
-    await this.validateAssociation(input);
+    // Shop/provider associations are maintained automatically by stable ID.
     const { id, name, parentId, imageUrl, isActive, moderationStatus, listingFields } = input;
     if (!id) {
       throw new AppError({ message: "Invalid id", statusCode: 400, code: "INVALID_CATEGORY_ID" });
@@ -180,7 +192,7 @@ export class ProductCategoryService {
     }
 
     try {
-      const updated = await this.db.update({ where: { id }, data: update });
+      const updated = await prisma.$transaction(async(tx) => { const node = await tx.productCategory.update({where:{id},data:update}); return syncShopNode(tx,node); });
       return this.toDto(updated);
     } catch (e) {
       if (e instanceof AppError) throw e;
@@ -210,7 +222,8 @@ export class ProductCategoryService {
         code: "CATEGORY_HAS_SUBCATEGORIES"
       });
     }
-    await this.db.delete({ where: { id } });
+    if(await prisma.provider.count({where:{categoryId:id}}) || await prisma.serviceProduct.count({where:{productCategoryId:id}})) throw new AppError({message:"This category is used by providers or products",statusCode:409,code:"CATEGORY_IN_USE"});
+    await prisma.$transaction(async(tx)=>{ await tx.productCategory.delete({where:{id}}); await tx.category.deleteMany({where:{id,taxonomyKind:"shop"}}); });
     return { deleted: true };
   }
 
@@ -237,9 +250,12 @@ export class ProductCategoryService {
       throw new AppError({ message: "Reorder payload must contain the exact sibling set", statusCode: 400, code: "INVALID_REORDER_PAYLOAD" });
     }
 
-    await prisma.$transaction(
-      orderedIds.map((id, index) => this.db.update({ where: { id }, data: { sortOrder: index } }))
-    );
+    await prisma.$transaction(async(tx)=>{
+      for(const [index,id] of orderedIds.entries()) {
+        const node=await tx.productCategory.update({where:{id},data:{sortOrder:index}});
+        await syncShopNode(tx,node);
+      }
+    });
     return { reordered: true, parentId: normalizedParentId, orderedIds };
   }
 

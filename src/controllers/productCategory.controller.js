@@ -21,7 +21,7 @@ export class ProductCategoryController {
     }
   };
 
-  listMine = async (req,res,next) => { try { res.json({data:await this.productCategoryService.getMine(req.user.id)}); } catch(e) {next(e);} };
+  listMine = async (req,res,next) => { try { res.json({data:await this.productCategoryService.getMine(req.user.id,{listingId:req.query.listingId})}); } catch(e) {next(e);} };
 
   createMine = async (req, res, next) => {
     try {

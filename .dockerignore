@@ -12,3 +12,7 @@ prisma/*.db-journal
 gabla_mobile
 mobile_app
 admin_ui
+
+public_app/node_modules
+public_app/dist
+public_app/.env*

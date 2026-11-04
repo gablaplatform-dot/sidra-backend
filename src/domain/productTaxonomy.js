@@ -11,11 +11,12 @@ export const effectiveProviderCategory = (products, id) => {
   return lineage(products, id).map((key) => byId.get(key)?.providerCategoryId).find(Boolean) ?? null;
 };
 export const categoryRelated = (directory, a, b) => Boolean(a && b && (lineage(directory, a).includes(b) || lineage(directory, b).includes(a)));
+export const categoryWithin = (directory, target, provider) => Boolean(target && provider && lineage(directory, target).includes(provider));
 export const scopedProductTree = (tree, directory, providerCategoryId) => {
   const visit = (nodes, inherited = null) => nodes.flatMap((n) => {
     const owner = n.providerCategoryId || inherited;
     const children = visit(n.children || [], owner);
-    const allowed = !owner || categoryRelated(directory, owner, providerCategoryId);
+    const allowed = owner && categoryWithin(directory, owner, providerCategoryId);
     return allowed || children.length ? [{...n, effectiveProviderCategoryId: owner, children}] : [];
   });
   return visit(tree);

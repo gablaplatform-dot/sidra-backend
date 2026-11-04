@@ -200,6 +200,7 @@ model Provider {
 }
 
 model Category {
+  taxonomyKind   String           @default("service")
   id             String           @id @default(cuid())
   name           String
   parentId       String?

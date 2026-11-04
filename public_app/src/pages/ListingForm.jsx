@@ -231,8 +231,8 @@ export default function ListingForm() {
     if (!session?.provider) return;
     let active = true;
     Promise.all([
-      request("/product-categories/mine"),
-      request("/service-categories"),
+      request(`/product-categories/mine${isEditing ? `?listingId=${encodeURIComponent(listingId)}` : ""}`),
+      request(`/service-categories/mine${isEditing ? `?listingId=${encodeURIComponent(listingId)}` : ""}`),
       request("/providers/me"),
       request("/shop-categories/mine"),
       // GET /listings/me caps `limit` at 100 (see src/routes/listing.routes.js) - asking for 200
@@ -288,7 +288,7 @@ export default function ListingForm() {
             setProductCategoryPath(path);
           }
         } else {
-          setForm((current) => ({ ...current, categoryId: providerResult?.categoryId || "" }));
+          setForm((current) => ({ ...current, type: shopProductCategories.length === 0 && serviceTree.length > 0 ? "service" : current.type, categoryId: providerResult?.categoryId || "" }));
         }
       })
       .catch((loadError) => setError(loadError.message || t("listing.errLoad")))

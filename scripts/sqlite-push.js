@@ -1347,3 +1347,6 @@ runSql("CREATE INDEX IF NOT EXISTS product_categories_providerCategoryId_idx ON 
 runSql(communitySql);
 
 process.stdout.write(`SQLite schema is ready at ${databasePath}\n`);
+
+ensureColumn("categories", "taxonomyKind", "TEXT NOT NULL DEFAULT 'service'");
+runSql("CREATE INDEX IF NOT EXISTS categories_taxonomyKind_idx ON categories(taxonomyKind);");

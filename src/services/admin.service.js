@@ -297,6 +297,7 @@ export class AdminService {
     }
     const toDto = (c) => ({
       id: c.id,
+      taxonomyKind: c.taxonomyKind ?? "service",
       name: c.name,
       parentId: c.parentId ? String(c.parentId) : null,
       behavior: c.behavior ?? "general",
