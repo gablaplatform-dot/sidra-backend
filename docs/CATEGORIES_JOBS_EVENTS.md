@@ -2,6 +2,10 @@
 
 Updated 4 November 2026. The category plan uses two admin sections: **Service Categories** and **Shop Categories**. The earlier name-association migration was stopped before application. `scripts/migrate-product-taxonomy.js` now refuses execution; use `scripts/migrate-category-workspace.js`.
 
+## Production status
+
+Deployed and migrated on 4 November 2026; Fly release 152, CI run 41793786311 succeeded. Public/admin main branches are published. All 7 listings and 179 product categories remain intact; provider category rows are now 346, including shop mirrors and the retained legacy service bridge. Database integrity/foreign-key checks passed, and a repeat preview proposes no additions or provider moves. APK `Gabla-category-workspace-v16.apk` is built and verified. Two legacy businesses selling products while assigned to service categories remain flagged for admin classification review; their current listings remain editable.
+
 ## Categories
 
 - `Category.taxonomyKind` identifies `service` or `shop`. Existing provider categories retain their IDs and tree. Electronics Appliances is retired from the service tree; its provider moves to the existing Electronics shop branch.
