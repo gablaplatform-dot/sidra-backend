@@ -1,0 +1,52 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="800" y1="0" x2="800" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020A19"/>
+      <stop offset="0.45" stop-color="#071734"/>
+      <stop offset="1" stop-color="#0A1424"/>
+    </linearGradient>
+    <radialGradient id="cityGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(800 552) rotate(90) scale(248 700)">
+      <stop stop-color="#FFC931" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#FFC931" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <ellipse cx="800" cy="560" rx="620" ry="210" fill="url(#cityGlow)"/>
+  <path d="M0 380C140 334 256 320 386 358C514 395 661 384 800 332C944 278 1082 271 1222 319C1368 369 1472 380 1600 343V900H0V380Z" fill="#050D1B"/>
+  <path d="M0 464C121 422 255 433 396 472C534 510 657 514 800 463C954 408 1080 415 1212 456C1332 494 1464 502 1600 472V900H0V464Z" fill="#071221"/>
+  <g fill="#FFC931" fill-opacity="0.85">
+    <circle cx="130" cy="500" r="3"/>
+    <circle cx="180" cy="542" r="2.5"/>
+    <circle cx="252" cy="520" r="3"/>
+    <circle cx="336" cy="480" r="2.5"/>
+    <circle cx="412" cy="550" r="3"/>
+    <circle cx="500" cy="498" r="3"/>
+    <circle cx="580" cy="556" r="2.5"/>
+    <circle cx="662" cy="520" r="3"/>
+    <circle cx="742" cy="488" r="2.5"/>
+    <circle cx="828" cy="536" r="3"/>
+    <circle cx="912" cy="492" r="2.5"/>
+    <circle cx="994" cy="554" r="3"/>
+    <circle cx="1084" cy="506" r="2.5"/>
+    <circle cx="1164" cy="544" r="3"/>
+    <circle cx="1240" cy="496" r="2.5"/>
+    <circle cx="1312" cy="538" r="3"/>
+    <circle cx="1394" cy="514" r="2.5"/>
+    <circle cx="1488" cy="548" r="3"/>
+    <circle cx="220" cy="612" r="2.5"/>
+    <circle cx="322" cy="648" r="2.5"/>
+    <circle cx="430" cy="604" r="3"/>
+    <circle cx="538" cy="642" r="2.5"/>
+    <circle cx="654" cy="612" r="3"/>
+    <circle cx="772" cy="646" r="2.5"/>
+    <circle cx="886" cy="610" r="3"/>
+    <circle cx="1000" cy="650" r="2.5"/>
+    <circle cx="1116" cy="614" r="3"/>
+    <circle cx="1236" cy="646" r="2.5"/>
+    <circle cx="1360" cy="614" r="3"/>
+  </g>
+  <g stroke="#FFC931" stroke-opacity="0.18">
+    <path d="M208 610L342 536L482 594L624 520L812 612L996 546L1132 606L1328 520" stroke-width="2"/>
+    <path d="M164 678L322 614L458 668L646 586L840 664L1012 598L1184 652L1390 586" stroke-width="1.8"/>
+  </g>
+</svg>

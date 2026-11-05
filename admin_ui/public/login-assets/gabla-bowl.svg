@@ -1,0 +1,32 @@
+<svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="rimGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(600 148) rotate(90) scale(58 300)">
+      <stop stop-color="#FFE082"/>
+      <stop offset="0.55" stop-color="#FFBF1E"/>
+      <stop offset="1" stop-color="#FFBF1E" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bowlBody" x1="600" y1="192" x2="600" y2="466" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#133270"/>
+      <stop offset="0.55" stop-color="#08162E"/>
+      <stop offset="1" stop-color="#030A16"/>
+    </linearGradient>
+    <linearGradient id="goldStroke" x1="243" y1="149" x2="955" y2="335" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE28A"/>
+      <stop offset="0.4" stop-color="#FFC931"/>
+      <stop offset="1" stop-color="#D99800"/>
+    </linearGradient>
+    <filter id="shadow" x="123" y="96" width="954" height="398" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="30" stdDeviation="28" flood-color="#000814" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <ellipse cx="600" cy="176" rx="278" ry="58" fill="url(#rimGlow)"/>
+  <g filter="url(#shadow)">
+    <path d="M258 182C265 302 375 424 600 424C825 424 935 302 942 182H258Z" fill="url(#bowlBody)"/>
+    <path d="M258 182C265 302 375 424 600 424C825 424 935 302 942 182" stroke="url(#goldStroke)" stroke-width="12" stroke-linecap="round"/>
+    <ellipse cx="600" cy="182" rx="342" ry="70" fill="rgba(10,26,56,0.7)" stroke="url(#goldStroke)" stroke-width="14"/>
+    <ellipse cx="600" cy="182" rx="288" ry="48" fill="rgba(4,15,31,0.75)" stroke="rgba(255,201,49,0.35)" stroke-width="8"/>
+    <path d="M390 281C456 316 520 334 600 334C680 334 744 316 810 281" stroke="rgba(255,201,49,0.28)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M342 232C420 282 498 306 600 306C702 306 780 282 858 232" stroke="rgba(255,201,49,0.18)" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <ellipse cx="600" cy="456" rx="220" ry="28" fill="rgba(255,191,30,0.25)"/>
+</svg>
