@@ -35,7 +35,7 @@ class MotionSettings extends ConsumerWidget {
                 Row(
                   children: [
                     IconButton.outlined(
-                      tooltip: 'Decrease interval',
+                      tooltip: 'Show images more often',
                       onPressed: preferences.productImageSeconds <= 1
                           ? null
                           : () => ref
@@ -56,7 +56,7 @@ class MotionSettings extends ConsumerWidget {
                       ),
                     ),
                     IconButton.outlined(
-                      tooltip: 'Increase interval',
+                      tooltip: 'Show images less often',
                       onPressed: preferences.productImageSeconds >= 10
                           ? null
                           : () => ref
@@ -99,7 +99,10 @@ class MotionSettings extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 28),
-        Text('Set the mood', style: Theme.of(context).textTheme.headlineSmall),
+        Text(
+          'Background animation',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
         const SizedBox(height: 8),
         const Text(
           'Choose a still background or a subtle animation. Motion uses your palette and sits behind the content.',
@@ -185,7 +188,17 @@ class MotionSettings extends ConsumerWidget {
               ),
             ),
           ),
-        Text('Intensity', style: Theme.of(context).textTheme.titleMedium),
+        if (!enabled)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Choose an animated background to adjust intensity and speed.',
+            ),
+          ),
+        Text(
+          'Animation intensity',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         Slider(
           value: preferences.motionIntensity,
           min: .15,
@@ -201,7 +214,7 @@ class MotionSettings extends ConsumerWidget {
           children: [Text('Subtle'), Text('Expressive')],
         ),
         const SizedBox(height: 20),
-        Text('Speed', style: Theme.of(context).textTheme.titleMedium),
+        Text('Animation speed', style: Theme.of(context).textTheme.titleMedium),
         Slider(
           value: preferences.motionSpeed,
           min: .5,

@@ -62,12 +62,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     final c = Theme.of(context).colorScheme;
     final tree = ref.watch(productTreeProvider).valueOrNull ?? [];
     if (p == null)
-      return Scaffold(
-        appBar: const CommerceAppBar(title: 'The details'),
+      return CommerceScaffold(
+        appBar: const CommerceAppBar(title: 'Product details'),
         body: fetched.hasError
             ? CommerceEmpty(
-                title: 'This find couldn’t be loaded',
-                message: '${fetched.error}',
+                title: 'Listing unavailable',
+                message:
+                    'This listing could not be loaded. Check your connection and try again.',
                 action: 'Try again',
                 onAction: () =>
                     ref.invalidate(productDetailProvider(widget.listingId)),
@@ -112,7 +113,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     );
     final gallery = AspectRatio(
       aspectRatio: style == AppThemeStyle.cinematic
-          ? .85
+          ? 1.1
           : style == AppThemeStyle.editorial
           ? 1.08
           : 1,
@@ -123,14 +124,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         fraction: style == AppThemeStyle.discover ? .92 : 1,
       ),
     );
-    return Scaffold(
+    return CommerceScaffold(
       appBar: CommerceAppBar(
         title:
             node?['name']?.toString() ??
-            (p.type == 'service' ? 'Service details' : 'A closer look'),
+            (p.type == 'service' ? 'Service details' : 'Product details'),
         actions: [
           IconButton(
-            tooltip: 'Share this find',
+            tooltip: 'Share listing',
             onPressed: () => shareGablaItem(
               context,
               type: p.type == 'service' ? 'service' : 'product',
@@ -162,7 +163,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               ),
               const SizedBox(width: 10),
               FilledButton(
-                onPressed: fetched.isLoading ? null : primary,
+                onPressed:
+                    fetched.isLoading ||
+                        (p.type == 'service' &&
+                            !p.bookable &&
+                            p.providerId == null)
+                    ? null
+                    : primary,
                 child: Text(
                   p.type == 'service'
                       ? (p.bookable ? 'Check availability' : 'Contact provider')
@@ -238,13 +245,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             'listingId': p.id,
                           });
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Added to your shopping bag'),
-                            ),
+                            const SnackBar(content: Text('Added to your cart')),
                           );
                         },
                   icon: const Icon(Icons.add_shopping_cart, size: 18),
-                  label: const Text('Add to bag'),
+                  label: const Text('Add to cart'),
                 ),
                 if (p.canPayOnline)
                   OutlinedButton(
@@ -265,7 +270,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ),
           ),
           if (p.description?.isNotEmpty ?? false) ...[
-            const CommerceTitle('The details'),
+            const CommerceTitle('Description'),
             Text(p.description!, style: const TextStyle(height: 1.6)),
           ],
           if (p.customFields.isNotEmpty) ...[
@@ -276,13 +281,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           ],
           if (p.providerId != null) ...[
             CommerceTitle(
-              'Meet your seller',
+              p.type == 'service' ? 'Service provider' : 'Seller',
               action: () => context.push('/provider/${p.providerId}'),
               label: 'Visit shop',
             ),
             ProviderContactPanel(providerId: p.providerId!),
           ],
-          const CommerceTitle('Shop with confidence'),
+          const CommerceTitle('Before you order'),
           const Text(
             'Inspect items before paying cash. Confirm the price, condition, and delivery arrangements with the seller. Keep payments and order records together on Gabla.',
             style: TextStyle(fontSize: 12, height: 1.5),

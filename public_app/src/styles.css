@@ -67,7 +67,6 @@ button { cursor: pointer; }
   flex-direction: column;
   justify-content: flex-start;
 }
-.welcome-pane img { width: min(100%, 360px); max-height: 300px; object-fit: contain; align-self: center; background: white; border-radius: 8px; }
 .eyebrow { margin: 26px 0 8px; color: var(--gabla-accent); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
 .welcome-pane .eyebrow { color: #facc15; }
 .welcome-pane h1 { margin: 0; max-width: 560px; font-size: clamp(30px, 3vw, 48px); line-height: 1.12; letter-spacing: 0; }
@@ -170,7 +169,6 @@ button { cursor: pointer; }
 @media (max-width: 920px) {
   .onboarding-grid { grid-template-columns: 1fr; }
   .welcome-pane { padding: 34px 24px; }
-  .welcome-pane img { max-height: 260px; }
   .welcome-pane h1 { font-size: 32px; }
   .registration-form { padding: 38px 24px 48px; }
 }
@@ -179,7 +177,6 @@ button { cursor: pointer; }
   .topbar { height: 64px; padding: 0 18px; }
   .secure-label { display: none; }
   .onboarding-grid { min-height: calc(100vh - 64px); }
-  .welcome-pane img { max-height: 220px; }
   .form-grid.two { grid-template-columns: 1fr; }
   .success-panel { padding: 34px 22px; }
 }

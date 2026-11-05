@@ -289,16 +289,16 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
           'bestsellers' => 'Best sellers',
           _ =>
             widget.providerId != null
-                ? 'Shop this seller'
+                ? 'Business catalog'
                 : widget.kind == 'service'
                 ? 'Services'
-                : 'The collection',
+                : 'All products',
         };
     final data = result.valueOrNull;
     final items = (data?['items'] as List? ?? [])
         .map((e) => Product.fromJson(Map<String, dynamic>.from(e)))
         .toList();
-    return Scaffold(
+    return CommerceScaffold(
       appBar: CommerceAppBar(
         actions: [
           IconButton(
@@ -335,7 +335,11 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
             },
           ),
         ],
-        title: widget.providerId == null ? 'Gabla shop' : 'Seller collection',
+        title: widget.providerId != null
+            ? 'Business catalog'
+            : widget.kind == 'service'
+            ? 'Services'
+            : 'Shop',
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -356,19 +360,6 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        style == AppThemeStyle.editorial
-                            ? 'THE CATALOGUE'
-                            : style == AppThemeStyle.cinematic
-                            ? 'DISCOVER YOUR NEXT FIND'
-                            : 'FIND YOUR EVERYDAY',
-                        style: TextStyle(
-                          fontSize: 10,
-                          letterSpacing: 2,
-                          color: c.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
                       Row(
                         children: [
                           Expanded(
@@ -376,8 +367,8 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
                               title,
                               style: AppTypography.of(context).display(
                                 size: style == AppThemeStyle.editorial
-                                    ? 38
-                                    : 30,
+                                    ? 30
+                                    : 26,
                               ),
                             ),
                           ),
@@ -394,7 +385,7 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
                       ),
                       const SizedBox(height: 9),
                       Text(
-                        '${data?['total'] ?? '…'} finds · ${_query.lat != null
+                        '${data?['total'] ?? '…'} results · ${_query.lat != null
                             ? 'Within 15 km'
                             : _query.district.isNotEmpty
                             ? _query.district
@@ -409,7 +400,9 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
                         controller: _search,
                         textInputAction: TextInputAction.search,
                         decoration: InputDecoration(
-                          hintText: 'Search this collection',
+                          hintText: widget.kind == 'service'
+                              ? 'Search services'
+                              : 'Search products',
                           prefixIcon: const Icon(Icons.search),
                           suffixIcon: IconButton(
                             tooltip: 'Search',
@@ -446,7 +439,7 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
                             ),
                             const SizedBox(width: 10),
                             PopupMenuButton<String>(
-                              tooltip: 'Sort products',
+                              tooltip: 'Sort results',
                               initialValue: _query.sort,
                               onSelected: (s) =>
                                   _change(_query.copyWith(sort: s)),
@@ -588,15 +581,15 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
                 child: result.when(
                   loading: () => const CommerceLoading(),
                   error: (e, _) => CommerceEmpty(
-                    title: 'Couldn’t load these finds',
-                    message: e.toString(),
+                    title: 'Couldn’t load results',
+                    message: 'Check your connection and try again.',
                     action: 'Try again',
                     onAction: () =>
                         ref.invalidate(browseResultsProvider(effective)),
                   ),
                   data: (_) => items.isEmpty
                       ? CommerceEmpty(
-                          title: 'A little further afield?',
+                          title: 'No matching results',
                           message:
                               'Try a broader search or adjust your filters.',
                           action: 'Reset filters',
@@ -789,7 +782,7 @@ class _ShopFilterSheetState extends ConsumerState<ShopFilterSheet> {
             children: [
               Expanded(
                 child: Text(
-                  'Make it yours',
+                  'Filter results',
                   style: AppTypography.of(context).display(size: 29),
                 ),
               ),
@@ -832,7 +825,16 @@ class _ShopFilterSheetState extends ConsumerState<ShopFilterSheet> {
                   ),
                 ],
               ),
-              if (_notice != null) Text(_notice!),
+              if (_notice != null)
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    _notice!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
               if (_draft.district.isNotEmpty || _draft.lat != null)
                 Text(
                   _draft.lat != null
@@ -869,6 +871,20 @@ class _ShopFilterSheetState extends ConsumerState<ShopFilterSheet> {
                     ),
               ),
               heading('Price range · UGX'),
+              if (_notice?.contains('price') == true ||
+                  _notice?.contains('numeric') == true)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      _notice!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                ),
               Row(
                 children: [
                   Expanded(
@@ -918,7 +934,7 @@ class _ShopFilterSheetState extends ConsumerState<ShopFilterSheet> {
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Only discounted finds'),
+                title: const Text('On sale only'),
                 subtitle: Text('${facets['discountCount'] ?? 0} available'),
                 value: _draft.discount,
                 onChanged: (v) => _update(_draft.copyWith(discount: v)),
@@ -1012,8 +1028,18 @@ class _ShopFilterSheetState extends ConsumerState<ShopFilterSheet> {
               width: double.infinity,
               child: FilledButton(
                 onPressed: () {
-                  final min = double.tryParse(_min.text),
-                      max = double.tryParse(_max.text);
+                  final min = double.tryParse(_min.text.trim()),
+                      max = double.tryParse(_max.text.trim());
+                  if ((_min.text.trim().isNotEmpty &&
+                          (min == null || !min.isFinite)) ||
+                      (_max.text.trim().isNotEmpty &&
+                          (max == null || !max.isFinite))) {
+                    setState(
+                      () =>
+                          _notice = 'Enter numeric minimum and maximum prices.',
+                    );
+                    return;
+                  }
                   if ((min != null && min < 0) ||
                       (max != null && max < 0) ||
                       (min != null && max != null && min > max)) {
@@ -1027,9 +1053,7 @@ class _ShopFilterSheetState extends ConsumerState<ShopFilterSheet> {
                         .copyWith(min: min, max: max),
                   );
                 },
-                child: Text(
-                  'Show matching finds${facets['total'] != null ? ' · ${facets['total']}' : ''}',
-                ),
+                child: const Text('Apply filters'),
               ),
             ),
           ),

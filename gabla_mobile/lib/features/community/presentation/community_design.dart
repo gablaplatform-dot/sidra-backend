@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme_style.dart';
 import '../../../core/theme/font_group.dart';
 
-// Reference-to-layout mapping is recorded in docs/COMMUNITY_DESIGN_REFERENCES.md.
+// Reference-to-layout mapping is recorded in docs/COMMUNITY_POLISH_REFERENCES.md.
 // Explicit local shapes keep the app-wide Orbit capsule style out of forms.
 double communityRadius(AppThemeStyle style) => switch (style) {
   AppThemeStyle.editorial => 0,
@@ -97,6 +97,99 @@ class CommunityDesignScope extends StatelessWidget {
       Theme(data: communityTheme(Theme.of(context), style), child: child);
 }
 
+/// Shared content hierarchy; each selected design uses its own composition.
+class CommunityPageHeading extends StatelessWidget {
+  const CommunityPageHeading({
+    super.key,
+    required this.style,
+    required this.eyebrow,
+    required this.title,
+    required this.description,
+    this.icon = Icons.work_outline,
+  });
+  final AppThemeStyle style;
+  final String eyebrow, title, description;
+  final IconData icon;
+  @override
+  Widget build(BuildContext context) {
+    final c = Theme.of(context).colorScheme;
+    final inverse = style == AppThemeStyle.gabla;
+    final ink = inverse ? c.onPrimaryContainer : c.onSurface;
+    final muted = inverse ? c.onPrimaryContainer : c.onSurfaceVariant;
+    final heading = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          eyebrow,
+          style: TextStyle(
+            color: inverse ? ink : c.primary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: .4,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          title,
+          style: AppTypography.of(context).display(
+            size: style == AppThemeStyle.editorial ? 34 : 28,
+            color: ink,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(description, style: TextStyle(color: muted, height: 1.5)),
+      ],
+    );
+    return switch (style) {
+      AppThemeStyle.gabla => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: c.primaryContainer,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: heading,
+      ),
+      AppThemeStyle.editorial => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [heading, const Divider(height: 32)],
+      ),
+      AppThemeStyle.discover => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: c.secondaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: c.onSecondaryContainer, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(child: heading),
+        ],
+      ),
+      AppThemeStyle.cinematic => Container(
+        padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+        decoration: BoxDecoration(
+          color: c.surfaceContainerHigh,
+          border: Border(left: BorderSide(color: c.primary, width: 3)),
+        ),
+        child: heading,
+      ),
+      AppThemeStyle.orbit => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Divider(height: 2, thickness: 2, color: c.primary),
+          const SizedBox(height: 18),
+          heading,
+          const SizedBox(height: 18),
+          const Divider(height: 1),
+        ],
+      ),
+    };
+  }
+}
+
 class CommunityBrowseHeader extends StatelessWidget {
   const CommunityBrowseHeader({
     super.key,
@@ -106,307 +199,61 @@ class CommunityBrowseHeader extends StatelessWidget {
   final AppThemeStyle style;
   final bool event;
   @override
-  Widget build(BuildContext context) {
-    final c = Theme.of(context).colorScheme;
-    final title = event
-        ? 'Good nights.\nGreat company.'
-        : 'Find work\nthat fits you.';
-    final subtitle = event
-        ? 'Music, culture and gatherings near you.'
-        : 'Vacancies & paid tasks, in one place.';
-    Widget text(String value, {Color? color, double size = 32}) => Text(
-      value,
-      style: AppTypography.of(context).display(size: size, color: color),
-    );
-    Widget location({Color? color}) => Row(
-      children: [
-        Icon(Icons.location_on_outlined, size: 16, color: color ?? c.primary),
-        const SizedBox(width: 5),
-        Flexible(
-          child: Text(
-            'Explore your city',
-            style: TextStyle(fontSize: 12, color: color ?? c.onSurfaceVariant),
-          ),
-        ),
-      ],
-    );
-    Widget artwork(double height) => ClipRRect(
-      borderRadius: BorderRadius.circular(communityRadius(style)),
-      child: SizedBox(
-        height: height,
-        width: double.infinity,
-        child: Image.asset(
-          'assets/artwork/community-concert.png',
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
-    );
-    switch (style) {
-      case AppThemeStyle.gabla:
-        return Container(
-          key: const ValueKey('community-header-gabla'),
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            color: c.inverseSurface,
-            image: event
-                ? const DecorationImage(
-                    image: AssetImage('assets/artwork/community-concert.png'),
-                    fit: BoxFit.cover,
-                    colorFilter: ColorFilter.mode(
-                      Color(0x88000000),
-                      BlendMode.darken,
-                    ),
-                  )
-                : null,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              location(color: (event ? Colors.white : c.onInverseSurface)),
-              const SizedBox(height: 24),
-              text(
-                event ? 'Discover amazing\nevents.' : title,
-                color: (event ? Colors.white : c.onInverseSurface),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  color: (event ? Colors.white : c.onInverseSurface).withValues(
-                    alpha: .75,
-                  ),
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Icon(
-                    event ? Icons.graphic_eq : Icons.work_outline,
-                    color: c.primaryContainer,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    child: Text(
-                      event
-                          ? 'Find your next live moment'
-                          : 'Your next opportunity starts here',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: (event ? Colors.white : c.onInverseSurface),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      case AppThemeStyle.editorial:
-        return Column(
-          key: const ValueKey('community-header-editorial'),
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            location(),
-            const SizedBox(height: 24),
-            Text(
-              event ? 'THE CITY / WHAT’S ON' : 'WORK / OPPORTUNITIES',
-              style: TextStyle(
-                fontSize: 10,
-                letterSpacing: 2,
-                color: c.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 12),
-            text(
-              event
-                  ? 'Go somewhere\nworth remembering.'
-                  : 'Your next\nchapter.',
-              size: 38,
-            ),
-            const SizedBox(height: 14),
-            Text(
-              subtitle,
-              style: TextStyle(color: c.onSurfaceVariant, height: 1.5),
-            ),
-            if (event) ...[const SizedBox(height: 20), artwork(155)],
-            const Divider(height: 38),
-          ],
-        );
-      case AppThemeStyle.discover:
-        return Column(
-          key: const ValueKey('community-header-discover'),
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            location(),
-            const SizedBox(height: 18),
-            text(
-              event
-                  ? 'Make plans.\nMake memories.'
-                  : 'Let’s find your\nnext job.',
-              size: 34,
-            ),
-            const SizedBox(height: 18),
-            if (event) ...[artwork(185), const SizedBox(height: 14)],
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: c.primaryContainer,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    event ? Icons.local_activity_outlined : Icons.trending_up,
-                    color: c.onPrimaryContainer,
-                    size: 32,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: c.onPrimaryContainer,
-                        fontWeight: FontWeight.w600,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                  Icon(Icons.north_east, color: c.onPrimaryContainer),
-                ],
-              ),
-            ),
-          ],
-        );
-      case AppThemeStyle.cinematic:
-        return Container(
-          key: const ValueKey('community-header-cinematic'),
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
-          decoration: BoxDecoration(
-            color: c.surfaceContainerHigh,
-            image: event
-                ? const DecorationImage(
-                    image: AssetImage('assets/artwork/community-concert.png'),
-                    fit: BoxFit.cover,
-                    colorFilter: ColorFilter.mode(
-                      Color(0x99000000),
-                      BlendMode.darken,
-                    ),
-                  )
-                : null,
-            border: Border(left: BorderSide(color: c.primary, width: 3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                event ? 'LIVE / LOCAL / UNMISSABLE' : 'YOUR JOB MATCH',
-                style: TextStyle(
-                  fontSize: 10,
-                  letterSpacing: 2,
-                  color: c.primary,
-                ),
-              ),
-              const SizedBox(height: 24),
-              text(
-                event ? 'The city\nafter hours.' : 'Work on\nyour terms.',
-                size: 40,
-              ),
-              const SizedBox(height: 18),
-              Text(
-                subtitle,
-                style: TextStyle(color: c.onSurfaceVariant, height: 1.6),
-              ),
-              const SizedBox(height: 24),
-              location(),
-            ],
-          ),
-        );
-      case AppThemeStyle.orbit:
-        return Column(
-          key: const ValueKey('community-header-orbit'),
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  color: c.primary,
-                  child: Icon(
-                    event ? Icons.bolt : Icons.work_outline,
-                    color: c.onPrimary,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  event ? 'GABLA / EVENTS' : 'GABLA / JOBS',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const Spacer(),
-                Icon(Icons.north_east, color: c.primary),
-              ],
-            ),
-            const SizedBox(height: 24),
-            text(
-              event
-                  ? 'Find your\nnext night out.'
-                  : 'Your next move\nstarts here.',
-              size: 34,
-            ),
-            const SizedBox(height: 16),
-            location(),
-            const SizedBox(height: 18),
-            Text(
-              subtitle,
-              style: TextStyle(color: c.onSurfaceVariant, height: 1.5),
-            ),
-            const SizedBox(height: 18),
-            Divider(color: c.primary, thickness: 2, height: 2),
-            if (event) ...[const SizedBox(height: 16), artwork(135)],
-          ],
-        );
-    }
-  }
+  Widget build(BuildContext context) => KeyedSubtree(
+    key: ValueKey('community-header-${style.name}'),
+    child: CommunityPageHeading(
+      style: style,
+      eyebrow: event ? 'Events' : 'Jobs & paid tasks',
+      title: event ? 'Find an event' : 'Find your next role',
+      description: event
+          ? 'Browse by category. Check dates, venues and entrance prices.'
+          : 'Compare vacancies and paid tasks by location, workplace and pay.',
+      icon: event ? Icons.event_outlined : Icons.work_outline,
+    ),
+  );
 }
 
+/// Context-specific recovery keeps saved posts separate from owned posts.
 class CommunityEmptyState extends StatelessWidget {
   const CommunityEmptyState({
     super.key,
     required this.event,
     required this.private,
+    this.scope = 'browse',
+    this.filtered = false,
+    this.onAction,
   });
-  final bool event, private;
+  final bool event, private, filtered;
+  final String scope;
+  final VoidCallback? onAction;
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).colorScheme;
+    final noun = event ? 'events' : 'jobs';
+    final saved = scope == 'saved';
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 34, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 12),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            event ? Icons.event_available_outlined : Icons.work_outline,
-            size: 30,
+            saved
+                ? Icons.bookmark_border
+                : event
+                ? Icons.event_outlined
+                : Icons.work_outline,
+            size: 28,
             color: c.primary,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 18),
           Text(
             private
-                ? 'Nothing here yet'
-                : event
-                ? 'No events found'
-                : 'No matching opportunities',
-            textAlign: TextAlign.center,
+                ? saved
+                      ? 'No saved $noun'
+                      : 'No $noun posted yet'
+                : filtered
+                ? 'No matching $noun'
+                : 'No $noun available',
             style: Theme.of(
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
@@ -414,13 +261,126 @@ class CommunityEmptyState extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             private
-                ? 'Your posts and saved discoveries will appear here.'
-                : 'Try another search or share the first ${event ? 'event' : 'opportunity'}.',
-            textAlign: TextAlign.center,
+                ? saved
+                      ? 'Save ${event ? 'an event' : 'a job or task'} from its details page to find it here.'
+                      : 'Posts you create appear here, including posts awaiting review.'
+                : filtered
+                ? 'Try a different search or clear your filters.'
+                : 'Pull down to check again for published $noun.',
             style: TextStyle(color: c.onSurfaceVariant, height: 1.5),
           ),
+          if (onAction != null) ...[
+            const SizedBox(height: 18),
+            OutlinedButton(
+              onPressed: onAction,
+              child: Text(
+                private
+                    ? saved
+                          ? 'Browse $noun'
+                          : event
+                          ? 'Create an event'
+                          : 'Post a job or task'
+                    : 'Clear search & filters',
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+/// Application records inherit the selected design without global Card shapes.
+class CommunityRecordSurface extends StatelessWidget {
+  const CommunityRecordSurface({
+    super.key,
+    required this.style,
+    required this.child,
+  });
+  final AppThemeStyle style;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final c = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.all(style == AppThemeStyle.editorial ? 0 : 18),
+      decoration: BoxDecoration(
+        color: style == AppThemeStyle.editorial
+            ? null
+            : style == AppThemeStyle.cinematic
+            ? c.surfaceContainerHigh
+            : c.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(communityRadius(style)),
+        border: switch (style) {
+          AppThemeStyle.editorial => Border(
+            bottom: BorderSide(color: c.outlineVariant),
+          ),
+          AppThemeStyle.cinematic => Border(
+            left: BorderSide(color: c.primary, width: 3),
+          ),
+          AppThemeStyle.orbit => Border.all(color: c.outlineVariant),
+          _ => null,
+        },
+      ),
+      child: Padding(
+        padding: style == AppThemeStyle.editorial
+            ? const EdgeInsets.symmetric(vertical: 20)
+            : EdgeInsets.zero,
+        child: child,
+      ),
+    );
+  }
+}
+
+/// Honest, compact fallback for a missing upload; never substitutes stock media.
+class CommunityMediaPlaceholder extends StatelessWidget {
+  const CommunityMediaPlaceholder({
+    super.key,
+    required this.style,
+    required this.event,
+  });
+  final AppThemeStyle style;
+  final bool event;
+  @override
+  Widget build(BuildContext context) {
+    final c = Theme.of(context).colorScheme;
+    final icon = Icon(
+      event ? Icons.event_outlined : Icons.work_outline,
+      color: style == AppThemeStyle.discover
+          ? c.onSecondaryContainer
+          : c.onPrimaryContainer,
+      size: 28,
+    );
+    return ColoredBox(
+      color: style == AppThemeStyle.discover
+          ? c.secondaryContainer
+          : c.primaryContainer,
+      child: switch (style) {
+        AppThemeStyle.editorial => Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(padding: const EdgeInsets.all(16), child: icon),
+        ),
+        AppThemeStyle.cinematic => Container(
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: c.primary, width: 3)),
+          ),
+          alignment: Alignment.center,
+          child: icon,
+        ),
+        AppThemeStyle.orbit => Center(
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: c.onPrimaryContainer.withValues(alpha: .3),
+              ),
+            ),
+            child: icon,
+          ),
+        ),
+        _ => Center(child: icon),
+      },
     );
   }
 }
@@ -451,20 +411,14 @@ class CommunityDetailMasthead extends StatelessWidget {
       ),
     );
     Widget photo(double height) => SizedBox(
-      height: height,
+      height: poster == null ? 84 : height,
       width: double.infinity,
       child: Hero(
         tag: 'community-${post['id']}',
         child: poster == null
-            ? ColoredBox(
-                color: c.primaryContainer,
-                child: Icon(
-                  post['kind'] == 'event'
-                      ? Icons.local_activity_outlined
-                      : Icons.work_outline,
-                  size: 44,
-                  color: c.onPrimaryContainer,
-                ),
+            ? CommunityMediaPlaceholder(
+                style: style,
+                event: post['kind'] == 'event',
               )
             : Image.network(
                 poster!,
@@ -482,10 +436,11 @@ class CommunityDetailMasthead extends StatelessWidget {
           key: const ValueKey('community-detail-gabla'),
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: photo(post['kind'] == 'event' ? 280 : 150),
-            ),
+            if (poster != null || post['kind'] == 'event')
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: photo(post['kind'] == 'event' ? 240 : 150),
+              ),
             const SizedBox(height: 20),
             organization(),
             const SizedBox(height: 10),
@@ -502,7 +457,8 @@ class CommunityDetailMasthead extends StatelessWidget {
             const SizedBox(height: 12),
             title(size: 38),
             const Divider(height: 28),
-            photo(post['kind'] == 'event' ? 250 : 140),
+            if (poster != null || post['kind'] == 'event')
+              photo(post['kind'] == 'event' ? 250 : 140),
             const SizedBox(height: 20),
           ],
         );
@@ -511,12 +467,16 @@ class CommunityDetailMasthead extends StatelessWidget {
           key: const ValueKey('community-detail-discover'),
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: photo(post['kind'] == 'event' ? 340 : 190),
-            ),
+            if (poster != null || post['kind'] == 'event')
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: photo(post['kind'] == 'event' ? 260 : 190),
+              ),
             Transform.translate(
-              offset: const Offset(0, -24),
+              offset: Offset(
+                0,
+                poster != null || post['kind'] == 'event' ? -16 : 0,
+              ),
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 12),
                 padding: const EdgeInsets.all(18),
@@ -542,7 +502,8 @@ class CommunityDetailMasthead extends StatelessWidget {
           key: const ValueKey('community-detail-cinematic'),
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            photo(post['kind'] == 'event' ? 400 : 180),
+            if (poster != null || post['kind'] == 'event')
+              photo(post['kind'] == 'event' ? 280 : 180),
             Container(
               padding: const EdgeInsets.fromLTRB(18, 24, 18, 24),
               decoration: BoxDecoration(

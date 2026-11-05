@@ -10,6 +10,7 @@ import '../../shop/presentation/commerce_widgets.dart';
 import '../../workspace/application/workspace_providers.dart';
 import '../../workspace/presentation/custom_field_input.dart';
 import 'bus_route_editor.dart';
+import 'bus_design_widgets.dart';
 
 class BusOnboardingScreen extends ConsumerStatefulWidget {
   const BusOnboardingScreen({super.key, this.token});
@@ -46,17 +47,10 @@ class _BusOnboardingScreenState extends ConsumerState<BusOnboardingScreen> {
         body: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(28),
-              child: Image.asset(
-                'assets/artwork/bus.png',
-                height: 220,
-                fit: BoxFit.cover,
-              ),
-            ),
+            const SizedBox(height: 112, child: BusScene()),
             const SizedBox(height: 26),
             Text(
-              'Your company’s\nnext chapter.',
+              'Set up your bus company',
               style: Theme.of(context).textTheme.headlineLarge,
             ),
             const SizedBox(height: 16),
@@ -128,11 +122,16 @@ class _BusOnboardingScreenState extends ConsumerState<BusOnboardingScreen> {
                     'Your company account',
                     'Your company & park',
                     'Routes & tickets',
-                    'Ready for your first passenger?',
+                    'Review company setup',
                   ][_step],
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 12),
+                Text(
+                  'Step ${_step + 1} of 4',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                const SizedBox(height: 8),
                 LinearProgressIndicator(value: (_step + 1) / 4),
                 const SizedBox(height: 24),
                 if (_step == 0) ...[
@@ -228,7 +227,7 @@ class _BusOnboardingScreenState extends ConsumerState<BusOnboardingScreen> {
                   for (var i = 0; i < _routes.length; i++)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 24),
-                      child: CommercePanel(
+                      child: BusPanel(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -262,7 +261,7 @@ class _BusOnboardingScreenState extends ConsumerState<BusOnboardingScreen> {
                     ),
                 ],
                 if (_step == 3)
-                  CommercePanel(
+                  BusPanel(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

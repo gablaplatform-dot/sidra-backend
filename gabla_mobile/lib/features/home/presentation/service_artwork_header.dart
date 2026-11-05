@@ -1,3 +1,4 @@
+import '../../../core/widgets/feature_visual.dart';
 import 'package:flutter/material.dart';
 import '../../../core/motion/artwork_hero.dart';
 import '../../../core/theme/font_group.dart';
@@ -9,17 +10,16 @@ class ServiceArtworkHeader extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 18),
     child: SizedBox(
-      height: 155,
+      height: 140,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(8),
         child: Stack(
           fit: StackFit.expand,
           children: [
             ArtworkHero(
               tag: 'service-artwork-$index',
-              child: Image.asset(
-                'assets/artwork/${['shop', 'services', 'bus', 'ride'][index]}.png',
-                fit: BoxFit.cover,
+              child: FeatureVisual(
+                kind: ['shop', 'services', 'bus', 'ride'][index],
               ),
             ),
             const DecoratedBox(
@@ -27,7 +27,7 @@ class ServiceArtworkHeader extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black54],
+                  colors: [Colors.transparent, Colors.transparent],
                 ),
               ),
             ),
@@ -37,15 +37,16 @@ class ServiceArtworkHeader extends StatelessWidget {
               right: 20,
               child: Text(
                 [
-                  'Good finds, all together.',
-                  'Find your next trusted pro.',
-                  'Your next journey starts here.',
-                  'Your city. Your next stop.',
+                  'Shop products',
+                  'Browse services',
+                  'Find bus tickets',
+                  'Book a ride',
                 ][index],
                 maxLines: 2,
-                style: AppTypography.of(
-                  context,
-                ).display(size: 27, color: Colors.white),
+                style: AppTypography.of(context).display(
+                  size: 27,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ),
           ],

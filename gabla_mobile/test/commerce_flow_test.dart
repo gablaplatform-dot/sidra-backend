@@ -1,3 +1,4 @@
+import 'helpers/load_test_fonts.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
@@ -95,6 +96,7 @@ const product = Product(
   district: 'Kampala',
 );
 void main() {
+  setUpAll(loadTestFonts);
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     VisibilityDetectorController.instance.updateInterval = Duration.zero;
@@ -411,12 +413,6 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
         if (const bool.fromEnvironment('COMMERCE_PREVIEWS')) {
-          await tester.runAsync(
-            () => precacheImage(
-              const AssetImage('assets/artwork/shop.png'),
-              tester.element(find.byType(ShopScreen)),
-            ),
-          );
           await tester.pumpAndSettle();
           await tester.runAsync(() async {
             final image =
@@ -444,7 +440,7 @@ void main() {
         await tester.tap(find.text('New · 1'));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        await tester.tap(find.text('Show matching finds · 1'));
+        await tester.tap(find.text('Apply filters'));
         await tester.pumpAndSettle();
         expect(find.text('New'), findsOneWidget);
         expect(tester.takeException(), isNull);

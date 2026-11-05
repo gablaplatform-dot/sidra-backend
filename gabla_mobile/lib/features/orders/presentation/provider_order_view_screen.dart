@@ -63,7 +63,7 @@ class _ProviderOrderViewScreenState
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => CommerceScaffold(
     appBar: const CommerceAppBar(title: 'Customer order'),
     body: AsyncValueView(
       value: ref.watch(workspaceDataProvider(path)),
@@ -84,7 +84,7 @@ class _ProviderOrderViewScreenState
           children: [
             Text(
               '${customer['name'] ?? 'Customer order'}',
-              style: Theme.of(context).textTheme.headlineLarge,
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 10),
             Text(
@@ -126,7 +126,7 @@ class _ProviderOrderViewScreenState
                 ],
               ),
             ),
-            const CommerceTitle('Customer & fulfillment'),
+            const CommerceTitle('Customer and fulfillment'),
             CommercePanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,7 +161,14 @@ class _ProviderOrderViewScreenState
                 })
                   FilledButton.tonal(
                     onPressed: _busy ? null : () => _change(next),
-                    child: Text(next[0].toUpperCase() + next.substring(1)),
+                    child: Text(switch (next) {
+                      'accepted' => 'Accept order',
+                      'rejected' => 'Decline order',
+                      'delivering' => 'Mark delivering',
+                      'fulfilled' => 'Mark completed',
+                      'canceled' => 'Cancel order',
+                      _ => next,
+                    }),
                   ),
               ],
             ),

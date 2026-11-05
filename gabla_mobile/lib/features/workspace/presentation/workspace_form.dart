@@ -1,4 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../../core/network/api_exception.dart';
+
+String workspaceErrorMessage(
+  Object error, {
+  String fallback = 'Could not save your changes. Please try again.',
+}) => error is ApiException
+    ? error.message
+    : error is StateError
+    ? '${error.message}'
+    : fallback;
 
 class WorkspaceField {
   const WorkspaceField(
@@ -75,6 +85,7 @@ class _WorkspaceFormState extends State<WorkspaceForm> {
       MediaQuery.viewInsetsOf(context).bottom + 20,
     ),
     child: SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       child: Form(
         key: _form,
         child: Column(
@@ -85,7 +96,11 @@ class _WorkspaceFormState extends State<WorkspaceForm> {
               widget.title,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 6),
+            const Text(
+              'Complete the details below. Optional fields are marked.',
+            ),
+            const SizedBox(height: 18),
             for (final f in widget.fields)
               Padding(
                 padding: const EdgeInsets.only(bottom: 14),
@@ -104,7 +119,11 @@ class _WorkspaceFormState extends State<WorkspaceForm> {
                             ? _values[f.keyName]
                             : null,
                         isExpanded: true,
-                        decoration: InputDecoration(labelText: f.label),
+                        decoration: InputDecoration(
+                          labelText:
+                              '${f.label}${f.required || f.label.toLowerCase().contains('optional') ? '' : ' (optional)'}',
+                          errorMaxLines: 3,
+                        ),
                         items: f.options
                             .map(
                               (s) => DropdownMenuItem(
@@ -125,6 +144,11 @@ class _WorkspaceFormState extends State<WorkspaceForm> {
                         controller: _controllers[f.keyName],
                         enabled: !_busy,
                         obscureText: f.type == 'password',
+                        autocorrect: f.type != 'password' && f.type != 'email',
+                        enableSuggestions: f.type != 'password',
+                        textInputAction: f.type == 'long'
+                            ? TextInputAction.newline
+                            : TextInputAction.next,
                         maxLines: f.type == 'long' ? 3 : 1,
                         keyboardType: f.type == 'number'
                             ? const TextInputType.numberWithOptions(
@@ -133,7 +157,11 @@ class _WorkspaceFormState extends State<WorkspaceForm> {
                             : f.type == 'email'
                             ? TextInputType.emailAddress
                             : TextInputType.text,
-                        decoration: InputDecoration(labelText: f.label),
+                        decoration: InputDecoration(
+                          labelText:
+                              '${f.label}${f.required || f.label.toLowerCase().contains('optional') ? '' : ' (optional)'}',
+                          errorMaxLines: 3,
+                        ),
                         validator: (v) {
                           if (f.required && (v ?? '').trim().isEmpty)
                             return 'Enter ${f.label.toLowerCase()}.';
@@ -148,9 +176,12 @@ class _WorkspaceFormState extends State<WorkspaceForm> {
                       ),
               ),
             if (_error != null)
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               ),
             const SizedBox(height: 12),
             FilledButton(
@@ -179,14 +210,11 @@ class _WorkspaceFormState extends State<WorkspaceForm> {
                         if (mounted)
                           setState(() {
                             _busy = false;
-                            _error = '$e';
+                            _error = workspaceErrorMessage(e);
                           });
                       }
                     },
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Text(_busy ? 'Saving…' : widget.action),
-              ),
+              child: Text(_busy ? 'Saving…' : widget.action),
             ),
           ],
         ),

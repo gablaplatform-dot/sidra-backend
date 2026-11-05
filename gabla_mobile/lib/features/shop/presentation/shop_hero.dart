@@ -47,12 +47,20 @@ class _ShopHeroState extends ConsumerState<ShopHero> {
     final c = Theme.of(context).colorScheme;
     final scale = MediaQuery.textScalerOf(context).scale(1);
     final narrow = MediaQuery.sizeOf(context).width < 350;
+    if (widget.ads.isEmpty) {
+      return CommerceFlowHeader(
+        title: 'Products from Gabla businesses',
+        message:
+            'Browse categories, compare prices and order directly from a seller.',
+        icon: Icons.storefront_outlined,
+      );
+    }
     final height =
         (style == AppThemeStyle.cinematic
-            ? 350.0
+            ? 270.0
             : style == AppThemeStyle.editorial
-            ? 340.0
-            : 280.0) +
+            ? 260.0
+            : 240.0) +
         (scale - 1) * 150;
     final ads = widget.ads.isEmpty ? [<String, dynamic>{}] : widget.ads;
     return Column(
@@ -76,7 +84,7 @@ class _ShopHeroState extends ConsumerState<ShopHero> {
                   };
               final image = ad['imageUrl']?.toString();
               final artwork = image == null
-                  ? Image.asset('assets/artwork/shop.png', fit: BoxFit.cover)
+                  ? const CommerceIconArt(icon: Icons.storefront_outlined)
                   : CommerceImage(image);
               final media = ad['videoUrl'] != null
                   ? _AdVideo(

@@ -12,6 +12,7 @@ import { IconArrowRight } from "../components/icons";
 import { ProviderCardsSkeleton, Skel } from "../components/Skeleton";
 import { mapCategoryDto, mapProductDto } from "../lib/shopMappers";
 import OrbitStage from "../components/home/OrbitStage";
+import FeatureVisual from "../components/FeatureVisual";
 import Reveal from "../components/home/Reveal";
 import { busApi } from "../lib/bus";
 
@@ -222,7 +223,7 @@ function DesktopHome() {
       ) : null}
 
       <section className="home-section community-home-entries" aria-label="Jobs and events">
-        {[['jobs','Make your next move.','Vacancies and paid tasks, all in one place.'],['events','Make a night of it.','Live music, local gatherings and great company.']].map(([kind,title,subtitle])=><Reveal key={kind}><Link to={`/${kind}`} className="community-home-entry"><img src={`/artwork/${kind}.png`} alt=""/><div><p>{kind.toUpperCase()}</p><h2>{title}</h2><span>{subtitle}</span></div></Link></Reveal>)}
+        {[['jobs','Make your next move.','Vacancies and paid tasks, all in one place.'],['events','Make a night of it.','Live music, local gatherings and great company.']].map(([kind,title,subtitle])=><Reveal key={kind}><Link to={`/${kind}`} className="community-home-entry"><FeatureVisual kind={kind}/><div><p>{kind.toUpperCase()}</p><h2>{title}</h2><span>{subtitle}</span></div></Link></Reveal>)}
       </section>
       {error ? <div className="error-message home-error">{error}</div> : null}
 

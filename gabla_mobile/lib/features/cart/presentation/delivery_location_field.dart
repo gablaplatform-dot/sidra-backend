@@ -76,7 +76,13 @@ class _DeliveryLocationFieldState extends ConsumerState<DeliveryLocationField> {
       TextFormField(
         controller: widget.controller,
         onChanged: (_) => widget.onEdited(),
-        decoration: const InputDecoration(labelText: 'Delivery address'),
+        decoration: const InputDecoration(
+          labelText: 'Delivery address',
+          helperText: 'Include a building, road or nearby landmark.',
+          alignLabelWithHint: true,
+        ),
+        minLines: 2,
+        maxLines: 3,
         validator: (v) =>
             (v?.trim().isEmpty ?? true) ? 'Enter a delivery address.' : null,
       ),

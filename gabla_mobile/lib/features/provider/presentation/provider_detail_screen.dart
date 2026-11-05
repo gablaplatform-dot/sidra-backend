@@ -61,8 +61,8 @@ class _ProviderDetailScreenState extends ConsumerState<ProviderDetailScreen> {
     final c = Theme.of(context).colorScheme;
     final categories =
         ref.watch(providerCategoryTreeProvider).valueOrNull ?? [];
-    return Scaffold(
-      appBar: const CommerceAppBar(title: 'Meet the seller'),
+    return CommerceScaffold(
+      appBar: const CommerceAppBar(title: 'Business profile'),
       body: provider.when(
         loading: () => const Padding(
           padding: EdgeInsets.all(20),
@@ -70,14 +70,15 @@ class _ProviderDetailScreenState extends ConsumerState<ProviderDetailScreen> {
         ),
         error: (e, _) => CommerceEmpty(
           title: 'This shop couldn’t be loaded',
-          message: '$e',
+          message: 'Check your connection and try loading this business again.',
           action: 'Try again',
           onAction: () =>
               ref.invalidate(providerDetailProvider(widget.providerId)),
         ),
         data: (p) {
           final media = Map<String, dynamic>.from(p['media'] as Map? ?? {});
-          final name = p['businessName']?.toString() ?? 'Provider';
+          final suppliedName = p['businessName']?.toString().trim() ?? '';
+          final name = suppliedName.isEmpty ? 'Business' : suppliedName;
           final node = findShopNode(categories, p['categoryId']?.toString());
           final layout =
               (node?['settings'] as Map?)?['layout']?.toString() ?? 'default';
@@ -125,7 +126,7 @@ class _ProviderDetailScreenState extends ConsumerState<ProviderDetailScreen> {
                 name,
                 style: AppTypography.of(
                   context,
-                ).display(size: style == AppThemeStyle.editorial ? 38 : 30),
+                ).display(size: style == AppThemeStyle.editorial ? 30 : 24),
               ),
               const SizedBox(height: 8),
               Text(
@@ -175,7 +176,7 @@ class _ProviderDetailScreenState extends ConsumerState<ProviderDetailScreen> {
                         commerceRadius(style),
                       ),
                       child: SizedBox(
-                        height: style == AppThemeStyle.cinematic ? 270 : 190,
+                        height: style == AppThemeStyle.cinematic ? 210 : 150,
                         width: double.infinity,
                         child: CommerceImage(media['coverUrl'].toString()),
                       ),
@@ -245,7 +246,7 @@ class _ProviderDetailScreenState extends ConsumerState<ProviderDetailScreen> {
                   ),
                 if (p['description'] != null &&
                     p['description'].toString().isNotEmpty) ...[
-                  const CommerceTitle('Their story'),
+                  const CommerceTitle('About'),
                   Text(
                     p['description'].toString(),
                     style: const TextStyle(height: 1.6),
@@ -276,8 +277,8 @@ class _ProviderDetailScreenState extends ConsumerState<ProviderDetailScreen> {
                   layout == 'menu'
                       ? 'The menu'
                       : layout == 'booking'
-                      ? 'Find your stay or service'
-                      : 'Shop this seller',
+                      ? 'Bookable services'
+                      : 'Products and services',
                   action: () => context.push(
                     '/provider/${widget.providerId}/catalog?type=${(listings.valueOrNull ?? []).any((p) => p.type == 'product') ? 'product' : 'service'}',
                   ),
@@ -293,7 +294,7 @@ class _ProviderDetailScreenState extends ConsumerState<ProviderDetailScreen> {
                   ),
                   data: (items) => items.isEmpty
                       ? const CommerceEmpty(
-                          title: 'More on the way',
+                          title: 'No public listings',
                           message: 'This provider has no public listings yet.',
                         )
                       : layout == 'menu'
@@ -316,11 +317,21 @@ class _ProviderDetailScreenState extends ConsumerState<ProviderDetailScreen> {
                               ),
                           ],
                         )
-                      : ProductLayout(
-                          items: items.take(8).toList(),
-                          listView:
-                              style == AppThemeStyle.editorial ||
-                              layout == 'booking',
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${items.length} published ${items.length == 1 ? 'listing' : 'listings'}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 12),
+                            ProductLayout(
+                              items: items.take(8).toList(),
+                              listView:
+                                  style == AppThemeStyle.editorial ||
+                                  layout == 'booking',
+                            ),
+                          ],
                         ),
                 ),
                 if (listings.valueOrNull?.any((p) => p.type == 'service') ??

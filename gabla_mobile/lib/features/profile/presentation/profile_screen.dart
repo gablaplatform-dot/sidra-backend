@@ -41,7 +41,7 @@ class ProfileScreen extends ConsumerWidget {
       ),
       (
         'Saved businesses',
-        'Your trusted people, together',
+        'Businesses you want to find again',
         '/profile/saved',
         Icons.favorite_border,
       ),
@@ -84,7 +84,7 @@ class ProfileScreen extends ConsumerWidget {
         ),
         (
           'Business insights',
-          'Real customer engagement',
+          'Profile views, listing views and contacts',
           '/profile/analytics',
           Icons.insights_outlined,
         ),
@@ -102,7 +102,7 @@ class ProfileScreen extends ConsumerWidget {
         ),
         (
           'Quotes & receipts',
-          'Documents with your signature',
+          'View and customize business documents',
           '/profile/documents',
           Icons.description_outlined,
         ),
@@ -115,14 +115,14 @@ class ProfileScreen extends ConsumerWidget {
           Icons.directions_bus_outlined,
         ),
       (
-        'Design Studio',
+        'Design studio',
         'Five designs, colors, fonts and motion',
         '/settings/appearance',
         Icons.tune,
       ),
     ];
     return Scaffold(
-      appBar: const CommerceAppBar(title: 'Your space'),
+      appBar: const CommerceAppBar(title: 'Your account'),
       body: ListView(
         padding: const EdgeInsets.all(18),
         children: [
@@ -133,6 +133,9 @@ class ProfileScreen extends ConsumerWidget {
                 CircleAvatar(
                   radius: 32,
                   backgroundColor: c.primaryContainer,
+                  foregroundImage: user?.avatarUrl?.isNotEmpty == true
+                      ? NetworkImage(user!.avatarUrl!)
+                      : null,
                   child: Text(
                     user?.name.isNotEmpty == true
                         ? user!.name[0].toUpperCase()
@@ -142,16 +145,51 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 18),
                 Text(
-                  user?.name ?? 'Welcome to Gabla',
+                  user?.name.isNotEmpty == true
+                      ? user!.name
+                      : 'Welcome to Gabla',
                   style: AppTypography.of(context).display(size: 30),
                 ),
                 const SizedBox(height: 8),
-                Text(user?.email ?? 'Your next good find starts here.'),
+                Text(
+                  user?.email.isNotEmpty == true
+                      ? user!.email
+                      : user != null
+                      ? (user.phone?.isNotEmpty == true
+                            ? user.phone!
+                            : 'Manage your profile and activity.')
+                      : 'Sign in to manage your account and activity.',
+                  style: TextStyle(color: c.onSurfaceVariant),
+                ),
+                if (user == null) ...[
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: () => context.push('/login?next=%2Fprofile'),
+                    child: const Text('Sign in'),
+                  ),
+                ],
               ],
             ),
           ),
           const SizedBox(height: 22),
-          for (final e in entries)
+          for (final e in entries) ...[
+            if (const [
+              'Account details',
+              'My orders',
+              'Customer inquiries',
+              'Operator workspace',
+              'Design studio',
+            ].contains(e.$1))
+              Padding(
+                padding: const EdgeInsets.fromLTRB(2, 14, 2, 10),
+                child: Text(switch (e.$1) {
+                  'Account details' => 'Profile',
+                  'My orders' => 'Your activity',
+                  'Customer inquiries' => 'Your business',
+                  'Operator workspace' => 'Transport',
+                  _ => 'Preferences',
+                }, style: Theme.of(context).textTheme.titleSmall),
+              ),
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: ListTile(
@@ -170,25 +208,32 @@ class ProfileScreen extends ConsumerWidget {
                   e.$1,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                subtitle: Text(e.$2, style: const TextStyle(fontSize: 11)),
+                subtitle: Text(
+                  e.$2,
+                  style: TextStyle(fontSize: 12, color: c.onSurfaceVariant),
+                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push(e.$3),
               ),
             ),
-          const SizedBox(height: 18),
-          TextButton.icon(
-            onPressed: () => context.push('/account/delete'),
-            icon: const Icon(Icons.delete_outline),
-            label: const Text('Delete account'),
-          ),
-          OutlinedButton.icon(
-            onPressed: () async {
-              await ref.read(authControllerProvider.notifier).signOut();
-              if (context.mounted) context.go('/home');
-            },
-            icon: const Icon(Icons.logout),
-            label: const Text('Sign out'),
-          ),
+          ],
+          if (user != null) ...[
+            const SizedBox(height: 18),
+            TextButton.icon(
+              onPressed: () => context.push('/account/delete'),
+              icon: const Icon(Icons.delete_outline),
+              style: TextButton.styleFrom(foregroundColor: c.error),
+              label: const Text('Delete account'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () async {
+                await ref.read(authControllerProvider.notifier).signOut();
+                if (context.mounted) context.go('/home');
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text('Sign out'),
+            ),
+          ],
         ],
       ),
     );

@@ -6,7 +6,6 @@ import '../../../core/motion/design_transitions.dart';
 import '../../../core/network/network_providers.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../categories/application/category_providers.dart';
-import '../../categories/presentation/widgets/category_cover.dart';
 import '../../provider/application/provider_providers.dart';
 import '../../shop/domain/product.dart';
 import '../../shop/presentation/commerce_widgets.dart';
@@ -31,7 +30,7 @@ final featuredServicesProvider = FutureProvider<List<Product>>(
 class ServicesScreen extends ConsumerWidget {
   const ServicesScreen({super.key});
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
+  Widget build(BuildContext context, WidgetRef ref) => CommerceScaffold(
     appBar: CommerceAppBar(
       title: 'Services',
       actions: [
@@ -52,14 +51,14 @@ class ServicesScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(18),
         children: [
           DiscoveryHeader(
-            title: 'Good people.\nGreat work.',
+            title: 'Services',
             subtitle:
-                'Find a professional, plan your visit, or book your next stay.',
+                'Browse providers, compare services and check availability.',
             child: TextField(
               readOnly: true,
               onTap: () => context.push('/search'),
               decoration: const InputDecoration(
-                hintText: 'What can we help with?',
+                hintText: 'Search services',
                 prefixIcon: Icon(Icons.search),
               ),
             ),
@@ -97,38 +96,32 @@ class ServicesScreen extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(
                                   commerceRadius(commerceStyle(ref)),
                                 ),
-                                child: Stack(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
-                                    SizedBox(
-                                      height: i.isEven ? 180 : 210,
-                                      width: double.infinity,
-                                      child: CategoryCover(category: items[i]),
-                                    ),
-                                    const Positioned.fill(
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [
-                                              Colors.transparent,
-                                              Colors.black87,
-                                            ],
-                                          ),
-                                        ),
+                                    if (items[i].imageUrl?.isNotEmpty == true)
+                                      SizedBox(
+                                        height: 100,
+                                        child: CommerceImage(items[i].imageUrl),
+                                      )
+                                    else
+                                      const CommerceIconArt(
+                                        icon: Icons.design_services_outlined,
+                                        height: 100,
                                       ),
-                                    ),
-                                    Positioned(
-                                      left: 14,
-                                      bottom: 16,
-                                      right: 14,
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                        horizontal: 8,
+                                      ),
                                       child: Text(
                                         items[i].name,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 16,
-                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleSmall,
                                       ),
                                     ),
                                   ],
@@ -141,7 +134,7 @@ class ServicesScreen extends ConsumerWidget {
                   ),
           ),
           CommerceTitle(
-            'Book your next experience',
+            'Featured services',
             action: () => context.push('/services/all?sort=featured'),
           ),
           AsyncValueView(
@@ -162,9 +155,9 @@ class ServicesScreen extends ConsumerWidget {
           TextButton.icon(
             onPressed: () => context.push('/provider/onboarding'),
             icon: const Icon(Icons.storefront_outlined),
-            label: const Text('Bring your business to Gabla'),
+            label: const Text('Open a business invitation'),
           ),
-          const CommerceTitle('Meet the professionals'),
+          const CommerceTitle('Service providers'),
           AsyncValueView(
             value: ref.watch(topRatedProvidersProvider),
             onRetry: () => ref.invalidate(topRatedProvidersProvider),

@@ -17,9 +17,38 @@ const _sectionNames = {
   'options': 'Document appearance',
   'email': 'Email delivery',
 };
-String _label(String key) => key
-    .replaceAllMapped(RegExp(r'([A-Z])'), (m) => ' ${m[1]!.toLowerCase()}')
-    .replaceFirstMapped(RegExp(r'^.'), (m) => m[0]!.toUpperCase());
+const _fieldLabels = {
+  'logoUrl': 'Logo image link',
+  'taxId': 'Tax identification number',
+  'accentColor': 'Accent color (hex code)',
+  'prefix': 'Document number prefix',
+  'validityDays': 'Valid for (days)',
+  'intro': 'Opening message',
+  'terms': 'Terms and conditions',
+  'showSignature': 'Show signature',
+  'signatoryName': 'Name below signature',
+  'signatoryTitle': 'Job title below signature',
+  'thankYou': 'Thank-you message',
+  'footerNote': 'Footer note',
+  'enabled': 'Add tax',
+  'label': 'Tax name',
+  'percent': 'Tax rate (%)',
+  'inclusive': 'Prices include tax',
+  'instructions': 'Payment instructions',
+  'mobileMoneyNumber': 'Mobile money number',
+  'mobileMoneyName': 'Mobile money account name',
+  'bankDetails': 'Bank account details',
+  'showItemNumbers': 'Show item numbers',
+  'showAmountInWords': 'Show total in words',
+  'showQrCode': 'Show QR code',
+  'sendQuotation': 'Email quotations automatically',
+  'sendReceipt': 'Email receipts automatically',
+};
+String _label(String key) =>
+    _fieldLabels[key] ??
+    key
+        .replaceAllMapped(RegExp(r'([A-Z])'), (m) => ' ${m[1]!.toLowerCase()}')
+        .replaceFirstMapped(RegExp(r'^.'), (m) => m[0]!.toUpperCase());
 
 class DocumentDesignScreen extends ConsumerWidget {
   const DocumentDesignScreen({super.key});
@@ -45,7 +74,7 @@ class DocumentDesignScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(18),
           children: [
             Text(
-              'Your business.\nOn every page.',
+              'Quotes and receipts',
               style: Theme.of(context).textTheme.headlineLarge,
             ),
             const SizedBox(height: 12),
@@ -127,9 +156,9 @@ class DocumentDesignScreen extends ConsumerWidget {
                   await save('brand', {'logoUrl': url});
                 } catch (e) {
                   if (context.mounted)
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('$e')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(workspaceErrorMessage(e))),
+                    );
                 }
               },
             ),
@@ -181,10 +210,11 @@ class _PromotionCreateScreenState extends ConsumerState<PromotionCreateScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: const CommerceAppBar(title: 'New promotion'),
     body: ListView(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(18),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
         Text(
-          'Give your business\na moment to shine.',
+          'Create a promotion',
           style: Theme.of(context).textTheme.headlineLarge,
         ),
         const SizedBox(height: 18),
@@ -194,12 +224,17 @@ class _PromotionCreateScreenState extends ConsumerState<PromotionCreateScreen> {
         const SizedBox(height: 24),
         TextField(
           controller: _title,
+          enabled: !_busy,
+          textCapitalization: TextCapitalization.sentences,
+          textInputAction: TextInputAction.next,
           maxLength: 200,
           decoration: const InputDecoration(labelText: 'Headline'),
         ),
         const SizedBox(height: 14),
         TextField(
           controller: _subtitle,
+          enabled: !_busy,
+          textCapitalization: TextCapitalization.sentences,
           maxLength: 400,
           maxLines: 3,
           decoration: const InputDecoration(
@@ -265,14 +300,15 @@ class _PromotionCreateScreenState extends ConsumerState<PromotionCreateScreen> {
                     if (mounted)
                       setState(() {
                         _busy = false;
-                        _error = '$e';
+                        _error = workspaceErrorMessage(
+                          e,
+                          fallback:
+                              'Could not submit your promotion. Please try again.',
+                        );
                       });
                   }
                 },
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Text(_busy ? 'Submitting…' : 'Submit for review'),
-          ),
+          child: Text(_busy ? 'Submitting…' : 'Submit for review'),
         ),
       ],
     ),

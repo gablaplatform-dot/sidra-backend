@@ -1,8 +1,9 @@
+import 'bus_design_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/config/env.dart';
-import '../../../core/mobility/mobility_layout.dart';
+import '../../../core/theme/style_tokens.dart';
 import '../../../core/theme/font_group.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../application/bus_providers.dart';
@@ -16,7 +17,7 @@ class BusTicketScreen extends ConsumerWidget {
     final c = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your boarding pass'),
+        title: const Text('Bus ticket'),
         actions: [
           IconButton(
             tooltip: 'Refresh ticket',
@@ -34,41 +35,43 @@ class BusTicketScreen extends ConsumerWidget {
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: c.primary,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(30),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(
+                      Theme.of(context).extension<StyleTokens>()?.cardRadius ??
+                          8,
+                    ),
                   ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'GABLA / BOARDING PASS',
+                      'BUS TICKET',
                       style: TextStyle(
                         color: c.onPrimary,
-                        letterSpacing: 2,
-                        fontSize: 10,
+                        letterSpacing: 1,
+                        fontSize: 11,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     Text(
-                      '${t.trip.originName}\n↓\n${t.trip.destinationName}',
+                      '${t.trip.originName}\n→ ${t.trip.destinationName}',
                       style: AppTypography.of(
                         context,
-                      ).display(size: 34, color: c.onPrimary),
+                      ).display(size: 28, color: c.onPrimary),
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      t.companyName ?? 'Gabla Bus',
+                      t.companyName ?? 'Bus operator',
                       style: TextStyle(color: c.onPrimary),
                     ),
                   ],
                 ),
               ),
-              MobilityPanel(
-                radius: 8,
+              BusPanel(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -99,6 +102,8 @@ class BusTicketScreen extends ConsumerWidget {
                         width: 190,
                         height: 190,
                         fit: BoxFit.contain,
+                        semanticLabel:
+                            'Boarding QR code for ticket ${t.ticketNumber}',
                         loadingBuilder: (_, child, progress) => progress == null
                             ? child
                             : const SizedBox(
@@ -112,7 +117,8 @@ class BusTicketScreen extends ConsumerWidget {
                           height: 150,
                           child: Center(
                             child: Text(
-                              'QR unavailable. Retry when connected.',
+                              'QR unavailable. Reconnect, then use Refresh ticket above.',
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         ),

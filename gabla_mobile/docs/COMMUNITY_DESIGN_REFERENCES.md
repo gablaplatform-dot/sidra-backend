@@ -25,7 +25,7 @@ The previous oval artwork, capsule inputs and overlapping posting FAB were repla
 | Cinematic | Dark job-match treatment and concert imagery; media-first detail header | FocoTik media-first event creation, dark compact fields and section panels |
 | Orbit | Geometric organization marks, rectangular image strips, compact side-by-side detail | Compact tabbed creation workspace, 4px corners, actionable completion checklist |
 
-These are reference-based adaptations for Gabla's actual functionality, not copied designer artwork or claims of pixel-identical replicas. The original concert photograph was generated for Gabla; it is decorative and does not advertise a real event. Actual posts use their uploaded images/posters.
+These are reference-based adaptations for Gabla's actual functionality, not copied designer artwork or claims of pixel-identical replicas. The generated concert and category artwork was removed on 5 November 2026 at the owner’s request. Navigation and missing-media states now use icons. Actual posts use their uploaded images/posters.
 
 Location entry supports debounced Google suggestions, selecting a resolved place, address search, choosing a Google Maps pin, and a complete typed address. Editing the address clears stale coordinates. Locations are required for posting. Search/pin interactions use the existing native Maps setup and map mode switcher.
 

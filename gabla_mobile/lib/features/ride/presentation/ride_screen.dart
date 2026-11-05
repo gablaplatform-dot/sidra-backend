@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/font_group.dart';
+import '../../../core/theme/style_tokens.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/location/google_place_picker.dart';
 import '../../../core/location/journey_map.dart';
@@ -26,12 +27,15 @@ class _RideScreenState extends ConsumerState<RideScreen> {
   final _phone = TextEditingController();
   String _payment = 'cash';
   bool _locating = false;
-  double _sheetExtent = .48;
+  double _sheetExtent = .42;
   @override
   void dispose() {
     _phone.dispose();
     super.dispose();
   }
+
+  double get _radius =>
+      Theme.of(context).extension<StyleTokens>()?.cardRadius ?? 8;
 
   RideFlowController get flow => ref.read(rideFlowControllerProvider.notifier);
   Future<void> _place(bool pickup) async {
@@ -94,20 +98,29 @@ class _RideScreenState extends ConsumerState<RideScreen> {
     final driver = s.trip?.driver;
     final titles = switch (s.stage) {
       RideStage.setup => (
-        'Where to\nnext?',
-        'A boda for the quick trips. A car for everything else.',
+        'Where are you going?',
+        'Set your pickup and destination to compare fares.',
       ),
       RideStage.choosing => (
-        'Your route.\nYour ride.',
-        'Compare real fares, then choose how you move.',
+        'Choose your ride',
+        'Estimated fares for your route. Choose how to pay below.',
       ),
       RideStage.confirming => (
-        'Meet your\ndriver.',
-        'Review the match before confirming your journey.',
+        'Confirm your driver',
+        'Check the driver, vehicle and fare before confirming.',
       ),
       RideStage.live => (
         rideStatusLabel(s.trip?.status ?? 'searching'),
-        'Your journey, with every update in one place.',
+        switch (s.trip?.status) {
+          'completed' => 'Your ride is complete. Review the fare below.',
+          'no_drivers_found' => 'Try requesting a ride again in a few minutes.',
+          'cancelled_by_rider' ||
+          'cancelled_by_driver' => 'You can book another ride below.',
+          'searching' => 'Waiting for a driver to accept your request.',
+          'arrived' => 'Check the vehicle details before getting in.',
+          'in_progress' => 'Follow your journey on the map.',
+          _ => 'Driver and journey details are shown below.',
+        },
       ),
     };
     final c = Theme.of(context).colorScheme;
@@ -135,10 +148,10 @@ class _RideScreenState extends ConsumerState<RideScreen> {
         ),
         title: Material(
           color: c.surface,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(_radius),
           child: const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Text('Get Ride', style: TextStyle(fontSize: 16)),
+            child: Text('Get a ride', style: TextStyle(fontSize: 16)),
           ),
         ),
         actions: [
@@ -217,21 +230,16 @@ class _RideScreenState extends ConsumerState<RideScreen> {
                 return false;
               },
               child: DraggableScrollableSheet(
-                initialChildSize: .48,
-                minChildSize: .24,
+                initialChildSize: .42,
+                minChildSize: .20,
                 maxChildSize: .9,
                 snap: true,
-                snapSizes: const [.24, .48, .9],
+                snapSizes: const [.20, .42, .9],
                 builder: (context, controller) => Material(
                   color: c.surface,
                   elevation: 18,
                   borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(switch (style) {
-                      AppThemeStyle.editorial => 8,
-                      AppThemeStyle.cinematic => 18,
-                      AppThemeStyle.orbit => 40,
-                      _ => 30,
-                    }),
+                    top: Radius.circular(_radius),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: ListView(
@@ -254,23 +262,12 @@ class _RideScreenState extends ConsumerState<RideScreen> {
                           ),
                         ),
                       ),
-                      Text(
-                        titles.$1.replaceAll('\n', ' '),
-                        style: AppTypography.of(context).display(
-                          size: style == AppThemeStyle.editorial ? 30 : 26,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        titles.$2,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: c.onSurfaceVariant,
-                        ),
-                      ),
+                      _heading(s, style, titles.$1, titles.$2),
                       const SizedBox(height: 16),
-                      _progress(s.stage),
-                      const SizedBox(height: 20),
+                      if (s.stage != RideStage.setup) ...[
+                        _routeSummary(s),
+                        const SizedBox(height: 16),
+                      ],
                       MobilityStageSwitcher(
                         style: style,
                         stageKey: s.stage.name,
@@ -284,9 +281,12 @@ class _RideScreenState extends ConsumerState<RideScreen> {
                       if (s.error != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 12),
-                          child: Text(
-                            s.error!,
-                            style: TextStyle(color: c.error),
+                          child: Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              s.error!,
+                              style: TextStyle(color: c.error),
+                            ),
                           ),
                         ),
                     ],
@@ -300,6 +300,108 @@ class _RideScreenState extends ConsumerState<RideScreen> {
     );
   }
 
+  Widget _heading(
+    RideFlowState s,
+    AppThemeStyle style,
+    String title,
+    String subtitle,
+  ) {
+    final c = Theme.of(context).colorScheme;
+    final text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: AppTypography.of(
+            context,
+          ).display(size: style == AppThemeStyle.editorial ? 28 : 24),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 12,
+            height: 1.4,
+            color: c.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+    return switch (style) {
+      AppThemeStyle.editorial => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          text,
+          const SizedBox(height: 12),
+          Divider(color: c.onSurface, thickness: 2),
+        ],
+      ),
+      AppThemeStyle.cinematic => Container(
+        padding: const EdgeInsets.only(left: 14),
+        decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: c.primary, width: 3)),
+        ),
+        child: text,
+      ),
+      AppThemeStyle.orbit => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            backgroundColor: c.primaryContainer,
+            foregroundColor: c.onPrimaryContainer,
+            child: Icon(switch (s.stage) {
+              RideStage.setup => Icons.route_outlined,
+              RideStage.choosing => Icons.directions_car_outlined,
+              RideStage.confirming => Icons.person_outline,
+              RideStage.live => Icons.near_me_outlined,
+            }),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: text),
+        ],
+      ),
+      AppThemeStyle.discover => text,
+      AppThemeStyle.gabla => Column(
+        children: [text, const SizedBox(height: 12), _progress(s.stage)],
+      ),
+    };
+  }
+
+  Widget _routeSummary(RideFlowState s) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(_radius),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final stop in [
+          (Icons.trip_origin, s.pickup?.address),
+          (Icons.location_on_outlined, s.dropoff?.address),
+        ])
+          if (stop.$2 != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  Icon(stop.$1, size: 16),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      stop.$2!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+      ],
+    ),
+  );
+
   Widget _progress(RideStage stage) => Row(
     children: [
       for (var i = 0; i < 4; i++)
@@ -307,7 +409,9 @@ class _RideScreenState extends ConsumerState<RideScreen> {
           child: Padding(
             padding: const EdgeInsets.only(right: 5),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
+              duration: Duration(
+                milliseconds: MediaQuery.disableAnimationsOf(context) ? 0 : 300,
+              ),
               height: 3,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
@@ -323,9 +427,9 @@ class _RideScreenState extends ConsumerState<RideScreen> {
   Widget _setup(RideFlowState s) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      JourneyField(
+      _locationField(
         label: 'Pickup',
-        value: s.pickup?.address ?? 'Choose your starting point',
+        value: s.pickup?.address ?? 'Choose pickup',
         icon: Icons.trip_origin,
         onTap: () => _place(true),
         trailing: IconButton(
@@ -342,14 +446,9 @@ class _RideScreenState extends ConsumerState<RideScreen> {
       ),
       Padding(
         padding: const EdgeInsets.only(left: 24),
-        child: Container(
-          height: 18,
-          width: 1,
-          alignment: Alignment.centerLeft,
-          child: const Icon(Icons.more_vert, size: 16),
-        ),
+        child: Container(height: 8, width: 1, alignment: Alignment.centerLeft),
       ),
-      JourneyField(
+      _locationField(
         label: 'Destination',
         value: s.dropoff?.address ?? 'Where are you going?',
         icon: Icons.location_on_outlined,
@@ -365,7 +464,7 @@ class _RideScreenState extends ConsumerState<RideScreen> {
       ),
       const SizedBox(height: 12),
       const Text(
-        'Choose exact locations with search or a satellite map pin.',
+        'Search for a place or tap the map to set a location.',
         textAlign: TextAlign.center,
         style: TextStyle(fontSize: 11, height: 1.5),
       ),
@@ -381,10 +480,10 @@ class _RideScreenState extends ConsumerState<RideScreen> {
       children: [
         Row(
           children: [
-            Expanded(
+            const Expanded(
               child: Text(
-                'Choose your ride',
-                style: Theme.of(context).textTheme.titleLarge,
+                'Estimated fares',
+                style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
             TextButton(
@@ -393,7 +492,14 @@ class _RideScreenState extends ConsumerState<RideScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
+        if (options.isEmpty) ...[
+          const Text('No fares available for this route.'),
+          TextButton(
+            onPressed: s.loading ? null : flow.fetchEstimates,
+            child: const Text('Retry fares'),
+          ),
+        ],
         if (style == AppThemeStyle.discover || style == AppThemeStyle.orbit)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -411,7 +517,7 @@ class _RideScreenState extends ConsumerState<RideScreen> {
         else
           ...options,
         const SizedBox(height: 20),
-        Text('Pay your way', style: Theme.of(context).textTheme.titleMedium),
+        Text('Payment', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
@@ -446,7 +552,9 @@ class _RideScreenState extends ConsumerState<RideScreen> {
         const SizedBox(height: 20),
         _button(
           'Request ${s.vehicleType == 'boda' ? 'boda boda' : 'car'}',
-          s.loading
+          s.loading ||
+                  s.vehicleType == null ||
+                  !s.estimates.containsKey(s.vehicleType)
               ? null
               : () {
                   if (!ref.read(isSignedInProvider)) {
@@ -475,56 +583,160 @@ class _RideScreenState extends ConsumerState<RideScreen> {
     );
   }
 
+  Widget _locationField({
+    required String label,
+    required String value,
+    required IconData icon,
+    required VoidCallback onTap,
+    Widget? trailing,
+  }) => Material(
+    color: Theme.of(context).colorScheme.surfaceContainerLow,
+    borderRadius: BorderRadius.circular(_radius),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(_radius),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    value,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            trailing ?? const Icon(Icons.chevron_right, size: 20),
+          ],
+        ),
+      ),
+    ),
+  );
+
   Widget _vehicle(RideFlowState s, String t, AppThemeStyle style) {
     final selected = s.vehicleType == t,
         e = s.estimates[t]!,
         c = Theme.of(context).colorScheme;
-    final tile = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: c.primary.withValues(alpha: .09),
-                borderRadius: BorderRadius.circular(18),
+    final horizontal =
+        style == AppThemeStyle.discover || style == AppThemeStyle.orbit;
+    final name = Text(
+      t == 'boda' ? 'Boda boda' : 'Car',
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+    );
+    final detail = Text(
+      [
+        if (e.distanceKm != null) '${e.distanceKm!.toStringAsFixed(1)} km',
+        if (e.durationMin != null) '${e.durationMin} min journey',
+      ].join(' · '),
+      style: TextStyle(fontSize: 11, color: c.onSurfaceVariant),
+    );
+    final price = Text(
+      formatUgx(e.fare),
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+    );
+    final tile = horizontal
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: c.primary.withValues(alpha: .09),
+                      borderRadius: BorderRadius.circular(_radius),
+                    ),
+                    child: Icon(
+                      t == 'boda'
+                          ? Icons.two_wheeler
+                          : Icons.directions_car_filled,
+                      size: 34,
+                      color: c.primary,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    selected ? Icons.check_circle : Icons.circle_outlined,
+                    color: selected ? c.primary : c.outline,
+                    size: 20,
+                  ),
+                ],
               ),
-              child: Icon(
+              const SizedBox(height: 12),
+              Text(
+                t == 'boda' ? 'Boda boda' : 'Car',
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                [
+                  if (e.distanceKm != null)
+                    '${e.distanceKm!.toStringAsFixed(1)} km',
+                  if (e.durationMin != null) '${e.durationMin} min journey',
+                ].join(' · '),
+                style: TextStyle(fontSize: 11, color: c.onSurfaceVariant),
+              ),
+              const SizedBox(height: 9),
+              Text(
+                formatUgx(e.fare),
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          )
+        : Row(
+            children: [
+              Icon(
                 t == 'boda' ? Icons.two_wheeler : Icons.directions_car_filled,
-                size: 34,
+                size: 30,
                 color: c.primary,
               ),
-            ),
-            const Spacer(),
-            Icon(
-              selected ? Icons.check_circle : Icons.circle_outlined,
-              color: selected ? c.primary : c.outline,
-              size: 20,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Text(
-          t == 'boda' ? 'Boda boda' : 'Gabla Car',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          [
-            if (e.distanceKm != null) '${e.distanceKm!.toStringAsFixed(1)} km',
-            if (e.durationMin != null) '${e.durationMin} min journey',
-          ].join(' · '),
-          style: TextStyle(fontSize: 11, color: c.onSurfaceVariant),
-        ),
-        const SizedBox(height: 9),
-        Text(
-          formatUgx(e.fare),
-          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
-        ),
-      ],
-    );
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    name,
+                    const SizedBox(height: 4),
+                    detail,
+                    const SizedBox(height: 6),
+                    price,
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                selected ? Icons.check_circle : Icons.circle_outlined,
+                color: selected ? c.primary : c.outline,
+                size: 22,
+              ),
+            ],
+          );
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: AnimatedContainer(
@@ -533,25 +745,23 @@ class _RideScreenState extends ConsumerState<RideScreen> {
         ),
         decoration: BoxDecoration(
           color: selected ? c.primary.withValues(alpha: .08) : c.surface,
-          borderRadius: BorderRadius.circular(
-            style == AppThemeStyle.editorial
-                ? 4
-                : style == AppThemeStyle.orbit
-                ? 28
-                : 18,
-          ),
+          borderRadius: BorderRadius.circular(_radius),
           border: Border.all(
             color: selected ? c.primary : c.outlineVariant,
             width: selected ? 2 : 1,
           ),
         ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: () {
-            HapticFeedback.selectionClick();
-            flow.selectVehicle(t);
-          },
-          child: Padding(padding: const EdgeInsets.all(16), child: tile),
+        child: Semantics(
+          selected: selected,
+          button: true,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(_radius),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              flow.selectVehicle(t);
+            },
+            child: Padding(padding: const EdgeInsets.all(16), child: tile),
+          ),
         ),
       ),
     );
@@ -632,7 +842,7 @@ class _RideScreenState extends ConsumerState<RideScreen> {
             child: Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(_radius),
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
               ),
               child: Row(
@@ -671,12 +881,7 @@ class _RideScreenState extends ConsumerState<RideScreen> {
               : Icons.route,
         ),
         const SizedBox(height: 12),
-        Text(
-          rideStatusLabel(trip.status),
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 20),
+
         if (trip.driver != null) _driver(s),
         const SizedBox(height: 16),
         Text(

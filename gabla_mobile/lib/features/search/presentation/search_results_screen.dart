@@ -29,15 +29,16 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
 
   void _search() {
     setState(() => _query = _controller.text.trim());
-    if (_query.isNotEmpty)
+    if (_query.isNotEmpty) {
       trackCommerce(ref, {'type': 'search', 'query': _query});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final result = ref.watch(searchResultsProvider(_query));
     return Scaffold(
-      appBar: const CommerceAppBar(title: 'Find it on Gabla'),
+      appBar: const CommerceAppBar(title: 'Search Gabla'),
       body: ListView(
         padding: const EdgeInsets.all(18),
         children: [
@@ -59,21 +60,22 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
           const SizedBox(height: 16),
           if (_query.isEmpty) ...[
             const DiscoveryHeader(
-              title: 'What are you\nlooking for?',
+              title: 'Find products and services',
+              showArtwork: false,
               subtitle:
-                  'Discover a good find, a trusted professional, or a business nearby.',
+                  'Search by product, service or business name. Use Nearby to search around a location.',
             ),
-            const CommerceTitle('Start exploring'),
+            const CommerceTitle('Browse by section'),
             for (final item in [
               ('Shop products', '/shop', Icons.shopping_bag_outlined),
-              ('Explore services', '/services', Icons.design_services_outlined),
+              ('Browse services', '/services', Icons.design_services_outlined),
               ('Search nearby', '/nearby', Icons.map_outlined),
             ])
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: ListTile(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   tileColor: Theme.of(context).colorScheme.surfaceContainerLow,
                   leading: Icon(item.$3),
@@ -91,7 +93,7 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
                     'All',
                     'Products',
                     'Services',
-                    'Providers',
+                    'Businesses',
                     'Categories',
                   ])
                     Padding(
@@ -106,6 +108,11 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            Text(
+              'Results for “$_query”',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 12),
             AsyncValueView(
               value: result,
               onRetry: () => ref.invalidate(searchResultsProvider(_query)),
@@ -118,7 +125,7 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
                           (_tab == 'Services' && p.type == 'service'),
                     )
                     .toList();
-                final providers = _tab == 'All' || _tab == 'Providers'
+                final providers = _tab == 'All' || _tab == 'Businesses'
                     ? r.providers
                     : r.providers.take(0).toList();
                 final categories = _tab == 'All' || _tab == 'Categories'
@@ -128,7 +135,7 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
                   return CommerceEmpty(
                     title: 'Try another search',
                     message:
-                        'No matches for “$_query” in this section. Try a broader term.',
+                        'No matches for “$_query” in this section. Try another name or check the spelling.',
                     action: 'Browse services',
                     onAction: () => context.push('/services'),
                     icon: Icons.search_off,

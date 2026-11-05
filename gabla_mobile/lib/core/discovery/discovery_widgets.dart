@@ -1,3 +1,4 @@
+import '../widgets/feature_visual.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,121 +15,104 @@ class DiscoveryHeader extends ConsumerWidget {
     super.key,
     required this.title,
     required this.subtitle,
-    this.eyebrow = 'GABLA / DISCOVER',
+    this.eyebrow = '',
     this.artwork = 'services',
+    this.showArtwork = true,
     this.child,
   });
   final String title, subtitle, eyebrow, artwork;
+  final bool showArtwork;
   final Widget? child;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final style = commerceStyle(ref), c = Theme.of(context).colorScheme;
+    final style = commerceStyle(ref), theme = Theme.of(context);
+    final radius = switch (style) {
+      AppThemeStyle.editorial => 0.0,
+      AppThemeStyle.orbit => 4.0,
+      AppThemeStyle.cinematic => 6.0,
+      AppThemeStyle.gabla => 8.0,
+      AppThemeStyle.discover => 12.0,
+    };
     final words = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          eyebrow,
-          style: TextStyle(
-            fontSize: 9,
-            letterSpacing: 2,
-            color: style == AppThemeStyle.discover ? Colors.white70 : c.primary,
+        if (eyebrow.isNotEmpty) ...[
+          Text(
+            eyebrow,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.primary,
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 8),
+        ],
         Text(
-          title,
-          style: AppTypography.of(context).display(
-            size: style == AppThemeStyle.editorial ? 38 : 32,
-            color: style == AppThemeStyle.discover ? Colors.white : c.onSurface,
-          ),
+          title.replaceAll('\n', ' '),
+          style: AppTypography.of(
+            context,
+          ).display(size: style == AppThemeStyle.editorial ? 30 : 27),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         Text(
           subtitle,
-          style: TextStyle(
-            fontSize: 12,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
             height: 1.5,
-            color: style == AppThemeStyle.discover
-                ? Colors.white70
-                : c.onSurfaceVariant,
           ),
         ),
       ],
     );
-    final image = Image.asset('assets/artwork/$artwork.png', fit: BoxFit.cover);
+    final image = ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: FeatureVisual(kind: artwork),
+    );
     return DesignEntrance(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          switch (style) {
-            AppThemeStyle.discover => ClipRRect(
-              borderRadius: BorderRadius.circular(30),
-              child: Stack(
+          if (!showArtwork)
+            words
+          else
+            switch (style) {
+              AppThemeStyle.orbit => LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth < 350 ||
+                      MediaQuery.textScalerOf(context).scale(1) > 1.2) {
+                    return words;
+                  }
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: words),
+                      const SizedBox(width: 16),
+                      SizedBox(width: 92, height: 112, child: image),
+                    ],
+                  );
+                },
+              ),
+              AppThemeStyle.editorial => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [words, const Divider(height: 26)],
+              ),
+              AppThemeStyle.discover => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(height: 270, width: double.infinity, child: image),
-                  const Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.black87, Colors.transparent],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(padding: const EdgeInsets.all(24), child: words),
+                  SizedBox(height: 140, child: image),
+                  const SizedBox(height: 16),
+                  words,
                 ],
               ),
-            ),
-            AppThemeStyle.editorial => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                words,
-                const Divider(height: 28),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(5),
-                  child: SizedBox(height: 140, child: image),
-                ),
-              ],
-            ),
-            AppThemeStyle.cinematic => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                words,
-                const SizedBox(height: 22),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(height: 180, child: image),
-                ),
-              ],
-            ),
-            AppThemeStyle.orbit => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                words,
-                const SizedBox(height: 18),
-                Center(
-                  child: ClipOval(
-                    child: SizedBox(width: 240, height: 170, child: image),
-                  ),
-                ),
-              ],
-            ),
-            _ => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: SizedBox(height: 170, child: image),
-                ),
-                const SizedBox(height: 22),
-                words,
-              ],
-            ),
-          },
+              AppThemeStyle.cinematic => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  words,
+                  const SizedBox(height: 16),
+                  SizedBox(height: 150, child: image),
+                ],
+              ),
+              AppThemeStyle.gabla => words,
+            },
           if (child != null)
-            Padding(padding: const EdgeInsets.only(top: 20), child: child!),
+            Padding(padding: const EdgeInsets.only(top: 18), child: child!),
         ],
       ),
     );
@@ -148,7 +132,7 @@ class ProviderDiscoveryCard extends ConsumerWidget {
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(6),
               child: SizedBox(
                 width: 64,
                 height: 64,
@@ -212,7 +196,7 @@ class ListingDiscoveryCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(6),
               child: SizedBox(
                 width: 80,
                 height: 90,

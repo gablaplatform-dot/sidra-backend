@@ -483,7 +483,8 @@ void main() {
             });
           }
           if (screen == 'ride') expect(find.text('See fares'), findsOneWidget);
-          if (screen == 'bus') expect(find.text('Find my bus'), findsOneWidget);
+          if (screen == 'bus')
+            expect(find.text('Search buses'), findsOneWidget);
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
         });

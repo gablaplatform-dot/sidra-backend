@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/app_theme_style.dart';
 import '../../../core/utils/money.dart';
 import '../../shop/domain/product.dart';
 import '../../shop/application/shop_providers.dart';
@@ -22,7 +21,6 @@ class CartScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartControllerProvider);
     final products = ref.watch(cartProductsProvider);
-    final style = commerceStyle(ref);
     final total = products.valueOrNull?.entries.fold<double>(
       0,
       (sum, e) => sum + e.value.price * (cart[e.key] ?? 0),
@@ -31,20 +29,18 @@ class CartScreen extends ConsumerWidget {
     for (final p in products.valueOrNull?.values ?? <Product>[]) {
       bySeller.putIfAbsent(p.providerId ?? 'unavailable', () => []).add(p);
     }
-    return Scaffold(
+    return CommerceScaffold(
       appBar: CommerceAppBar(
-        title: style == AppThemeStyle.editorial
-            ? 'The shopping list'
-            : 'Your shopping bag',
+        title: 'Cart',
         actions: [
           if (cart.isNotEmpty)
             IconButton(
-              tooltip: 'Empty bag',
+              tooltip: 'Clear cart',
               onPressed: () async {
                 final clear = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('Empty your bag?'),
+                    title: const Text('Clear your cart?'),
                     content: const Text('All items will be removed.'),
                     actions: [
                       TextButton(
@@ -53,7 +49,7 @@ class CartScreen extends ConsumerWidget {
                       ),
                       FilledButton(
                         onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Empty bag'),
+                        child: const Text('Clear cart'),
                       ),
                     ],
                   ),
@@ -79,7 +75,7 @@ class CartScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${cart.values.fold(0, (n, v) => n + v)} items',
+                            'Items subtotal',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           Text(
@@ -97,7 +93,7 @@ class CartScreen extends ConsumerWidget {
                           ? () => context.push('/checkout')
                           : null,
                       icon: const Icon(Icons.arrow_forward, size: 18),
-                      label: const Text('Checkout'),
+                      label: const Text('Review order'),
                     ),
                   ],
                 ),
@@ -106,30 +102,28 @@ class CartScreen extends ConsumerWidget {
       body: cart.isEmpty
           ? Center(
               child: CommerceEmpty(
-                title: 'Room for a good find.',
+                title: 'Your cart is empty',
                 message:
-                    'Save something you love. Your shopping bag stays here until you’re ready.',
+                    'Add products from the shop, then review quantities and send an order to each seller.',
                 onAction: () => context.push('/shop'),
               ),
             )
           : ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                CommerceTitle(
-                  style == AppThemeStyle.orbit
-                      ? 'In your orbit.'
-                      : style == AppThemeStyle.cinematic
-                      ? 'Your selected finds.'
-                      : 'A few good choices.',
-                  subtitle:
-                      'Orders go directly to each seller. No payment is taken now.',
+                const CommerceFlowHeader(
+                  title: 'Review your items',
+                  message:
+                      'Items are grouped by seller. Delivery costs are arranged with each seller.',
+                  icon: Icons.shopping_cart_outlined,
                 ),
+                const SizedBox(height: 16),
                 products.when(
                   loading: () => const CommerceLoading(),
                   error: (e, _) => Column(
                     children: [
                       CommerceEmpty(
-                        title: 'Some items need another look',
+                        title: 'Couldn’t load cart items',
                         message:
                             'A listing may be unavailable. Retry or remove the item below.',
                         action: 'Retry listings',
@@ -199,7 +193,7 @@ class CartScreen extends ConsumerWidget {
                                     onRemove: () => ref
                                         .read(cartControllerProvider.notifier)
                                         .remove(p.id),
-                                    stacked: style == AppThemeStyle.discover,
+                                    stacked: false,
                                   ),
                                 ],
                                 const Divider(height: 24),
@@ -236,7 +230,7 @@ class CartScreen extends ConsumerWidget {
                 TextButton.icon(
                   onPressed: () => context.push('/shop'),
                   icon: const Icon(Icons.arrow_back, size: 16),
-                  label: const Text('Keep exploring'),
+                  label: const Text('Continue shopping'),
                 ),
                 const SizedBox(height: 20),
               ],
@@ -339,7 +333,7 @@ class QuantityStepper extends StatelessWidget {
     children: [
       IconButton(
         tooltip: 'Decrease quantity',
-        visualDensity: VisualDensity.compact,
+        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
         onPressed: quantity > 1 ? () => onChanged(quantity - 1) : null,
         icon: const Icon(Icons.remove, size: 16),
       ),
@@ -355,7 +349,7 @@ class QuantityStepper extends StatelessWidget {
       ),
       IconButton(
         tooltip: 'Increase quantity',
-        visualDensity: VisualDensity.compact,
+        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
         onPressed: quantity < 99 ? () => onChanged(quantity + 1) : null,
         icon: const Icon(Icons.add, size: 16),
       ),

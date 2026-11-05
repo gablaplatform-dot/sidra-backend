@@ -51,7 +51,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('1.5 seconds'), findsOneWidget);
-      await tester.tap(find.byTooltip('Increase interval'));
+      await tester.tap(find.byTooltip('Show images less often'));
       await tester.pumpAndSettle();
       expect(find.text('2.0 seconds'), findsOneWidget);
       final slider = tester.widget<Slider>(

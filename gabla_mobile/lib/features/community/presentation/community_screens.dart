@@ -103,6 +103,13 @@ class _CommunityHubScreenState extends ConsumerState<CommunityHubScreen> {
   final _search = TextEditingController();
   String _q = '', _category = '', _type = '', _workplace = '', _district = '';
   int _page = 1;
+  bool get filtered =>
+      [_q, _category, _type, _workplace, _district].any((v) => v.isNotEmpty);
+  void clearFilters() => setState(() {
+    _search.clear();
+    _q = _category = _type = _workplace = _district = '';
+    _page = 1;
+  });
   bool get event => widget.kind == 'events';
   String get endpoint => Uri(
     path:
@@ -183,8 +190,12 @@ class _CommunityHubScreenState extends ConsumerState<CommunityHubScreen> {
         ),
         body: private && !ref.watch(isSignedInProvider)
             ? CommerceEmpty(
-                title: 'Your ${widget.kind}, together',
-                message: 'Sign in to manage your posts and saved discoveries.',
+                title: widget.scope == 'saved'
+                    ? 'Saved ${widget.kind}'
+                    : 'My ${widget.kind}',
+                message: widget.scope == 'saved'
+                    ? 'Sign in to see posts you saved.'
+                    : 'Sign in to manage posts you created.',
                 action: 'Sign in',
                 onAction: () => communitySignIn(
                   context,
@@ -197,8 +208,29 @@ class _CommunityHubScreenState extends ConsumerState<CommunityHubScreen> {
                   ref.invalidate(communityEndpointProvider(endpoint));
                 },
                 child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
                   children: [
+                    if (private) ...[
+                      CommunityPageHeading(
+                        style: style,
+                        eyebrow: widget.scope == 'saved'
+                            ? 'Saved posts'
+                            : 'Your posts',
+                        title: widget.scope == 'saved'
+                            ? 'Saved ${widget.kind}'
+                            : 'My ${widget.kind}',
+                        description: widget.scope == 'saved'
+                            ? event
+                                  ? 'Events you marked as interested or going.'
+                                  : 'Jobs and paid tasks you saved for later.'
+                            : 'Open a post to check its review status, edit details${event ? ' or cancel it.' : ', view applicants or close it.'}',
+                        icon: widget.scope == 'saved'
+                            ? Icons.bookmark_border
+                            : Icons.edit_outlined,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     if (!private) ...[
                       CommunityBrowseHeader(style: style, event: event),
                       const SizedBox(height: 22),
@@ -211,8 +243,8 @@ class _CommunityHubScreenState extends ConsumerState<CommunityHubScreen> {
                         decoration:
                             InputDecoration(
                               hintText: event
-                                  ? 'Artist, venue or event'
-                                  : 'Role, company or skill',
+                                  ? 'Event, organizer or keyword'
+                                  : 'Job, company or keyword',
                               prefixIcon: const Icon(Icons.search),
                               suffixIcon: IconButton(
                                 tooltip: 'Search',
@@ -296,6 +328,12 @@ class _CommunityHubScreenState extends ConsumerState<CommunityHubScreen> {
                                     'Workplace',
                                     type: 'select',
                                     options: ['', 'onsite', 'hybrid', 'remote'],
+                                    labels: {
+                                      '': 'Any workplace',
+                                      'onsite': 'On-site',
+                                      'hybrid': 'Hybrid',
+                                      'remote': 'Remote',
+                                    },
                                   ),
                               ],
                             );
@@ -310,6 +348,15 @@ class _CommunityHubScreenState extends ConsumerState<CommunityHubScreen> {
                         ),
                       ),
                     ],
+                    if (!private && filtered)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: clearFilters,
+                          icon: const Icon(Icons.close, size: 16),
+                          label: const Text('Clear search & filters'),
+                        ),
+                      ),
                     const SizedBox(height: 16),
                     AsyncValueView<Map<String, dynamic>>(
                       value: ref.watch(communityEndpointProvider(endpoint)),
@@ -324,6 +371,15 @@ class _CommunityHubScreenState extends ConsumerState<CommunityHubScreen> {
                           return CommunityEmptyState(
                             event: event,
                             private: private,
+                            scope: widget.scope,
+                            filtered: filtered,
+                            onAction: private
+                                ? () => widget.scope == 'saved'
+                                      ? context.push('/${widget.kind}')
+                                      : context.push('/${widget.kind}/new')
+                                : filtered
+                                ? clearFilters
+                                : null,
                           );
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -398,332 +454,246 @@ class CommunityPostCard extends StatelessWidget {
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
-    final event = post['kind'] == 'event', c = Theme.of(context).colorScheme;
+    final c = Theme.of(context).colorScheme;
+    final event = post['kind'] == 'event';
     final media = (post['media'] as List? ?? []).cast<Map>();
     final poster =
         media.where((m) => m['type'] == 'image').firstOrNull?['url'] as String?;
-    final picture = poster == null
-        ? (event
-              ? Image.asset(
-                  'assets/artwork/community-concert.png',
-                  fit: BoxFit.cover,
-                )
-              : ColoredBox(
-                  color: c.primaryContainer,
-                  child: Center(
-                    child: Text(
-                      '${post['organization'] ?? 'G'}'.isEmpty
-                          ? 'G'
-                          : '${post['organization'] ?? 'G'}'[0].toUpperCase(),
-                      style: TextStyle(
-                        color: c.onPrimaryContainer,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 38,
-                      ),
-                    ),
+    final organization = '${post['organization'] ?? ''}'.trim();
+    final location = '${post['district'] ?? ''}'.trim().isNotEmpty
+        ? '${post['district']}'
+        : '${post['address'] ?? ''}';
+    final metadata = event
+        ? eventDate(post)
+        : [
+            post['jobType'] == 'task'
+                ? 'Paid task'
+                : prettyCommunity(post['employmentType'] as String?),
+            prettyCommunity(post['workplace'] as String?),
+          ].where((v) => v.isNotEmpty).join(' · ');
+    Widget image(double height) => SizedBox(
+      height: height,
+      width: double.infinity,
+      child: Hero(
+        tag: 'community-${post['id']}',
+        child: poster == null
+            ? CommunityMediaPlaceholder(style: style, event: event)
+            : Image.network(
+                poster,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => ColoredBox(
+                  color: c.secondaryContainer,
+                  child: Icon(
+                    Icons.image_outlined,
+                    color: c.onSecondaryContainer,
                   ),
-                ))
-        : Image.network(
-            poster,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const Icon(Icons.image_outlined),
-          );
-    final radius = communityRadius(style);
-    Widget words({Color? ink}) => Column(
+                ),
+              ),
+      ),
+    );
+    Widget facts() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          '${post['organization'] ?? ''}'.isEmpty
-              ? (event ? 'LOCAL EVENT' : 'OPPORTUNITY')
-              : '${post['organization']}',
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.5,
-            color: ink ?? c.primary,
+        if (organization.isNotEmpty) ...[
+          Text(
+            organization,
+            style: TextStyle(
+              color: c.onSurfaceVariant,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        const SizedBox(height: 10),
+          const SizedBox(height: 7),
+        ],
         Text(
-          '${post['title']}',
+          '${post['title'] ?? ''}',
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
           style: AppTypography.of(
             context,
-          ).display(size: event ? 25 : 23, color: ink),
+          ).display(size: style == AppThemeStyle.cinematic ? 27 : 23),
         ),
         const SizedBox(height: 12),
-        Text(
-          event
-              ? eventDate(post)
-              : '${prettyCommunity(post['employmentType'] as String?)} · ${prettyCommunity(post['workplace'] as String?)}',
-          style: TextStyle(
-            fontSize: 12,
-            color: ink?.withValues(alpha: .85) ?? c.onSurfaceVariant,
+        if (metadata.isNotEmpty)
+          Text(
+            metadata,
+            style: TextStyle(
+              color: c.onSurfaceVariant,
+              fontSize: 13,
+              height: 1.5,
+            ),
           ),
-        ),
-        const SizedBox(height: 7),
-        Text(
-          '${post['district'] ?? ''}',
-          style: TextStyle(
-            fontSize: 12,
-            color: ink?.withValues(alpha: .8) ?? c.onSurfaceVariant,
+        if (location.isNotEmpty) ...[
+          const SizedBox(height: 7),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.place_outlined, size: 16, color: c.onSurfaceVariant),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  location,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: c.onSurfaceVariant,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 14),
+        ],
+        const SizedBox(height: 16),
         Text(
           communityPay(post),
           style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-            color: ink ?? c.primary,
+            color: c.primary,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
           ),
         ),
-        if (post['status'] != 'approved')
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Chip(
-              label: Text(prettyCommunity(post['status'] as String?)),
+        if (!event && communityPayPeriod(post).isNotEmpty) ...[
+          const SizedBox(height: 3),
+          Text(
+            communityPayPeriod(post),
+            style: TextStyle(color: c.onSurfaceVariant, fontSize: 12),
+          ),
+        ],
+        if ('${post['status'] ?? ''}'.isNotEmpty &&
+            post['status'] != 'approved') ...[
+          const SizedBox(height: 12),
+          Text(
+            'Status: ${prettyCommunity(post['status'] as String?)}',
+            style: TextStyle(
+              color: c.onSurfaceVariant,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
+        ],
       ],
     );
-    Widget content;
-    if (event && style == AppThemeStyle.discover) {
-      content = Stack(
-        children: [
-          SizedBox(
-            height: 350,
-            width: double.infinity,
-            child: Hero(tag: 'community-${post['id']}', child: picture),
-          ),
-          const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black87],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 22,
-            right: 22,
-            bottom: 22,
-            child: words(ink: Colors.white),
-          ),
-        ],
-      );
-    } else if (event && style == AppThemeStyle.editorial) {
-      content = Row(
-        children: [
-          Expanded(
-            child: SizedBox(
-              height: 285,
-              child: Hero(tag: 'community-${post['id']}', child: picture),
-            ),
-          ),
-          Expanded(
-            child: Padding(padding: const EdgeInsets.all(16), child: words()),
-          ),
-        ],
-      );
-    } else if (event && style == AppThemeStyle.orbit) {
-      content = Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: c.secondaryContainer,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  eventDate(post),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: c.onSecondaryContainer,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 90,
-                  height: 110,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: Hero(tag: 'community-${post['id']}', child: picture),
-                  ),
-                ),
-                const SizedBox(width: 18),
-                Expanded(child: words()),
-              ],
-            ),
-          ],
-        ),
-      );
-    } else if (event && style == AppThemeStyle.cinematic) {
-      content = Column(
+    final content = switch (style) {
+      AppThemeStyle.gabla => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            height: 330,
-            child: Hero(tag: 'community-${post['id']}', child: picture),
+          if (event) image(poster == null ? 72 : 180),
+          Padding(padding: const EdgeInsets.all(18), child: facts()),
+        ],
+      ),
+      AppThemeStyle.editorial => LayoutBuilder(
+        builder: (context, box) {
+          final sideImage =
+              event &&
+              poster != null &&
+              box.maxWidth >= 360 &&
+              MediaQuery.textScalerOf(context).scale(14) <= 18;
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: sideImage
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: facts()),
+                      const SizedBox(width: 18),
+                      SizedBox(width: 110, child: image(140)),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (event && poster != null) ...[
+                        image(180),
+                        const SizedBox(height: 16),
+                      ],
+                      facts(),
+                    ],
+                  ),
+          );
+        },
+      ),
+      AppThemeStyle.discover => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (poster != null) image(event ? 200 : 140),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: c.primary, width: 3)),
+            ),
+            child: facts(),
           ),
+        ],
+      ),
+      AppThemeStyle.cinematic => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (event && poster != null) image(240),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+            padding: const EdgeInsets.all(20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '${post['category'] ?? (event ? 'Event' : 'Job')}',
+                  style: TextStyle(
+                    color: c.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Divider(height: 26),
+                facts(),
+              ],
+            ),
+          ),
+        ],
+      ),
+      AppThemeStyle.orbit => Padding(
+        padding: const EdgeInsets.all(16),
+        child: LayoutBuilder(
+          builder: (context, box) {
+            if (box.maxWidth < 280 ||
+                MediaQuery.textScalerOf(context).scale(14) > 18)
+              return facts();
+            return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(width: 42, height: 3, color: c.primary),
-                const SizedBox(height: 20),
-                words(),
+                SizedBox(width: 58, child: image(event ? 76 : 58)),
+                const SizedBox(width: 14),
+                Expanded(child: facts()),
               ],
-            ),
-          ),
-        ],
-      );
-    } else if (event) {
-      content = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            height: style == AppThemeStyle.orbit ? 170 : 205,
-            child: Hero(tag: 'community-${post['id']}', child: picture),
-          ),
-          Padding(padding: const EdgeInsets.all(20), child: words()),
-        ],
-      );
-    } else if (style == AppThemeStyle.editorial) {
-      content = Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(width: 5, height: 92, color: c.primary),
-            const SizedBox(width: 22),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 22),
-                child: words(),
-              ),
-            ),
-          ],
+            );
+          },
         ),
-      );
-    } else if (style == AppThemeStyle.discover) {
-      content = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(height: 140, child: picture),
-          Padding(padding: const EdgeInsets.all(24), child: words()),
-        ],
-      );
-    } else if (style == AppThemeStyle.orbit) {
-      content = Padding(
-        padding: const EdgeInsets.all(22),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: c.secondaryContainer,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Icon(Icons.work_outline, color: c.onSecondaryContainer),
-            ),
-            const SizedBox(width: 18),
-            Expanded(child: words()),
-          ],
+      ),
+    };
+    return Semantics(
+      button: true,
+      child: Material(
+        color: style == AppThemeStyle.editorial
+            ? c.surface
+            : c.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(communityRadius(style)),
+          side: style == AppThemeStyle.orbit
+              ? BorderSide(color: c.outlineVariant)
+              : BorderSide.none,
         ),
-      );
-    } else if (style == AppThemeStyle.cinematic) {
-      content = Padding(
-        padding: const EdgeInsets.all(26),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              post['jobType'] == 'task'
-                  ? 'THE NEXT PROJECT'
-                  : 'THE NEXT CHAPTER',
-              style: TextStyle(
-                color: c.primary,
-                fontSize: 10,
-                letterSpacing: 2.5,
-              ),
-            ),
-            const Divider(height: 32),
-            words(),
-            const SizedBox(height: 24),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Icon(Icons.north_east, size: 32, color: c.primary),
-            ),
-          ],
-        ),
-      );
-    } else {
-      content = Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: c.primaryContainer,
-                    borderRadius: BorderRadius.circular(communityRadius(style)),
-                  ),
-                  child: Icon(
-                    post['jobType'] == 'task'
-                        ? Icons.handyman_outlined
-                        : Icons.work_outline,
-                    color: c.onPrimaryContainer,
-                  ),
-                ),
-                const Spacer(),
-                Chip(
-                  label: Text(
-                    post['jobType'] == 'task' ? 'Paid task' : 'Vacancy',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            words(),
-            if (style == AppThemeStyle.cinematic) ...[
-              const SizedBox(height: 18),
-              Divider(color: c.primary.withValues(alpha: .5)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              content,
+              if (style == AppThemeStyle.editorial) const Divider(height: 1),
             ],
-          ],
+          ),
         ),
-      );
-    }
-    return Material(
-      color: c.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(radius),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(onTap: onTap, child: content),
+      ),
     );
   }
 }
@@ -826,8 +796,10 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  Chip(label: Text('${post['category']}')),
-                  Chip(label: Text('${post['district'] ?? ''}')),
+                  if ('${post['category'] ?? ''}'.isNotEmpty)
+                    Chip(label: Text('${post['category']}')),
+                  if ('${post['district'] ?? ''}'.isNotEmpty)
+                    Chip(label: Text('${post['district']}')),
                   if (!event)
                     Chip(
                       label: Text(
@@ -847,11 +819,41 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   context,
                 ).display(size: 28, color: c.primary),
               ),
-              if (!event)
+              if (!event && communityPayPeriod(post).isNotEmpty)
                 Text(
-                  'per ${details['payPeriod'] ?? 'month'}',
+                  communityPayPeriod(post),
                   style: TextStyle(color: c.onSurfaceVariant),
                 ),
+              if (!event) ...[
+                const SizedBox(height: 18),
+                if ('${post['employmentType'] ?? ''}'.isNotEmpty)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.work_outline),
+                    title: Text(
+                      post['jobType'] == 'task'
+                          ? 'Paid task'
+                          : prettyCommunity(post['employmentType'] as String?),
+                    ),
+                    subtitle: Text(
+                      prettyCommunity(post['workplace'] as String?),
+                    ),
+                  ),
+                if ('${post['address'] ?? ''}'.isNotEmpty)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.place_outlined),
+                    title: Text('${post['address']}'),
+                  ),
+                if (deadline != null)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.schedule_outlined),
+                    title: Text(
+                      'Apply by ${DateFormat('d MMM yyyy').format(deadline.toLocal())}',
+                    ),
+                  ),
+              ],
               if (event) ...[
                 const SizedBox(height: 14),
                 ListTile(
@@ -867,6 +869,14 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                 if ('${details['ageRestriction'] ?? ''}'.isNotEmpty)
                   Text('${details['ageRestriction']}'),
               ],
+              if (event && ends != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Ends ${DateFormat('EEE, d MMM · HH:mm').format(ends.toLocal())}',
+                    style: TextStyle(color: c.onSurfaceVariant),
+                  ),
+                ),
               const SizedBox(height: 22),
               Text(
                 event ? 'About the event' : 'About this opportunity',
@@ -909,7 +919,11 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                               ),
                             ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(
+                          communityRadius(
+                            ref.watch(themeControllerProvider).style,
+                          ),
+                        ),
                         child: SizedBox(
                           width: 130,
                           child: media[i]['type'] == 'video'
@@ -1047,7 +1061,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                               return;
                             final form = await communityForm(
                               context,
-                              title: 'Introduce yourself',
+                              title: 'Apply for this job',
                               fields: const [
                                 WorkspaceField(
                                   'coverLetter',
@@ -1071,7 +1085,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                           },
                     child: Text(
                       post['myApplication'] != null
-                          ? 'Application ${post['myApplication']['status']}'
+                          ? 'Application: ${prettyCommunity(post['myApplication']['status'] as String?)}'
                           : 'Apply now',
                     ),
                   ),
@@ -1091,7 +1105,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   ),
                   label: Text(
                     post['myResponse'] != null
-                        ? 'Remove from saved'
+                        ? event && post['myResponse'] == 'going'
+                              ? 'Remove going response'
+                              : 'Remove from saved'
                         : 'Save for later',
                   ),
                 ),
@@ -1115,108 +1131,262 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
   );
 }
 
-class CommunityApplicationsScreen extends ConsumerWidget {
+class CommunityApplicationsScreen extends ConsumerStatefulWidget {
   const CommunityApplicationsScreen({super.key, this.postId});
   final String? postId;
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final endpoint = postId == null
-        ? '/jobs/applications/mine'
-        : '/jobs/$postId/applicants';
-    return Scaffold(
-      appBar: CommunityAppBar(
-        title: postId == null ? 'My applications' : 'Applicants',
-      ),
-      body: AsyncValueView<Map<String, dynamic>>(
-        value: ref.watch(communityEndpointProvider(endpoint)),
-        onRetry: () => ref.invalidate(communityEndpointProvider(endpoint)),
-        data: (context, data) {
-          final items = communityItems(data);
-          if (items.isEmpty)
-            return const CommerceEmpty(
-              title: 'No applications yet',
-              message:
-                  'Applications will appear here when someone takes the next step.',
-            );
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: items.map((application) {
-              final user = application['user'] as Map? ?? {};
-              final post = application['post'] as Map? ?? {};
-              final title = postId == null ? post['title'] : user['name'];
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$title',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 10),
-                      Text("${application['status']}"),
-                      if (postId != null) ...[
-                        Text("${user['email'] ?? ''}"),
-                        Text("${application['phone'] ?? ''}"),
-                        const SizedBox(height: 10),
-                        SelectableText("${application['coverLetter']}"),
-                        if ("${application['portfolioUrl'] ?? ''}".startsWith(
-                          'https://',
-                        ))
-                          TextButton(
-                            onPressed: () => launchUrl(
-                              Uri.parse("${application['portfolioUrl']}"),
-                              mode: LaunchMode.externalApplication,
+  ConsumerState<CommunityApplicationsScreen> createState() =>
+      _ApplicationsState();
+}
+
+class _ApplicationsState extends ConsumerState<CommunityApplicationsScreen> {
+  final _pending = <String>{};
+  String get endpoint => widget.postId == null
+      ? '/jobs/applications/mine'
+      : '/jobs/${widget.postId}/applicants';
+  Future<void> updateStatus(
+    Map<String, dynamic> application,
+    String status,
+  ) async {
+    final id = '${application['id']}';
+    if (_pending.contains(id)) return;
+    setState(() => _pending.add(id));
+    try {
+      await ref
+          .read(apiClientProvider)
+          .patch('/jobs/applications/$id', body: {'status': status});
+      ref.invalidate(communityEndpointProvider);
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => _pending.remove(id));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final style = ref.watch(themeControllerProvider).style;
+    final mine = widget.postId == null;
+    return CommunityDesignScope(
+      style: style,
+      child: Builder(
+        builder: (context) {
+          final c = Theme.of(context).colorScheme;
+          final title = mine ? 'My applications' : 'Applicants';
+          return Scaffold(
+            appBar: CommunityAppBar(title: title),
+            body: !ref.watch(isSignedInProvider)
+                ? CommerceEmpty(
+                    title: title,
+                    message: mine
+                        ? 'Sign in to view applications you sent.'
+                        : 'Sign in to review applications to your post.',
+                    action: 'Sign in',
+                    onAction: () => communitySignIn(
+                      context,
+                      ref,
+                      mine
+                          ? '/jobs/applications'
+                          : '/jobs/applicants/${widget.postId}',
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: () async =>
+                        ref.invalidate(communityEndpointProvider(endpoint)),
+                    child: AsyncValueView<Map<String, dynamic>>(
+                      value: ref.watch(communityEndpointProvider(endpoint)),
+                      onRetry: () =>
+                          ref.invalidate(communityEndpointProvider(endpoint)),
+                      data: (context, data) {
+                        final items = communityItems(data);
+                        return ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
+                          children: [
+                            CommunityPageHeading(
+                              style: style,
+                              eyebrow: mine ? 'Job search' : 'Your job post',
+                              title: title,
+                              description: mine
+                                  ? 'Check the status of applications you sent. Open a job to revisit its details.'
+                                  : 'Read each application and update its review status.',
+                              icon: Icons.assignment_outlined,
                             ),
-                            child: const Text('Open portfolio / CV'),
-                          ),
-                      ],
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          for (final status
-                              in postId == null
-                                  ? ['withdrawn']
-                                  : ['reviewed', 'shortlisted', 'declined'])
-                            if (application['status'] != 'withdrawn')
-                              OutlinedButton(
-                                onPressed: () async {
-                                  try {
-                                    await ref
-                                        .read(apiClientProvider)
-                                        .patch(
-                                          "/jobs/applications/${application['id']}",
-                                          body: {'status': status},
-                                        );
-                                    ref.invalidate(
-                                      communityEndpointProvider(endpoint),
-                                    );
-                                  } catch (e) {
-                                    if (context.mounted)
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(content: Text('$e')),
-                                      );
-                                  }
-                                },
-                                child: Text(
-                                  status == 'withdrawn'
-                                      ? 'Withdraw'
-                                      : prettyCommunity(status),
+                            const SizedBox(height: 24),
+                            if (items.isEmpty) ...[
+                              Icon(
+                                Icons.assignment_outlined,
+                                size: 28,
+                                color: c.primary,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No applications yet',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                mine
+                                    ? 'When you apply for a job or paid task, your application will appear here.'
+                                    : 'Applications to this post will appear here after people submit them.',
+                                style: TextStyle(
+                                  color: c.onSurfaceVariant,
+                                  height: 1.5,
                                 ),
                               ),
-                        ],
-                      ),
-                    ],
+                              const SizedBox(height: 18),
+                              OutlinedButton(
+                                onPressed: () => context.push(
+                                  mine ? '/jobs' : '/jobs/p/${widget.postId}',
+                                ),
+                                child: Text(
+                                  mine ? 'Browse jobs' : 'View job post',
+                                ),
+                              ),
+                            ] else ...[
+                              Text(
+                                '${items.length} ${items.length == 1 ? 'application' : 'applications'}',
+                                style: TextStyle(
+                                  color: c.onSurfaceVariant,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              for (var i = 0; i < items.length; i++)
+                                DesignEntrance(
+                                  index: i,
+                                  child: record(context, items[i], style, mine),
+                                ),
+                            ],
+                          ],
+                        );
+                      },
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
           );
         },
+      ),
+    );
+  }
+
+  Widget record(
+    BuildContext context,
+    Map<String, dynamic> application,
+    AppThemeStyle style,
+    bool mine,
+  ) {
+    final c = Theme.of(context).colorScheme;
+    final user = application['user'] as Map? ?? {};
+    final post = application['post'] as Map? ?? {};
+    final title = mine
+        ? '${post['title'] ?? 'Job unavailable'}'
+        : '${user['name'] ?? 'Applicant'}';
+    final date = DateTime.tryParse('${application['createdAt']}')?.toLocal();
+    final status = '${application['status'] ?? ''}';
+    final pending = _pending.contains('${application['id']}');
+    final actions = mine
+        ? {'withdrawn': 'Withdraw application'}
+        : {
+            'reviewed': 'Mark reviewed',
+            'shortlisted': 'Shortlist',
+            'declined': 'Decline',
+          };
+    return CommunityRecordSurface(
+      style: style,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            prettyCommunity(status),
+            style: TextStyle(
+              color: c.primary,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(title, style: AppTypography.of(context).display(size: 23)),
+          if (mine && '${post['organization'] ?? ''}'.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              '${post['organization']}',
+              style: TextStyle(color: c.onSurfaceVariant),
+            ),
+          ],
+          if (date != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Applied ${DateFormat('d MMM yyyy').format(date)}',
+              style: TextStyle(color: c.onSurfaceVariant, fontSize: 12),
+            ),
+          ],
+          if (!mine) ...[
+            const Divider(height: 28),
+            for (final contact in [
+              '${user['email'] ?? ''}',
+              '${application['phone'] ?? ''}',
+            ])
+              if (contact.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: SelectableText(contact),
+                ),
+            const SizedBox(height: 8),
+            Text(
+              'Application',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: c.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SelectableText(
+              '${application['coverLetter'] ?? ''}',
+              style: const TextStyle(height: 1.6),
+            ),
+            if ('${application['portfolioUrl'] ?? ''}'.startsWith('https://'))
+              TextButton.icon(
+                onPressed: () => launchUrl(
+                  Uri.parse('${application['portfolioUrl']}'),
+                  mode: LaunchMode.externalApplication,
+                ),
+                icon: const Icon(Icons.open_in_new, size: 16),
+                label: const Text('Open portfolio / CV'),
+              ),
+          ],
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (mine && post['id'] != null)
+                TextButton.icon(
+                  onPressed: () => context.push('/jobs/p/${post['id']}'),
+                  icon: const Icon(Icons.arrow_forward, size: 16),
+                  label: const Text('View job'),
+                ),
+              if (status != 'withdrawn')
+                for (final action in actions.entries)
+                  OutlinedButton(
+                    onPressed: pending || status == action.key
+                        ? null
+                        : () => updateStatus(application, action.key),
+                    child: Text(action.value),
+                  ),
+            ],
+          ),
+          if (pending)
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: Text(
+                'Updating application…',
+                semanticsLabel: 'Updating application',
+              ),
+            ),
+        ],
       ),
     );
   }

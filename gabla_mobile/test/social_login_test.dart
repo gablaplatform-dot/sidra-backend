@@ -1,3 +1,4 @@
+import 'helpers/load_test_fonts.dart';
 import 'dart:io';
 import 'dart:async';
 import 'dart:ui' as ui;
@@ -55,6 +56,7 @@ class TokenRepository extends AuthRepository {
 }
 
 void main() {
+  setUpAll(loadTestFonts);
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     for (final entry in {
@@ -194,12 +196,7 @@ void main() {
           if (!reduced) {
             await tester.runAsync(() async {
               final context = key.currentContext!;
-              for (final asset in [
-                'assets/brand/icon-only.png',
-                'assets/artwork/shop.png',
-                'assets/artwork/ride.png',
-                'assets/artwork/services.png',
-              ]) {
+              for (final asset in ['assets/brand/icon-only.png']) {
                 await precacheImage(AssetImage(asset), context);
               }
             });

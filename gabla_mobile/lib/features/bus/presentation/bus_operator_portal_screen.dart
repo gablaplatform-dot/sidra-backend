@@ -1,3 +1,4 @@
+import 'bus_design_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -184,7 +185,7 @@ class _BusOperatorPortalScreenState
     final today = d['today'] as Map? ?? {}, month = d['month'] as Map? ?? {};
     return [
       Text(
-        'Every journey\nstarts with you.',
+        'Company overview',
         style: Theme.of(context).textTheme.headlineLarge,
       ),
       const SizedBox(height: 20),
@@ -206,14 +207,14 @@ class _BusOperatorPortalScreenState
           ])
             SizedBox(
               width: (MediaQuery.sizeOf(context).width - 48) / 2,
-              child: CommercePanel(
+              child: BusPanel(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       e.$1,
                       style: const TextStyle(
-                        fontSize: 22,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -226,7 +227,7 @@ class _BusOperatorPortalScreenState
         ],
       ),
       const CommerceTitle('This month'),
-      CommercePanel(
+      BusPanel(
         child: Text(
           '${month['tickets'] ?? 0} tickets · ${formatUgx(num.tryParse('${month['revenue'] ?? 0}'))} revenue',
         ),
@@ -252,14 +253,14 @@ class _BusOperatorPortalScreenState
     const SizedBox(height: 18),
     if (workspaceItems(d).isEmpty)
       const CommerceEmpty(
-        title: 'Where will you take them?',
+        title: 'No routes yet',
         message: 'Create a route with ticket prices and departure times.',
         icon: Icons.route_outlined,
       ),
     for (final r in workspaceItems(d))
       Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: CommercePanel(
+        child: BusPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -437,7 +438,7 @@ class _BusOperatorPortalScreenState
     for (final s in workspaceItems(d))
       Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: CommercePanel(
+        child: BusPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -490,7 +491,7 @@ class _BusOperatorPortalScreenState
       ),
     if (workspaceItems(d).isEmpty)
       const CommerceEmpty(
-        title: 'A timetable that works for you',
+        title: 'No departure schedules',
         message: 'Create a schedule for a route to generate future trips.',
         icon: Icons.schedule_outlined,
       ),
@@ -516,7 +517,7 @@ class _BusOperatorPortalScreenState
         WorkspaceField('name', 'Schedule label', value: old?['name']),
         WorkspaceField(
           'departureTime',
-          'Departure time (HH:mm)',
+          'Time in EAT (HH:mm)',
           required: true,
           value: old?['departureTime'] ?? '07:00',
         ),
@@ -570,7 +571,7 @@ class _BusOperatorPortalScreenState
     const SizedBox(height: 18),
     if (workspaceItems(d).isEmpty)
       const CommerceEmpty(
-        title: 'Your next departure awaits',
+        title: 'No trips yet',
         message: 'Scheduled and one-off departures will appear here.',
         icon: Icons.directions_bus_outlined,
       ),
@@ -579,7 +580,7 @@ class _BusOperatorPortalScreenState
         padding: const EdgeInsets.only(bottom: 12),
         child: InkWell(
           onTap: () => context.push('/bus/operator/trips/${t['id']}'),
-          child: CommercePanel(
+          child: BusPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -626,7 +627,7 @@ class _BusOperatorPortalScreenState
         ),
         const WorkspaceField(
           'time',
-          'Departure time (HH:mm)',
+          'Time in EAT (HH:mm)',
           required: true,
           value: '07:00',
         ),
@@ -739,6 +740,8 @@ class _BusOperatorPortalScreenState
       ],
     ),
     const CommerceTitle('Passenger manifest'),
+    if ((t['passengers'] as List? ?? []).isEmpty)
+      const Text('No passengers are listed for this trip yet.'),
     for (final p in t['passengers'] as List? ?? [])
       ListTile(
         contentPadding: EdgeInsets.zero,
@@ -766,14 +769,14 @@ class _BusOperatorPortalScreenState
   List<Widget> _bookings(dynamic d) => [
     if (workspaceItems(d).isEmpty)
       const CommerceEmpty(
-        title: 'Welcome your next passenger',
+        title: 'No bookings yet',
         message: 'Confirmed bookings and passenger details will appear here.',
         icon: Icons.confirmation_number_outlined,
       ),
     for (final b in workspaceItems(d))
       Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: CommercePanel(
+        child: BusPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -797,10 +800,7 @@ class _BusOperatorPortalScreenState
       ),
   ];
   List<Widget> _tickets() => [
-    Text(
-      'A smooth start\nto every journey.',
-      style: Theme.of(context).textTheme.headlineLarge,
-    ),
+    Text('Verify a ticket', style: Theme.of(context).textTheme.headlineLarge),
     const SizedBox(height: 14),
     const Text(
       'Enter the ticket number to verify it before the passenger boards.',
@@ -808,6 +808,7 @@ class _BusOperatorPortalScreenState
     const SizedBox(height: 24),
     TextField(
       controller: _ticket,
+      enabled: !_busy,
       textCapitalization: TextCapitalization.characters,
       decoration: const InputDecoration(
         labelText: 'Ticket number',
@@ -820,7 +821,7 @@ class _BusOperatorPortalScreenState
       child: const Text('Verify ticket'),
     ),
     if (_verified != null)
-      CommercePanel(
+      BusPanel(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -864,7 +865,7 @@ class _BusOperatorPortalScreenState
   List<Widget> _customers(dynamic d) => [
     if (workspaceItems(d).isEmpty)
       const CommerceEmpty(
-        title: 'A growing travel community',
+        title: 'No passengers yet',
         message: 'Your passengers and their journey history will appear here.',
         icon: Icons.people_outline,
       ),
@@ -917,14 +918,14 @@ class _BusOperatorPortalScreenState
     const SizedBox(height: 16),
     if (workspaceItems(d).isEmpty)
       const CommerceEmpty(
-        title: 'Keep passengers in the loop',
+        title: 'No announcements yet',
         message: 'Share departure notices and company updates here.',
         icon: Icons.campaign_outlined,
       ),
     for (final a in workspaceItems(d))
       Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: CommercePanel(
+        child: BusPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -968,7 +969,7 @@ class _BusOperatorPortalScreenState
     const SizedBox(height: 18),
     if (workspaceItems(d).isEmpty)
       const CommerceEmpty(
-        title: 'Your earnings, clearly tracked',
+        title: 'No payout requests yet',
         message: 'Payout requests and their status will appear here.',
         icon: Icons.payments_outlined,
       ),
@@ -1015,7 +1016,7 @@ class _BusOperatorPortalScreenState
     MediaUploadButton(
       video: false,
       folder: 'bus-operators',
-        registerAsset: false,
+      registerAsset: false,
       label: 'Update logo',
       onUploaded: (u) => run(() async {
         await ref
@@ -1026,7 +1027,7 @@ class _BusOperatorPortalScreenState
     MediaUploadButton(
       video: false,
       folder: 'bus-operators',
-        registerAsset: false,
+      registerAsset: false,
       label: 'Update cover photo',
       onUploaded: (u) => run(() async {
         await ref

@@ -78,7 +78,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
           loading: () => const CommerceLoading(rows: 2),
           error: (e, _) => CommerceEmpty(
             title: 'This collection is taking a moment',
-            message: 'Pull down to refresh, or browse all finds.',
+            message: 'Pull down to refresh, or browse all products.',
             onAction: () => context.push('/shop/all'),
           ),
           data: (items) => items.isEmpty
@@ -120,7 +120,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                 'Picked for you',
                 subtitle:
                     feed['headline']?.toString() ??
-                    'Good finds, shaped around your interests.',
+                    'Products based on your browsing.',
               ),
               if (feed['personalized'] == true)
                 TextButton(
@@ -238,14 +238,9 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
           ),
       ],
     );
-    return Scaffold(
+    return CommerceScaffold(
       appBar: CommerceAppBar(
-        title: switch (style) {
-          AppThemeStyle.editorial => 'Gabla / The shop',
-          AppThemeStyle.cinematic => 'GABLA SELECT',
-          AppThemeStyle.orbit => 'Your shopping orbit',
-          _ => 'Gabla shop',
-        },
+        title: 'Shop',
         actions: [
           IconButton(
             tooltip: 'My orders',
@@ -269,7 +264,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                       controller: _search,
                       textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
-                        hintText: 'What are you looking for?',
+                        hintText: 'Search products',
                         prefixIcon: const Icon(Icons.search),
                         suffixIcon: IconButton(
                           tooltip: 'Browse and filter',
@@ -303,15 +298,13 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                       personalized,
                     if (style == AppThemeStyle.cinematic)
                       shelf(
-                        'The most-loved edit',
+                        'Best sellers',
                         best,
                         '/shop/best-sellers',
                         horizontal: true,
                       ),
                     shelf(
-                      style == AppThemeStyle.editorial
-                          ? 'Fresh off the shelf'
-                          : 'New arrivals',
+                      'New arrivals',
                       arrivals,
                       '/shop/new-arrivals',
                       subtitle: 'The latest from shops on Gabla.',
@@ -337,7 +330,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () => context.push('/shop/all'),
                         icon: Icon(Icons.arrow_outward, color: c.primary),
-                        label: const Text('Explore every find'),
+                        label: const Text('Browse all products'),
                       ),
                     ),
                     const SizedBox(height: 40),
@@ -377,7 +370,7 @@ class _CategoryTile extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ],
         ),

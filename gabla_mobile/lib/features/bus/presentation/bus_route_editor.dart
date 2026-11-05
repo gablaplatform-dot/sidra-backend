@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../shop/presentation/commerce_widgets.dart';
 import '../../workspace/presentation/workspace_form.dart';
+import 'bus_design_widgets.dart';
 
 Map<String, dynamic> emptyBusRoute() => {
   'originName': '',
@@ -103,6 +104,13 @@ class BusRouteEditor extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
+      Text('Route details', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 6),
+      const Text(
+        'Set the towns and boarding points passengers will see.',
+        style: TextStyle(fontSize: 12, height: 1.4),
+      ),
+      const SizedBox(height: 14),
       for (final e in {
         'originName': 'Departure town',
         'destinationName': 'Destination town',
@@ -113,6 +121,8 @@ class BusRouteEditor extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 12),
           child: TextFormField(
             initialValue: '${value[e.key] ?? ''}',
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
             decoration: InputDecoration(labelText: e.value),
             onChanged: (v) => _set(e.key, v),
             validator: (v) =>
@@ -125,31 +135,37 @@ class BusRouteEditor extends StatelessWidget {
       TextFormField(
         initialValue: '${value['durationMinutes'] ?? 180}',
         keyboardType: TextInputType.number,
-        decoration: const InputDecoration(
-          labelText: 'Journey duration (minutes)',
-        ),
+        decoration: const InputDecoration(labelText: 'Duration (minutes)'),
         onChanged: (v) => _set('durationMinutes', int.tryParse(v) ?? 0),
       ),
       if (busTypes.isNotEmpty)
-        DropdownButtonFormField<String>(
-          initialValue: busTypes.any((b) => b['id'] == value['busTypeId'])
-              ? value['busTypeId']
-              : null,
-          decoration: const InputDecoration(labelText: 'Bus type'),
-          items: [
-            for (final b in busTypes)
-              DropdownMenuItem(
-                value: '${b['id']}',
-                child: Text('${b['name']}'),
-              ),
-          ],
-          onChanged: (v) => _set('busTypeId', v),
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: DropdownButtonFormField<String>(
+            initialValue: busTypes.any((b) => b['id'] == value['busTypeId'])
+                ? value['busTypeId']
+                : null,
+            decoration: const InputDecoration(labelText: 'Bus type'),
+            items: [
+              for (final b in busTypes)
+                DropdownMenuItem(
+                  value: '${b['id']}',
+                  child: Text('${b['name']}'),
+                ),
+            ],
+            onChanged: (v) => _set('busTypeId', v),
+          ),
         ),
       CommerceTitle(
         'Ticket types',
         label: 'Add',
         action: () => _ticket(context),
       ),
+      if ((value['ticketTypes'] as List? ?? []).isEmpty)
+        const Text(
+          'Add a ticket type and price before saving.',
+          style: TextStyle(fontSize: 12),
+        ),
       for (final ticket in value['ticketTypes'] as List? ?? [])
         ListTile(
           contentPadding: EdgeInsets.zero,
@@ -170,71 +186,84 @@ class BusRouteEditor extends StatelessWidget {
         label: 'Add',
         action: () => _departure(context),
       ),
+      const Text(
+        'Times use East Africa Time (EAT). Select the days each departure runs.',
+        style: TextStyle(fontSize: 12, height: 1.4),
+      ),
+      const SizedBox(height: 12),
+      if ((value['departures'] as List? ?? []).isEmpty)
+        const Text(
+          'Add at least one departure before saving.',
+          style: TextStyle(fontSize: 12),
+        ),
       for (final departure in value['departures'] as List? ?? [])
-        CommercePanel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${departure['departureTime']}',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Edit departure',
-                    onPressed: () => _departure(
-                      context,
-                      Map<String, dynamic>.from(departure),
-                    ),
-                    icon: const Icon(Icons.edit_outlined),
-                  ),
-                  IconButton(
-                    tooltip: 'Remove departure',
-                    onPressed: () => _set(
-                      'departures',
-                      (value['departures'] as List)
-                          .where((d) => d != departure)
-                          .toList(),
-                    ),
-                    icon: const Icon(Icons.remove_circle_outline),
-                  ),
-                ],
-              ),
-              Wrap(
-                spacing: 4,
-                children: [
-                  for (var day = 0; day < 7; day++)
-                    FilterChip(
-                      label: Text(
-                        ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][day],
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: BusPanel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${departure['departureTime']}',
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      selected: (departure['daysOfWeek'] as List? ?? [])
-                          .contains(day),
-                      onSelected: (selected) {
-                        final next = Map<String, dynamic>.from(
-                              departure as Map,
-                            ),
-                            days = <dynamic>{
-                              ...?departure['daysOfWeek'] as List?,
-                            };
-                        if (selected) {
-                          days.add(day);
-                        } else {
-                          days.remove(day);
-                        }
-                        next['daysOfWeek'] = days.toList()..sort();
-                        _set('departures', [
-                          for (final d in value['departures'] as List)
-                            if (d == departure) next else d,
-                        ]);
-                      },
                     ),
-                ],
-              ),
-            ],
+                    IconButton(
+                      tooltip: 'Edit departure',
+                      onPressed: () => _departure(
+                        context,
+                        Map<String, dynamic>.from(departure),
+                      ),
+                      icon: const Icon(Icons.edit_outlined),
+                    ),
+                    IconButton(
+                      tooltip: 'Remove departure',
+                      onPressed: () => _set(
+                        'departures',
+                        (value['departures'] as List)
+                            .where((d) => d != departure)
+                            .toList(),
+                      ),
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                  ],
+                ),
+                Wrap(
+                  spacing: 4,
+                  children: [
+                    for (var day = 0; day < 7; day++)
+                      FilterChip(
+                        label: Text(
+                          ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][day],
+                        ),
+                        selected: (departure['daysOfWeek'] as List? ?? [])
+                            .contains(day),
+                        onSelected: (selected) {
+                          final next = Map<String, dynamic>.from(
+                                departure as Map,
+                              ),
+                              days = <dynamic>{
+                                ...?departure['daysOfWeek'] as List?,
+                              };
+                          if (selected) {
+                            days.add(day);
+                          } else {
+                            days.remove(day);
+                          }
+                          next['daysOfWeek'] = days.toList()..sort();
+                          _set('departures', [
+                            for (final d in value['departures'] as List)
+                              if (d == departure) next else d,
+                          ]);
+                        },
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       CommerceTitle(
@@ -255,6 +284,11 @@ class BusRouteEditor extends StatelessWidget {
           save: (v) async => _set('stops', [...?value['stops'] as List?, v]),
         ),
       ),
+      if ((value['stops'] as List? ?? []).isEmpty)
+        const Text(
+          'Optional: add intermediate stops for this route.',
+          style: TextStyle(fontSize: 12),
+        ),
       for (final stop in value['stops'] as List? ?? [])
         ListTile(
           title: Text('${stop['name']}'),
@@ -324,7 +358,7 @@ class BusRouteEditor extends StatelessWidget {
       fields: [
         WorkspaceField(
           'departureTime',
-          'Time (HH:mm)',
+          'Time in EAT (HH:mm)',
           required: true,
           value: old?['departureTime'] ?? '07:00',
         ),

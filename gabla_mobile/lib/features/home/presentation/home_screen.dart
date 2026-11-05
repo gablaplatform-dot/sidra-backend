@@ -43,9 +43,8 @@ class HomeScreen extends ConsumerWidget {
                 initial: _initial(session?.user.name),
               ),
               const SizedBox(height: 20),
-              _SearchBar(onTap: () => context.push('/nearby')),
+              _SearchBar(onTap: () => context.push('/search')),
               const SizedBox(height: 14),
-              NearbyEntry(style: design),
               AnimatedSwitcher(
                 duration: Duration(
                   milliseconds: MediaQuery.disableAnimationsOf(context)
@@ -54,19 +53,25 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 child: DesignLauncher(key: ValueKey(design), style: design),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
+              NearbyEntry(style: design),
+              const SizedBox(height: 20),
               _SectionHeader(
-                title: 'Categories',
-                onSeeAll: () => context.push('/shop/categories'),
+                title: 'Business categories',
+                onSeeAll: () => context.push('/categories'),
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 184,
+                height: 142,
                 child: AsyncValueView<List<Category>>(
                   value: categories,
                   onRetry: () => ref.invalidate(directoryCategoriesProvider),
                   data: (context, items) => items.isEmpty
-                      ? const Center(child: Text('No categories yet.'))
+                      ? const Center(
+                          child: Text(
+                            'Business categories are not available right now.',
+                          ),
+                        )
                       : ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: items.length,
@@ -79,13 +84,18 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 28),
-              _SectionHeader(title: 'Top rated providers', onSeeAll: null),
+              _SectionHeader(title: 'Businesses on Gabla', onSeeAll: null),
               const SizedBox(height: 12),
               AsyncValueView<List<ProviderSummary>>(
                 value: providers,
                 onRetry: () => ref.invalidate(topRatedProvidersProvider),
                 data: (context, items) => items.isEmpty
-                    ? const Text('No providers yet.')
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          'No businesses to show right now. Try searching nearby.',
+                        ),
+                      )
                     : Column(
                         children: [
                           for (var i = 0; i < items.length; i++) ...[
@@ -151,13 +161,15 @@ class _HomeHeader extends StatelessWidget {
           onPressed: () => context.push('/settings/appearance'),
         ),
         _IconBubble(
-          icon: Icons.notifications_none_rounded,
+          icon: Icons.receipt_long_outlined,
+          tooltip: 'My orders',
           onTap: () =>
               context.push(signedIn ? '/orders' : '/login?next=%2Forders'),
         ),
         const SizedBox(width: 8),
         _IconBubble(
           icon: signedIn ? Icons.person_outline : Icons.login,
+          tooltip: signedIn ? 'My account' : 'Sign in',
           onTap: () => context.push(signedIn ? '/profile' : '/login'),
           filled: signedIn,
           label: signedIn ? initial : null,
@@ -173,41 +185,46 @@ class _IconBubble extends StatelessWidget {
     required this.onTap,
     this.filled = false,
     this.label,
+    required this.tooltip,
   });
 
   final IconData icon;
   final VoidCallback onTap;
   final bool filled;
   final String? label;
+  final String tooltip;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Material(
-      color: filled
-          ? theme.colorScheme.primary
-          : theme.cardTheme.color ?? theme.colorScheme.surface,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: SizedBox(
-          width: 42,
-          height: 42,
-          child: Center(
-            child: label != null
-                ? Text(
-                    label!,
-                    style: TextStyle(
-                      color: theme.colorScheme.onPrimary,
-                      fontWeight: FontWeight.w700,
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: filled
+            ? theme.colorScheme.primary
+            : theme.cardTheme.color ?? theme.colorScheme.surface,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(
+            width: 42,
+            height: 42,
+            child: Center(
+              child: label != null
+                  ? Text(
+                      label!,
+                      style: TextStyle(
+                        color: theme.colorScheme.onPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    )
+                  : Icon(
+                      icon,
+                      size: 20,
+                      color: filled ? theme.colorScheme.onPrimary : null,
                     ),
-                  )
-                : Icon(
-                    icon,
-                    size: 20,
-                    color: filled ? theme.colorScheme.onPrimary : null,
-                  ),
+            ),
           ),
         ),
       ),
@@ -231,8 +248,8 @@ class _SearchBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(tokens?.pillRadius ?? 999),
         onTap: onTap,
         child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 18),
+          constraints: const BoxConstraints(minHeight: 52),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(tokens?.pillRadius ?? 999),
             border: Border.all(
@@ -245,7 +262,7 @@ class _SearchBar extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'What would you like to find nearby?',
+                  'Search products, services or businesses',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -284,11 +301,13 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          title,
-          style:
-              tokens?.sectionTitleStyle ??
-              Theme.of(context).textTheme.titleMedium,
+        Expanded(
+          child: Text(
+            title,
+            style:
+                tokens?.sectionTitleStyle ??
+                Theme.of(context).textTheme.titleMedium,
+          ),
         ),
         if (onSeeAll != null)
           TextButton(
@@ -318,7 +337,7 @@ class _CategoryTile extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.push('/category/${category.id}'),
       child: Container(
-        width: 136,
+        width: 126,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(radius),
           color: Colors.grey.shade800,
@@ -450,78 +469,39 @@ class _HomeDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: colors.onSurface,
-            borderRadius: BorderRadius.circular(99),
-            boxShadow: [
-              BoxShadow(
-                color: colors.onSurface.withValues(alpha: .12),
-                blurRadius: 24,
-                offset: const Offset(0, 6),
-              ),
-            ],
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: colors.outlineVariant)),
+      ),
+      child: NavigationBar(
+        backgroundColor: colors.surface,
+        elevation: 0,
+        selectedIndex: 0,
+        onDestinationSelected: (index) {
+          final route = [
+            '/home',
+            '/search',
+            '/cart',
+            signedIn ? '/profile' : '/login',
+          ][index];
+          if (index != 0) context.push(route);
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Home',
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              for (final item in [
-                (Icons.home_rounded, 'Home', '/home'),
-                (Icons.search_rounded, 'Explore', '/search'),
-                (Icons.shopping_bag_outlined, 'Cart', '/cart'),
-                (
-                  Icons.person_outline_rounded,
-                  'Account',
-                  signedIn ? '/profile' : '/login',
-                ),
-              ])
-                Expanded(
-                  child: Semantics(
-                    selected: item.$3 == '/home',
-                    button: true,
-                    label: item.$2,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(99),
-                      onTap: () {
-                        if (item.$3 != '/home') context.push(item.$3);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 9),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              item.$1,
-                              color: item.$3 == '/home'
-                                  ? colors.secondary
-                                  : colors.surface,
-                              size: 22,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item.$2,
-                              style: TextStyle(
-                                color: item.$3 == '/home'
-                                    ? colors.secondary
-                                    : colors.surface,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+          NavigationDestination(icon: Icon(Icons.search), label: 'Search'),
+          NavigationDestination(
+            icon: Icon(Icons.shopping_bag_outlined),
+            label: 'Cart',
           ),
-        ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            label: 'Account',
+          ),
+        ],
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme_style.dart';
 import '../../../core/theme/font_group.dart';
+import '../../../core/theme/style_tokens.dart';
 import '../application/nearby_controller.dart';
 import 'nearby_entry.dart';
 
@@ -33,7 +34,7 @@ class NearbySearchChrome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).colorScheme;
-    final editorial = style == AppThemeStyle.editorial;
+    final radius = Theme.of(context).extension<StyleTokens>()?.cardRadius ?? 8;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       child: Column(
@@ -52,31 +53,19 @@ class NearbySearchChrome extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      switch (style) {
-                        AppThemeStyle.gabla => 'THE WORLD AROUND YOU',
-                        AppThemeStyle.editorial => 'THE NEIGHBORHOOD EDIT',
-                        AppThemeStyle.discover => 'FOLLOW YOUR CURIOSITY',
-                        AppThemeStyle.cinematic => 'A DIFFERENT POINT OF VIEW',
-                        AppThemeStyle.orbit => 'A WORLD WITHIN REACH',
-                      },
+                      'PRODUCTS & SERVICES',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: c.onSurfaceVariant,
-                        fontSize: 8,
-                        letterSpacing: 1.5,
+                        fontSize: 10,
+                        letterSpacing: .6,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      switch (style) {
-                        AppThemeStyle.gabla => 'Find it nearby',
-                        AppThemeStyle.editorial => 'Good things, close by.',
-                        AppThemeStyle.discover => 'Around you',
-                        AppThemeStyle.cinematic => 'Your city. Unfolded.',
-                        AppThemeStyle.orbit => 'Explore your radius',
-                      },
+                      'Find nearby',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.of(
@@ -96,7 +85,7 @@ class NearbySearchChrome extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           ListenableBuilder(
             listenable: focus,
             builder: (context, _) => AnimatedScale(
@@ -116,7 +105,7 @@ class NearbySearchChrome extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: c.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(editorial ? 10 : 25),
+                      borderRadius: BorderRadius.circular(radius),
                       border: Border.all(
                         color: focus.hasFocus
                             ? c.primary
@@ -149,28 +138,15 @@ class NearbySearchChrome extends StatelessWidget {
                       ),
                       decoration: InputDecoration(
                         counterText: '',
-                        hintText: 'What are you looking for?',
+                        hintText: 'Search products or services',
                         hintStyle: TextStyle(
                           color: c.onSurfaceVariant,
                           fontSize: 13,
                         ),
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.all(9),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: c.primary,
-                              borderRadius: BorderRadius.circular(
-                                editorial ? 7 : 16,
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.search_rounded,
-                              color: c.onPrimary,
-                              size: 21,
-                            ),
-                          ),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: c.primary,
+                          size: 22,
                         ),
                         suffixIcon: IconButton(
                           tooltip: 'Clear search',
@@ -186,7 +162,7 @@ class NearbySearchChrome extends StatelessWidget {
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
-                          vertical: 18,
+                          vertical: 12,
                           horizontal: 10,
                         ),
                       ),
@@ -201,10 +177,10 @@ class NearbySearchChrome extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                for (final filter in <String?, (String, String?)>{
-                  null: ('Everything', null),
-                  'product': ('Products', 'assets/artwork/shop.png'),
-                  'service': ('Services', 'assets/artwork/services.png'),
+                for (final filter in <String?, (String, IconData)>{
+                  null: ('All', Icons.grid_view_outlined),
+                  'product': ('Products', Icons.shopping_bag_outlined),
+                  'service': ('Services', Icons.handyman_outlined),
                 }.entries)
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
@@ -212,7 +188,7 @@ class NearbySearchChrome extends StatelessWidget {
                       button: true,
                       selected: state.type == filter.key,
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(editorial ? 9 : 24),
+                        borderRadius: BorderRadius.circular(radius),
                         onTap: () => onType(filter.key),
                         child: AnimatedContainer(
                           duration: Duration(
@@ -222,13 +198,12 @@ class NearbySearchChrome extends StatelessWidget {
                                 : 220,
                           ),
                           padding: const EdgeInsets.fromLTRB(5, 5, 13, 5),
+                          constraints: const BoxConstraints(minHeight: 48),
                           decoration: BoxDecoration(
                             color: state.type == filter.key
                                 ? c.primaryContainer
                                 : c.surface,
-                            borderRadius: BorderRadius.circular(
-                              editorial ? 9 : 24,
-                            ),
+                            borderRadius: BorderRadius.circular(radius),
                             border: Border.all(
                               color: state.type == filter.key
                                   ? c.primary
@@ -239,33 +214,18 @@ class NearbySearchChrome extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(
-                                  editorial ? 6 : 18,
-                                ),
-                                child: SizedBox(
-                                  width: 30,
-                                  height: 30,
-                                  child: filter.value.$2 == null
-                                      ? ColoredBox(
-                                          color: c.primary,
-                                          child: Icon(
-                                            Icons.explore_outlined,
-                                            color: c.onPrimary,
-                                            size: 18,
-                                          ),
-                                        )
-                                      : Image.asset(
-                                          filter.value.$2!,
-                                          fit: BoxFit.cover,
-                                        ),
-                                ),
+                              Icon(
+                                filter.value.$2,
+                                size: 20,
+                                color: state.type == filter.key
+                                    ? c.onPrimaryContainer
+                                    : c.onSurfaceVariant,
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 filter.value.$1,
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                   color: state.type == filter.key
                                       ? c.onPrimaryContainer
@@ -287,56 +247,60 @@ class NearbySearchChrome extends StatelessWidget {
               Expanded(
                 child: InkWell(
                   onTap: onArea,
-                  borderRadius: BorderRadius.circular(20),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 4,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.place_outlined, color: c.primary, size: 15),
-                        const SizedBox(width: 5),
-                        Expanded(
-                          child: Text(
-                            state.origin.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: c.onSurface,
+                  borderRadius: BorderRadius.circular(radius),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 6,
+                        horizontal: 4,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.place_outlined,
+                            color: c.primary,
+                            size: 15,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  state.origin.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: c.onSurface,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  state.result.valueOrNull?.widened == true
+                                      ? 'Broader area'
+                                      : '15 km',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: c.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        Icon(
-                          Icons.expand_more,
-                          color: c.onSurfaceVariant,
-                          size: 15,
-                        ),
-                      ],
+                          Icon(
+                            Icons.expand_more,
+                            color: c.onSurfaceVariant,
+                            size: 15,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: c.secondaryContainer,
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Text(
-                  state.result.valueOrNull?.widened == true
-                      ? 'Broader area'
-                      : '15 km',
-                  style: TextStyle(
-                    color: c.onSecondaryContainer,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),

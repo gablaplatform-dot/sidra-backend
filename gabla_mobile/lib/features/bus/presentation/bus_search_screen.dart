@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../../core/mobility/mobility_layout.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../application/bus_providers.dart';
 import 'bus_design_widgets.dart';
@@ -41,7 +40,7 @@ class _BusSearchScreenState extends ConsumerState<BusSearchScreen> {
     final result = ref.watch(busSearchResultsProvider(current));
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Find your departure'),
+        title: const Text('Bus departures'),
         actions: [
           IconButton(
             tooltip: 'Design Studio',
@@ -54,7 +53,7 @@ class _BusSearchScreenState extends ConsumerState<BusSearchScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
-            child: MobilityPanel(
+            child: BusPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -64,7 +63,7 @@ class _BusSearchScreenState extends ConsumerState<BusSearchScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${DateFormat('EEE, d MMM').format(day)} · East Africa Time',
+                    '${DateFormat('EEE, d MMM').format(day)} · All times EAT',
                     style: const TextStyle(fontSize: 12),
                   ),
                   const SizedBox(height: 14),
@@ -201,17 +200,23 @@ class _BusSearchScreenState extends ConsumerState<BusSearchScreen> {
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Try another date or adjust your search.',
+                          Text(
+                            all.isEmpty
+                                ? 'Choose another date above or search a different route.'
+                                : 'Remove a filter to see more departures.',
                             textAlign: TextAlign.center,
                           ),
                           TextButton(
-                            onPressed: () => setState(() {
-                              _time = 'All day';
-                              _company = 'All operators';
-                              _available = false;
-                            }),
-                            child: const Text('Clear filters'),
+                            onPressed: all.isEmpty
+                                ? () => context.go('/bus')
+                                : () => setState(() {
+                                    _time = 'All day';
+                                    _company = 'All operators';
+                                    _available = false;
+                                  }),
+                            child: Text(
+                              all.isEmpty ? 'Change route' : 'Clear filters',
+                            ),
                           ),
                         ],
                       ),

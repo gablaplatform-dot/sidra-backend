@@ -67,13 +67,13 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
         reload();
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Updated successfully.')));
+        ).showSnackBar(const SnackBar(content: Text('Changes saved.')));
       }
     } catch (e) {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('$e')));
+        ).showSnackBar(SnackBar(content: Text(workspaceErrorMessage(e))));
     }
   }
 
@@ -104,8 +104,8 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
         appBar: AppBar(title: Text(title)),
         body: Center(
           child: CommerceEmpty(
-            title: 'Your Gabla space',
-            message: 'Sign in to manage your account.',
+            title: 'Sign in to view $title',
+            message: 'Continue with your Gabla account to access this page.',
             action: 'Sign in',
             onAction: () => context.push(
               '/login?next=${Uri.encodeComponent('/profile/${widget.section}')}',
@@ -131,6 +131,8 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
         data: (context, data) => RefreshIndicator(
           onRefresh: () async => reload(),
           child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.all(18),
             children: [
               Text(title, style: Theme.of(context).textTheme.headlineMedium),
@@ -173,8 +175,10 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     'bookings' => 'Manage dates, guests and reservation requests.',
     'categories' => 'Organize your storefront into collections.',
     'analytics' => 'See how customers discover and engage with your business.',
-    'ads' => 'Bring your business into the spotlight.',
-    _ => 'Keep your trusted businesses close.',
+    'ads' => 'Manage photo and video promotions and check their review status.',
+    'inquiries' => 'Read customer messages and update their status.',
+    'saved' => 'Find the businesses you have saved.',
+    _ => 'Manage your business details.',
   };
   List<Widget> _listings(dynamic data) => [
     FilledButton.icon(
@@ -267,7 +271,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
                   ),
                   WorkspaceField(
                     'description',
-                    'Your story',
+                    'About your business',
                     type: 'long',
                     value: p['description'],
                   ),
@@ -350,11 +354,11 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
         icon: const Icon(Icons.public),
         label: const Text('Communities & countries served'),
       ),
-      const CommerceTitle('Your visual identity'),
+      const CommerceTitle('Business photos'),
       MediaUploadButton(
         folder: 'provider-avatar',
         video: false,
-        label: 'Update business avatar',
+        label: 'Update business photo',
         onUploaded: (u) => saveMedia({'avatarUrl': u}),
       ),
       MediaUploadButton(
@@ -364,6 +368,13 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
         onUploaded: (u) => saveMedia({'coverUrl': u}),
       ),
       const CommerceTitle('Gallery'),
+      if (gallery.isEmpty)
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Text(
+            'No gallery photos or videos yet. Add media to show customers your work.',
+          ),
+        ),
       if (gallery.isNotEmpty)
         SizedBox(height: 280, child: ProductGallery(images: gallery)),
       MediaUploadButton(
@@ -468,10 +479,11 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
                         child: Text('Country'),
                       ),
                     ],
-                    onChanged: (v) => kind = v ?? 'culture',
+                    onChanged: busy ? null : (v) => kind = v ?? 'culture',
                   ),
                   TextField(
                     controller: suggestion,
+                    enabled: !busy,
                     maxLength: 60,
                     decoration: const InputDecoration(
                       labelText: 'Community name (optional)',
@@ -511,7 +523,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
                               if (sheet.mounted)
                                 update(() {
                                   busy = false;
-                                  error = '$e';
+                                  error = workspaceErrorMessage(e);
                                 });
                             }
                           },
@@ -528,7 +540,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('$e')));
+        ).showSnackBar(SnackBar(content: Text(workspaceErrorMessage(e))));
     }
   }
 
@@ -649,7 +661,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     const SizedBox(height: 18),
     if (workspaceItems(data).isEmpty)
       const CommerceEmpty(
-        title: 'Professional from the first quote',
+        title: 'No quotes or receipts yet',
         message:
             'Quotations and receipts issued for your orders will be kept here.',
         icon: Icons.description_outlined,
@@ -689,7 +701,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
                           .post('/documents/${d['id']}/resend', body: {});
                     }),
                     icon: const Icon(Icons.mail_outline),
-                    label: const Text('Resend'),
+                    label: const Text('Resend email'),
                   ),
                 ],
               ),
@@ -701,7 +713,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
   List<Widget> _orders(dynamic data) => [
     if (workspaceItems(data).isEmpty)
       const CommerceEmpty(
-        title: 'Ready for your next order',
+        title: 'No customer orders yet',
         message:
             'New customer orders will arrive here. Keep your listings up to date.',
         icon: Icons.shopping_bag_outlined,
@@ -734,7 +746,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
   List<Widget> _bookings(dynamic data) => [
     if (workspaceItems(data).isEmpty)
       const CommerceEmpty(
-        title: 'Your next reservation starts here',
+        title: 'No reservations yet',
         message: 'Publish a bookable service to start receiving requests.',
         icon: Icons.event_available_outlined,
       ),
@@ -828,7 +840,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
       ),
       if (items.isEmpty)
         const CommerceEmpty(
-          title: 'A shop with your signature',
+          title: 'No collections yet',
           message:
               'Group your products into collections customers can explore.',
           icon: Icons.category_outlined,
@@ -997,7 +1009,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     const SizedBox(height: 16),
     if (workspaceItems(data).isEmpty)
       const CommerceEmpty(
-        title: 'Put your business in the spotlight',
+        title: 'No promotions yet',
         message:
             'Create an image or video promotion. The team reviews it before publishing.',
         icon: Icons.campaign_outlined,
@@ -1047,7 +1059,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
   List<Widget> _inquiries(dynamic data) => [
     if (workspaceItems(data).isEmpty)
       const CommerceEmpty(
-        title: 'The conversation starts here',
+        title: 'No customer inquiries yet',
         message: 'Questions from customers will appear here.',
         icon: Icons.chat_bubble_outline,
       ),
@@ -1077,7 +1089,12 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
                 }),
                 itemBuilder: (_) => [
                   for (final status in ['new', 'open', 'closed', 'archived'])
-                    PopupMenuItem(value: status, child: Text(status)),
+                    PopupMenuItem(
+                      value: status,
+                      child: Text(
+                        status[0].toUpperCase() + status.substring(1),
+                      ),
+                    ),
                 ],
                 child: Chip(
                   label: Text('Status · ${item['status'] ?? 'new'}'),
@@ -1092,8 +1109,8 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
   List<Widget> _saved(dynamic data) => [
     if (workspaceItems(data).isEmpty)
       CommerceEmpty(
-        title: 'Your trusted circle',
-        message: 'Save a provider from their profile to keep them here.',
+        title: 'No saved businesses yet',
+        message: 'Save a business from its profile to find it here later.',
         action: 'Discover businesses',
         onAction: () => context.push('/search'),
         icon: Icons.favorite_border,
@@ -1143,7 +1160,11 @@ class _WorkspacePdfScreenState extends ConsumerState<WorkspacePdfScreen> {
       builder: (context, s) => s.hasError
           ? CommerceEmpty(
               title: 'Could not open this document',
-              message: '${s.error}',
+              message: workspaceErrorMessage(
+                s.error!,
+                fallback:
+                    'The document could not be loaded. Check your connection and try again.',
+              ),
               action: 'Retry',
               onAction: () => setState(_load),
             )

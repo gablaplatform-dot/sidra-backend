@@ -6,6 +6,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/network/network_providers.dart';
 import '../../../core/theme/app_theme_style.dart';
 import '../../../core/theme/font_group.dart';
+import '../../../core/widgets/feature_visual.dart';
 import '../../settings/application/theme_controller.dart';
 import '../application/auth_controller.dart';
 import '../application/session_controller.dart';
@@ -228,10 +229,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             children: [
               Expanded(
                 flex: 6,
-                child: _photo(
+                child: _categoryTile(
                   'shop',
                   radius: 28,
-                  child: const _PhotoLabel(
+                  child: const _CategoryLabel(
                     'A little discovery',
                     Icons.shopping_bag_outlined,
                   ),
@@ -242,9 +243,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 flex: 4,
                 child: Column(
                   children: [
-                    Expanded(child: _photo('ride', radius: 24)),
+                    Expanded(child: _categoryTile('ride', radius: 24)),
                     const SizedBox(height: 10),
-                    Expanded(child: _photo('services', radius: 24)),
+                    Expanded(child: _categoryTile('services', radius: 24)),
                   ],
                 ),
               ),
@@ -295,14 +296,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(flex: 7, child: _photo('services', radius: 2)),
+              Expanded(flex: 7, child: _categoryTile('services', radius: 2)),
               const SizedBox(width: 12),
               Expanded(
                 flex: 3,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: _photo('shop', radius: 2)),
+                    Expanded(child: _categoryTile('shop', radius: 2)),
                     const SizedBox(height: 10),
                     Text(
                       'LOCAL FINDS.\nNEW STORIES.',
@@ -394,7 +395,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               border: Border.all(color: Colors.white54),
             ),
             child: const Icon(
-              Icons.auto_awesome_outlined,
+              Icons.storefront_outlined,
               color: Colors.white,
               size: 26,
             ),
@@ -474,7 +475,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       child: SizedBox(
                         width: box.maxWidth * .47,
                         height: 158,
-                        child: _photo('shop', radius: 24),
+                        child: _categoryTile('shop', radius: 24),
                       ),
                     ),
                   ),
@@ -486,7 +487,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       child: SizedBox(
                         width: box.maxWidth * .46,
                         height: 158,
-                        child: _photo('ride', radius: 24),
+                        child: _categoryTile('ride', radius: 24),
                       ),
                     ),
                   ),
@@ -563,56 +564,108 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     ],
   );
 
-  Widget _immersiveBackground(AppThemeStyle style) => AnimatedBuilder(
-    animation: _ambient,
-    builder: (context, _) => Stack(
-      fit: StackFit.expand,
-      children: [
-        Transform.scale(
-          scale: _reduced ? 1.06 : 1.06 + _ambient.value * .045,
-          alignment: Alignment.topCenter,
-          child: Image.asset(
-            'assets/artwork/${style == AppThemeStyle.cinematic ? 'services' : 'ride'}.png',
-            fit: BoxFit.cover,
-          ),
-        ),
-        DecoratedBox(
+  Widget _immersiveBackground(AppThemeStyle style) {
+    final c = Theme.of(context).colorScheme;
+    final cinematic = style == AppThemeStyle.cinematic;
+    final base = HSLColor.fromColor(c.primary).withLightness(.09).toColor();
+    final glow = HSLColor.fromColor(c.primary).withLightness(.22).toColor();
+    return ExcludeSemantics(
+      child: AnimatedBuilder(
+        animation: _ambient,
+        builder: (context, _) => DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: style == AppThemeStyle.cinematic
-                  ? const [
-                      Color(0xAA07101A),
-                      Color(0xD907101A),
-                      Color(0xFF07101A),
-                    ]
-                  : const [
-                      Color(0x88071121),
-                      Color(0x66071121),
-                      Color(0xF2071121),
-                    ],
+              begin: cinematic ? Alignment.topCenter : Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: [glow, base, base],
             ),
           ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _photo(String name, {double radius = 24, Widget? child}) => ClipRRect(
-    borderRadius: BorderRadius.circular(radius),
-    child: Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.asset('assets/artwork/$name.png', fit: BoxFit.cover),
-        if (child != null)
-          Align(
-            alignment: Alignment.bottomLeft,
-            child: Padding(padding: const EdgeInsets.all(12), child: child),
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final drift = _reduced ? 0.0 : _ambient.value * 12;
+              return Stack(
+                children: [
+                  Positioned(
+                    top: 46 + drift,
+                    right: cinematic ? -32 : -70,
+                    child: Container(
+                      width: cinematic ? 250 : 310,
+                      height: cinematic ? 250 : 310,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: c.primary.withValues(alpha: .3),
+                        ),
+                      ),
+                      child: Icon(
+                        cinematic
+                            ? Icons.storefront_outlined
+                            : Icons.explore_outlined,
+                        size: cinematic ? 120 : 180,
+                        color: Colors.white.withValues(alpha: .07),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: box.maxHeight * .48 - drift,
+                    left: -30,
+                    child: Transform.rotate(
+                      angle: cinematic ? 0 : -.2,
+                      child: Icon(
+                        cinematic
+                            ? Icons.shopping_bag_outlined
+                            : Icons.directions_bus_outlined,
+                        size: 150,
+                        color: Colors.white.withValues(alpha: .035),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
-      ],
-    ),
-  );
+        ),
+      ),
+    );
+  }
+
+  Widget _categoryTile(String name, {double radius = 24, Widget? child}) {
+    final c = Theme.of(context).colorScheme;
+    final emphasized = name == 'shop';
+    final label = switch (name) {
+      'shop' => 'Shopping',
+      'ride' => 'Rides',
+      _ => 'Local services',
+    };
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          FeatureVisual(kind: name, emphasized: emphasized),
+          Align(
+            alignment: child == null
+                ? Alignment.bottomCenter
+                : Alignment.bottomLeft,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child:
+                  child ??
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: emphasized ? c.onPrimary : c.onSurfaceVariant,
+                    ),
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _actions(AppThemeStyle style, Color ink) {
     final state = ref.watch(authControllerProvider);
@@ -712,7 +765,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             foregroundColor: immersive ? Colors.white70 : c.onSurfaceVariant,
           ),
           child: const Text(
-            'Already have a business on Gabla?',
+            'Reconnect an existing business',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 11),
           ),
@@ -736,8 +789,8 @@ String loginDestination(String? next, {bool isBusOperator = false}) {
   return isBusOperator ? '/bus/operator' : '/home';
 }
 
-class _PhotoLabel extends StatelessWidget {
-  const _PhotoLabel(this.text, this.icon);
+class _CategoryLabel extends StatelessWidget {
+  const _CategoryLabel(this.text, this.icon);
   final String text;
   final IconData icon;
   @override
@@ -882,9 +935,12 @@ class _ReconnectBusinessSheetState
             TextField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.done,
+              autocorrect: false,
               autofillHints: const [AutofillHints.email],
               decoration: InputDecoration(
                 labelText: 'Business email',
+                errorMaxLines: 3,
                 errorText: _error,
               ),
               enabled: !_busy,
@@ -923,10 +979,7 @@ class _ReconnectBusinessSheetState
                         if (mounted) setState(() => _busy = false);
                       }
                     },
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(_busy ? 'Sending…' : 'Send connection link'),
-              ),
+              child: Text(_busy ? 'Sending…' : 'Send Google connection link'),
             ),
           ],
           const SizedBox(height: 10),

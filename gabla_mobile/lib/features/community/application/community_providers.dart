@@ -43,3 +43,24 @@ String communityPay(Map post) {
     return post['kind'] == 'event' ? 'Free entry' : 'Pay negotiable';
   return '${post['currency'] ?? 'UGX'} ${amount(min)}${max > min ? ' – ${amount(max)}' : ''}';
 }
+
+/// Show only a declared pay basis; negotiable pay has no periodic amount.
+String communityPayPeriod(Map post) {
+  if (post['kind'] == 'event') return '';
+  final min = num.tryParse('${post['payMin']}') ?? 0;
+  final max = num.tryParse('${post['payMax']}') ?? 0;
+  if (min == 0 && max == 0) return '';
+  if (post['jobType'] == 'task') return 'Per task';
+  final details = post['details'] as Map? ?? {};
+  final period = '${details['payPeriod'] ?? ''}';
+  return switch (period) {
+    'hour' => 'Per hour',
+    'day' => 'Per day',
+    'week' => 'Per week',
+    'month' => 'Per month',
+    'year' => 'Per year',
+    'task' => 'Per task',
+    'negotiable' => 'Pay period negotiable',
+    _ => '',
+  };
+}

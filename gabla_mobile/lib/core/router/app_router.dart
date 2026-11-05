@@ -1,3 +1,4 @@
+import '../../features/categories/presentation/categories_screen.dart';
 import '../sharing/share_links.dart';
 import '../../features/community/presentation/community_screens.dart';
 import '../../features/community/presentation/community_editor_screen.dart';
@@ -184,6 +185,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (c, s) => WelcomeScreen(next: s.uri.queryParameters['next']),
       ),
       GoRoute(path: '/home', builder: (c, s) => const HomeScreen()),
+      GoRoute(path: '/categories', builder: (c, s) => const CategoriesScreen()),
       GoRoute(
         path: '/category/:categoryId',
         builder: (c, s) =>

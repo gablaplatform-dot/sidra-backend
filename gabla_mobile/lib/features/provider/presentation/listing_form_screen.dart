@@ -110,7 +110,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
     ],
   ];
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => CommerceScaffold(
     appBar: CommerceAppBar(
       title: widget.listingId == null ? 'Create listing' : 'Edit listing',
     ),
@@ -165,15 +165,13 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
           child: ListView(
             padding: const EdgeInsets.all(18),
             children: [
-              Text(
-                'A good listing starts\nwith the details.',
-                style: Theme.of(context).textTheme.headlineMedium,
+              const CommerceFlowHeader(
+                title: 'Listing details',
+                message:
+                    'Add an accurate description, your own photos and a price. Booking settings apply to services only.',
+                icon: Icons.edit_note_outlined,
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Photos, honest descriptions and the right category help customers find you.',
-              ),
-              const SizedBox(height: 24),
+              const CommerceTitle('About the listing'),
               CommercePanel(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -210,6 +208,9 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                       maxLength: 5000,
                       decoration: const InputDecoration(
                         labelText: 'Description',
+                        hintText:
+                            'Describe what is included, condition and any important limitations.',
+                        alignLabelWithHint: true,
                       ),
                     ),
                     DropdownButtonFormField<String>(
@@ -274,6 +275,12 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                 ),
               ),
               const CommerceTitle('Photos & video'),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Use photos of the actual product, place or service. The cover appears in search results.',
+                ),
+              ),
               if (_image != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(18),
@@ -348,6 +355,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         labelText: 'Stock quantity (optional)',
+                        helperText: 'Leave blank if stock is not tracked.',
                       ),
                     ),
                     const SizedBox(height: 12),

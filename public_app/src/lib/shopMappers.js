@@ -2,8 +2,8 @@ import i18n from "../i18n";
 import { formatUgx } from "./format";
 import { safeHref } from "./safeHref";
 
-const PLACEHOLDER_COVER = "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=premium%20product%20packaging%20minimal%20white%20background&image_size=square_hd";
-const PLACEHOLDER_PROMO = "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=abstract%20orange%20coral%20gradient%20mesh%20banner&image_size=landscape_16_9";
+const PLACEHOLDER_COVER = "/icons/product-placeholder.svg";
+const PLACEHOLDER_PROMO = "/icons/promotion-placeholder.svg";
 
 export const listingCover = (listing) => {
   const media = listing?.media;
