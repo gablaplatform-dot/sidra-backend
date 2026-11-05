@@ -16,3 +16,6 @@ admin_ui
 public_app/node_modules
 public_app/dist
 public_app/.env*
+
+# Driver source is versioned but not part of the backend image.
+driver_app
