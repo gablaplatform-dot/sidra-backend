@@ -25,7 +25,7 @@ The previous oval artwork, capsule inputs and overlapping posting FAB were repla
 | Cinematic | Dark job-match treatment and concert imagery; media-first detail header | FocoTik media-first event creation, dark compact fields and section panels |
 | Orbit | Geometric organization marks, rectangular image strips, compact side-by-side detail | Compact tabbed creation workspace, 4px corners, actionable completion checklist |
 
-These are reference-based adaptations for Gabla's actual functionality, not copied designer artwork or claims of pixel-identical replicas. The bundled concert photograph illustrates the event category. [Photo source](https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f). Actual posts use their uploaded images/posters.
+These are reference-based adaptations for Gabla's actual functionality, not copied designer artwork or claims of pixel-identical replicas. The bundled concert photograph illustrates the event category. [Photo source](https://images.unsplash.com/photo-1516280440614-37939bbacd81). Actual posts use their uploaded images/posters.
 
 Location entry supports debounced Google suggestions, selecting a resolved place, address search, choosing a Google Maps pin, and a complete typed address. Editing the address clears stale coordinates. Locations are required for posting. Search/pin interactions use the existing native Maps setup and map mode switcher.
 

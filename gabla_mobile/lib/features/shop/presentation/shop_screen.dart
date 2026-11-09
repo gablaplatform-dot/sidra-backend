@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../categories/presentation/widgets/category_cover.dart';
 import '../../../core/motion/design_transitions.dart';
 import '../../../core/theme/app_theme_style.dart';
 import '../../categories/domain/category.dart';
@@ -368,7 +369,9 @@ class _CategoryTile extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(editorial ? 4 : 20),
-                child: SizedBox.expand(child: CommerceImage(category.imageUrl)),
+                child: SizedBox.expand(
+                  child: CategoryCover(category: category),
+                ),
               ),
             ),
             const SizedBox(height: 8),

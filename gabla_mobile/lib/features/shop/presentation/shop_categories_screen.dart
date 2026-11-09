@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../categories/domain/category.dart';
+import '../../categories/presentation/widgets/category_cover.dart';
 import '../application/commerce_providers.dart';
 import 'commerce_widgets.dart';
 
@@ -9,25 +11,34 @@ class ShopCategoriesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tree = ref.watch(productTreeProvider);
-    Widget node(Map<String, dynamic> n) {
-      final children = n['children'] as List? ?? [];
+    Widget node(Category category) {
+      final children = category.children;
+      final cover = ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: SizedBox.square(
+          dimension: 44,
+          child: CategoryCover(category: category),
+        ),
+      );
       return children.isEmpty
           ? ListTile(
-              title: Text(n['name']?.toString() ?? 'Category'),
+              leading: cover,
+              title: Text(category.name),
               trailing: const Icon(Icons.arrow_outward, size: 17),
-              onTap: () => context.push('/shop/${n['id']}'),
+              onTap: () => context.push('/shop/${category.id}'),
             )
           : ExpansionTile(
-              title: Text(n['name']?.toString() ?? 'Category'),
+              leading: cover,
+              title: Text(category.name),
               children: [
                 ListTile(
-                  title: Text('All ${n['name']}'),
-                  onTap: () => context.push('/shop/${n['id']}'),
+                  title: Text('All ${category.name}'),
+                  onTap: () => context.push('/shop/${category.id}'),
                 ),
                 for (final child in children)
                   Padding(
                     padding: const EdgeInsets.only(left: 16),
-                    child: node(Map<String, dynamic>.from(child)),
+                    child: node(child),
                   ),
               ],
             );
@@ -52,7 +63,9 @@ class ShopCategoriesScreen extends ConsumerWidget {
               onAction: () => ref.invalidate(productTreeProvider),
             ),
             data: (items) => Column(
-              children: [for (final category in items) node(category)],
+              children: [
+                for (final category in items) node(Category.fromJson(category)),
+              ],
             ),
           ),
         ],

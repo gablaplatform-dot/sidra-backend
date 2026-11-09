@@ -36,6 +36,26 @@ void main() {
     expect(c.name, 'Rental');
   });
 
+  test('missing covers use a category photo or inherit the parent cover', () {
+    final category = Category.fromJson({
+      'id': 'kids',
+      'name': 'Babies & Kids',
+      'children': [
+        {'id': 'strollers', 'name': 'Strollers'},
+        {'id': 'phones', 'name': 'Phones'},
+      ],
+    });
+    expect(category.fallbackArtwork, 'assets/categories/kids.jpg');
+    expect(category.children.first.fallbackArtwork, category.fallbackArtwork);
+    expect(
+      category.children.last.fallbackArtwork,
+      'assets/categories/phones.jpg',
+    );
+    for (final entry in [category, ...category.children]) {
+      expect(File(entry.fallbackArtwork).existsSync(), isTrue);
+    }
+  });
+
   testWidgets('new category with no image renders a graceful fallback', (
     tester,
   ) async {
