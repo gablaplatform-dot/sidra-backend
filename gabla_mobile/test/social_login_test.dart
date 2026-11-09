@@ -196,9 +196,9 @@ void main() {
               final context = key.currentContext!;
               for (final asset in [
                 'assets/brand/icon-only.png',
-                'assets/artwork/shop.png',
-                'assets/artwork/ride.png',
-                'assets/artwork/services.png',
+                'assets/artwork/shop.jpg',
+                'assets/artwork/ride.jpg',
+                'assets/artwork/services.jpg',
               ]) {
                 await precacheImage(AssetImage(asset), context);
               }

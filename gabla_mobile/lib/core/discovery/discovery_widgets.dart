@@ -55,7 +55,7 @@ class DiscoveryHeader extends ConsumerWidget {
         ),
       ],
     );
-    final image = Image.asset('assets/artwork/$artwork.png', fit: BoxFit.cover);
+    final image = Image.asset('assets/artwork/$artwork.jpg', fit: BoxFit.cover);
     return DesignEntrance(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

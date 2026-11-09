@@ -18,7 +18,7 @@ class ServiceArtworkHeader extends StatelessWidget {
             ArtworkHero(
               tag: 'service-artwork-$index',
               child: Image.asset(
-                'assets/artwork/${['shop', 'services', 'bus', 'ride'][index]}.png',
+                'assets/artwork/${['shop', 'services', 'bus', 'ride'][index]}.jpg',
                 fit: BoxFit.cover,
               ),
             ),

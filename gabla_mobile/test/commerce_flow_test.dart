@@ -413,7 +413,7 @@ void main() {
         if (const bool.fromEnvironment('COMMERCE_PREVIEWS')) {
           await tester.runAsync(
             () => precacheImage(
-              const AssetImage('assets/artwork/shop.png'),
+              const AssetImage('assets/artwork/shop.jpg'),
               tester.element(find.byType(ShopScreen)),
             ),
           );

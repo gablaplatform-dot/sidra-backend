@@ -405,7 +405,7 @@ class CommunityPostCard extends StatelessWidget {
     final picture = poster == null
         ? (event
               ? Image.asset(
-                  'assets/artwork/community-concert.png',
+                  'assets/artwork/community-concert.jpg',
                   fit: BoxFit.cover,
                 )
               : ColoredBox(

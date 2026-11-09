@@ -107,7 +107,7 @@ class NearbyEntry extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(18),
                 child: Image.asset(
-                  'assets/artwork/services.png',
+                  'assets/artwork/services.jpg',
                   fit: BoxFit.cover,
                 ),
               ),
@@ -123,7 +123,7 @@ class NearbyEntry extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(18),
                 child: Image.asset(
-                  'assets/artwork/shop.png',
+                  'assets/artwork/shop.jpg',
                   fit: BoxFit.cover,
                 ),
               ),
@@ -152,7 +152,7 @@ class NearbyEntry extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Image.asset(
-            'assets/artwork/ride.png',
+            'assets/artwork/ride.jpg',
             fit: BoxFit.cover,
             alignment: Alignment.topCenter,
           ),

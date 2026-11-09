@@ -76,7 +76,7 @@ class _ShopHeroState extends ConsumerState<ShopHero> {
                   };
               final image = ad['imageUrl']?.toString();
               final artwork = image == null
-                  ? Image.asset('assets/artwork/shop.png', fit: BoxFit.cover)
+                  ? Image.asset('assets/artwork/shop.jpg', fit: BoxFit.cover)
                   : CommerceImage(image);
               final media = ad['videoUrl'] != null
                   ? _AdVideo(

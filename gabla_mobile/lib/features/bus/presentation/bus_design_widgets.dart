@@ -144,7 +144,7 @@ class BusJourneyCard extends ConsumerWidget {
                     top: Radius.circular(24),
                   ),
                   child: Image.asset(
-                    'assets/artwork/bus.png',
+                    'assets/artwork/bus.jpg',
                     height: 100,
                     fit: BoxFit.cover,
                   ),

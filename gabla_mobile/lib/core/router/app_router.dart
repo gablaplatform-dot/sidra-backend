@@ -1,4 +1,3 @@
-import '../../features/mylike/mylike_screen.dart';
 import '../sharing/share_links.dart';
 import '../../features/community/presentation/community_screens.dart';
 import '../../features/community/presentation/community_editor_screen.dart';
@@ -77,11 +76,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(
-        path: '/mylike/:screen',
-        builder: (context, state) =>
-            MylikeScreen(screen: state.pathParameters['screen']!),
-      ),
       GoRoute(
         path: '/share/:type/:id',
         redirect: (context, state) => sharedDestination(state.uri) ?? '/home',

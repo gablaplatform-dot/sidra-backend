@@ -1,15 +1,12 @@
-# First seven provider categories
+# Directory category photos
 
-Generated with the built-in image-generation tool. These images illustrate categories, not real provider listings. The first seven category IDs from the directory API are mapped explicitly in `lib/features/categories/domain/category_artwork.dart`. Later categories and all admin URLs remain unchanged.
+Bundled photographs from [Unsplash](https://unsplash.com/license). The photos illustrate sections and categories.
 
-Shared prompt: premium standalone square editorial category artwork for Gabla, coordinated peach/terracotta/sage/lilac architectural materials, realistic tactile surfaces and warm daylight, centered upper subject with quiet lower space for labels, no text, logos, borders, watermarks, or UI.
+- [rental.jpg](https://images.unsplash.com/photo-1522708323590-d24dbb6b0267)
+- [properties.jpg](https://images.unsplash.com/photo-1600596542815-ffad4c1539a9)
+- [venue.jpg](https://images.unsplash.com/photo-1519167758481-83f550bb49b3)
+- [media.jpg](https://images.unsplash.com/photo-1516035069371-29a1b244cc32)
+- [entertainment.jpg](https://images.unsplash.com/photo-1516280440614-37939bbacd81)
+- [jobs.jpg](https://images.unsplash.com/photo-1522071820081-009f0129c71c)
 
-- Rental: modern apartment doorway, sculptural brass key on terracotta pedestal, sage plant and peach arch.
-- Jobs: confident Black African professional in sage tailoring with folio, lilac desk and laptop.
-- Media: professional cinema camera, amber reel sculpture, lilac plinth and peach studio.
-- Service providers: reuse the generated architect portrait from `assets/artwork/services.png`.
-- Venue: open-air pavilion, cream arches, elegant chairs and tropical plants.
-- Entertainment: cream/peach headphones, silver microphone, coral acoustic forms and lilac studio.
-- Properties: modern East African villa, travertine architecture, tropical foliage, terracotta stair and blue pool.
-
-Artwork is bundled in Flutter and does not overwrite backend category records.
+Service providers uses the [services photograph](https://images.unsplash.com/photo-1581578731548-c64695cc6952). The seven directory category IDs retain their existing cover mapping. Other categories use their admin image URLs when available.

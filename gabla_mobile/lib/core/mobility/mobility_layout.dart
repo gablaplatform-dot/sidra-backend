@@ -539,7 +539,7 @@ class MobilityArtwork extends StatelessWidget {
   Widget build(BuildContext context) {
     final position = Scrollable.maybeOf(context)?.position;
     final image = Image.asset(
-      'assets/artwork/${bus ? 'bus' : 'ride'}.png',
+      'assets/artwork/${bus ? 'bus' : 'ride'}.jpg',
       fit: BoxFit.cover,
     );
     if (position == null || MediaQuery.disableAnimationsOf(context))

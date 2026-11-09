@@ -30,7 +30,7 @@ class ProviderOnboardingScreen extends ConsumerWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(26),
               child: Image.asset(
-                'assets/artwork/services.png',
+                'assets/artwork/services.jpg',
                 height: 230,
                 fit: BoxFit.cover,
               ),

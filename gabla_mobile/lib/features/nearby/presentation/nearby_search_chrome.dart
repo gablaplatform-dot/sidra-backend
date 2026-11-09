@@ -203,8 +203,8 @@ class NearbySearchChrome extends StatelessWidget {
               children: [
                 for (final filter in <String?, (String, String?)>{
                   null: ('Everything', null),
-                  'product': ('Products', 'assets/artwork/shop.png'),
-                  'service': ('Services', 'assets/artwork/services.png'),
+                  'product': ('Products', 'assets/artwork/shop.jpg'),
+                  'service': ('Services', 'assets/artwork/services.jpg'),
                 }.entries)
                   Padding(
                     padding: const EdgeInsets.only(right: 8),

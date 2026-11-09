@@ -22,7 +22,7 @@ void main() {
     ); // Health care, eighth.
     for (final asset in providerCategoryArtwork.values) {
       final bytes = File(asset).readAsBytesSync();
-      expect(bytes.take(8), [137, 80, 78, 71, 13, 10, 26, 10]);
+      expect(bytes.take(3), [0xff, 0xd8, 0xff]);
     }
   });
 

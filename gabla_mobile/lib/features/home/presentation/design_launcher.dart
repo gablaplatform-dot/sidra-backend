@@ -463,7 +463,7 @@ class _Artwork extends StatelessWidget {
   Widget build(BuildContext context) => ArtworkHero(
     tag: 'service-artwork-$index',
     child: Image.asset(
-      'assets/artwork/${serviceArtwork[index]}.png',
+      'assets/artwork/${serviceArtwork[index]}.jpg',
       fit: BoxFit.cover,
       excludeFromSemantics: true,
       cacheWidth: 900,

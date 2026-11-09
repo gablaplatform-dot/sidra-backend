@@ -136,7 +136,7 @@ class CommunityBrowseHeader extends StatelessWidget {
         height: height,
         width: double.infinity,
         child: Image.asset(
-          'assets/artwork/community-concert.png',
+          'assets/artwork/community-concert.jpg',
           fit: BoxFit.cover,
           alignment: Alignment.centerRight,
         ),
@@ -151,7 +151,7 @@ class CommunityBrowseHeader extends StatelessWidget {
             color: c.inverseSurface,
             image: event
                 ? const DecorationImage(
-                    image: AssetImage('assets/artwork/community-concert.png'),
+                    image: AssetImage('assets/artwork/community-concert.jpg'),
                     fit: BoxFit.cover,
                     colorFilter: ColorFilter.mode(
                       Color(0x88000000),
@@ -290,7 +290,7 @@ class CommunityBrowseHeader extends StatelessWidget {
             color: c.surfaceContainerHigh,
             image: event
                 ? const DecorationImage(
-                    image: AssetImage('assets/artwork/community-concert.png'),
+                    image: AssetImage('assets/artwork/community-concert.jpg'),
                     fit: BoxFit.cover,
                     colorFilter: ColorFilter.mode(
                       Color(0x99000000),

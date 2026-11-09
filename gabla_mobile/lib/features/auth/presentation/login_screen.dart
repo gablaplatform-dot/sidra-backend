@@ -572,7 +572,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           scale: _reduced ? 1.06 : 1.06 + _ambient.value * .045,
           alignment: Alignment.topCenter,
           child: Image.asset(
-            'assets/artwork/${style == AppThemeStyle.cinematic ? 'services' : 'ride'}.png',
+            'assets/artwork/${style == AppThemeStyle.cinematic ? 'services' : 'ride'}.jpg',
             fit: BoxFit.cover,
           ),
         ),
@@ -604,7 +604,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     child: Stack(
       fit: StackFit.expand,
       children: [
-        Image.asset('assets/artwork/$name.png', fit: BoxFit.cover),
+        Image.asset('assets/artwork/$name.jpg', fit: BoxFit.cover),
         if (child != null)
           Align(
             alignment: Alignment.bottomLeft,

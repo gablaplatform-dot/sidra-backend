@@ -210,7 +210,7 @@ void main() {
         await tester.runAsync(() async {
           await precacheImage(
             AssetImage(
-              'assets/artwork/${kind.contains('event') ? 'events' : 'jobs'}.png',
+              'assets/artwork/${kind.contains('event') ? 'events' : 'jobs'}.jpg',
             ),
             key.currentContext!,
           );

@@ -39,18 +39,18 @@ class CategoryCover extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final name = category.name.toLowerCase();
     final asset = name.contains('job')
-        ? 'assets/categories/jobs.png'
+        ? 'assets/categories/jobs.jpg'
         : name.contains('rental') ||
               name.contains('propert') ||
               name.contains('accom')
-        ? 'assets/categories/properties.png'
+        ? 'assets/categories/properties.jpg'
         : name.contains('entertain')
-        ? 'assets/categories/entertainment.png'
+        ? 'assets/categories/entertainment.jpg'
         : name.contains('venue') || name.contains('event')
-        ? 'assets/categories/venue.png'
+        ? 'assets/categories/venue.jpg'
         : name.contains('media') || name.contains('technolog')
-        ? 'assets/categories/media.png'
-        : 'assets/artwork/services.png';
+        ? 'assets/categories/media.jpg'
+        : 'assets/artwork/services.jpg';
     return Stack(
       fit: StackFit.expand,
       children: [

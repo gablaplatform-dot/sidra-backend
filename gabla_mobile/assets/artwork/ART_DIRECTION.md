@@ -1,12 +1,11 @@
-# Gabla service artwork
+# Home and feature photos
 
-Original images generated using the built-in image-generation tool for this native app. These are illustrative category covers, not actual inventory, vehicle listings, or provider portraits. All four PNGs are bundled for offline rendering.
+Bundled photographs from [Unsplash](https://unsplash.com/license). The photos illustrate sections and categories.
 
-Prompt direction shared by all four images: premium editorial commercial artwork for an East African marketplace; realistic materials, soft lighting; square framing with uncluttered lower space for labels; no logos, text, UI, or watermarks.
-
-- shop.png: cobalt shopping bag, cream sneaker, translucent amber sunglasses, apricot fabric on warm terracotta architectural plinths; product campaign still life.
-- ride.png: silver compact crossover, orange motorcycle helmet, sweeping concrete road sculpture and powder-blue backdrop; automotive editorial campaign.
-- bus.png: deep teal intercity coach, curved road, tropical hills and terracotta sun; sophisticated landscape with realistic coach proportions.
-- services.png: confident Black African female architect in an ivory shirt holding architectural drawings, forest-green arch, clay-pink side table and toolkit; lavender studio portrait.
-
-Subjects are illustrative; they do not change API data or imply availability. Runtime cropping and dark gradient scrims are drawn by Flutter, not baked into the PNGs.
+- [shop.jpg](https://images.unsplash.com/photo-1441986300917-64674bd600d8)
+- [services.jpg](https://images.unsplash.com/photo-1581578731548-c64695cc6952)
+- [bus.jpg](https://images.unsplash.com/photo-1603521801204-8d9c70dd08c8)
+- [ride.jpg](https://images.unsplash.com/photo-1449965408869-eaa3f722e40d)
+- [jobs.jpg](https://images.unsplash.com/photo-1521737711867-e3b97375f902)
+- [events.jpg](https://images.unsplash.com/photo-1506157786151-b8491531f063)
+- [community-concert.jpg](https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f)

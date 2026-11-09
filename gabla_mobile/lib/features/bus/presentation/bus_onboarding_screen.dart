@@ -49,7 +49,7 @@ class _BusOnboardingScreenState extends ConsumerState<BusOnboardingScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(28),
               child: Image.asset(
-                'assets/artwork/bus.png',
+                'assets/artwork/bus.jpg',
                 height: 220,
                 fit: BoxFit.cover,
               ),

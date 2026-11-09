@@ -63,16 +63,6 @@ class AppearanceScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.dashboard_customize_outlined),
-                    title: const Text('Mylike'),
-                    subtitle: const Text('Open the presentation preview'),
-                    trailing: const Icon(Icons.arrow_forward),
-                    onTap: () => context.push('/mylike/home'),
-                  ),
-                ),
-                const SizedBox(height: 12),
                 for (final style in AppThemeStyle.values) ...[
                   _StyleCard(
                     style: style,
