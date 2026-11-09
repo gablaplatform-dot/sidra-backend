@@ -9,7 +9,6 @@ import { loadGoogleMaps } from "../lib/maps";
 import { flattenCategories } from "../lib/categories";
 import AudiencePicker from "../components/AudiencePicker";
 import { isCustomFieldFilled } from "../lib/customFields";
-import FeatureVisual from "../components/FeatureVisual";
 import Field from "../components/Field";
 import DynamicField from "../components/DynamicField";
 
@@ -278,7 +277,7 @@ export default function ProviderOnboarding() {
 
       <div className="onboarding-grid">
         <aside className="welcome-pane">
-          <FeatureVisual kind="business" />
+          <img src="/assets/gabla-provider-welcome.jpg" alt="" />
           <p className="eyebrow">{t("onboarding.invited")}</p>
           <h1>{t("onboarding.headline")}</h1>
           <p>{t("onboarding.completeFor")} <strong>{invitation?.provider?.businessName}</strong>. {t("onboarding.savedSecurely")}</p>

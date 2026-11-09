@@ -42,7 +42,7 @@ class ProviderEngagementPanel extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const CommerceTitle('Save or contact'),
+        const CommerceTitle('Keep the connection'),
         OutlinedButton.icon(
           onPressed: () => gate(() async {
             final api = ref.read(apiClientProvider);

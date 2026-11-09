@@ -25,7 +25,7 @@ class AppearanceScreen extends ConsumerWidget {
           bottom: const TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
-            labelPadding: EdgeInsets.symmetric(horizontal: 12),
+            labelPadding: EdgeInsets.symmetric(horizontal: 5),
             labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             tabs: [
               Tab(text: 'Designs'),
@@ -37,7 +37,7 @@ class AppearanceScreen extends ConsumerWidget {
           ),
           actions: [
             IconButton(
-              tooltip: 'View home with this design',
+              tooltip: 'Present design',
               onPressed: () => context.go('/home'),
               icon: const Icon(Icons.play_arrow_rounded),
             ),
@@ -51,7 +51,7 @@ class AppearanceScreen extends ConsumerWidget {
                 FilledButton.icon(
                   onPressed: () => context.go('/home'),
                   icon: const Icon(Icons.play_arrow_rounded),
-                  label: Text('View ${preferences.style.label} on home'),
+                  label: Text('Present ${preferences.style.label}'),
                 ),
                 const SizedBox(height: 20),
                 Text('Layout design', style: theme.textTheme.titleMedium),
@@ -84,7 +84,9 @@ class AppearanceScreen extends ConsumerWidget {
                   style: theme.textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
-                const Text('Choose a preset or edit the three colors below.'),
+                const Text(
+                  'Color combinations change the palette, never the layout.',
+                ),
                 const SizedBox(height: 16),
                 Text('Three-color palette', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
@@ -169,7 +171,7 @@ class AppearanceScreen extends ConsumerWidget {
                 FilledButton.icon(
                   onPressed: () => context.go('/home'),
                   icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('View colors on home'),
+                  label: const Text('Present this combination'),
                 ),
               ],
             ),
@@ -179,7 +181,7 @@ class AppearanceScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               children: [
                 const Text(
-                  'Choose a light or dark appearance, or follow your phone’s setting.',
+                  'Motion follows your phone’s accessibility settings. Scroll reveals replay when cards return into view.',
                 ),
                 const SizedBox(height: 20),
                 Text('Brightness', style: theme.textTheme.titleMedium),
@@ -251,7 +253,7 @@ class _StyleCard extends StatelessWidget {
             border: Border.all(
               color: selected
                   ? theme.colorScheme.primary
-                  : theme.colorScheme.outlineVariant,
+                  : Colors.grey.withValues(alpha: 0.2),
               width: selected ? 2 : 1,
             ),
           ),
@@ -284,7 +286,7 @@ class _StyleCard extends StatelessWidget {
               else
                 Icon(
                   Icons.radio_button_unchecked,
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: Colors.grey.withValues(alpha: 0.4),
                 ),
             ],
           ),

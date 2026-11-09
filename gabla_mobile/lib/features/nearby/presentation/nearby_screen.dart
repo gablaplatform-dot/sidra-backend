@@ -2,8 +2,6 @@ import '../../../core/location/map_mode.dart';
 import '../../../core/location/google_place_picker.dart';
 import 'nearby_search_chrome.dart';
 import '../../../core/theme/font_group.dart';
-import '../../../core/theme/style_tokens.dart';
-import '../../../core/widgets/feature_visual.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,7 +27,6 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
   final _listScroll = ScrollController();
   final _sheetController = DraggableScrollableController();
   ScrollController? _activeResultsScroll;
-  double _resultsHeaderExtent = 0;
   bool _listOnly = false, _mapExpanded = false, _areaMoved = false;
   LatLng? _camera;
   double _zoom = 13;
@@ -88,7 +85,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
           return;
         }
         final scale = MediaQuery.textScalerOf(context).scale(1);
-        final target = (_resultsHeaderExtent + index * 180 * scale)
+        final target = (100 * scale + index * 180 * scale)
             .clamp(0.0, scroll.positions.last.maxScrollExtent)
             .toDouble();
         if (MediaQuery.disableAnimationsOf(context)) {
@@ -142,7 +139,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
       controller: _query,
       focus: _queryFocus,
       listOnly: _listOnly,
-      onBack: () => context.canPop() ? context.pop() : context.go('/home'),
+      onBack: () => context.pop(),
       onQuery: ref.read(nearbyControllerProvider.notifier).setQuery,
       onSubmit: ref.read(nearbyControllerProvider.notifier).search,
       onClear: () {
@@ -435,13 +432,9 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
         children: [
           Text(
             state.query.trim().length < 2
-                ? 'Search products & services'
-                : state.result.isLoading
-                ? 'Searching nearby…'
-                : state.result.hasError
-                ? 'Search unavailable'
+                ? 'What would you like to find?'
                 : response == null
-                ? 'Search nearby'
+                ? 'Finding your next stop…'
                 : '${response.total} matches for “${state.query.trim()}”',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -453,15 +446,11 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
           ),
           const SizedBox(height: 5),
           Text(
-            state.query.trim().length < 2
-                ? 'Choose an area above, then enter a search.'
-                : state.result.isLoading || state.result.hasError
-                ? state.origin.label
-                : response?.widened == true
+            response?.widened == true
                 ? 'Search widened beyond 15 km · pins are approximate'
                 : 'Nearest matches first · pins are approximate',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 10,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
@@ -475,20 +464,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
 
   Widget _emptyContent(NearbyState state) {
     if (state.result.isLoading) {
-      return const Padding(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 12),
-            Text(
-              'Searching products and services…',
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
     if (state.result.hasError) {
       final error = state.result.error;
@@ -498,13 +474,10 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.search_off_outlined, size: 32),
-              const SizedBox(height: 12),
               Text(
                 error is ApiException
                     ? error.message
                     : 'Search could not load. Try again.',
-                textAlign: TextAlign.center,
               ),
               TextButton(
                 onPressed: ref.read(nearbyControllerProvider.notifier).search,
@@ -525,7 +498,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
             const SizedBox(height: 12),
             Text(
               state.query.trim().length < 2
-                  ? 'Enter at least 2 letters to search products and services.'
+                  ? 'Search for at least two letters to explore products and services.'
                   : 'No matches in this area. Try another search or location.',
               textAlign: TextAlign.center,
             ),
@@ -571,32 +544,24 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
     return CustomScrollView(
       controller: controller,
       slivers: [
-        SliverToBoxAdapter(child: _summary(state)),
-        SliverLayoutBuilder(
-          builder: (context, constraints) {
-            // Measure the naturally wrapped summary rather than assuming a
-            // fixed height; pin selection must still scroll to the right item.
-            _resultsHeaderExtent = constraints.precedingScrollExtent;
-            return SliverFixedExtentList(
-              itemExtent: 180 * scale,
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
-                  child: _ResultCard(
-                    item: state.items[index],
-                    selected: state.selectedId == state.items[index].id,
-                    editorial: style == AppThemeStyle.editorial,
-                    onPick: () => _pick(state.items[index]),
-                    onOpen: () => _open(state.items[index]),
-                  ),
-                ),
-                childCount: state.items.length,
+        SliverToBoxAdapter(
+          child: SizedBox(height: 100 * scale, child: _summary(state)),
+        ),
+        SliverFixedExtentList(
+          itemExtent: 180 * scale,
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: _ResultCard(
+                item: state.items[index],
+                selected: state.selectedId == state.items[index].id,
+                editorial: style == AppThemeStyle.editorial,
+                onPick: () => _pick(state.items[index]),
+                onOpen: () => _open(state.items[index]),
               ),
-            );
-          },
+            ),
+            childCount: state.items.length,
+          ),
         ),
         const SliverToBoxAdapter(child: SizedBox(height: 22)),
       ],
@@ -610,11 +575,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
   ) => Material(
     elevation: 8,
     color: Theme.of(context).colorScheme.surface,
-    borderRadius: BorderRadius.vertical(
-      top: Radius.circular(
-        Theme.of(context).extension<StyleTokens>()?.cardRadius ?? 8,
-      ),
-    ),
+    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
     clipBehavior: Clip.antiAlias,
     child: Column(
       children: [
@@ -646,9 +607,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
     }
     return LayoutBuilder(
       builder: (context, bounds) {
-        if (bounds.maxHeight < 180 ||
-            MediaQuery.textScalerOf(context).scale(1) > 1.2)
-          return _results(state, style);
+        if (bounds.maxHeight < 180) return _results(state, style);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -708,21 +667,20 @@ class _ResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).colorScheme;
-    final radius = Theme.of(context).extension<StyleTokens>()?.cardRadius ?? 8;
     final p = item.product;
     final details = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          '${item.type == 'service' ? 'Service' : 'Product'}${item.related ? ' · Related' : ''}${p.distanceKm == null ? '' : ' · ${p.distanceKm! < 1 ? '<1' : p.distanceKm!.toStringAsFixed(1)} km'}',
+          '${item.type == 'service' ? 'SERVICE' : 'PRODUCT'}${item.related ? ' · RELATED' : ''}${p.distanceKm == null ? '' : ' · ${p.distanceKm! < 1 ? '<1' : p.distanceKm!.toStringAsFixed(1)} km'}',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 9,
             height: 1.15,
             fontWeight: FontWeight.w700,
-            letterSpacing: .1,
+            letterSpacing: .6,
             color: photo ? Colors.white70 : c.primary,
           ),
         ),
@@ -765,7 +723,16 @@ class _ResultCard extends StatelessWidget {
         ),
       ],
     );
-    final placeholder = FeatureVisual(kind: item.type);
+    final placeholder = ColoredBox(
+      color: c.secondaryContainer,
+      child: Icon(
+        item.type == 'service'
+            ? Icons.handyman_outlined
+            : Icons.shopping_bag_outlined,
+        color: c.onSecondaryContainer,
+        size: 34,
+      ),
+    );
     final image = p.imageUrl == null || p.imageUrl!.isEmpty
         ? placeholder
         : Image.network(
@@ -778,7 +745,7 @@ class _ResultCard extends StatelessWidget {
       selected: selected,
       child: Material(
         color: c.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(radius),
+        borderRadius: BorderRadius.circular(editorial ? 8 : 24),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onPick,
@@ -788,7 +755,7 @@ class _ResultCard extends StatelessWidget {
                 color: selected ? c.primary : c.outlineVariant,
                 width: selected ? 2 : 1,
               ),
-              borderRadius: BorderRadius.circular(radius),
+              borderRadius: BorderRadius.circular(editorial ? 8 : 24),
             ),
             child: photo
                 ? Stack(
@@ -826,7 +793,7 @@ class _ResultCard extends StatelessWidget {
                     child: Row(
                       children: [
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(radius),
+                          borderRadius: BorderRadius.circular(14),
                           child: SizedBox(width: 68, height: 88, child: image),
                         ),
                         const SizedBox(width: 12),

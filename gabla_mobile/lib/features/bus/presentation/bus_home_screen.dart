@@ -8,7 +8,6 @@ import '../../../core/motion/design_transitions.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../application/bus_providers.dart';
-import 'bus_design_widgets.dart';
 
 class BusHomeScreen extends ConsumerStatefulWidget {
   const BusHomeScreen({super.key});
@@ -40,8 +39,7 @@ class _BusHomeScreenState extends ConsumerState<BusHomeScreen> {
   }
 
   Future<void> _town(bool origin) async {
-    final placesState = ref.read(busPlacesProvider);
-    final places = placesState.valueOrNull;
+    final places = ref.read(busPlacesProvider).valueOrNull;
     final options =
         (places?[origin ? 'origins' : 'destinations'] as List? ?? [])
             .map((p) => '$p')
@@ -53,11 +51,6 @@ class _BusHomeScreenState extends ConsumerState<BusHomeScreen> {
       builder: (_) => _TownPicker(
         title: origin ? 'Leaving from' : 'Travelling to',
         options: options,
-        notice: placesState.hasError
-            ? 'Town suggestions could not load. You can still type a town.'
-            : placesState.isLoading
-            ? 'Town suggestions are loading. You can also type a town.'
-            : null,
       ),
     );
     if (value != null && mounted)
@@ -76,9 +69,8 @@ class _BusHomeScreenState extends ConsumerState<BusHomeScreen> {
     ref.watch(busPlacesProvider);
     return MobilityLayout(
       bus: true,
-      scene: const SizedBox(height: 112, child: BusScene()),
-      title: 'Find a bus',
-      subtitle: 'Choose your towns and date to compare departures.',
+      title: 'A window seat\nto somewhere.',
+      subtitle: 'Find your route. Pick your ticket. Let the journey begin.',
       actions: [
         IconButton(
           tooltip: 'My tickets',
@@ -89,38 +81,35 @@ class _BusHomeScreenState extends ConsumerState<BusHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          BusJourneyField(
+          JourneyField(
             label: 'From',
-            value: _from.isEmpty ? 'Departure town' : _from,
+            value: _from.isEmpty ? 'Your departure town' : _from,
             icon: Icons.trip_origin,
             onTap: () => _town(true),
           ),
-          SizedBox(
-            height: 48,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
-                tooltip: 'Swap towns',
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    final v = _from;
-                    _from = _to;
-                    _to = v;
-                  });
-                },
-                icon: const Icon(Icons.swap_vert),
-              ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              tooltip: 'Swap towns',
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                setState(() {
+                  final v = _from;
+                  _from = _to;
+                  _to = v;
+                });
+              },
+              icon: const Icon(Icons.swap_vert),
             ),
           ),
-          BusJourneyField(
+          JourneyField(
             label: 'To',
-            value: _to.isEmpty ? 'Destination town' : _to,
+            value: _to.isEmpty ? 'Where will you go?' : _to,
             icon: Icons.location_on_outlined,
             onTap: () => _town(false),
           ),
           const SizedBox(height: 12),
-          BusJourneyField(
+          JourneyField(
             label: 'Departure',
             value: DateFormat('EEE, d MMM yyyy').format(_date),
             icon: Icons.calendar_today_outlined,
@@ -142,11 +131,7 @@ class _BusHomeScreenState extends ConsumerState<BusHomeScreen> {
             spacing: 8,
             children: [
               for (var i = 0; i < 3; i++)
-                ChoiceChip(
-                  selected: DateUtils.isSameDay(
-                    _date,
-                    DateTime.now().toUtc().add(Duration(hours: 3, days: i)),
-                  ),
+                ActionChip(
                   label: Text(
                     i == 0
                         ? 'Today'
@@ -154,7 +139,7 @@ class _BusHomeScreenState extends ConsumerState<BusHomeScreen> {
                         ? 'Tomorrow'
                         : 'In 2 days',
                   ),
-                  onSelected: (_) => setState(
+                  onPressed: () => setState(
                     () => _date = DateUtils.dateOnly(
                       DateTime.now().toUtc().add(Duration(hours: 3, days: i)),
                     ),
@@ -168,7 +153,7 @@ class _BusHomeScreenState extends ConsumerState<BusHomeScreen> {
             icon: const Icon(Icons.search),
             label: const Padding(
               padding: EdgeInsets.all(14),
-              child: Text('Search buses'),
+              child: Text('Find my bus'),
             ),
           ),
         ],
@@ -177,7 +162,7 @@ class _BusHomeScreenState extends ConsumerState<BusHomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           MobilitySection(
-            title: 'Popular routes',
+            title: 'Routes worth the ride',
             child: AsyncValueView(
               value: routes,
               onRetry: () => ref.invalidate(popularRoutesProvider),
@@ -194,17 +179,15 @@ class _BusHomeScreenState extends ConsumerState<BusHomeScreen> {
                                 color: Theme.of(
                                   context,
                                 ).colorScheme.surfaceContainerLow,
-                                shape: Theme.of(context).cardTheme.shape,
+                                borderRadius: BorderRadius.circular(20),
                                 child: InkWell(
-                                  customBorder: Theme.of(
-                                    context,
-                                  ).cardTheme.shape,
+                                  borderRadius: BorderRadius.circular(20),
                                   onTap: () => _search(
                                     items[i].originName,
                                     items[i].destinationName,
                                   ),
                                   child: Padding(
-                                    padding: const EdgeInsets.all(14),
+                                    padding: const EdgeInsets.all(18),
                                     child: Row(
                                       children: [
                                         CircleAvatar(
@@ -253,7 +236,7 @@ class _BusHomeScreenState extends ConsumerState<BusHomeScreen> {
           OutlinedButton.icon(
             onPressed: () => context.push('/bus/parks'),
             icon: const Icon(Icons.location_city_outlined),
-            label: const Text('Bus companies & parks'),
+            label: const Text('Explore bus companies & parks'),
           ),
         ],
       ),
@@ -262,10 +245,9 @@ class _BusHomeScreenState extends ConsumerState<BusHomeScreen> {
 }
 
 class _TownPicker extends StatefulWidget {
-  const _TownPicker({required this.title, required this.options, this.notice});
+  const _TownPicker({required this.title, required this.options});
   final String title;
   final List<String> options;
-  final String? notice;
   @override
   State<_TownPicker> createState() => _TownPickerState();
 }
@@ -306,14 +288,6 @@ class _TownPickerState extends State<_TownPicker> {
               },
             ),
             const SizedBox(height: 12),
-            if (widget.notice != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  widget.notice!,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
             Expanded(
               child: ListView(
                 children: [

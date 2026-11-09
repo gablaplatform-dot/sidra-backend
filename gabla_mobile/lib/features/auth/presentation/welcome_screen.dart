@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/media/media_upload_button.dart';
-import '../../../core/network/api_exception.dart';
 import '../../../core/network/network_providers.dart';
 import '../../../core/theme/font_group.dart';
 import '../../provider/application/provider_providers.dart';
@@ -48,21 +47,19 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       _avatar = user?.avatarUrl;
       _ready = true;
     }
-    final districtState = ref.watch(providerDistrictsProvider);
-    final districts = districtState.valueOrNull ?? [];
+    final districts = ref.watch(providerDistrictsProvider).valueOrNull ?? [];
     return Scaffold(
-      appBar: const CommerceAppBar(title: 'Account details'),
+      appBar: const CommerceAppBar(title: 'Make yourself at home'),
       body: ListView(
-        padding: const EdgeInsets.all(18),
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.all(24),
         children: [
           Text(
-            'Your profile',
-            style: AppTypography.of(context).display(size: 30),
+            'A little more you.',
+            style: AppTypography.of(context).display(size: 38),
           ),
           const SizedBox(height: 14),
           const Text(
-            'Add your name so people can recognize you. Your phone, photo and district are optional.',
+            'Help people recognize you and arrange your finds around your district.',
           ),
           const SizedBox(height: 24),
           Center(
@@ -85,18 +82,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
           const SizedBox(height: 18),
           TextField(
             controller: _name,
-            enabled: !_busy,
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.next,
-            autofillHints: const [AutofillHints.name],
             decoration: const InputDecoration(labelText: 'Name'),
           ),
           const SizedBox(height: 14),
           TextField(
             controller: _phone,
-            enabled: !_busy,
-            textInputAction: TextInputAction.done,
-            autofillHints: const [AutofillHints.telephoneNumber],
             keyboardType: TextInputType.phone,
             decoration: const InputDecoration(labelText: 'Phone (optional)'),
           ),
@@ -108,39 +98,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
             items: districts
                 .map((d) => DropdownMenuItem(value: d, child: Text(d)))
                 .toList(),
-            onChanged:
-                _busy || districtState.isLoading || districtState.hasError
-                ? null
-                : (v) => _district = v,
+            onChanged: (v) => _district = v,
           ),
-          if (districtState.isLoading)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text('Loading districts…'),
-            ),
-          if (districtState.hasError)
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Districts could not be loaded. You can save without one.',
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => ref.invalidate(providerDistrictsProvider),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 14),
-              child: Semantics(
-                liveRegion: true,
-                child: Text(
-                  _error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
+              child: Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
           const SizedBox(height: 24),
@@ -153,9 +118,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                             _phone.text.replaceAll(RegExp(r'\D'), '').length <
                                 7) {
                       setState(
-                        () => _error = _name.text.trim().isEmpty
-                            ? 'Enter your name.'
-                            : 'Enter a phone number with at least 7 digits, or leave it blank.',
+                        () => _error =
+                            'Enter your name and a valid phone number.',
                       );
                       return;
                     }
@@ -197,16 +161,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       if (mounted)
                         setState(() {
                           _busy = false;
-                          _error = e is ApiException
-                              ? e.message
-                              : 'Could not save your profile. Please try again.';
+                          _error = '$e';
                         });
                     }
                   },
-            child: Text(_busy ? 'Saving…' : 'Save and continue'),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Text(_busy ? 'Saving…' : 'Save & explore'),
+            ),
           ),
           TextButton(
-            onPressed: _busy ? null : () => context.go(_destination),
+            onPressed: () => context.go(_destination),
             child: const Text('Skip for now'),
           ),
         ],

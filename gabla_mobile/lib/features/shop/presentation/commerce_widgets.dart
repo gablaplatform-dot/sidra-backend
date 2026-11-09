@@ -12,187 +12,11 @@ AppThemeStyle commerceStyle(WidgetRef ref) =>
     ref.watch(themeControllerProvider.select((p) => p.style));
 double commerceRadius(AppThemeStyle style) => switch (style) {
   AppThemeStyle.editorial => 5,
-  AppThemeStyle.discover => 18,
+  AppThemeStyle.discover => 30,
   AppThemeStyle.cinematic => 12,
-  AppThemeStyle.orbit => 24,
-  _ => 12,
+  AppThemeStyle.orbit => 32,
+  _ => 20,
 };
-
-/// Commerce-only controls keep the user's palette, typeface and motion settings.
-/// Core theme ownership remains outside this feature.
-class CommerceScaffold extends ConsumerWidget {
-  const CommerceScaffold({
-    super.key,
-    this.appBar,
-    required this.body,
-    this.bottomNavigationBar,
-  });
-  final PreferredSizeWidget? appBar;
-  final Widget body;
-  final Widget? bottomNavigationBar;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final base = Theme.of(context);
-    final c = base.colorScheme;
-    final style = commerceStyle(ref);
-    final radius = switch (style) {
-      AppThemeStyle.editorial => 4.0,
-      AppThemeStyle.cinematic => 6.0,
-      AppThemeStyle.orbit => 14.0,
-      AppThemeStyle.discover => 10.0,
-      AppThemeStyle.gabla => 8.0,
-    };
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(radius),
-    );
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(radius),
-      borderSide: BorderSide(color: c.outlineVariant),
-    );
-    return Theme(
-      data: base.copyWith(
-        inputDecorationTheme: base.inputDecorationTheme.copyWith(
-          isDense: true,
-          filled: true,
-          fillColor: c.surfaceContainerLow,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 14,
-          ),
-          border: border,
-          enabledBorder: border,
-          focusedBorder: border.copyWith(
-            borderSide: BorderSide(color: c.primary, width: 2),
-          ),
-          errorBorder: border.copyWith(borderSide: BorderSide(color: c.error)),
-          focusedErrorBorder: border.copyWith(
-            borderSide: BorderSide(color: c.error, width: 2),
-          ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style:
-              base.filledButtonTheme.style?.copyWith(
-                shape: WidgetStatePropertyAll(shape),
-                minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
-                padding: const WidgetStatePropertyAll(
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-              ) ??
-              FilledButton.styleFrom(
-                shape: shape,
-                minimumSize: const Size(48, 48),
-              ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style:
-              base.outlinedButtonTheme.style?.copyWith(
-                shape: WidgetStatePropertyAll(shape),
-                minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
-              ) ??
-              OutlinedButton.styleFrom(
-                shape: shape,
-                minimumSize: const Size(48, 48),
-              ),
-        ),
-        chipTheme: base.chipTheme.copyWith(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radius),
-          ),
-          labelStyle: base.textTheme.labelMedium,
-        ),
-        appBarTheme: base.appBarTheme.copyWith(
-          toolbarHeight: 56,
-          titleTextStyle: base.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-          scrolledUnderElevation: 0,
-        ),
-      ),
-      child: Scaffold(
-        appBar: appBar,
-        body: body,
-        bottomNavigationBar: bottomNavigationBar,
-      ),
-    );
-  }
-}
-
-/// A truthful summary of the current flow, not a decorative stepper.
-class CommerceFlowHeader extends StatelessWidget {
-  const CommerceFlowHeader({
-    super.key,
-    required this.title,
-    required this.message,
-    required this.icon,
-  });
-  final String title, message;
-  final IconData icon;
-  @override
-  Widget build(BuildContext context) => CommercePanel(
-    padding: const EdgeInsets.all(16),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 22, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 4),
-              Text(
-                message,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(height: 1.45),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-/// An intentional default illustration, with no generated or stock imagery.
-class CommerceIconArt extends ConsumerWidget {
-  const CommerceIconArt({super.key, required this.icon, this.height = 112});
-  final IconData icon;
-  final double height;
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final style = commerceStyle(ref);
-    final c = Theme.of(context).colorScheme;
-    return Container(
-      height: height,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: style == AppThemeStyle.cinematic
-            ? c.surfaceContainerHighest
-            : c.primaryContainer,
-        borderRadius: style == AppThemeStyle.editorial
-            ? BorderRadius.zero
-            : BorderRadius.circular(commerceRadius(style)),
-        border: style == AppThemeStyle.editorial
-            ? Border(bottom: BorderSide(color: c.primary, width: 2))
-            : null,
-      ),
-      alignment: style == AppThemeStyle.editorial
-          ? Alignment.centerLeft
-          : Alignment.center,
-      padding: const EdgeInsets.all(20),
-      child: Icon(
-        icon,
-        size: style == AppThemeStyle.orbit ? 42 : 36,
-        color: style == AppThemeStyle.cinematic
-            ? c.onSurface
-            : c.onPrimaryContainer,
-      ),
-    );
-  }
-}
 
 class CommerceAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const CommerceAppBar({
@@ -203,7 +27,7 @@ class CommerceAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget> actions;
   @override
-  Size get preferredSize => const Size.fromHeight(56);
+  Size get preferredSize => const Size.fromHeight(64);
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final style = commerceStyle(ref);
@@ -224,12 +48,12 @@ class CommerceCartButton extends ConsumerWidget {
   const CommerceCartButton({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) => IconButton(
-    tooltip: 'Cart',
+    tooltip: 'Shopping bag',
     onPressed: () => context.push('/cart'),
     icon: Badge(
       isLabelVisible: ref.watch(cartCountProvider) > 0,
       label: Text('${ref.watch(cartCountProvider)}'),
-      child: const Icon(Icons.shopping_cart_outlined),
+      child: const Icon(Icons.shopping_bag_outlined),
     ),
   );
 }
@@ -240,14 +64,14 @@ class CommerceTitle extends StatelessWidget {
     super.key,
     this.subtitle,
     this.action,
-    this.label = 'View all',
+    this.label = 'Explore',
   });
   final String title, label;
   final String? subtitle;
   final VoidCallback? action;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 20, bottom: 12),
+    padding: const EdgeInsets.only(top: 22, bottom: 14),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -255,7 +79,7 @@ class CommerceTitle extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: AppTypography.of(context).display(size: 22)),
+              Text(title, style: AppTypography.of(context).display(size: 26)),
               if (subtitle != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 5),
@@ -279,7 +103,7 @@ class CommerceEmpty extends StatelessWidget {
     required this.title,
     required this.message,
     this.onAction,
-    this.action = 'Browse products',
+    this.action = 'Explore the shop',
     this.icon = Icons.shopping_bag_outlined,
   });
   final String title, message, action;
@@ -287,7 +111,7 @@ class CommerceEmpty extends StatelessWidget {
   final VoidCallback? onAction;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(20),
+    padding: const EdgeInsets.all(28),
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -296,7 +120,7 @@ class CommerceEmpty extends StatelessWidget {
         Text(
           title,
           textAlign: TextAlign.center,
-          style: AppTypography.of(context).display(size: 22),
+          style: AppTypography.of(context).display(size: 26),
         ),
         const SizedBox(height: 12),
         Text(message, textAlign: TextAlign.center),
@@ -335,7 +159,7 @@ class CommercePanel extends ConsumerWidget {
   const CommercePanel({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(16),
+    this.padding = const EdgeInsets.all(20),
     this.index = 0,
   });
   final Widget child;
@@ -350,25 +174,11 @@ class CommercePanel extends ConsumerWidget {
       child: Container(
         padding: padding,
         decoration: BoxDecoration(
-          color: switch (style) {
-            AppThemeStyle.editorial => c.surface,
-            AppThemeStyle.cinematic => c.surfaceContainerHighest,
-            AppThemeStyle.orbit => c.secondaryContainer.withValues(alpha: .32),
-            _ => c.surfaceContainerLow,
-          },
-          borderRadius: style == AppThemeStyle.editorial
-              ? BorderRadius.zero
-              : BorderRadius.circular(commerceRadius(style)),
-          border: switch (style) {
-            AppThemeStyle.editorial => Border(
-              top: BorderSide(color: c.outlineVariant),
-            ),
-            AppThemeStyle.gabla => Border.all(
-              color: c.outlineVariant.withValues(alpha: .6),
-            ),
-            AppThemeStyle.cinematic => Border.all(color: c.outlineVariant),
-            _ => null,
-          },
+          color: c.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(commerceRadius(style)),
+          border: style == AppThemeStyle.editorial
+              ? Border(top: BorderSide(color: c.outlineVariant))
+              : null,
         ),
         child: child,
       ),

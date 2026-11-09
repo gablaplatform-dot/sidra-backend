@@ -1,5 +1,3 @@
-import '../theme/style_tokens.dart';
-import '../widgets/feature_visual.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -33,122 +31,265 @@ class MobilityLayout extends ConsumerWidget {
     final style = ref.watch(themeControllerProvider.select((p) => p.style));
     final c = Theme.of(context).colorScheme;
     final type = AppTypography.of(context);
-    final radius = switch (style) {
-      AppThemeStyle.editorial => 0.0,
-      AppThemeStyle.orbit => 4.0,
-      AppThemeStyle.cinematic => 6.0,
-      AppThemeStyle.gabla => 8.0,
-      AppThemeStyle.discover => 12.0,
-    };
-    final heading = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title.replaceAll('\n', ' '),
-          style: type.display(size: style == AppThemeStyle.editorial ? 29 : 26),
-        ),
-        if (subtitle.isNotEmpty) ...[
-          const SizedBox(height: 8),
+    Widget heading({bool light = false, double size = 38}) => Padding(
+      padding: const EdgeInsets.fromLTRB(22, 16, 22, 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            bus ? 'GABLA / INTERCITY' : 'GABLA / GET RIDE',
+            style: TextStyle(
+              fontSize: 10,
+              letterSpacing: 2.4,
+              fontWeight: FontWeight.w700,
+              color: light ? Colors.white70 : c.primary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: type.display(
+              size: size,
+              color: light ? Colors.white : c.onSurface,
+            ),
+          ),
+          const SizedBox(height: 10),
           Text(
             subtitle,
             style: TextStyle(
               height: 1.5,
-              fontSize: 14,
-              color: c.onSurfaceVariant,
+              fontSize: 13,
+              color: light ? Colors.white70 : c.onSurfaceVariant,
             ),
           ),
         ],
-      ],
-    );
-    final visual = ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: SizedBox(
-        height: scene is SizedBox ? 112 : 200,
-        child: scene ?? MobilityArtwork(bus: bus),
       ),
     );
-    final panel = MobilityPanel(radius: radius, child: child);
-    final body = Padding(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-      child: switch (style) {
-        AppThemeStyle.gabla => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            heading,
-            const SizedBox(height: 20),
-            panel,
-            const SizedBox(height: 16),
-            visual,
-          ],
-        ),
-        AppThemeStyle.editorial => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            heading,
-            const Divider(height: 26),
-            child,
-            const Divider(height: 26),
-            visual,
-          ],
-        ),
-        AppThemeStyle.discover => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            visual,
-            const SizedBox(height: 18),
-            heading,
-            const SizedBox(height: 18),
-            panel,
-          ],
-        ),
-        AppThemeStyle.cinematic => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.only(left: 14),
-              decoration: BoxDecoration(
-                border: Border(left: BorderSide(color: c.primary, width: 2)),
-              ),
-              child: heading,
-            ),
-            const SizedBox(height: 20),
-            panel,
-            const SizedBox(height: 18),
-            visual,
-          ],
-        ),
-        AppThemeStyle.orbit => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    Widget visual({double height = 230, bool round = false}) => SizedBox(
+      height: height,
+      child:
+          scene ??
+          ClipRRect(
+            borderRadius: BorderRadius.circular(round ? 150 : 0),
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                Icon(
-                  bus
-                      ? Icons.directions_bus_outlined
-                      : Icons.local_taxi_outlined,
-                  size: 30,
-                  color: c.primary,
+                MobilityArtwork(bus: bus),
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Color(0x55000000)],
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 14),
-                Expanded(child: heading),
+                Positioned(
+                  left: 18,
+                  bottom: 18,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Text(
+                      bus
+                          ? 'A little further. A new story.'
+                          : 'Your city, at your pace.',
+                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                    ),
+                  ),
+                ),
               ],
             ),
-            const Divider(height: 28),
-            child,
-            const SizedBox(height: 18),
-            visual,
-          ],
-        ),
-      },
+          ),
     );
+    Widget panel({double radius = 28}) =>
+        MobilityPanel(radius: radius, child: child);
+    Widget inset(Widget w) =>
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: w);
+    final body = switch (style) {
+      AppThemeStyle.gabla => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          visual(height: 265),
+          Transform.translate(
+            offset: const Offset(0, -24),
+            child: inset(
+              Column(
+                children: [
+                  MobilityPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title, style: type.display(size: 30)),
+                        const SizedBox(height: 8),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: c.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        child,
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      AppThemeStyle.editorial => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          heading(size: 44),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22),
+            child: Row(
+              children: [
+                Expanded(child: Divider(color: c.outlineVariant)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Icon(
+                    bus ? Icons.route : Icons.near_me_outlined,
+                    color: c.primary,
+                  ),
+                ),
+                Expanded(child: Divider(color: c.outlineVariant)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          inset(visual(height: 170)),
+          const SizedBox(height: 24),
+          inset(panel(radius: 6)),
+        ],
+      ),
+      AppThemeStyle.discover => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Stack(
+            children: [
+              visual(height: 340),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: .85),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              IgnorePointer(child: heading(light: true, size: 42)),
+            ],
+          ),
+          Transform.translate(
+            offset: const Offset(0, -34),
+            child: inset(panel(radius: 32)),
+          ),
+        ],
+      ),
+      AppThemeStyle.cinematic => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          heading(size: 40),
+          inset(
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: visual(height: 250),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
+            child: Row(
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: c.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    bus ? 'YOUR NEXT DEPARTURE' : 'YOUR JOURNEY CONSOLE',
+                    style: const TextStyle(fontSize: 10, letterSpacing: 2),
+                  ),
+                ),
+                Icon(Icons.arrow_downward, size: 16, color: c.primary),
+              ],
+            ),
+          ),
+          inset(panel(radius: 12)),
+        ],
+      ),
+      AppThemeStyle.orbit => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          heading(size: 36),
+          SizedBox(
+            height: 250,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned.fill(
+                  child: CustomPaint(painter: OrbitRings(c.primary)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40,
+                    vertical: 14,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(150),
+                    child: visual(height: 220, round: true),
+                  ),
+                ),
+                Positioned(
+                  right: 18,
+                  bottom: 12,
+                  child: CircleAvatar(
+                    radius: 27,
+                    backgroundColor: c.secondaryContainer,
+                    child: Icon(
+                      bus
+                          ? Icons.confirmation_number_outlined
+                          : Icons.north_east,
+                      color: c.onSecondaryContainer,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          inset(panel(radius: 36)),
+        ],
+      ),
+    };
     return Scaffold(
       appBar: AppBar(
-        title: Text(bus ? 'Bus tickets' : 'Get a ride'),
+        title: Text(bus ? 'Gabla Bus' : 'Get Ride'),
         actions: [
           ...actions,
           IconButton(
-            tooltip: 'Design studio',
+            tooltip: 'Design Studio',
             onPressed: () => context.push('/settings/appearance'),
             icon: const Icon(Icons.tune_rounded),
           ),
@@ -242,7 +383,7 @@ class MobilityStageSwitcher extends StatelessWidget {
 }
 
 class MobilityPanel extends StatelessWidget {
-  const MobilityPanel({super.key, required this.child, this.radius = 8});
+  const MobilityPanel({super.key, required this.child, this.radius = 26});
   final Widget child;
   final double radius;
   @override
@@ -253,10 +394,15 @@ class MobilityPanel extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: BorderRadius.circular(
-          Theme.of(context).extension<StyleTokens>()?.cardRadius ?? radius,
-        ),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: c.outlineVariant.withValues(alpha: .5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .06),
+            blurRadius: 28,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: child,
     );
@@ -392,7 +538,10 @@ class MobilityArtwork extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final position = Scrollable.maybeOf(context)?.position;
-    final image = FeatureVisual(kind: bus ? 'bus' : 'ride');
+    final image = Image.asset(
+      'assets/artwork/${bus ? 'bus' : 'ride'}.png',
+      fit: BoxFit.cover,
+    );
     if (position == null || MediaQuery.disableAnimationsOf(context))
       return image;
     return AnimatedBuilder(

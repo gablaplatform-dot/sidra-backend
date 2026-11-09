@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/discovery/discovery_widgets.dart';
 import '../../../core/network/network_providers.dart';
 import '../../auth/application/session_controller.dart';
 import '../../auth/domain/session.dart';
@@ -32,19 +33,11 @@ class _BusOperatorLoginScreenState
     body: ListView(
       padding: const EdgeInsets.all(22),
       children: [
-        Icon(
-          Icons.directions_bus_outlined,
-          size: 40,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Operator sign-in',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Use your registered company account to manage routes, departures and passengers.',
+        const DiscoveryHeader(
+          title: 'Your routes.\nYour passengers.',
+          subtitle: 'Manage your departures and welcome your next passenger.',
+          artwork: 'bus',
+          eyebrow: 'GABLA / FOR OPERATORS',
         ),
         const SizedBox(height: 24),
         Form(
@@ -55,9 +48,6 @@ class _BusOperatorLoginScreenState
               TextFormField(
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                autofillHints: const [AutofillHints.username],
-                enabled: !_busy,
                 decoration: const InputDecoration(labelText: 'Company email'),
                 validator: (v) => (v ?? '').contains('@')
                     ? null
@@ -67,18 +57,12 @@ class _BusOperatorLoginScreenState
               TextFormField(
                 controller: _password,
                 obscureText: !_show,
-                enabled: !_busy,
-                autofillHints: const [AutofillHints.password],
                 decoration: InputDecoration(
                   labelText: 'Password',
                   suffixIcon: IconButton(
-                    tooltip: _show ? 'Hide password' : 'Show password',
+                    tooltip: 'Show password',
                     onPressed: () => setState(() => _show = !_show),
-                    icon: Icon(
-                      _show
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                    ),
+                    icon: const Icon(Icons.visibility_outlined),
                   ),
                 ),
                 validator: (v) =>

@@ -84,12 +84,12 @@ class ProviderContactPanel extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CommerceTitle(
-                locked ? 'Contact access' : 'Contact & location',
+                locked ? 'Connect with the seller' : 'Contact & location',
                 subtitle: p['businessName']?.toString(),
               ),
               if (locked) ...[
                 const Text(
-                  'This provider’s contact details are locked. Review the access fee below before continuing.',
+                  'Phone numbers and the exact location are private until unlocked. Pay once to access this provider’s contact details.',
                 ),
                 const SizedBox(height: 18),
                 FilledButton.icon(
@@ -160,7 +160,7 @@ class ProviderContactPanel extends ConsumerWidget {
                           location['address']?.toString() ?? 'Seller location',
                     ),
                     fromLabel: 'Seller location',
-                    height: 160,
+                    height: 200,
                   ),
                 ],
                 if (directions != null)

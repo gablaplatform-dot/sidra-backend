@@ -1,4 +1,3 @@
-import 'bus_design_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -37,7 +36,7 @@ class BusParkScreen extends ConsumerWidget {
                 address: '${p['parkAddress'] ?? p['parkName'] ?? ''}',
               ),
             )
-          : const BusScene(),
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -58,14 +57,9 @@ class BusParkScreen extends ConsumerWidget {
             ),
           const SizedBox(height: 20),
           Text(
-            'Routes & departures',
+            'Explore their routes',
             style: Theme.of(context).textTheme.titleLarge,
           ),
-          if ((p['routes'] as List? ?? []).isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('No routes are listed for this company yet.'),
-            ),
           for (final r in p['routes'] as List? ?? [])
             ListTile(
               contentPadding: EdgeInsets.zero,

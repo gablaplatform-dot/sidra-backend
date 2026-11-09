@@ -1,7 +1,7 @@
-import 'bus_design_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/mobility/mobility_layout.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../application/bus_providers.dart';
 
@@ -42,32 +42,7 @@ class _BusParksScreenState extends ConsumerState<BusParksScreen> {
                   )
                   .toList();
               if (items.isEmpty)
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.directions_bus_outlined, size: 40),
-                        const SizedBox(height: 12),
-                        Text(
-                          all.isEmpty
-                              ? 'No bus companies available'
-                              : 'No matching bus companies',
-                          style: Theme.of(context).textTheme.titleMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          all.isEmpty
-                              ? 'Try again later to see companies and bus parks.'
-                              : 'Try another company, park or district.',
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                return const Center(child: Text('No matching bus companies.'));
               return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 18),
                 itemCount: items.length,
@@ -77,7 +52,7 @@ class _BusParksScreenState extends ConsumerState<BusParksScreen> {
                     padding: const EdgeInsets.only(bottom: 14),
                     child: InkWell(
                       onTap: () => context.push('/bus/parks/${p['slug']}'),
-                      child: BusPanel(
+                      child: MobilityPanel(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

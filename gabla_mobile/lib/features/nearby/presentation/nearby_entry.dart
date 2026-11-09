@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme_style.dart';
-import '../../../core/theme/style_tokens.dart';
 
 const nearbyHeroTag = 'gabla-nearby-entry';
 
@@ -15,7 +14,6 @@ class NearbyEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).colorScheme;
-    final radius = Theme.of(context).extension<StyleTokens>()?.cardRadius ?? 8;
     final extra = (MediaQuery.textScalerOf(context).scale(1) - 1) * 160;
     Widget caption(String text, {Color? color}) => Text(
       text,
@@ -57,7 +55,7 @@ class NearbyEntry extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  caption('PRODUCTS & SERVICES'),
+                  caption('RIGHT AROUND YOU'),
                   const SizedBox(height: 9),
                   title('Find it nearby'),
                 ],
@@ -74,9 +72,9 @@ class NearbyEntry extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            caption('PRODUCTS & SERVICES'),
+            caption('THE NEIGHBORHOOD EDIT'),
             const SizedBox(height: 10),
-            title('Find nearby', serif: true),
+            title('Good things. Close by.', serif: true),
             const SizedBox(height: 14),
             Container(
               height: 1,
@@ -107,14 +105,10 @@ class NearbyEntry extends StatelessWidget {
             child: Transform.rotate(
               angle: .12,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(radius),
-                child: ColoredBox(
-                  color: c.secondaryContainer,
-                  child: Icon(
-                    Icons.handyman_outlined,
-                    color: c.onSecondaryContainer,
-                    size: 42,
-                  ),
+                borderRadius: BorderRadius.circular(18),
+                child: Image.asset(
+                  'assets/artwork/services.png',
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
@@ -127,14 +121,10 @@ class NearbyEntry extends StatelessWidget {
             child: Transform.rotate(
               angle: -.13,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(radius),
-                child: ColoredBox(
-                  color: c.primaryContainer,
-                  child: Icon(
-                    Icons.shopping_bag_outlined,
-                    color: c.onPrimaryContainer,
-                    size: 42,
-                  ),
+                borderRadius: BorderRadius.circular(18),
+                child: Image.asset(
+                  'assets/artwork/shop.png',
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
@@ -147,9 +137,9 @@ class NearbyEntry extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  caption('NEARBY'),
+                  caption('A LITTLE CLOSER'),
                   const SizedBox(height: 10),
-                  title('Products & services'),
+                  title('Your next find.'),
                   const SizedBox(height: 12),
                   Icon(Icons.travel_explore, color: c.primary, size: 25),
                 ],
@@ -161,14 +151,18 @@ class NearbyEntry extends StatelessWidget {
       AppThemeStyle.cinematic => Stack(
         fit: StackFit.expand,
         children: [
-          ColoredBox(color: c.surfaceContainerHighest),
-          Positioned(
-            top: 20,
-            right: 22,
-            child: Icon(
-              Icons.travel_explore,
-              color: c.primary.withValues(alpha: .35),
-              size: 80,
+          Image.asset(
+            'assets/artwork/ride.png',
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+          ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [Colors.black26, Colors.black87],
+              ),
             ),
           ),
           Padding(
@@ -177,13 +171,18 @@ class NearbyEntry extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                caption('PRODUCTS & SERVICES', color: c.onSurfaceVariant),
+                caption('YOUR CITY, UNFOLDED', color: Colors.white70),
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Expanded(child: title('Find nearby', color: c.onSurface)),
+                    Expanded(
+                      child: title(
+                        'Somewhere worth finding.',
+                        color: Colors.white,
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Icon(Icons.north_east, color: c.primary),
+                    const Icon(Icons.north_east, color: Colors.white),
                   ],
                 ),
               ],
@@ -209,9 +208,9 @@ class NearbyEntry extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  caption('PRODUCTS & SERVICES'),
+                  caption('EXPLORE YOUR RADIUS'),
                   const SizedBox(height: 9),
-                  title('Find nearby'),
+                  title('Start exploring'),
                 ],
               ),
             ),
@@ -224,7 +223,13 @@ class NearbyEntry extends StatelessWidget {
       tag: nearbyHeroTag,
       child: Material(
         color: c.primaryContainer,
-        borderRadius: BorderRadius.circular(radius),
+        borderRadius: BorderRadius.circular(
+          style == AppThemeStyle.editorial
+              ? 8
+              : style == AppThemeStyle.orbit
+              ? 100
+              : 28,
+        ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => context.push('/nearby'),

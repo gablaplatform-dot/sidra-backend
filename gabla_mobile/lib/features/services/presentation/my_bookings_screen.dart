@@ -9,7 +9,6 @@ import '../../payments/presentation/payment_sheet.dart';
 import '../../shop/presentation/commerce_widgets.dart';
 import '../application/service_providers.dart';
 import '../domain/booking.dart';
-import '../domain/booking_config.dart';
 
 class MyBookingsScreen extends ConsumerStatefulWidget {
   const MyBookingsScreen({super.key});
@@ -21,7 +20,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
   String _filter = 'Upcoming';
   String? _busy;
   @override
-  Widget build(BuildContext context) => CommerceScaffold(
+  Widget build(BuildContext context) => Scaffold(
     appBar: CommerceAppBar(
       title: 'My bookings',
       actions: [
@@ -72,9 +71,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                 return Center(
                   child: SingleChildScrollView(
                     child: CommerceEmpty(
-                      title: all.isEmpty
-                          ? 'No bookings yet'
-                          : 'No bookings in this view',
+                      title: 'Make room for a new experience',
                       message:
                           'Your stays, appointments and service bookings will appear here.',
                       icon: Icons.event_available_outlined,
@@ -89,9 +86,9 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                 itemBuilder: (context, i) {
                   final b = items[i];
                   final color = b.status == BookingStatus.confirmed
-                      ? Theme.of(context).colorScheme.primary
+                      ? Colors.green
                       : b.status == BookingStatus.pending
-                      ? Theme.of(context).colorScheme.tertiary
+                      ? Colors.orange
                       : Theme.of(context).colorScheme.onSurfaceVariant;
                   return DesignEntrance(
                     index: i,
@@ -101,16 +98,6 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            if (b.providerName?.isNotEmpty == true)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Text(
-                                  b.providerName!,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.labelMedium,
-                                ),
-                              ),
                             Row(
                               children: [
                                 Expanded(
@@ -157,7 +144,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                               ),
                             const SizedBox(height: 12),
                             Text(
-                              '${b.quantity} ${b.unit == BookingUnit.night ? (b.quantity == 1 ? 'room' : 'rooms') : (b.quantity == 1 ? 'space' : 'spaces')} · ${b.guests} ${b.guests == 1 ? 'guest' : 'guests'}',
+                              '${b.quantity} rooms / spaces · ${b.guests} guests',
                               style: const TextStyle(fontSize: 12),
                             ),
                             const Divider(height: 28),

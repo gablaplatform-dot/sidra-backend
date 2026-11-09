@@ -58,7 +58,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       ? '${p.discountPercent != null ? '-${p.discountPercent}%' : 'Sale'}'
                       : 'New',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 10,
                     fontWeight: FontWeight.w700,
                     color: p.isOnSale ? c.onPrimary : c.onSurface,
                   ),
@@ -79,7 +79,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
               p.providerName!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, color: c.onSurfaceVariant),
+              style: TextStyle(fontSize: 10, color: c.onSurfaceVariant),
             ),
           const SizedBox(height: 4),
           Text(
@@ -101,7 +101,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             Text(
               formatUgx(p.originalPrice),
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 10,
                 color: c.onSurfaceVariant,
                 decoration: TextDecoration.lineThrough,
               ),
@@ -113,7 +113,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                 p.district!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, color: c.onSurfaceVariant),
+                style: TextStyle(fontSize: 10, color: c.onSurfaceVariant),
               ),
             ),
           const SizedBox(height: 10),
@@ -122,7 +122,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             child: FilledButton.tonal(
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
-                minimumSize: const Size(48, 48),
+                minimumSize: const Size(0, 36),
               ),
               onPressed: p.type == 'product'
                   ? () {
@@ -138,10 +138,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   p.type == 'service'
                       ? (p.bookable ? 'View availability' : 'View service')
                       : inCart
-                      ? 'Add another'
-                      : 'Add to cart',
+                      ? 'In bag · add more'
+                      : 'Add to bag',
                   key: ValueKey(inCart),
-                  style: const TextStyle(fontSize: 12),
+                  style: const TextStyle(fontSize: 11),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

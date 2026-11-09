@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gabla_mobile/features/categories/domain/category.dart';
@@ -5,54 +6,51 @@ import 'package:gabla_mobile/features/categories/domain/category_artwork.dart';
 import 'package:gabla_mobile/features/categories/presentation/widgets/category_cover.dart';
 
 void main() {
-  test('fallback symbols describe the category', () {
-    expect(providerCategoryIcon('Jobs'), Icons.work_outline);
-    expect(providerCategoryIcon('Properties'), Icons.home_work_outlined);
-    expect(providerCategoryIcon('Entertainment'), Icons.headphones_outlined);
+  test('only the first seven provider directory IDs receive artwork', () {
+    expect(providerCategoryArtwork.keys.toSet(), {
+      'cmq7q7svm000fubkdhwf98m4g',
+      'cmq7qkfw4000tubkddp732of8',
+      'cmq9v0adb001dubkd4lfm00at',
+      'cmqch43oh002dubkdedlno08a',
+      'cmqcreszc0031ubkd5xzpq46r',
+      'cmqcth3fs0041ubkdsvz86yv6',
+      'cmqctv568004lubkdxhstzuui',
+    });
     expect(
-      providerCategoryIcon('Health care'),
-      Icons.health_and_safety_outlined,
-    );
-    expect(providerCategoryIcon('Unclassified'), Icons.category_outlined);
+      providerCategoryArtwork.containsKey('cmqdsf84g005vubkd2lildzss'),
+      isFalse,
+    ); // Health care, eighth.
+    for (final asset in providerCategoryArtwork.values) {
+      final bytes = File(asset).readAsBytesSync();
+      expect(bytes.take(8), [137, 80, 78, 71, 13, 10, 26, 10]);
+    }
   });
-  testWidgets('first seven categories retain original admin photos', (
+
+  test('admin image URLs and category names remain unchanged', () {
+    final c = Category.fromJson({
+      'id': 'cmq7q7svm000fubkdhwf98m4g',
+      'name': 'Rental',
+      'settings': {'imageUrl': 'https://example.com/admin.png'},
+    });
+    expect(c.imageUrl, 'https://example.com/admin.png');
+    expect(c.name, 'Rental');
+  });
+
+  testWidgets('new category with no image renders a graceful fallback', (
     tester,
   ) async {
-    const category = Category(
-      id: 'cmq7q7svm000fubkdhwf98m4g',
-      name: 'Rental',
-      imageUrl: 'https://example.test/admin-photo.jpg',
-    );
     await tester.pumpWidget(
       const MaterialApp(
         home: SizedBox(
           width: 136,
           height: 184,
-          child: CategoryCover(category: category),
+          child: CategoryCover(
+            category: Category(id: 'new', name: 'New category'),
+          ),
         ),
       ),
     );
-    final image = tester.widget<Image>(find.byType(Image));
-    final provider = image.image as ResizeImage;
-    expect((provider.imageProvider as NetworkImage).url, category.imageUrl);
+    expect(find.byIcon(Icons.category_outlined), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
-  testWidgets(
-    'missing category photo renders an icon without generated artwork',
-    (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: SizedBox(
-            width: 136,
-            height: 184,
-            child: CategoryCover(
-              category: Category(id: 'new', name: 'New category'),
-            ),
-          ),
-        ),
-      );
-      expect(find.byIcon(Icons.category_outlined), findsOneWidget);
-      expect(find.byType(Image), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
 }

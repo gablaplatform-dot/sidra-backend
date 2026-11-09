@@ -18,13 +18,6 @@ class CustomFieldInput extends StatelessWidget {
     final options = (field['options'] as List? ?? [])
         .map((o) => o is Map ? '${o['value'] ?? o['label']}' : '$o')
         .toList();
-    final optionLabels = <String, String>{
-      for (final option in field['options'] as List? ?? [])
-        if (option is Map)
-          '${option['value'] ?? option['label']}':
-              '${option['label'] ?? option['value']}',
-    };
-    final displayLabel = required ? label : '$label (optional)';
     if (['boolean', 'checkbox', 'switch'].contains(type))
       return SwitchListTile(
         contentPadding: EdgeInsets.zero,
@@ -41,7 +34,7 @@ class CustomFieldInput extends StatelessWidget {
         builder: (state) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(displayLabel),
+            Text(label),
             const SizedBox(height: 8),
             Wrap(
               spacing: 6,
@@ -49,7 +42,7 @@ class CustomFieldInput extends StatelessWidget {
               children: [
                 for (final option in options)
                   FilterChip(
-                    label: Text(optionLabels[option] ?? option),
+                    label: Text(option),
                     selected: chosen.contains(option),
                     onSelected: (v) {
                       final next = {...chosen};
@@ -76,17 +69,9 @@ class CustomFieldInput extends StatelessWidget {
       return DropdownButtonFormField<String>(
         initialValue: options.contains(value) ? value : null,
         isExpanded: true,
-        decoration: InputDecoration(labelText: displayLabel, errorMaxLines: 3),
+        decoration: InputDecoration(labelText: label),
         items: options
-            .map(
-              (o) => DropdownMenuItem(
-                value: o,
-                child: Text(
-                  optionLabels[o] ?? o,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            )
+            .map((o) => DropdownMenuItem(value: o, child: Text(o)))
             .toList(),
         onChanged: onChanged,
         validator: (v) =>
@@ -98,10 +83,7 @@ class CustomFieldInput extends StatelessWidget {
       keyboardType: type == 'number'
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
-      decoration: InputDecoration(labelText: displayLabel, errorMaxLines: 3),
-      textInputAction: type == 'textarea'
-          ? TextInputAction.newline
-          : TextInputAction.next,
+      decoration: InputDecoration(labelText: '$label${required ? ' *' : ''}'),
       onChanged: (v) => onChanged(type == 'number' ? num.tryParse(v) : v),
       validator: (v) => required && (v ?? '').trim().isEmpty
           ? 'Enter $label.'

@@ -1,9 +1,8 @@
-import 'bus_design_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../../core/theme/style_tokens.dart';
+import '../../../core/mobility/mobility_layout.dart';
 import '../../../core/motion/design_transitions.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../auth/application/session_controller.dart';
@@ -38,7 +37,7 @@ class _BusTicketsScreenState extends ConsumerState<BusTicketsScreen> {
     final messages = ref.watch(busPassengerMessagesProvider).valueOrNull ?? [];
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My tickets'),
+        title: const Text('Your journeys'),
         actions: [
           IconButton(
             tooltip: 'Refresh tickets',
@@ -55,9 +54,7 @@ class _BusTicketsScreenState extends ConsumerState<BusTicketsScreen> {
               child: ListTile(
                 tileColor: Theme.of(context).colorScheme.primaryContainer,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    Theme.of(context).extension<StyleTokens>()?.cardRadius ?? 8,
-                  ),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 leading: const Icon(Icons.campaign_outlined),
                 title: Text('${messages.length} updates from bus companies'),
@@ -132,7 +129,7 @@ class _BusTicketsScreenState extends ConsumerState<BusTicketsScreen> {
                         Text(
                           _past
                               ? 'No past journeys yet'
-                              : 'No upcoming tickets',
+                              : 'Your next journey is waiting',
                         ),
                         TextButton(
                           onPressed: () => context.push('/bus'),
@@ -154,12 +151,12 @@ class _BusTicketsScreenState extends ConsumerState<BusTicketsScreen> {
                           onTap: () => context.push(
                             '/bus/tickets/${Uri.encodeComponent(t.ticketNumber)}',
                           ),
-                          child: BusPanel(
+                          child: MobilityPanel(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Text(
-                                  t.companyName ?? 'Bus operator',
+                                  t.companyName ?? 'Gabla Bus',
                                   style: const TextStyle(fontSize: 11),
                                 ),
                                 const SizedBox(height: 14),
@@ -176,7 +173,7 @@ class _BusTicketsScreenState extends ConsumerState<BusTicketsScreen> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        'Seat ${t.seatLabel} · ${t.status.replaceAll('_', ' ')}',
+                                        'Seat ${t.seatLabel} · ${t.status}',
                                       ),
                                     ),
                                     const Icon(Icons.qr_code_2),

@@ -22,15 +22,22 @@ class ProviderOnboardingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (token == null || token!.isEmpty) {
-      return CommerceScaffold(
+      return Scaffold(
         appBar: const CommerceAppBar(title: 'Your business invitation'),
         body: ListView(
           padding: const EdgeInsets.all(22),
           children: [
-            const CommerceIconArt(icon: Icons.storefront_outlined),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(26),
+              child: Image.asset(
+                'assets/artwork/services.png',
+                height: 230,
+                fit: BoxFit.cover,
+              ),
+            ),
             const SizedBox(height: 26),
             Text(
-              'Set up your business profile',
+              'A new home for\nyour business.',
               style: Theme.of(context).textTheme.headlineLarge,
             ),
             const SizedBox(height: 16),
@@ -68,8 +75,8 @@ class ProviderOnboardingScreen extends ConsumerWidget {
     }
 
     final invite = ref.watch(providerInviteProvider(token!));
-    return CommerceScaffold(
-      appBar: const CommerceAppBar(title: 'Business profile'),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Complete your provider profile')),
       body: AsyncValueView<ProviderInvite>(
         value: invite,
         onRetry: () => ref.invalidate(providerInviteProvider(token!)),

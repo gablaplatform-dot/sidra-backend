@@ -418,6 +418,43 @@ class _NearbyMapState extends ConsumerState<NearbyMap> {
                     ],
                   ),
                 ),
+                Positioned(
+                  left: 12,
+                  top: 12,
+                  child: IgnorePointer(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xDD101B22),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.satellite_alt_outlined,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'SATELLITE',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              letterSpacing: 1.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             )
           : _unavailable(c),

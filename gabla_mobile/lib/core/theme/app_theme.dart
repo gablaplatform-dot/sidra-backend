@@ -90,29 +90,12 @@ class AppTheme {
         fontFamily: typography.heading,
       ),
     );
-    final radius = switch (style) {
-      AppThemeStyle.editorial => 0.0,
-      AppThemeStyle.orbit => 4.0,
-      AppThemeStyle.cinematic => 6.0,
-      AppThemeStyle.gabla => 8.0,
-      AppThemeStyle.discover => 12.0,
-    };
-    OutlineInputBorder fieldBorder(Color color, [double width = 1]) =>
-        OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radius),
-          borderSide: BorderSide(color: color, width: width),
-        );
-    final buttonShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(radius),
-    );
     return base.copyWith(
       colorScheme: themedScheme,
       extensions: [
         typography,
         if (tokens != null)
           tokens.copyWith(
-            pillRadius: radius,
-            cardRadius: radius,
             heroGradient: [colors[0], colors[1]],
             eyebrowStyle: tokens.eyebrowStyle.copyWith(color: scheme.primary),
             sectionTitleStyle: tokens.sectionTitleStyle.copyWith(
@@ -126,76 +109,19 @@ class AppTheme {
       appBarTheme: base.appBarTheme.copyWith(
         backgroundColor: surface,
         foregroundColor: scheme.onSurface,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        centerTitle: style == AppThemeStyle.editorial,
-        titleTextStyle: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        titleTextStyle: text.titleLarge,
       ),
       cardTheme: base.cardTheme.copyWith(
-        color: Color.lerp(surface, colors[0], .025),
-        elevation: 0,
-        shape: buttonShape,
+        color: Color.lerp(surface, colors[0], .035),
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(
-        filled: true,
-        fillColor: Color.lerp(surface, scheme.onSurface, .025),
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 15,
-        ),
-        labelStyle: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-        hintStyle: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-        alignLabelWithHint: true,
-        border: fieldBorder(scheme.outlineVariant),
-        enabledBorder: fieldBorder(scheme.outlineVariant),
-        focusedBorder: fieldBorder(scheme.primary, 1.5),
-        errorBorder: fieldBorder(scheme.error),
-        focusedErrorBorder: fieldBorder(scheme.error, 1.5),
+        fillColor: scheme.surfaceContainerHighest,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: scheme.primary,
           foregroundColor: scheme.onPrimary,
-          minimumSize: const Size(48, 48),
-          elevation: 0,
-          shape: buttonShape,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-          textStyle: text.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: scheme.primary,
-          foregroundColor: scheme.onPrimary,
-          minimumSize: const Size(48, 48),
-          shape: buttonShape,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: scheme.onSurface,
-          minimumSize: const Size(48, 48),
-          shape: buttonShape,
-          side: BorderSide(color: scheme.outlineVariant),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-        ),
-      ),
-      chipTheme: base.chipTheme.copyWith(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radius),
-        ),
-        labelStyle: text.labelMedium,
-        side: BorderSide(color: scheme.outlineVariant),
-        backgroundColor: surface,
-        selectedColor: scheme.primaryContainer,
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-      ),
-      dividerTheme: DividerThemeData(
-        color: scheme.outlineVariant,
-        thickness: 1,
-        space: 24,
       ),
       pageTransitionsTheme: PageTransitionsTheme(
         builders: {

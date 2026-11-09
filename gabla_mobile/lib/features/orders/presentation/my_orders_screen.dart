@@ -22,7 +22,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
   @override
   Widget build(BuildContext context) {
     final orders = ref.watch(myOrdersProvider);
-    return CommerceScaffold(
+    return Scaffold(
       appBar: CommerceAppBar(
         title: 'Your orders',
         actions: [
@@ -42,7 +42,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
           padding: const EdgeInsets.all(20),
           children: [
             const CommerceTitle(
-              'Order history',
+              'From shop to doorstep.',
               subtitle:
                   'Track progress, pay accepted orders, and keep your documents together.',
             ),
@@ -74,8 +74,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
               loading: () => const CommerceLoading(),
               error: (e, _) => CommerceEmpty(
                 title: 'Couldn’t load your orders',
-                message:
-                    'Check your connection and try loading your orders again.',
+                message: '$e',
                 action: 'Try again',
                 onAction: () => ref.invalidate(myOrdersProvider),
               ),
@@ -86,7 +85,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                 return shown.isEmpty
                     ? CommerceEmpty(
                         title: items.isEmpty
-                            ? 'No orders yet'
+                            ? 'Your next find starts here'
                             : 'No orders in this view',
                         message: items.isEmpty
                             ? 'Your orders will appear here once sent to a seller.'
@@ -99,7 +98,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                         children: [
                           for (var i = 0; i < shown.length; i++)
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
+                              padding: const EdgeInsets.only(bottom: 20),
                               child: OrderReceiptCard(
                                 order: shown[i],
                                 index: i,
@@ -125,7 +124,7 @@ class OrderReceiptCard extends ConsumerWidget {
     final c = Theme.of(context).colorScheme;
     final step = orderStatusStep(order.status);
     final tone = order.status == OrderStatus.fulfilled
-        ? c.primary
+        ? Colors.green
         : order.bucket == 'closed'
         ? c.error
         : c.primary;
@@ -167,17 +166,10 @@ class OrderReceiptCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Text(
-                  switch (order.status) {
-                    OrderStatus.pending => 'Awaiting seller',
-                    OrderStatus.fulfilled => 'Completed',
-                    OrderStatus.canceled => 'Cancelled',
-                    _ =>
-                      order.status.name[0].toUpperCase() +
-                          order.status.name.substring(1),
-                  },
+                  order.status.name,
                   style: TextStyle(
                     color: tone,
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -214,13 +206,11 @@ class OrderReceiptCard extends ConsumerWidget {
                             [
                               'Placed',
                               'Accepted',
-                              order.fulfillment['method'] == 'pickup'
-                                  ? 'Pickup'
-                                  : 'Delivering',
+                              'Delivering',
                               'Completed',
                             ][i],
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 9,
                               color: i <= step
                                   ? c.onSurface
                                   : c.onSurfaceVariant,
@@ -233,30 +223,6 @@ class OrderReceiptCard extends ConsumerWidget {
                 ],
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              children: [
-                Icon(
-                  order.fulfillment['method'] == 'pickup'
-                      ? Icons.storefront_outlined
-                      : Icons.local_shipping_outlined,
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    order.fulfillment['method'] == 'pickup'
-                        ? 'Pickup from seller'
-                        : order.fulfillment['method'] == 'delivery'
-                        ? 'Delivery'
-                        : 'Arrange with seller',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-              ],
-            ),
-          ),
           for (final item in order.items)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -419,7 +385,7 @@ class _OrderPdfScreenState extends ConsumerState<OrderPdfScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => CommerceScaffold(
+  Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: Text(
         '${widget.document['type'] ?? 'Document'} ${widget.document['number'] ?? ''}',

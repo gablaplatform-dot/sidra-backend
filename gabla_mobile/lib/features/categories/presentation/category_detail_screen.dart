@@ -60,7 +60,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
     final audiences = ref.watch(audienceCatalogProvider).valueOrNull ?? {};
     final tree = ref.watch(directoryCategoriesProvider);
     return Scaffold(
-      appBar: const CommerceAppBar(title: 'Businesses'),
+      appBar: const CommerceAppBar(title: 'Explore the directory'),
       body: AsyncValueView(
         value: tree,
         onRetry: () => ref.invalidate(directoryCategoriesProvider),
@@ -84,7 +84,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                   children: [
                     SizedBox(
                       width: double.infinity,
-                      height: 170,
+                      height: 230,
                       child: CategoryCover(category: category),
                     ),
                     const Positioned.fill(
@@ -105,7 +105,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                       child: Text(
                         category.name,
                         style: const TextStyle(
-                          fontSize: 26,
+                          fontSize: 30,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
@@ -115,7 +115,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                 ),
               ),
               if (category.children.isNotEmpty) ...[
-                const CommerceTitle('Subcategories'),
+                const CommerceTitle('Explore a little deeper'),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -128,7 +128,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                   ],
                 ),
               ],
-              const CommerceTitle('Filter businesses'),
+              const CommerceTitle('Discover local expertise'),
               for (final group in ['countries', 'cultures'])
                 if ((audiences[group] as List? ?? []).isNotEmpty)
                   Padding(
@@ -190,7 +190,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                         ListingDiscoveryCard(product: p),
                       if (providers.isEmpty && listings.isEmpty)
                         CommerceEmpty(
-                          title: 'No businesses found',
+                          title: 'More discoveries ahead',
                           message:
                               'This category has no published listings yet. Try another category or search nearby.',
                           action: 'Search nearby',

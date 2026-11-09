@@ -1,4 +1,3 @@
-import 'bus_design_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,13 +44,12 @@ class _BusTripScreenState extends ConsumerState<BusTripScreen> {
       onRetry: () => ref.invalidate(tripDetailProvider(widget.tripId)),
       data: (context, t) => MobilityLayout(
         bus: true,
-        scene: const SizedBox(height: 112, child: BusScene()),
         stageKey: checkout.phase,
         title: checkout.phase == 'confirmed'
-            ? 'Booking confirmed'
-            : '${t.originName}\nto ${t.destinationName}',
+            ? 'You’re going\nplaces.'
+            : '${t.originName}\nto ${t.destinationName}.',
         subtitle:
-            '${t.companyName ?? 'Bus operator'} · ${DateFormat('EEE, d MMM · HH:mm').format(t.departAtEat)} EAT',
+            '${t.companyName ?? 'Gabla Bus'} · ${DateFormat('EEE, d MMM · HH:mm').format(t.departAtEat)} EAT',
         actions: [
           IconButton(
             tooltip: 'My tickets',
@@ -60,13 +58,7 @@ class _BusTripScreenState extends ConsumerState<BusTripScreen> {
           ),
         ],
         child: checkout.restoring
-            ? const Column(
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 12),
-                  Text('Restoring your booking…'),
-                ],
-              )
+            ? const Center(child: CircularProgressIndicator())
             : checkout.phase == 'restore_error'
             ? Column(
                 children: [
@@ -118,7 +110,7 @@ class _BusTripScreenState extends ConsumerState<BusTripScreen> {
               ),
               if (t.seatsAvailable != null)
                 Text(
-                  '${t.seatsAvailable} seats left',
+                  '${t.seatsAvailable} left',
                   style: const TextStyle(fontSize: 12),
                 ),
             ],
@@ -129,10 +121,6 @@ class _BusTripScreenState extends ConsumerState<BusTripScreen> {
             style: TextStyle(fontSize: 12, height: 1.5),
           ),
           const SizedBox(height: 16),
-          if (t.ticketTypes.isEmpty)
-            const Text(
-              'No ticket types are available for this departure. Try another departure.',
-            ),
           if (!t.bookable)
             const Padding(
               padding: EdgeInsets.only(bottom: 12),
@@ -213,7 +201,6 @@ class _BusTripScreenState extends ConsumerState<BusTripScreen> {
             enabled: !busy,
             textCapitalization: TextCapitalization.words,
             autofillHints: const [AutofillHints.name],
-            textInputAction: TextInputAction.next,
             decoration: const InputDecoration(labelText: 'Full name'),
             validator: (v) =>
                 (v?.trim().length ?? 0) < 2 ? 'Enter your full name.' : null,
@@ -223,8 +210,6 @@ class _BusTripScreenState extends ConsumerState<BusTripScreen> {
             controller: _phone,
             enabled: !busy,
             keyboardType: TextInputType.phone,
-            textInputAction: TextInputAction.next,
-            autofillHints: const [AutofillHints.telephoneNumber],
             decoration: const InputDecoration(
               labelText: 'Passenger phone',
               hintText: '07XXXXXXXX',
@@ -238,8 +223,6 @@ class _BusTripScreenState extends ConsumerState<BusTripScreen> {
             controller: _email,
             enabled: !busy,
             keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            autofillHints: const [AutofillHints.email],
             decoration: const InputDecoration(labelText: 'Email (optional)'),
             validator: (v) =>
                 (v ?? '').trim().isNotEmpty &&
@@ -263,9 +246,7 @@ class _BusTripScreenState extends ConsumerState<BusTripScreen> {
             enabled: !busy,
             keyboardType: TextInputType.phone,
             decoration: const InputDecoration(
-              labelText: 'Payment phone (optional)',
-              helperText: 'Leave blank to use the passenger phone.',
-              helperMaxLines: 2,
+              labelText: 'Payment number (or use passenger phone)',
             ),
             validator: (v) =>
                 (v ?? '').trim().isNotEmpty && normalizeBusPhone(v!).isEmpty
@@ -447,8 +428,8 @@ class _BusTripScreenState extends ConsumerState<BusTripScreen> {
   }
 
   Widget _itinerary(BusTrip t) => MobilitySection(
-    title: 'Boarding & arrival',
-    child: BusPanel(
+    title: 'Your journey at a glance',
+    child: MobilityPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

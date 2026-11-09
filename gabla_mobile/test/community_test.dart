@@ -1,4 +1,3 @@
-import 'helpers/load_test_fonts.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
@@ -91,7 +90,6 @@ class FixtureApi extends ApiClient {
 }
 
 void main() {
-  setUpAll(loadTestFonts);
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     for (final entry in {
@@ -209,6 +207,14 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        await tester.runAsync(() async {
+          await precacheImage(
+            AssetImage(
+              'assets/artwork/${kind.contains('event') ? 'events' : 'jobs'}.png',
+            ),
+            key.currentContext!,
+          );
+        });
         await tester.pump();
         expect(tester.takeException(), isNull);
         await tester.runAsync(() async {

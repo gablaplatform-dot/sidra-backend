@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/discovery/discovery_widgets.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/async_value_view.dart';
@@ -64,8 +65,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     });
     final product = ref.watch(productDetailProvider(widget.listingId));
     final flow = ref.watch(bookingFlowControllerProvider);
-    return CommerceScaffold(
-      appBar: const CommerceAppBar(title: 'Book service'),
+    return Scaffold(
+      appBar: const CommerceAppBar(title: 'Plan your booking'),
       body: AsyncValueView(
         value: product,
         onRetry: () => ref.invalidate(productDetailProvider(widget.listingId)),
@@ -84,9 +85,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               title: 'Arrange this with the provider',
               message: 'This listing does not offer online reservations.',
               action: 'View provider',
-              onAction: p.providerId == null
-                  ? null
-                  : () => context.push('/provider/${p.providerId}'),
+              onAction: () => context.push('/provider/${p.providerId}'),
               icon: Icons.support_agent,
             );
           return _content(p, flow.isLoading);
@@ -124,49 +123,12 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     return ListView(
       padding: const EdgeInsets.all(18),
       children: [
-        CommercePanel(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: 64,
-                  height: 64,
-                  child: CommerceImage(p.imageUrl),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      p.name,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    if (p.providerName != null)
-                      Text(
-                        p.providerName!,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${formatUgx(p.price)} / ${unit.name}',
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
+        ListingDiscoveryCard(product: p),
         Row(
           children: [
             Expanded(
               child: Text(
-                _details ? '2. Contact details' : '1. Dates and guests',
+                _details ? '2 / Your details' : '1 / Dates & guests',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
             ),
@@ -177,14 +139,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               ),
           ],
         ),
-        const SizedBox(height: 8),
-        Text(
-          _details
-              ? 'Review your dates and estimate below before submitting.'
-              : 'Choose dates, duration and number of guests. Times are shown in East Africa Time (EAT).',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         if (!_details) ...[
           CommercePanel(
             child: Column(
@@ -251,17 +206,6 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                         ),
                       ),
                       child: const Text('Retry time slots'),
-                    ),
-                  if (hourly?.hasValue == true &&
-                      !(hourly?.valueOrNull?.slots.any(
-                            (slot) => slot.free > 0,
-                          ) ??
-                          false))
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        'No start times available. Choose another date.',
-                      ),
                     ),
                   Wrap(
                     spacing: 6,
@@ -391,23 +335,16 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Booking summary',
+                'Your booking estimate',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 10),
-              if (_date != null) ...[
-                Text(
-                  '${DateFormat.yMMMd().format(_date!)}${selection.endDate == null ? '' : ' – ${DateFormat.yMMMd().format(selection.endDate!)}'}',
-                ),
-                if (_time != null) Text('Start time: $_time EAT'),
-                const Divider(height: 24),
-              ],
               Text(
                 formatUgx(total),
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               Text(
-                '$_units ${unit.name}${_units == 1 ? '' : 's'} × $_quantity ${unit == BookingUnit.night ? (_quantity == 1 ? 'room' : 'rooms') : (_quantity == 1 ? 'space' : 'spaces')} · $_guests ${_guests == 1 ? 'guest' : 'guests'}',
+                '$_units ${unit.name}${_units == 1 ? '' : 's'} · $_quantity ${unit == BookingUnit.night ? 'rooms' : 'spaces'} · $_guests guests',
                 style: const TextStyle(fontSize: 12),
               ),
               if ((config.depositPercent ?? 0) > 0)
@@ -491,7 +428,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                       );
                 },
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
+            padding: const EdgeInsets.symmetric(vertical: 14),
             child: Text(
               busy
                   ? 'Submitting…'

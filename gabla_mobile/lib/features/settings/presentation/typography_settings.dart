@@ -13,7 +13,7 @@ class TypographySettings extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       children: [
         Text(
-          'Heading and body fonts',
+          'Find your type',
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: 8),
@@ -70,7 +70,7 @@ class TypographySettings extends ConsumerWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Find something\nclose to home.',
+                          'Your world,\nbeautifully connected.',
                           style: AppTypography(
                             heading: group.heading(preferences.style),
                             body: group.body,
@@ -78,7 +78,7 @@ class TypographySettings extends ConsumerWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Browse local businesses, services and places to stay.',
+                          'Discover good finds and great people around you.',
                           style: TextStyle(
                             fontFamily: group.body,
                             fontSize: 13,

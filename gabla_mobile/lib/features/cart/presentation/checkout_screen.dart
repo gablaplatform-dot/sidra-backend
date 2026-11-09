@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/theme/app_theme_style.dart';
 import '../../auth/application/session_controller.dart';
 import '../../orders/application/order_providers.dart';
 import '../../orders/domain/order_input.dart';
@@ -148,7 +149,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       ref.invalidate(myOrdersProvider);
     }
 
-    return CommerceScaffold(
+    return Scaffold(
       appBar: const CommerceAppBar(title: 'Checkout'),
       bottomNavigationBar: cart.isEmpty || products.hasError
           ? null
@@ -175,8 +176,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ),
       body: cart.isEmpty
           ? CommerceEmpty(
-              title: 'Your cart is empty',
-              message: 'Add a product before placing an order.',
+              title: 'Your bag is empty',
+              message: 'Find something you love before checking out.',
               onAction: () => context.push('/shop'),
             )
           : loading
@@ -184,8 +185,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           : products.hasError
           ? CommerceEmpty(
               title: 'Couldn’t prepare checkout',
-              message: 'Review your cart and retry unavailable listings.',
-              action: 'Back to cart',
+              message: 'Review your bag and retry unavailable listings.',
+              action: 'Back to bag',
               onAction: () => context.pop(),
             )
           : Form(
@@ -193,13 +194,41 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  const CommerceFlowHeader(
-                    title: 'Review and send order',
-                    message:
-                        'No payment is collected now. Each seller reviews their order before payment or collection.',
-                    icon: Icons.receipt_long_outlined,
+                  CommerceTitle(
+                    style == AppThemeStyle.editorial
+                        ? 'The final details.'
+                        : style == AppThemeStyle.cinematic
+                        ? 'Make it yours.'
+                        : style == AppThemeStyle.orbit
+                        ? 'One step closer.'
+                        : 'You’re almost there.',
+                    subtitle:
+                        'Send your request now. No payment is collected at this step.',
                   ),
-                  const CommerceTitle('Order summary'),
+                  if (style == AppThemeStyle.discover ||
+                      style == AppThemeStyle.orbit)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 22),
+                      child: Row(
+                        children: [
+                          for (final step in [
+                            '01 · Review',
+                            '02 · Details',
+                            '03 · Send',
+                          ])
+                            Expanded(
+                              child: Text(
+                                step,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: c.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   if (widget.quickBuyId != null)
                     CommercePanel(
                       child: Row(
@@ -269,7 +298,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       style: TextStyle(color: c.error),
                     ),
                   if (delivery) ...[
-                    const CommerceTitle('Pickup or delivery'),
+                    const CommerceTitle('How would you like it?'),
                     SegmentedButton<String>(
                       segments: const [
                         ButtonSegment(
@@ -309,7 +338,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           : const SizedBox.shrink(),
                     ),
                   ],
-                  const CommerceTitle('Payment method'),
+                  const CommerceTitle('Payment, your way'),
                   for (final method in ['cash', 'online'])
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -336,7 +365,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           method == 'cash'
                               ? 'Pay the seller when you receive your order.'
                               : 'The seller accepts first. Then pay from My orders.',
-                          style: const TextStyle(fontSize: 12),
+                          style: const TextStyle(fontSize: 11),
                         ),
                       ),
                     ),
@@ -396,7 +425,7 @@ class _CheckoutResultView extends StatelessWidget {
   final String payment;
   final VoidCallback onRetry;
   @override
-  Widget build(BuildContext context) => CommerceScaffold(
+  Widget build(BuildContext context) => Scaffold(
     appBar: const CommerceAppBar(title: 'Your order requests'),
     body: ListView(
       padding: const EdgeInsets.all(24),
@@ -408,8 +437,8 @@ class _CheckoutResultView extends StatelessWidget {
         ),
         CommerceTitle(
           result.allSucceeded
-              ? 'Order requests sent'
-              : 'Some orders were not sent',
+              ? 'Sent to your sellers.'
+              : 'Some sellers need another try.',
           subtitle: payment == 'online'
               ? 'You can pay from My orders after each seller accepts.'
               : 'Your seller will confirm pickup or delivery. Pay in cash when you receive your items.',
@@ -449,7 +478,7 @@ class _CheckoutResultView extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => context.go('/cart'),
-            child: const Text('Return to cart'),
+            child: const Text('Return to bag'),
           ),
         ],
         TextButton(

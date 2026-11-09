@@ -23,7 +23,7 @@ extension AppThemeStyleMeta on AppThemeStyle {
     AppThemeStyle.cinematic =>
       'Immersive dark panels and slow cinematic reveals.',
     AppThemeStyle.orbit =>
-      'Compact panels, clear dividers, and quick scale transitions.',
+      'Floating photo collages, gentle drift, and playful scale transitions.',
   };
 
   /// Always-dark styles skip the light/dark toggle in Settings.

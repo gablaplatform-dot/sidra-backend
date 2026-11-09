@@ -1,31 +1,12 @@
-import 'package:flutter/material.dart';
-
-/// Category symbols are fallbacks only. Admin-supplied photographs take priority.
-IconData providerCategoryIcon(String name) {
-  final value = name.toLowerCase();
-  if (value.contains('job')) return Icons.work_outline;
-  if (value.contains('rental') ||
-      value.contains('propert') ||
-      value.contains('accom'))
-    return Icons.home_work_outlined;
-  if (value.contains('entertain') || value.contains('music'))
-    return Icons.headphones_outlined;
-  if (value.contains('venue') || value.contains('event'))
-    return Icons.local_activity_outlined;
-  if (value.contains('media') || value.contains('photo'))
-    return Icons.camera_alt_outlined;
-  if (value.contains('health')) return Icons.health_and_safety_outlined;
-  if (value.contains('electro') || value.contains('technolog'))
-    return Icons.devices_outlined;
-  if (value.contains('food') || value.contains('restaurant'))
-    return Icons.restaurant_outlined;
-  if (value.contains('beauty') || value.contains('salon'))
-    return Icons.content_cut;
-  if (value.contains('repair') || value.contains('service'))
-    return Icons.handyman_outlined;
-  if (value.contains('educat') ||
-      value.contains('school') ||
-      value.contains('institute'))
-    return Icons.school_outlined;
-  return Icons.category_outlined;
-}
+/// The first seven provider-directory categories only. ID matching deliberately
+/// avoids overriding product categories or new/unrelated admin categories.
+/// The underlying admin image URL remains intact in Category.imageUrl.
+const providerCategoryArtwork = <String, String>{
+  'cmq7q7svm000fubkdhwf98m4g': 'assets/categories/rental.png',
+  'cmq7qkfw4000tubkddp732of8': 'assets/categories/jobs.png',
+  'cmq9v0adb001dubkd4lfm00at': 'assets/categories/media.png',
+  'cmqch43oh002dubkdedlno08a': 'assets/artwork/services.png',
+  'cmqcreszc0031ubkd5xzpq46r': 'assets/categories/venue.png',
+  'cmqcth3fs0041ubkdsvz86yv6': 'assets/categories/entertainment.png',
+  'cmqctv568004lubkdxhstzuui': 'assets/categories/properties.png',
+};

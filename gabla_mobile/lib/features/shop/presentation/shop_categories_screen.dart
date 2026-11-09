@@ -33,13 +33,13 @@ class ShopCategoriesScreen extends ConsumerWidget {
             );
     }
 
-    return CommerceScaffold(
-      appBar: const CommerceAppBar(title: 'Shop categories'),
+    return Scaffold(
+      appBar: const CommerceAppBar(title: 'Find your category'),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           const CommerceTitle(
-            'Browse by category',
+            'A world of good finds.',
             subtitle:
                 'Explore a category, then narrow it down to what you need.',
           ),
@@ -47,22 +47,13 @@ class ShopCategoriesScreen extends ConsumerWidget {
             loading: () => const CommerceLoading(),
             error: (e, _) => CommerceEmpty(
               title: 'Couldn’t load categories',
-              message: 'Check your connection and try again.',
+              message: '$e',
               action: 'Try again',
               onAction: () => ref.invalidate(productTreeProvider),
             ),
-            data: (items) => items.isEmpty
-                ? CommerceEmpty(
-                    title: 'No categories available',
-                    message: 'You can still browse all published products.',
-                    onAction: () => context.push('/shop/all'),
-                  )
-                : CommercePanel(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Column(
-                      children: [for (final category in items) node(category)],
-                    ),
-                  ),
+            data: (items) => Column(
+              children: [for (final category in items) node(category)],
+            ),
           ),
         ],
       ),

@@ -65,7 +65,7 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          required ? '$label *' : label,
+          label,
           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
@@ -73,38 +73,13 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
           key: ValueKey('community-input-$key'),
           controller: field(key),
           maxLines: lines,
-          textCapitalization:
-              ['email', 'website', 'bookingUrl', 'phone'].contains(key)
-              ? TextCapitalization.none
-              : TextCapitalization.sentences,
-          onChanged: (_) => setState(() {}),
           keyboardType: number
               ? const TextInputType.numberWithOptions(decimal: true)
               : lines > 1
               ? TextInputType.multiline
-              : key == 'email'
-              ? TextInputType.emailAddress
-              : key == 'phone'
-              ? TextInputType.phone
-              : ['website', 'bookingUrl'].contains(key)
-              ? TextInputType.url
               : TextInputType.text,
-          decoration:
-              InputDecoration(
-                hintText: switch (key) {
-                  'description' =>
-                    event
-                        ? 'Describe the programme and what guests should know.'
-                        : 'Describe the work, responsibilities and expected experience.',
-                  'requirements' =>
-                    'List the skills, qualifications or equipment needed.',
-                  'bookingUrl' || 'website' => 'https://',
-                  _ => null,
-                },
-                helperText: key == 'description'
-                    ? 'At least 20 characters.'
-                    : null,
-              ).applyDefaults(
+          decoration: InputDecoration(hintText: required ? "$label *" : label)
+              .applyDefaults(
                 communityTheme(Theme.of(context), style).inputDecorationTheme,
               ),
           style: Theme.of(context).textTheme.bodyMedium,
@@ -131,7 +106,7 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label == 'Category' ? '$label *' : label,
+          label,
           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
@@ -258,26 +233,6 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
       });
       return;
     }
-    final minimum = num.tryParse(field('payMin').text.trim());
-    final maximum = num.tryParse(field('payMax').text.trim());
-    if ((field('payMin').text.trim().isNotEmpty &&
-            (minimum == null || !minimum.isFinite || minimum < 0)) ||
-        (!event &&
-            field('payMax').text.trim().isNotEmpty &&
-            (maximum == null || !maximum.isFinite || maximum < 0)) ||
-        (!event &&
-            minimum != null &&
-            maximum != null &&
-            maximum > 0 &&
-            maximum < minimum)) {
-      setState(() {
-        step = 1;
-        error =
-            'Enter valid pay amounts. Maximum pay must be at least minimum pay.';
-      });
-      if (scroll.hasClients) scroll.jumpTo(0);
-      return;
-    }
     if (!form.currentState!.validate()) return;
     if (event && (start == null || end == null || !end!.isAfter(start!))) {
       setState(() {
@@ -353,7 +308,7 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Submitted for review. Open your post to check its status.',
+              'Submitted for review. Manage your post in My posts.',
             ),
           ),
         );
@@ -366,8 +321,7 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
   }
 
   Widget pair(Widget first, Widget second) => LayoutBuilder(
-    builder: (context, box) =>
-        box.maxWidth >= 420 && MediaQuery.textScalerOf(context).scale(14) <= 18
+    builder: (context, box) => box.maxWidth >= 360
         ? Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -471,7 +425,7 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
       ),
     ),
     if (!event) ...[
-      input('payMax', 'Maximum pay (0 = no upper amount)', number: true),
+      input('payMax', 'Maximum pay (optional)', number: true),
       pick('Pay period', period, [
         'hour',
         'day',
@@ -607,7 +561,6 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
   Widget section(int index, List<Widget> children) {
     final c = Theme.of(context).colorScheme;
     final editorial = style == AppThemeStyle.editorial;
-    final cinematic = style == AppThemeStyle.cinematic;
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Container(
@@ -617,10 +570,8 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
         decoration: editorial
             ? null
             : BoxDecoration(
-                color: cinematic ? c.surfaceContainerHigh : c.surface,
-                border: cinematic
-                    ? Border(left: BorderSide(color: c.primary, width: 3))
-                    : Border.all(color: c.outlineVariant),
+                color: c.surface,
+                border: Border.all(color: c.outlineVariant),
                 borderRadius: BorderRadius.circular(communityRadius(style)),
               ),
         child: Column(
@@ -663,21 +614,21 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
       (
         1,
         Icons.subject_outlined,
-        event ? 'Event details' : 'Description',
+        event ? 'Event details' : 'Role & pay',
         field('description').text.trim().length >= 20,
       ),
       (
         2,
         Icons.place_outlined,
-        event ? 'Date & location' : 'Work location',
+        'Date & location',
         field('address').text.trim().isNotEmpty &&
             (!event || start != null && end != null),
       ),
       (
         3,
         Icons.add_photo_alternate_outlined,
-        event ? 'Event poster' : 'Attachments (optional)',
-        event ? media.any((m) => m['type'] == 'image') : media.isNotEmpty,
+        'Media & contact',
+        !event || media.any((m) => m['type'] == 'image'),
       ),
     ];
     return Column(
@@ -704,18 +655,14 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
                 color: c.primary,
               ),
               title: Text(
-                row.$3,
+                row.$1 == 1 && !event ? 'Role & pay' : row.$3,
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               subtitle: Text(
-                row.$4
-                    ? 'Added'
-                    : row.$1 == 3 && !event
-                    ? 'Optional'
-                    : 'Add details',
+                row.$4 ? 'Added' : 'Add details',
                 style: TextStyle(fontSize: 11, color: c.onSurfaceVariant),
               ),
               trailing: const Icon(Icons.arrow_forward, size: 17),
@@ -741,11 +688,7 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
         tabbed = style == AppThemeStyle.orbit;
     final groups = [basics(), details(), placeAndTime(), contact()];
     Widget intro() {
-      final title = widget.id != null
-          ? 'Edit ${event ? 'event' : 'job or task'}'
-          : event
-          ? 'Create an event'
-          : 'Post a job or task';
+      final title = event ? 'Create an event' : 'Post an opportunity';
       if (style == AppThemeStyle.cinematic)
         return Container(
           padding: const EdgeInsets.all(22),
@@ -757,7 +700,7 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                event ? 'Event listing' : 'Job or paid task',
+                event ? 'THE NEXT LIVE MOMENT' : 'YOUR NEXT GREAT HIRE',
                 style: TextStyle(
                   color: c.primary,
                   fontSize: 10,
@@ -768,7 +711,7 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
               Text(title, style: AppTypography.of(context).display(size: 32)),
               const SizedBox(height: 12),
               const Text(
-                'Add the details below. Your post is reviewed before publication.',
+                'Build your post. We review it before it goes live.',
                 style: TextStyle(fontSize: 12, height: 1.5),
               ),
             ],
@@ -779,11 +722,7 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.id != null
-                  ? 'Edit listing'
-                  : event
-                  ? 'New event'
-                  : 'New job or task',
+              event ? 'EVENT / NEW LISTING' : 'WORK / NEW LISTING',
               style: TextStyle(
                 color: c.primary,
                 fontSize: 10,
@@ -804,8 +743,8 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
             wizard
                 ? 'STEP ${step + 1} OF 4'
                 : event
-                ? 'Event listing'
-                : 'Job or paid task',
+                ? 'MAKE IT HAPPEN'
+                : 'FIND YOUR PEOPLE',
             style: TextStyle(
               fontSize: 10,
               letterSpacing: 1.5,
@@ -822,9 +761,7 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            widget.id != null
-                ? 'Changes are reviewed before the post appears publicly again.'
-                : 'Fields marked * are required. Your post is reviewed before publication.',
+            'Your post is reviewed before appearing publicly.',
             style: TextStyle(
               color: c.onSurfaceVariant,
               fontSize: 12,
@@ -929,6 +866,18 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
                 ] else
                   for (var i = 0; i < 4; i++)
                     DesignEntrance(index: i, child: section(i, groups[i])),
+                if (error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 18),
+                    child: Text(
+                      error!,
+                      style: TextStyle(
+                        color: c.error,
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -942,49 +891,32 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: Row(
                 children: [
-                  if (error != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Semantics(
-                        liveRegion: true,
-                        child: Text(
-                          error!,
-                          style: TextStyle(color: c.error, height: 1.4),
-                        ),
+                  if (wizard && step > 0) ...[
+                    OutlinedButton(
+                      onPressed: () => goStep(step - 1),
+                      child: const Text('Back'),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: busy
+                          ? null
+                          : () => wizard && step < 3
+                                ? (form.currentState!.validate()
+                                      ? goStep(step + 1)
+                                      : null)
+                                : save(),
+                      child: Text(
+                        busy
+                            ? 'Submitting…'
+                            : wizard && step < 3
+                            ? 'Continue'
+                            : 'Submit for review',
                       ),
                     ),
-                  Row(
-                    children: [
-                      if (wizard && step > 0) ...[
-                        OutlinedButton(
-                          onPressed: () => goStep(step - 1),
-                          child: const Text('Back'),
-                        ),
-                        const SizedBox(width: 12),
-                      ],
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: busy
-                              ? null
-                              : () => wizard && step < 3
-                                    ? (form.currentState!.validate()
-                                          ? goStep(step + 1)
-                                          : null)
-                                    : save(),
-                          child: Text(
-                            busy
-                                ? 'Submitting…'
-                                : wizard && step < 3
-                                ? 'Continue'
-                                : 'Submit for review',
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -1003,12 +935,12 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
         appBar: CommunityAppBar(
           title: widget.id == null
               ? 'Post ${event ? 'an event' : 'a job'}'
-              : 'Edit ${event ? 'event' : 'job or task'}',
+              : 'Edit post',
         ),
         body: !ref.watch(isSignedInProvider)
             ? CommerceEmpty(
-                title: event ? 'Create an event' : 'Post a job or task',
-                message: 'Sign in to create a post and submit it for review.',
+                title: 'Create with Gabla',
+                message: 'Sign in to publish your post.',
                 action: 'Sign in',
                 onAction: () =>
                     communitySignIn(context, ref, '/${widget.kind}/new'),
