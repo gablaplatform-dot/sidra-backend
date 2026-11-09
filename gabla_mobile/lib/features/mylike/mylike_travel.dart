@@ -154,6 +154,24 @@ class _RideState extends State<_Ride> {
     final start = screen == 'ride';
     final driver = screen == 'ride-driver';
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Back',
+          onPressed: () => _back(context),
+          icon: const Icon(Icons.chevron_left),
+        ),
+        title: Text(
+          start ? 'Get a ride' : 'Kampala Road → Acacia Mall',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Ride history',
+            onPressed: () => _open(context, 'ride-history'),
+            icon: const Icon(Icons.history),
+          ),
+        ],
+      ),
       body: LayoutBuilder(
         builder: (context, constraints) => Stack(
           children: [
@@ -162,24 +180,9 @@ class _RideState extends State<_Ride> {
               left: 15,
               right: 15,
               top: MediaQuery.paddingOf(context).top + 10,
-              child: Row(
-                children: [
-                  _CircleButton(
-                    Icons.chevron_left,
-                    'Back',
-                    () => _back(context),
-                    tint: Colors.white,
-                  ),
-                  const Spacer(),
-                  _CircleButton(
-                    Icons.history,
-                    'Ride history',
-                    () => _open(context, 'ride-history'),
-                    tint: Colors.white,
-                  ),
-                  const SizedBox(width: 7),
-                  const MapModeButton(compact: true),
-                ],
+              child: const Align(
+                alignment: Alignment.centerRight,
+                child: MapModeButton(compact: true),
               ),
             ),
             Align(
@@ -188,7 +191,7 @@ class _RideState extends State<_Ride> {
                 top: false,
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxHeight: constraints.maxHeight * .62,
+                    maxHeight: constraints.maxHeight * .55,
                   ),
                   child: Material(
                     color: Colors.white,
@@ -397,7 +400,7 @@ class _Nearby extends StatelessWidget {
   );
 }
 
-const _busRed = Color(0xffd72522);
+const _busAccent = Color(0xffa9d6ff);
 
 class _Bus extends StatefulWidget {
   const _Bus({required this.screen});
@@ -469,7 +472,7 @@ class _BusState extends State<_Bus> {
           ),
           const SizedBox(height: 14),
           _Panel(
-            color: Colors.white,
+            color: const Color(0xff214b7b),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -477,7 +480,7 @@ class _BusState extends State<_Bus> {
                   child: Text(
                     'One way',
                     style: TextStyle(
-                      color: _busRed,
+                      color: _busAccent,
                       fontWeight: FontWeight.w800,
                       fontVariations: [FontVariation('wght', 800)],
                     ),
@@ -531,7 +534,7 @@ class _BusState extends State<_Bus> {
                 _Action(
                   'Search buses',
                   () => _open(context, 'bus-results'),
-                  color: _busRed,
+                  color: _busAccent,
                 ),
               ],
             ),
@@ -560,7 +563,7 @@ class _BusState extends State<_Bus> {
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: _Panel(
-                color: Colors.white,
+                color: const Color(0xff214b7b),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -603,7 +606,7 @@ class _BusState extends State<_Bus> {
                     _Action(
                       'View trip',
                       () => _open(context, 'bus-trip'),
-                      color: _busRed,
+                      color: _busAccent,
                     ),
                   ],
                 ),
@@ -618,7 +621,7 @@ class _BusState extends State<_Bus> {
           const _Section('Choose a seat'),
           Center(
             child: _Panel(
-              color: Colors.white,
+              color: const Color(0xff214b7b),
               child: SizedBox(
                 width: 240,
                 child: Column(
@@ -637,7 +640,7 @@ class _BusState extends State<_Bus> {
                               showCheckmark: false,
                               label: Text('${row * 4 + col + 1}'),
                               selected: selectedSeat == row * 4 + col + 1,
-                              selectedColor: const Color(0xfff5c1bc),
+                              selectedColor: const Color(0xff366ba8),
                               onSelected: (_) => setState(
                                 () => selectedSeat = row * 4 + col + 1,
                               ),
@@ -653,14 +656,14 @@ class _BusState extends State<_Bus> {
         ],
         'bus-ticket' => [
           _Panel(
-            color: Colors.white,
+            color: const Color(0xff214b7b),
             radius: 20,
             child: Column(
               children: [
                 const Text(
                   'WESTERN EXPRESS',
                   style: TextStyle(
-                    color: _busRed,
+                    color: _busAccent,
                     fontWeight: FontWeight.w800,
                     fontVariations: [FontVariation('wght', 800)],
                     letterSpacing: 1,
@@ -738,7 +741,7 @@ class _BusState extends State<_Bus> {
           ? _Action(
               'Passenger details',
               () => _open(context, 'bus-passengers'),
-              color: _busRed,
+              color: _busAccent,
             )
           : null,
     );

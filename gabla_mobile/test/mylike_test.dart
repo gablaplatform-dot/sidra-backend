@@ -100,6 +100,12 @@ void main() {
     'jobs',
     'ride-options',
     'bus',
+    'bus-results',
+    'bus-ticket',
+    'services',
+    'service',
+    'profile',
+    'job',
   ]) {
     testWidgets('render Mylike $screen', (tester) async {
       tester.view.physicalSize = const Size(390, 844);

@@ -2,163 +2,152 @@ part of 'mylike_screen.dart';
 
 const _band = _Photo('events', Rect.fromLTWH(264, 221, 279, 183));
 const _singer = _Photo('events', Rect.fromLTWH(642, 198, 309, 117));
-const _poster = _Photo('events', Rect.fromLTWH(264, 551, 60, 62));
-const _eventFace = _Photo('events', Rect.fromLTWH(515, 164, 26, 28));
 
-class _Events extends StatelessWidget {
+class _Events extends StatefulWidget {
   const _Events();
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(
-      bottom: false,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
+  State<_Events> createState() => _EventsState();
+}
+
+class _EventsState extends State<_Events> {
+  int day = 0;
+  @override
+  Widget build(BuildContext context) => _Page(
+    title: 'Events',
+    trailing: _CircleButton(
+      Icons.search,
+      'Search',
+      () => _open(context, 'search'),
+    ),
+    footer: const _EventDock(),
+    children: [
+      const _Heading('What’s on', 'Lekki, Lagos'),
+      const SizedBox(height: 12),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (final category in ['Concerts', 'Festivals', 'Vendors'])
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ActionChip(
+                  label: Text(category),
+                  onPressed: () => _open(
+                    context,
+                    category == 'Vendors' ? 'vendors' : 'saved-events',
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 14),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Text(
-                'Events',
-                style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: InkWell(
-                  onTap: () => _open(context, 'vendors'),
-                  child: const Text(
-                    'Vendors',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      fontVariations: [FontVariation('wght', 700)],
-                      color: Colors.white54,
-                    ),
-                  ),
+          SizedBox(
+            width: 44,
+            child: Column(
+              children: [
+                const Text(
+                  'AUG',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
                 ),
-              ),
-              _CircleButton(
-                Icons.search,
-                'Search',
-                () => _open(context, 'search'),
-                tint: Colors.white12,
-                ink: Colors.white,
-              ),
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: () => _open(context, 'profile'),
-                child: const SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: ClipOval(child: _eventFace),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          InkWell(
-            onTap: () => _open(context, 'event'),
-            borderRadius: BorderRadius.circular(22),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(22),
-              child: Stack(
-                children: [
-                  const Positioned.fill(child: _band),
-                  const Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          stops: [0, .45, 1],
-                          colors: [
-                            Colors.transparent,
-                            Colors.transparent,
-                            Color(0xea1a2024),
-                          ],
-                        ),
+                for (var i = 0; i < 5; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 7),
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        backgroundColor: i == day ? _ink : Colors.transparent,
+                        foregroundColor: i == day ? Colors.white : _ink,
+                        minimumSize: const Size(40, 44),
                       ),
+                      onPressed: () => setState(() => day = i),
+                      child: Text('${9 + i}'),
                     ),
                   ),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 320),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 218, 16, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 10,
-                                backgroundColor: _lime,
-                                child: Icon(
-                                  Icons.music_note,
-                                  size: 12,
-                                  color: _ink,
-                                ),
-                              ),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Owanbe Niger',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Trench Party',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              fontVariations: [FontVariation('wght', 800)],
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 9,
-                            runSpacing: 4,
-                            children: const [
-                              _EventMeta(Icons.schedule, 'July 14 · 7 AM'),
-                              _EventMeta(
-                                Icons.location_on_outlined,
-                                '88 Palms, Lekki Phase 1',
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
           ),
-          _Section(
-            'Nearby Events',
-            action: 'View All',
-            onTap: () => _open(context, 'saved-events'),
-          ),
-          const _EventRow(
-            'TechFest NG',
-            'InnovateAfrica',
-            'Tomorrow 9:00 AM',
-            _poster,
-          ),
-          const _EventRow(
-            'Afro Nation Lagos',
-            'The Weekend Social',
-            'Tomorrow 11:00 AM',
-            _singer,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              children: [
+                _EventPoster(
+                  photo: day.isEven ? _singer : _band,
+                  title: day.isEven ? 'Afro Nation Lagos' : 'Trench Party',
+                  details: '88 Palms · ${9 + day} August',
+                ),
+                const SizedBox(height: 12),
+                const _EventPoster(
+                  photo: _band,
+                  title: 'Trench Party',
+                  details: 'Owanbe Niger · Lekki',
+                ),
+              ],
+            ),
           ),
         ],
       ),
+    ],
+  );
+}
+
+class _EventPoster extends StatelessWidget {
+  const _EventPoster({
+    required this.photo,
+    required this.title,
+    required this.details,
+  });
+  final Widget photo;
+  final String title, details;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: () => _open(context, 'event'),
+    borderRadius: BorderRadius.circular(17),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(17),
+      child: SizedBox(
+        width: double.infinity,
+        child: Stack(
+          children: [
+            Positioned.fill(child: photo),
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black87],
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 136, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                      fontVariations: [FontVariation('wght', 800)],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(details, style: const TextStyle(color: Colors.white70)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     ),
-    bottomNavigationBar: const _EventDock(),
   );
 }
 
@@ -223,7 +212,7 @@ class _EventDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: const BoxDecoration(
-      border: Border(top: BorderSide(color: Colors.white12)),
+      border: Border(top: BorderSide(color: Colors.black12)),
     ),
     child: SafeArea(
       top: false,
@@ -242,7 +231,7 @@ class _EventDock extends StatelessWidget {
               onPressed: () => _open(context, item.$3),
               icon: Icon(
                 item.$1,
-                color: item.$3 == 'events' ? _orange : Colors.white60,
+                color: item.$3 == 'events' ? _ink : Colors.black54,
               ),
             ),
         ],
@@ -253,160 +242,57 @@ class _EventDock extends StatelessWidget {
 
 class _Event extends StatelessWidget {
   const _Event();
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(
-      top: false,
-      bottom: false,
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          Stack(
-            children: [
-              const Positioned.fill(bottom: 76, child: _singer),
-              const Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      stops: [0, .32, .65, 1],
-                      colors: [
-                        Color(0x66000000),
-                        Colors.transparent,
-                        Color(0xd6203641),
-                        Color(0xff122637),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  18,
-                  MediaQuery.paddingOf(context).top + 12,
-                  18,
-                  18,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        _CircleButton(
-                          Icons.chevron_left,
-                          'Back',
-                          () => _back(context),
-                          tint: Colors.white24,
-                          ink: Colors.white,
-                        ),
-                        const Spacer(),
-                        _CircleButton(
-                          Icons.reply,
-                          'Share',
-                          () => _preview(
-                            context,
-                            'Sharing is shown for presentation.',
-                          ),
-                          tint: Colors.white24,
-                          ink: Colors.white,
-                        ),
-                        const SizedBox(width: 7),
-                        const _Heart(dark: true),
-                      ],
-                    ),
-                    const SizedBox(height: 145),
-                    const Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            'Afro Nation Lagos',
-                            style: TextStyle(
-                              fontSize: 25,
-                              fontWeight: FontWeight.w800,
-                              fontVariations: [FontVariation('wght', 800)],
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(Icons.verified, size: 19, color: Colors.white),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Sat, 9 Aug, 11:00 AM – 12:00 PM',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    const SizedBox(height: 12),
-                    const Row(
-                      children: [
-                        SizedBox(
-                          width: 25,
-                          height: 25,
-                          child: ClipOval(child: _eventFace),
-                        ),
-                        SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: ClipOval(child: _singer),
-                        ),
-                        SizedBox(width: 8),
-                        Text('100+', style: TextStyle(color: Colors.white)),
-                      ],
-                    ),
-                    const SizedBox(height: 13),
-                    const Text(
-                      'Experience Afro Nation Lagos, a celebration of music, dance and culture. Join us at 88 Palms for live performances.',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        height: 1.45,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 2, 18, 15),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _Section('Host'),
-                const _RowLink(
-                  Icons.music_note,
-                  'The Weekend Social',
-                  '',
-                  'vendors',
-                ),
-                const SizedBox(height: 9),
-                const _Section('88 Palms'),
-                const Text(
-                  'Lekki, Lagos',
-                  style: TextStyle(color: Colors.white60),
-                ),
-                const SizedBox(height: 12),
-                const SizedBox(
-                  height: 148,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.all(Radius.circular(16)),
-                    child: _PreviewMap(event: true),
-                  ),
-                ),
-              ],
+  Widget build(BuildContext context) => _Page(
+    title: 'Event details',
+    trailing: const _Heart(),
+    children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(17),
+        child: const SizedBox(
+          height: 210,
+          width: double.infinity,
+          child: _singer,
+        ),
+      ),
+      const SizedBox(height: 16),
+      const _Heading('Afro Nation Lagos', 'Hosted by The Weekend Social'),
+      const SizedBox(height: 14),
+      const _Panel(
+        color: Colors.white,
+        child: Column(
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.calendar_today_outlined),
+              title: Text('Saturday, 9 August'),
+              subtitle: Text('11:00 AM – 12:00 PM'),
             ),
-          ),
-        ],
+            Divider(height: 1),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.location_on_outlined),
+              title: Text('88 Palms'),
+              subtitle: Text('Lekki, Lagos'),
+            ),
+          ],
+        ),
       ),
-    ),
-    bottomNavigationBar: _Footer(
-      child: _Action(
-        'Buy Ticket',
-        () => _preview(context, 'No ticket was purchased.'),
-        color: _orange,
+      const _Section('About the event'),
+      const Text('A celebration of music, dance and culture at 88 Palms.'),
+      const SizedBox(height: 14),
+      const SizedBox(
+        height: 130,
+        child: ClipRRect(
+          borderRadius: BorderRadius.all(Radius.circular(14)),
+          child: _PreviewMap(event: true),
+        ),
       ),
+    ],
+    footer: _Action(
+      'View entrance details',
+      () => _preview(context, 'Sample event information.'),
     ),
   );
 }
@@ -478,7 +364,7 @@ class _Jobs extends StatelessWidget {
         ],
       ),
       const SizedBox(height: 20),
-      const _Heading('Popular jobs', 'Vacancies and paid tasks'),
+      const _Heading('Find your next role', 'Vacancies and paid tasks'),
       const SizedBox(height: 12),
       const TextField(
         decoration: InputDecoration(
@@ -516,15 +402,51 @@ class _Jobs extends StatelessWidget {
         label: const Text('Filter'),
       ),
       const SizedBox(height: 14),
-      for (final listing in const [
-        (
-          'Studio North',
-          'Product Designer',
-          'Hybrid · Full time · Kampala',
-          'UGX 2,800,000 / month',
-          Icons.design_services_outlined,
-          Color(0xffefd45b),
+      InkWell(
+        onTap: () => _open(context, 'job'),
+        borderRadius: BorderRadius.circular(18),
+        child: _Panel(
+          radius: 18,
+          color: const Color(0xff075ee8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'FEATURED VACANCY',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 10,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Product Designer',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  fontVariations: [FontVariation('wght', 800)],
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Studio North · Hybrid · Kampala',
+                style: TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 12),
+              _Action(
+                'View job',
+                () => _open(context, 'job'),
+                color: Colors.white,
+                icon: Icons.north_east,
+              ),
+            ],
+          ),
         ),
+      ),
+      const _Section('Recent openings'),
+      for (final listing in const [
         (
           'The Portrait Room',
           'Event Photographer',
@@ -624,7 +546,7 @@ class _Job extends StatelessWidget {
     trailing: const _Heart(),
     children: [
       _Panel(
-        color: const Color(0xffd9edc4),
+        color: const Color(0xffe3efff),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -666,7 +588,11 @@ class _Job extends StatelessWidget {
         'nearby',
       ),
     ],
-    footer: _Action('Apply now', () => _open(context, 'job-apply')),
+    footer: _Action(
+      'Apply now',
+      () => _open(context, 'job-apply'),
+      color: const Color(0xff075ee8),
+    ),
   );
 }
 

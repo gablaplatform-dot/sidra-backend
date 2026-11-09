@@ -133,18 +133,39 @@ class MylikeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = _groups['Events']!.containsKey(screen);
-    final accent = dark
+    final bus = _groups['Bus tickets']!.containsKey(screen);
+    final jobs = _groups['Jobs']!.containsKey(screen);
+    final services = _groups['Services and businesses']!.containsKey(screen);
+    final dark =
+        bus ||
+        (screen != 'events' &&
+            screen != 'event' &&
+            _groups['Events']!.containsKey(screen));
+    final accent = bus
+        ? const Color(0xffa9d6ff)
+        : dark
         ? _orange
+        : jobs || services
+        ? const Color(0xff075ee8)
         : _groups['Rides']!.containsKey(screen)
         ? _blue
+        : _groups['Shop']!.containsKey(screen) ||
+              screen == 'events' ||
+              screen == 'event'
+        ? _ink
         : _lime;
-    final surface = dark ? _night : _paper;
+    final surface = bus
+        ? const Color(0xff0d2d59)
+        : dark
+        ? _night
+        : _paper;
     final colors = ColorScheme.fromSeed(
       seedColor: accent,
       brightness: dark ? Brightness.dark : Brightness.light,
       primary: accent,
-      onPrimary: accent == _blue ? Colors.white : _ink,
+      onPrimary: ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
+          ? Colors.white
+          : _ink,
       surface: surface,
     );
     return Theme(
@@ -159,7 +180,11 @@ class MylikeScreen extends StatelessWidget {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: dark ? const Color(0xff292927) : Colors.white,
+          fillColor: bus
+              ? const Color(0xff173b65)
+              : dark
+              ? const Color(0xff292927)
+              : Colors.white,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -207,6 +232,9 @@ class MylikeScreen extends StatelessWidget {
           'bus-parks' ||
           'bus-park' ||
           'bus-operator' => _Bus(screen: screen),
+          'services' ||
+          'service' ||
+          'provider' => _ServicePreview(screen: screen),
           'login' => const _SignIn(),
           'profile' ||
           'workspace' => _Account(workspace: screen == 'workspace'),
@@ -914,6 +942,7 @@ class _RecordPage extends StatelessWidget {
 class _Account extends StatelessWidget {
   const _Account({required this.workspace});
   final bool workspace;
+
   @override
   Widget build(BuildContext context) => _Page(
     title: workspace ? 'Business workspace' : 'Account',
@@ -923,40 +952,71 @@ class _Account extends StatelessWidget {
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: _lime.withValues(alpha: .35),
+              radius: 25,
+              backgroundColor: const Color(0xffdceadf),
               child: Icon(workspace ? Icons.storefront : Icons.person_outline),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _Heading(
-                workspace ? 'The Portrait Room' : 'Gabla account',
-                'Mylike presentation preview',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    workspace ? 'The Portrait Room' : 'Gabla account',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      fontVariations: [FontVariation('wght', 800)],
+                    ),
+                  ),
+                  const Text(
+                    'Presentation preview',
+                    style: TextStyle(color: Colors.black54),
+                  ),
+                  TextButton(
+                    onPressed: () =>
+                        _open(context, workspace ? 'business' : 'welcome'),
+                    child: Text(workspace ? 'Edit business' : 'Edit profile'),
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
-      const SizedBox(height: 16),
-      _Section(workspace ? 'Manage business' : 'Activity'),
-      for (final item
-          in (workspace
-              ? _groups['Services and businesses']!.entries.where(
-                  (item) => item.key != 'workspace',
-                )
-              : const {
-                  'orders': 'Orders',
-                  'bookings': 'Bookings',
-                  'bus-tickets': 'Bus tickets',
-                  'ride-history': 'Rides',
-                  'saved': 'Saved',
-                  'applications': 'Applications',
-                  'workspace': 'Business workspace',
-                  'welcome': 'Account details',
-                  'login': 'Sign in',
-                  'delete-account': 'Delete account',
-                }.entries))
-        _RowLink(Icons.arrow_outward, item.value, '', item.key),
-      const Divider(),
+      if (workspace) ...[
+        const _Section('Business activity'),
+        _AccountRows(
+          items: [
+            for (final item
+                in _groups['Services and businesses']!.entries.where(
+                  (item) => item.key != 'workspace' && item.key != 'business',
+                ))
+              (Icons.arrow_outward, item.value, item.key),
+          ],
+        ),
+      ] else ...[
+        const _Section('My activity'),
+        const _AccountRows(
+          items: [
+            (Icons.shopping_bag_outlined, 'Orders', 'orders'),
+            (Icons.calendar_month_outlined, 'Bookings', 'bookings'),
+            (Icons.confirmation_number_outlined, 'Bus tickets', 'bus-tickets'),
+            (Icons.route_outlined, 'Ride history', 'ride-history'),
+            (Icons.favorite_border, 'Saved', 'saved'),
+            (Icons.work_outline, 'Applications', 'applications'),
+          ],
+        ),
+        const _Section('Account & business'),
+        const _AccountRows(
+          items: [
+            (Icons.storefront_outlined, 'Business workspace', 'workspace'),
+            (Icons.login, 'Sign in', 'login'),
+            (Icons.delete_outline, 'Delete account', 'delete-account'),
+          ],
+        ),
+      ],
+      const SizedBox(height: 10),
       ListTile(
         title: const Text('Design Studio'),
         leading: const Icon(Icons.palette_outlined),
@@ -964,6 +1024,128 @@ class _Account extends StatelessWidget {
       ),
     ],
   );
+}
+
+class _AccountRows extends StatelessWidget {
+  const _AccountRows({required this.items});
+  final List<(IconData, String, String)> items;
+
+  @override
+  Widget build(BuildContext context) => _Panel(
+    color: Colors.white,
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    child: Column(
+      children: [
+        for (final item in items.indexed) ...[
+          if (item.$1 > 0) const Divider(height: 1),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(item.$2.$1, size: 20),
+            title: Text(item.$2.$2),
+            trailing: const Icon(Icons.chevron_right, size: 18),
+            onTap: () => _open(context, item.$2.$3),
+          ),
+        ],
+      ],
+    ),
+  );
+}
+
+class _ServicePreview extends StatelessWidget {
+  const _ServicePreview({required this.screen});
+  final String screen;
+
+  @override
+  Widget build(BuildContext context) {
+    final browse = screen == 'services';
+    final business = screen == 'provider';
+    return _Page(
+      title: browse
+          ? 'Services'
+          : business
+          ? 'Business profile'
+          : 'Service details',
+      children: [
+        if (browse) ...[
+          const _Heading('Find local services', 'Kampala'),
+          const SizedBox(height: 14),
+          const TextField(
+            decoration: InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'Search for a service',
+            ),
+          ),
+          const _Section('Browse by category'),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final item in const [
+                (Icons.camera_alt_outlined, 'Photography'),
+                (Icons.event_outlined, 'Events'),
+                (Icons.handyman_outlined, 'Home services'),
+              ])
+                ActionChip(
+                  avatar: Icon(item.$1, size: 16),
+                  label: Text(item.$2),
+                  onPressed: () => _open(context, 'service'),
+                ),
+            ],
+          ),
+          const _Section('Featured in Kampala'),
+        ],
+        InkWell(
+          onTap: browse ? () => _open(context, 'service') : null,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.asset(
+              'assets/mylike/studio.jpg',
+              height: 194,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _Heading(
+          business ? 'The Portrait Room' : 'Studio photography',
+          'The Portrait Room · Kampala',
+        ),
+        const SizedBox(height: 8),
+        if (!business)
+          const Text(
+            'UGX 85,000 per session',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Color(0xff075ee8),
+            ),
+          ),
+        const SizedBox(height: 12),
+        if (browse)
+          const _RowLink(
+            Icons.calendar_month_outlined,
+            'My bookings',
+            'Reservations and requests',
+            'bookings',
+          )
+        else ...[
+          const _Section('About the studio'),
+          const Text(
+            'Portraits and product photography in a private studio. Sessions include lighting and a selection of edited photographs.',
+          ),
+          const SizedBox(height: 12),
+          _RowLink(
+            Icons.storefront_outlined,
+            business ? 'View services' : 'The Portrait Room',
+            'Kampala',
+            business ? 'services' : 'provider',
+          ),
+        ],
+      ],
+      footer: browse || business
+          ? null
+          : _Action('Check availability', () => _open(context, 'booking')),
+    );
+  }
 }
 
 class _SignIn extends StatelessWidget {
@@ -1026,7 +1208,6 @@ class _Home extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 16),
-      const _ShopOffer(),
       const _Section('Explore Gabla'),
       for (final pair in const [
         [
@@ -1082,6 +1263,13 @@ class _Home extends StatelessWidget {
             ],
           ),
         ),
+      const _Section('Coming up'),
+      const _EventPoster(
+        photo: _band,
+        title: 'Trench Party',
+        details: 'Live music · Lekki',
+      ),
+      const SizedBox(height: 12),
       const _RowLink(
         Icons.map_outlined,
         'Nearby',

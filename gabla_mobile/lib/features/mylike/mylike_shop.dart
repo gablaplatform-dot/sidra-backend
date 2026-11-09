@@ -5,50 +5,89 @@ const _jacket = _Photo('shop', Rect.fromLTWH(143, 767, 157, 213));
 
 class _Shop extends StatelessWidget {
   const _Shop();
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(
-      bottom: false,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget build(BuildContext context) => _Page(
+    title: 'Gabla Shop',
+    trailing: _CircleButton(
+      Icons.shopping_bag_outlined,
+      'Cart',
+      () => _open(context, 'cart'),
+    ),
+    footer: const _ShopDock(),
+    children: [
+      _ShopSearchBar(),
+      const SizedBox(height: 16),
+      ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: ColoredBox(
+          color: _ink,
+          child: Stack(
             children: [
-              _CircleButton(
-                Icons.menu,
-                'Mylike screens',
-                () => _open(context, 'home'),
-                tint: Colors.white,
+              const Positioned.fill(
+                left: 155,
+                child: _Photo(
+                  'shop',
+                  Rect.fromLTWH(143, 767, 157, 213),
+                  alignment: Alignment.topCenter,
+                ),
               ),
-              _CircleButton(
-                Icons.shopping_bag_outlined,
-                'Cart',
-                () => _open(context, 'cart'),
-                tint: Colors.white,
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      stops: [0, .48, 1],
+                      colors: [_ink, _ink, Colors.transparent],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'THE SHOP EDIT',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 10,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Everyday\nessentials',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        height: 1.05,
+                        fontWeight: FontWeight.w800,
+                        fontVariations: [FontVariation('wght', 800)],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _Action(
+                      'Shop collection',
+                      () => _open(context, 'shop-search'),
+                      color: Colors.white,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          _ShopSearchBar(),
-          const SizedBox(height: 16),
-          const _ShopOffer(),
-          _Section(
-            'Categories',
-            action: 'See all',
-            onTap: () => _open(context, 'categories'),
-          ),
-          const _ShopCategories(),
-          _Section(
-            'New Arrival',
-            action: 'See all',
-            onTap: () => _open(context, 'shop-search'),
-          ),
-          const _ProductGrid(),
-        ],
+        ),
       ),
-    ),
-    bottomNavigationBar: const _Footer(child: _ShopDock()),
+      const SizedBox(height: 12),
+      const _ShopCategories(),
+      _Section(
+        'New arrivals',
+        action: 'See all',
+        onTap: () => _open(context, 'shop-search'),
+      ),
+      const _ProductGrid(),
+    ],
   );
 }
 
@@ -91,80 +130,6 @@ class _ShopSearchBar extends StatelessWidget {
         const SizedBox(width: 4),
       ],
     ),
-  );
-}
-
-class _ShopOffer extends StatelessWidget {
-  const _ShopOffer();
-  @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: ColoredBox(
-          color: const Color(0xffadcc57),
-          child: SizedBox(
-            width: double.infinity,
-            child: Stack(
-              children: [
-                const Positioned.fill(
-                  left: 150,
-                  child: _Photo(
-                    'shop',
-                    Rect.fromLTWH(369, 333, 190, 205),
-                    alignment: Alignment.centerRight,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-                  child: FractionallySizedBox(
-                    widthFactor: .60,
-                    alignment: Alignment.centerLeft,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const _Panel(
-                          color: Color(0xff15180c),
-                          radius: 25,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          child: Text(
-                            'Limited Offer',
-                            style: TextStyle(color: Colors.white, fontSize: 10),
-                          ),
-                        ),
-                        const SizedBox(height: 9),
-                        const Text(
-                          'First Purchase Enjoy a Special Offer',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            fontVariations: [FontVariation('wght', 800)],
-                            color: _ink,
-                            height: 1.28,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _Action(
-                          'Shop Now',
-                          () => _open(context, 'shop-search'),
-                          color: _ink,
-                          icon: Icons.north_east,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      const SizedBox(height: 5),
-      const _Dots(color: _lime),
-    ],
   );
 }
 
@@ -283,8 +248,7 @@ class _ProductGrid extends StatelessWidget {
 }
 
 class _Heart extends StatefulWidget {
-  const _Heart({this.dark = false});
-  final bool dark;
+  const _Heart();
   @override
   State<_Heart> createState() => _HeartState();
 }
@@ -296,8 +260,8 @@ class _HeartState extends State<_Heart> {
     saved ? Icons.favorite : Icons.favorite_border,
     saved ? 'Remove from saved' : 'Save',
     () => setState(() => saved = !saved),
-    tint: widget.dark ? Colors.white24 : Colors.white,
-    ink: widget.dark ? Colors.white : Colors.black54,
+    tint: Colors.white,
+    ink: Colors.black54,
   );
 }
 
@@ -496,7 +460,7 @@ class _ProductState extends ConsumerState<_Product> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      selectedColor: _lime,
+                      selectedColor: const Color(0xffdededb),
                       label: Text(option),
                       selected: size == option,
                       onSelected: (_) => setState(() => size = option),
@@ -533,7 +497,7 @@ class _ProductState extends ConsumerState<_Product> {
     bottomNavigationBar: _Footer(
       child: _Panel(
         color: Colors.white,
-        radius: 42,
+        radius: 12,
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 9),
         child: Row(
           children: [
