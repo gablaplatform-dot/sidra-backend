@@ -509,6 +509,9 @@
 .bm-form {
   padding: 28px;
   color: #142838;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 .bm-form header {
   display: flex;
