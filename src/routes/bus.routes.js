@@ -977,7 +977,10 @@ export const buildBusRoutes = ({
 
   admin.get(
     "/routes",
-    validate(Joi.object({ q: Joi.string().trim().max(80) }), "query"),
+    validate(
+      Joi.object({ q: Joi.string().trim().max(80).allow("").optional() }),
+      "query",
+    ),
     h((req) => busRouteDeskService.list(req.query)),
   );
   admin.post(
