@@ -221,7 +221,6 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
             { kind: "action", id: "tickets", to: "/bus/tickets", icon: "ticket", label: t("home.bus.myTickets") }
           ],
       ride: [
-        { kind: "ride", id: "boda", to: "/ride", icon: "bike", title: t("landing.story.boda"), sub: t("landing.story.bodaSub") },
         { kind: "ride", id: "car", to: "/ride", icon: "car", title: t("landing.story.car"), sub: t("landing.story.carSub") }
       ],
       phone: [{ kind: "phone", id: "phone" }],
