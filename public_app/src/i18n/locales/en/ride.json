@@ -26,10 +26,6 @@
       "unavailable": "Map is not available right now."
     },
     "types": {
-      "boda": {
-        "label": "Boda",
-        "description": "Quick & affordable"
-      },
       "car": {
         "label": "Car",
         "description": "Comfortable ride"

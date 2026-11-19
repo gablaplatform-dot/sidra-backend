@@ -19,6 +19,9 @@ const main = async () => {
 
   server.listen(env.port, "0.0.0.0");
   startMaintenance(app.locals.runMaintenance);
+  // A stranded ride offer needs to move on well inside the minute the general sweep runs on -
+  // its own fast, independent interval so it never competes with (or waits on) the other jobs.
+  startMaintenance(app.locals.runRideMaintenance, { everyMs: 5 * 1000 });
 
   const shutdown = async () => {
     server.close(async () => {

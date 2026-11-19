@@ -8,7 +8,7 @@ import { Roles } from "../constants/enums.js";
 export const buildRideRoutes = ({ rideController }) => {
   const router = Router();
   const id = Joi.string().trim().min(1).max(64);
-  const vehicleType = Joi.string().valid("boda", "car");
+  const vehicleType = Joi.string().valid("car");
   const point = Joi.object({
     lat: Joi.number().min(-90).max(90).required(),
     lng: Joi.number().min(-180).max(180).required(),

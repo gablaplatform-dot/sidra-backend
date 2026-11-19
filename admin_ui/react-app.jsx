@@ -10744,7 +10744,6 @@ const RIDE_TRIP_STATUS_OPTIONS = [
 ];
 
 const RIDE_VEHICLE_TYPES = [
-  { value: 'boda', label: 'Boda', icon: 'ph-moped-front' },
   { value: 'car', label: 'Car', icon: 'ph-car' }
 ];
 
@@ -10757,7 +10756,6 @@ const RidesView = ({ token }) => {
   const [tripsLoading, setTripsLoading] = useState(true);
   const [tripStatusFilter, setTripStatusFilter] = useState('');
   const [settingsForm, setSettingsForm] = useState({
-    boda: { baseFare: 0, perKmRate: 0, perMinuteRate: 0, minimumFare: 0, commissionPercent: 15, isActive: true },
     car: { baseFare: 0, perKmRate: 0, perMinuteRate: 0, minimumFare: 0, commissionPercent: 15, isActive: true }
   });
   const [settingsLoading, setSettingsLoading] = useState(true);
@@ -10810,7 +10808,6 @@ const RidesView = ({ token }) => {
         };
       }
       setSettingsForm((prev) => ({
-        boda: byType.boda || prev.boda,
         car: byType.car || prev.car
       }));
     } catch (e) {

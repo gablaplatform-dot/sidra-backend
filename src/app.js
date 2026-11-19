@@ -207,6 +207,7 @@ export const buildApp = () => {
   busBookingService.management=busManagementService;
   const busRouteDeskService=new BusRouteDeskService({catalogService:busCatalogService});
   app.locals.runMaintenance = () => runMaintenance({ serviceBookingService, eventTicketsService, busManagementService });
+  app.locals.runRideMaintenance = () => rideService.expireStaleOffers();
 
   app.use(
     "/api/v1",

@@ -1491,3 +1491,5 @@ UPDATE bus_routes SET boardingLat=(SELECT parkLat FROM bus_operators WHERE id=op
  WHERE boardingLat IS NULL AND (boardingPoint='' OR boardingPoint=(SELECT parkName FROM bus_operators WHERE id=operatorId));
 CREATE INDEX IF NOT EXISTS bus_routes_corridorId_idx ON bus_routes(corridorId);
 `);
+
+ensureColumn("ride_trips", "offerExpiresAt", "DATETIME");

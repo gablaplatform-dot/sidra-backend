@@ -558,12 +558,19 @@ class MobilityActivityIcon extends StatefulWidget {
   State<MobilityActivityIcon> createState() => _MobilityActivityIconState();
 }
 
+// 3 concentric rings, each on its own controller started with a staggered delay, so the pulse
+// reads as a continuous outward radar sweep (like Uber/Mapbox's "pulsing puck") rather than one
+// ring repeatedly resetting.
+const _radarRingCount = 3;
+const _radarRingDuration = Duration(milliseconds: 1800);
+
 class _MobilityActivityIconState extends State<MobilityActivityIcon>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1800),
+    with TickerProviderStateMixin {
+  late final List<AnimationController> _rings = List.generate(
+    _radarRingCount,
+    (_) => AnimationController(vsync: this, duration: _radarRingDuration),
   );
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -578,16 +585,25 @@ class _MobilityActivityIconState extends State<MobilityActivityIcon>
 
   void _update() {
     if (widget.active && !MediaQuery.disableAnimationsOf(context)) {
-      _pulse.repeat();
+      for (var i = 0; i < _rings.length; i++) {
+        final stagger = _radarRingDuration * (i / _rings.length);
+        Future.delayed(stagger, () {
+          if (mounted && widget.active) _rings[i].repeat();
+        });
+      }
     } else {
-      _pulse.stop();
-      _pulse.value = 0;
+      for (final ring in _rings) {
+        ring.stop();
+        ring.value = 0;
+      }
     }
   }
 
   @override
   void dispose() {
-    _pulse.dispose();
+    for (final ring in _rings) {
+      ring.dispose();
+    }
     super.dispose();
   }
 
@@ -597,25 +613,28 @@ class _MobilityActivityIconState extends State<MobilityActivityIcon>
       width: 84,
       height: 84,
       child: AnimatedBuilder(
-        animation: _pulse,
+        animation: Listenable.merge(_rings),
         builder: (context, _) {
           final c = Theme.of(context).colorScheme.primary;
           return Stack(
             alignment: Alignment.center,
             children: [
               if (widget.active)
-                Transform.scale(
-                  scale: .7 + .3 * _pulse.value,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: c.withValues(alpha: .4 * (1 - _pulse.value)),
-                        width: 2,
+                for (final ring in _rings)
+                  Transform.scale(
+                    scale: .6 + .9 * ring.value,
+                    child: Container(
+                      width: 62,
+                      height: 62,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: c.withValues(alpha: .35 * (1 - ring.value)),
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
-                ),
               CircleAvatar(
                 radius: 31,
                 backgroundColor: c.withValues(alpha: .09),

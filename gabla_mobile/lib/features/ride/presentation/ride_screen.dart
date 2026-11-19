@@ -95,7 +95,7 @@ class _RideScreenState extends ConsumerState<RideScreen> {
     final titles = switch (s.stage) {
       RideStage.setup => (
         'Where to\nnext?',
-        'A boda for the quick trips. A car for everything else.',
+        'Request a car, from drivers near you.',
       ),
       RideStage.choosing => (
         'Your route.\nYour ride.',
@@ -445,7 +445,7 @@ class _RideScreenState extends ConsumerState<RideScreen> {
           ),
         const SizedBox(height: 20),
         _button(
-          'Request ${s.vehicleType == 'boda' ? 'boda boda' : 'car'}',
+          'Request car',
           s.loading
               ? null
               : () {
@@ -492,7 +492,7 @@ class _RideScreenState extends ConsumerState<RideScreen> {
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Icon(
-                t == 'boda' ? Icons.two_wheeler : Icons.directions_car_filled,
+                Icons.directions_car_filled,
                 size: 34,
                 color: c.primary,
               ),
@@ -506,9 +506,9 @@ class _RideScreenState extends ConsumerState<RideScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        Text(
-          t == 'boda' ? 'Boda boda' : 'Gabla Car',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        const Text(
+          'Gabla Car',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 4),
         Text(

@@ -9,9 +9,11 @@ import { MobileMoneyService } from "./mobileMoney.service.js";
 import { RoutingService } from "./routing.service.js";
 import { webhookKey } from "../utils/webhookKey.js";
 
-const VEHICLE_TYPES = ["boda", "car"];
+const VEHICLE_TYPES = ["car"];
 const GEOHASH_PRECISION_FINE = 6; // ~1.2km x 0.6km cells - the primary search
 const GEOHASH_PRECISION_COARSE = 5; // ~4.9km x 4.9km cells - fallback if the fine search is empty
+// How long a driver has to accept/decline an offer before the dispatcher moves on without them.
+const OFFER_TIMEOUT_MS = 20_000;
 
 const decToString = (v) => (v ? v.toString() : "0.00");
 
@@ -39,6 +41,7 @@ const tripDto = (trip) => ({
   matchedAt: trip.matchedAt,
   acceptedAt: trip.acceptedAt,
   riderConfirmedAt: trip.riderConfirmedAt,
+  offerExpiresAt: trip.offerExpiresAt,
   routePolyline: trip.routePolyline,
   arrivedAt: trip.arrivedAt,
   startedAt: trip.startedAt,
@@ -417,7 +420,10 @@ export class RideService {
         : null;
 
       if (candidate && !grabbedElsewhere) {
-        const updated = await tx.rideTrip.update({ where: { id: tripId }, data: { riderConfirmedAt: new Date() } });
+        const updated = await tx.rideTrip.update({
+          where: { id: tripId },
+          data: { riderConfirmedAt: new Date(), offerExpiresAt: new Date(Date.now() + OFFER_TIMEOUT_MS) }
+        });
         return { ...tripDto(updated), driver: driverSummary(candidate) };
       }
 
@@ -430,7 +436,8 @@ export class RideService {
           driverId: match?.driver?.id ?? null,
           status: match ? "matched" : "no_drivers_found",
           matchedAt: match ? new Date() : trip.matchedAt,
-          riderConfirmedAt: match ? new Date() : null
+          riderConfirmedAt: match ? new Date() : null,
+          offerExpiresAt: match ? new Date(Date.now() + OFFER_TIMEOUT_MS) : null
         }
       });
       return { ...tripDto(updated), driver: driverSummary(match?.driver) };
@@ -484,20 +491,46 @@ export class RideService {
         return tripDto(updated);
       }
 
-      const declinedIds = [...(trip.metadata?.declinedDriverIds ?? []), driver.id];
-      const match = await this.findNearestDriver({ lat: trip.pickupLat, lng: trip.pickupLng, vehicleType: trip.vehicleType, excludeDriverIds: declinedIds });
-
-      const updated = await tx.rideTrip.update({
-        where: { id: tripId },
-        data: {
-          driverId: match?.driver?.id ?? null,
-          status: match ? "matched" : "no_drivers_found",
-          matchedAt: match ? new Date() : trip.matchedAt,
-          metadata: { ...(trip.metadata ?? {}), declinedDriverIds: declinedIds }
-        }
-      });
+      const updated = await this._passOverDriver(tx, trip, driver.id);
       return tripDto(updated);
     });
+  }
+
+  // Shared by an explicit decline (respondToTripOffer) and a server-side timeout
+  // (expireStaleOffers) - both "move on without this driver" the same way: exclude them, find the
+  // next nearest, and give that driver a fresh offer window.
+  async _passOverDriver(tx, trip, excludedDriverId) {
+    const declinedIds = [...(trip.metadata?.declinedDriverIds ?? []), excludedDriverId];
+    const match = await this.findNearestDriver({ lat: trip.pickupLat, lng: trip.pickupLng, vehicleType: trip.vehicleType, excludeDriverIds: declinedIds });
+    return tx.rideTrip.update({
+      where: { id: trip.id },
+      data: {
+        driverId: match?.driver?.id ?? null,
+        status: match ? "matched" : "no_drivers_found",
+        matchedAt: match ? new Date() : trip.matchedAt,
+        offerExpiresAt: match ? new Date(Date.now() + OFFER_TIMEOUT_MS) : null,
+        metadata: { ...(trip.metadata ?? {}), declinedDriverIds: declinedIds }
+      }
+    });
+  }
+
+  // Maintenance sweep (see src/jobs/maintenance.js): a driver who neither accepts nor declines
+  // within OFFER_TIMEOUT_MS would otherwise strand the trip - riderConfirmedAt alone marks a
+  // driver "busy" in findNearestDriver, so a silent driver ties up both the trip and themselves
+  // forever without this.
+  async expireStaleOffers() {
+    const stale = await prisma.rideTrip.findMany({
+      where: { status: "matched", riderConfirmedAt: { not: null }, acceptedAt: null, offerExpiresAt: { lt: new Date() } }
+    });
+    for (const trip of stale) {
+      await prisma.$transaction(async (tx) => {
+        // Re-check freshness inside the transaction - another request (accept/decline) may have
+        // just resolved it.
+        const fresh = await tx.rideTrip.findUnique({ where: { id: trip.id } });
+        if (!fresh || fresh.status !== "matched" || fresh.acceptedAt || !fresh.offerExpiresAt || fresh.offerExpiresAt >= new Date()) return;
+        await this._passOverDriver(tx, fresh, fresh.driverId);
+      });
+    }
   }
 
   async updateTripStatus({ actorUserId, tripId, status }) {

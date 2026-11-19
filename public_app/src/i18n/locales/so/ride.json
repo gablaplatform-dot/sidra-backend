@@ -26,10 +26,6 @@
       "unavailable": "Khariidadda hadda lama heli karo."
     },
     "types": {
-      "boda": {
-        "label": "Boda",
-        "description": "Dhakhso ah oo jaban"
-      },
       "car": {
         "label": "Gaari",
         "description": "Safar raaxo leh"

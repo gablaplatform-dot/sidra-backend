@@ -8,7 +8,7 @@ import { getSession } from "../lib/session";
 import { loadGoogleMaps } from "../lib/maps";
 import { formatUgx } from "../lib/format";
 import { getActiveTripId, setActiveTripId, clearActiveTripId } from "../lib/activeRide";
-import { IconBike, IconCar, IconCash, IconChevronLeft, IconPhone, IconTarget, IconWallet } from "../components/icons";
+import { IconCar, IconCash, IconChevronLeft, IconPhone, IconTarget, IconWallet } from "../components/icons";
 
 // Kampala — used only when geolocation is unavailable/denied, purely as a starting map center.
 const DEFAULT_CENTER = { lat: 0.3476, lng: 32.5825 };
@@ -18,7 +18,6 @@ const CANCELLABLE_STATUSES = ["searching", "matched", "arrived"];
 
 // Labels/descriptions come from ride.types.<value>.* at render time.
 const RIDE_TYPES = [
-  { value: "boda", Icon: IconBike },
   { value: "car", Icon: IconCar }
 ];
 
@@ -52,7 +51,7 @@ export default function Ride() {
   const [locating, setLocating] = useState(false);
 
   const [stage, setStage] = useState("setup"); // setup | choose | confirm | live
-  const [vehicleType, setVehicleType] = useState("boda");
+  const [vehicleType, setVehicleType] = useState("car");
   const [estimates, setEstimates] = useState({});
   const [estimating, setEstimating] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cash");

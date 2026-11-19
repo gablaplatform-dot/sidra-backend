@@ -1012,6 +1012,10 @@ model RideTrip {
   // count as "busy" for matching purposes (so an abandoned, unconfirmed match doesn't tie up a
   // driver indefinitely) and the driver app never surfaces it as an incoming offer.
   riderConfirmedAt DateTime?
+  // Set alongside riderConfirmedAt (and refreshed on every reassignment): the moment a driver's
+  // offer goes stale if they neither accept nor decline it. A maintenance sweep treats an expired
+  // offer exactly like a decline - see RideService#expireStaleOffers.
+  offerExpiresAt DateTime?
   arrivedAt     DateTime?
   startedAt     DateTime?
   completedAt   DateTime?

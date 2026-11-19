@@ -73,7 +73,7 @@ class _ProfileTabState extends State<ProfileTab> {
           const SizedBox(height: 12),
           Row(
             children: [
-              _VehicleChip(label: driver['vehicleType'] == 'car' ? 'Car' : 'Boda', icon: driver['vehicleType'] == 'car' ? Icons.directions_car_filled_rounded : Icons.two_wheeler_rounded),
+              const _VehicleChip(label: 'Car', icon: Icons.directions_car_filled_rounded),
               const SizedBox(width: 10),
               _VehicleChip(label: '★ ${(driver['ratingAvg'] as num? ?? 0).toStringAsFixed(1)} (${driver['ratingCount'] ?? 0})', icon: Icons.star_rounded),
             ],

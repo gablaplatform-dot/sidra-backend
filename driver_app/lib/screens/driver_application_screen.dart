@@ -17,7 +17,7 @@ class DriverApplicationScreen extends StatefulWidget {
 }
 
 class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
-  String _vehicleType = 'boda';
+  static const _vehicleType = 'car';
   final _modelCtrl = TextEditingController();
   final _plateCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
@@ -116,20 +116,19 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            const Text('Vehicle type', style: TextStyle(fontWeight: FontWeight.w800, color: GablaColors.navy)),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(child: _VehicleTypeCard(
-                  label: 'Boda', icon: Icons.two_wheeler_rounded,
-                  selected: _vehicleType == 'boda', onTap: () => setState(() => _vehicleType = 'boda'),
-                )),
-                const SizedBox(width: 12),
-                Expanded(child: _VehicleTypeCard(
-                  label: 'Car', icon: Icons.directions_car_filled_rounded,
-                  selected: _vehicleType == 'car', onTap: () => setState(() => _vehicleType = 'car'),
-                )),
-              ],
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              decoration: BoxDecoration(
+                color: GablaColors.navy,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.directions_car_filled_rounded, color: GablaColors.gold, size: 26),
+                  SizedBox(width: 12),
+                  Text('Driving a car for Gabla Ride', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white)),
+                ],
+              ),
             ),
             const SizedBox(height: 22),
             if (_error != null) ...[
@@ -180,36 +179,6 @@ class _DriverApplicationScreenState extends State<DriverApplicationScreen> {
                   ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
                   : const Text('Submit application'),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _VehicleTypeCard extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-  const _VehicleTypeCard({required this.label, required this.icon, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        decoration: BoxDecoration(
-          color: selected ? GablaColors.navy : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? GablaColors.navy : GablaColors.border),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: selected ? GablaColors.gold : GablaColors.navy, size: 30),
-            const SizedBox(height: 8),
-            Text(label, style: TextStyle(fontWeight: FontWeight.w800, color: selected ? Colors.white : GablaColors.navy)),
           ],
         ),
       ),

@@ -26,10 +26,6 @@
       "unavailable": "ካርታ ሕጂ የለን።"
     },
     "types": {
-      "boda": {
-        "label": "ቦዳ",
-        "description": "ቅልጡፍን ርሱንን"
-      },
       "car": {
         "label": "መኪና",
         "description": "ምቹእ መጓዓዝያ"

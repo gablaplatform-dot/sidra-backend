@@ -10,7 +10,7 @@ import 'ride_providers.dart';
 
 enum RideStage { setup, choosing, confirming, live }
 
-const rideVehicleTypes = ['boda', 'car'];
+const rideVehicleTypes = ['car'];
 
 const _unset = Object();
 

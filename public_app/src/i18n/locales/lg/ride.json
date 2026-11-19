@@ -26,10 +26,6 @@
       "unavailable": "Maapu teriwo kati."
     },
     "types": {
-      "boda": {
-        "label": "Boda",
-        "description": "Ya mangu era ya bbeeyi entono"
-      },
       "car": {
         "label": "Mmotoka",
         "description": "Entambula ey'emirembe"

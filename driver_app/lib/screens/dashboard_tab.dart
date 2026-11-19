@@ -320,7 +320,7 @@ class _OfflineHint extends StatelessWidget {
   }
 }
 
-class _TripOfferSheet extends StatelessWidget {
+class _TripOfferSheet extends StatefulWidget {
   final Map<String, dynamic> trip;
   final bool loading;
   final VoidCallback onAccept;
@@ -328,7 +328,41 @@ class _TripOfferSheet extends StatelessWidget {
   const _TripOfferSheet({required this.trip, required this.loading, required this.onAccept, required this.onDecline});
 
   @override
+  State<_TripOfferSheet> createState() => _TripOfferSheetState();
+}
+
+// Purely cosmetic - the server independently expires the offer and reassigns it (see
+// RideService#expireStaleOffers), so a backgrounded/slow phone can never stall dispatch by
+// just not showing this. This only gives the driver a visual sense of urgency.
+class _TripOfferSheetState extends State<_TripOfferSheet> {
+  Timer? _ticker;
+  double _remaining = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+  }
+
+  void _tick() {
+    final expiresAt = DateTime.tryParse(widget.trip['offerExpiresAt'] as String? ?? '');
+    if (expiresAt == null) return;
+    final total = const Duration(seconds: 20).inMilliseconds;
+    final left = expiresAt.difference(DateTime.now()).inMilliseconds;
+    if (mounted) setState(() => _remaining = (left / total).clamp(0, 1));
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final trip = widget.trip;
+    final loading = widget.loading;
     final pickup = trip['pickup'] as Map<String, dynamic>?;
     final dropoff = trip['dropoff'] as Map<String, dynamic>?;
     return Align(
@@ -347,7 +381,16 @@ class _TripOfferSheet extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.bolt_rounded, color: GablaColors.gold, size: 22),
+                SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    value: _remaining,
+                    strokeWidth: 2.4,
+                    backgroundColor: const Color(0xFFFEF3C7),
+                    valueColor: const AlwaysStoppedAnimation(GablaColors.gold),
+                  ),
+                ),
                 const SizedBox(width: 8),
                 const Text('New ride request', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: GablaColors.navy)),
                 const Spacer(),
@@ -365,7 +408,7 @@ class _TripOfferSheet extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: loading ? null : onDecline,
+                    onPressed: loading ? null : widget.onDecline,
                     style: OutlinedButton.styleFrom(foregroundColor: GablaColors.danger, side: const BorderSide(color: Color(0xFFFECDD3))),
                     child: const Text('Decline'),
                   ),
@@ -374,7 +417,7 @@ class _TripOfferSheet extends StatelessWidget {
                 Expanded(
                   flex: 2,
                   child: ElevatedButton(
-                    onPressed: loading ? null : onAccept,
+                    onPressed: loading ? null : widget.onAccept,
                     child: loading
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
                         : const Text('Accept'),
