@@ -1070,6 +1070,79 @@ CREATE TABLE IF NOT EXISTS community_responses (
  FOREIGN KEY(postId) REFERENCES community_posts(id) ON DELETE CASCADE, FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE UNIQUE INDEX IF NOT EXISTS community_responses_postId_userId_key ON community_responses(postId,userId);
+-- CreateTable
+CREATE TABLE IF NOT EXISTS "event_ticket_sales" (
+    "eventId" TEXT NOT NULL PRIMARY KEY,
+    "enabled" BOOLEAN NOT NULL DEFAULT false,
+    "price" INTEGER NOT NULL,
+    "capacity" INTEGER NOT NULL,
+    CONSTRAINT "event_ticket_sales_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "community_posts" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE IF NOT EXISTS "event_ticket_orders" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "eventId" TEXT NOT NULL,
+    "buyerId" TEXT NOT NULL,
+    "buyerName" TEXT NOT NULL,
+    "buyerEmail" TEXT NOT NULL,
+    "payPhone" TEXT NOT NULL,
+    "transactionId" TEXT NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "unitPrice" INTEGER NOT NULL,
+    "total" INTEGER NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'pending_payment',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" DATETIME NOT NULL,
+    "paidAt" DATETIME,
+    "emailStatus" TEXT NOT NULL DEFAULT 'pending',
+    "payoutId" TEXT,
+    CONSTRAINT "event_ticket_orders_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "community_posts" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "event_ticket_orders_transactionId_fkey" FOREIGN KEY ("transactionId") REFERENCES "transactions" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "event_ticket_orders_payoutId_fkey" FOREIGN KEY ("payoutId") REFERENCES "event_ticket_payouts" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE IF NOT EXISTS "event_admissions" (
+    "number" TEXT NOT NULL PRIMARY KEY,
+    "orderId" TEXT NOT NULL,
+    "usedAt" DATETIME,
+    CONSTRAINT "event_admissions_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "event_ticket_orders" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE IF NOT EXISTS "event_ticket_payouts" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "eventId" TEXT NOT NULL,
+    "ownerId" TEXT NOT NULL,
+    "adminId" TEXT NOT NULL,
+    "phone" TEXT NOT NULL,
+    "amount" DECIMAL NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'processing',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "settledAt" DATETIME,
+    "reconciliationNote" TEXT,
+    CONSTRAINT "event_ticket_payouts_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "community_posts" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX IF NOT EXISTS "event_ticket_orders_transactionId_key" ON "event_ticket_orders"("transactionId");
+
+-- CreateIndex
+CREATE INDEX IF NOT EXISTS "event_ticket_orders_eventId_status_expiresAt_idx" ON "event_ticket_orders"("eventId", "status", "expiresAt");
+
+-- CreateIndex
+CREATE INDEX IF NOT EXISTS "event_ticket_orders_buyerId_createdAt_idx" ON "event_ticket_orders"("buyerId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX IF NOT EXISTS "event_ticket_orders_payoutId_idx" ON "event_ticket_orders"("payoutId");
+
+-- CreateIndex
+CREATE INDEX IF NOT EXISTS "event_admissions_orderId_idx" ON "event_admissions"("orderId");
+
+-- CreateIndex
+CREATE INDEX IF NOT EXISTS "event_ticket_payouts_eventId_createdAt_idx" ON "event_ticket_payouts"("eventId", "createdAt");
+
 `;
 const sqlite = findSqlite();
 const result = spawnSync(sqlite, [databasePath], { input: sql, encoding: "utf8" });
@@ -1350,3 +1423,71 @@ process.stdout.write(`SQLite schema is ready at ${databasePath}\n`);
 
 ensureColumn("categories", "taxonomyKind", "TEXT NOT NULL DEFAULT 'service'");
 runSql("CREATE INDEX IF NOT EXISTS categories_taxonomyKind_idx ON categories(taxonomyKind);");
+
+// Gabla-managed fleet: additive migration, retaining all historic operators and bookings.
+runSql(`
+CREATE TABLE IF NOT EXISTS bus_vehicles (
+ id TEXT PRIMARY KEY NOT NULL, operatorId TEXT NOT NULL REFERENCES bus_operators(id) ON DELETE CASCADE,
+ name TEXT NOT NULL, registration TEXT NOT NULL, contactName TEXT NOT NULL, contactPhone TEXT NOT NULL,
+ seats INTEGER NOT NULL DEFAULT 60, cancellationMinutes INTEGER NOT NULL DEFAULT 120,
+ amenities JSONB NOT NULL DEFAULT '[]', imageUrl TEXT, isActive BOOLEAN NOT NULL DEFAULT 1,
+ createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE(operatorId, registration)
+);
+CREATE TABLE IF NOT EXISTS bus_notifications (
+ id TEXT PRIMARY KEY NOT NULL, bookingId TEXT NOT NULL REFERENCES bus_bookings(id) ON DELETE CASCADE,
+ kind TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,
+ nextAttemptAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, leaseUntil DATETIME, sentAt DATETIME,
+ lastError TEXT NOT NULL DEFAULT '', createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE(bookingId,kind)
+);
+CREATE INDEX IF NOT EXISTS bus_notifications_due_idx ON bus_notifications(status,nextAttemptAt);
+`);
+[
+ ['bus_operators','managedByGabla','BOOLEAN NOT NULL DEFAULT 0'],
+ ['bus_operators','isDemo','BOOLEAN NOT NULL DEFAULT 0'],
+ ['bus_operators','contactName',"TEXT NOT NULL DEFAULT ''"],
+ ['bus_routes','vehicleId','TEXT REFERENCES bus_vehicles(id) ON DELETE SET NULL'],
+ ['bus_trips','vehicleId','TEXT REFERENCES bus_vehicles(id) ON DELETE SET NULL'],
+ ['bus_trips','availability',"TEXT NOT NULL DEFAULT 'available'"],
+ ['bus_trips','availabilityCheckedAt','DATETIME'],
+ ['bus_trips','availabilityNote',"TEXT NOT NULL DEFAULT ''"],
+ ['bus_bookings','cancellationMinutes','INTEGER NOT NULL DEFAULT 120'],
+ ['bus_bookings','cancellationClosesAt','DATETIME'],
+ ['bus_bookings','lockedAt','DATETIME'],
+ ['bus_bookings','cancelledAt','DATETIME'],
+ ['bus_bookings','operationStatus',"TEXT NOT NULL DEFAULT 'awaiting_call'"],
+ ['bus_bookings','operationNote',"TEXT NOT NULL DEFAULT ''"],
+ ['bus_bookings','checkedById','TEXT'],
+ ['bus_bookings','checkedAt','DATETIME'],
+ ['bus_bookings','handoverAt','DATETIME'],
+ ['bus_bookings','handoverAmount','DECIMAL'],
+ ['bus_bookings','handoverRecipient','TEXT'],
+ ['bus_bookings','handoverPhone','TEXT'],
+ ['bus_bookings','handoverReference','TEXT'],
+ ['bus_bookings','handoverById','TEXT'],
+ ['bus_bookings','refundedAt','DATETIME'],
+ ['bus_bookings','refundedById','TEXT'],
+ ['bus_bookings','refundReference','TEXT']
+].forEach(([table,column,definition]) => ensureColumn(table,column,definition));
+
+// Route-first transport catalogue. Existing company routes become bus offerings under a shared route.
+runSql(`CREATE TABLE IF NOT EXISTS bus_corridors (
+ id TEXT PRIMARY KEY NOT NULL, key TEXT NOT NULL UNIQUE, originName TEXT NOT NULL,
+ destinationName TEXT NOT NULL, durationMinutes INTEGER NOT NULL DEFAULT 180,
+ isActive BOOLEAN NOT NULL DEFAULT 1, createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);`);
+ensureColumn('bus_routes','corridorId','TEXT REFERENCES bus_corridors(id) ON DELETE SET NULL');
+ensureColumn('bus_routes','boardingLat','REAL');
+ensureColumn('bus_routes','boardingLng','REAL');
+runSql(`
+INSERT OR IGNORE INTO bus_corridors(id,key,originName,destinationName,durationMinutes)
+SELECT 'route-' || MIN(id),
+ lower(trim(originName)) || '|' || lower(trim(destinationName)),MIN(trim(originName)),MIN(trim(destinationName)),MIN(durationMinutes)
+ FROM bus_routes WHERE corridorId IS NULL GROUP BY lower(trim(originName)),lower(trim(destinationName));
+UPDATE bus_routes SET corridorId=(SELECT id FROM bus_corridors WHERE key=lower(trim(bus_routes.originName)) || '|' || lower(trim(bus_routes.destinationName))) WHERE corridorId IS NULL;
+UPDATE bus_routes SET boardingLat=(SELECT parkLat FROM bus_operators WHERE id=operatorId),boardingLng=(SELECT parkLng FROM bus_operators WHERE id=operatorId)
+ WHERE boardingLat IS NULL AND (boardingPoint='' OR boardingPoint=(SELECT parkName FROM bus_operators WHERE id=operatorId));
+CREATE INDEX IF NOT EXISTS bus_routes_corridorId_idx ON bus_routes(corridorId);
+`);

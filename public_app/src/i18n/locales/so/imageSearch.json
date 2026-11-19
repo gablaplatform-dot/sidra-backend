@@ -1,0 +1,8 @@
+{
+  "imageSearch": {
+    "label": "Ku raadi sawir",
+    "nothing": "Ma garan karno waxa sawirka ku jira. Isku day mid kale ama qor waxaad rabto.",
+    "errType": "Dooro sawir caadi ah (JPEG, PNG ama WebP).",
+    "errFailed": "Raadinta sawirku ma shaqayn. Mar kale isku day ama qor waxaad rabto."
+  }
+}

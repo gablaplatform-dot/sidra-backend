@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:visibility_detector/visibility_detector.dart';
+import 'package:gabla_mobile/core/motion/motion_background.dart';
 import 'package:gabla_mobile/core/network/api_client.dart';
 import 'package:gabla_mobile/core/network/network_providers.dart';
 import 'package:gabla_mobile/core/theme/app_theme.dart';
@@ -15,6 +17,7 @@ import 'package:gabla_mobile/features/auth/domain/session.dart';
 import 'package:gabla_mobile/features/community/application/community_providers.dart';
 import 'package:gabla_mobile/features/community/presentation/community_screens.dart';
 import 'package:gabla_mobile/features/community/presentation/community_editor_screen.dart';
+import 'package:gabla_mobile/features/home/presentation/home_screen.dart';
 import 'package:gabla_mobile/features/settings/application/theme_controller.dart';
 import 'package:gabla_mobile/features/settings/domain/theme_preferences.dart';
 
@@ -77,11 +80,36 @@ class FixtureApi extends ApiClient {
         onUnauthorized: () {},
       );
   @override
+  Future<List<dynamic>> getList(
+    String path, {
+    Map<String, dynamic>? query,
+  }) async => switch (path) {
+    '/categories' => [
+      {'id': 'accommodation', 'name': 'Accommodation'},
+      {'id': 'restaurants', 'name': 'Restaurants'},
+    ],
+    '/providers' => [
+      {'id': 'garden', 'businessName': 'The Garden', 'district': 'Kampala'},
+    ],
+    _ => super.getList(path, query: query),
+  };
+
+  @override
   Future<T> get<T>(String path, {Map<String, dynamic>? query}) async {
     final event = path.startsWith('/events');
     final dynamic data = path == '/jobs' || path == '/events'
         ? {
-            'items': [post(event)],
+            'items': [
+              if (!event && query?['jobGroup'] == 'workers')
+                {
+                  ...post(false),
+                  'id': 'worker',
+                  'title': 'Experienced sound engineer available',
+                  'jobType': 'seeking_work',
+                }
+              else
+                post(event),
+            ],
             'total': 1,
           }
         : post(event);
@@ -125,6 +153,72 @@ void main() {
       );
     },
   );
+  testWidgets(
+    'Jobs switches between openings and workers with the right posting action',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 1100);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            themeControllerProvider.overrideWith(
+              () => FixedTheme(AppThemeStyle.gabla),
+            ),
+            sessionControllerProvider.overrideWith(SignedIn.new),
+            apiClientProvider.overrideWithValue(FixtureApi()),
+          ],
+          child: const MaterialApp(home: CommunityHubScreen(kind: 'jobs')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Sound engineer for local live shows'), findsOneWidget);
+      expect(find.text('Post your availability'), findsOneWidget);
+      await tester.tap(find.text('Find workers'));
+      await tester.pumpAndSettle();
+      expect(find.text('Experienced sound engineer available'), findsOneWidget);
+      expect(find.text('Sound engineer for local live shows'), findsNothing);
+      expect(find.text('Post a job or task'), findsOneWidget);
+      expect(find.text('Paid tasks'), findsNothing);
+    },
+  );
+  testWidgets('a directly opened event can go back to Events', (tester) async {
+    final router = GoRouter(
+      initialLocation: '/events/p/event',
+      routes: [
+        GoRoute(
+          path: '/events',
+          builder: (_, _) => const Scaffold(body: Text('Events directory')),
+        ),
+        GoRoute(
+          path: '/events/p/:id',
+          builder: (_, state) => CommunityDetailScreen(
+            kind: 'events',
+            id: state.pathParameters['id']!,
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          themeControllerProvider.overrideWith(
+            () => FixedTheme(AppThemeStyle.gabla),
+          ),
+          sessionControllerProvider.overrideWith(SignedIn.new),
+          apiClientProvider.overrideWithValue(FixtureApi()),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(router.canPop(), isFalse);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('Events directory'), findsOneWidget);
+  });
   for (final style in AppThemeStyle.values) {
     final screens = <String, Widget>{
       'jobs': const CommunityHubScreen(kind: 'jobs'),
@@ -175,7 +269,7 @@ void main() {
     }
   }
   for (final style in AppThemeStyle.values) {
-    for (final kind in ['jobs', 'events', 'post-job', 'post-event']) {
+    for (final kind in ['home', 'jobs', 'events', 'post-job', 'post-event']) {
       testWidgets('${style.name} $kind rendered preview', (tester) async {
         tester.view.physicalSize = const Size(430, 1100);
         tester.view.devicePixelRatio = 1;
@@ -193,27 +287,40 @@ void main() {
               theme: AppTheme.resolve(style, Brightness.light),
               builder: (context, child) => MediaQuery(
                 data: MediaQuery.of(context).copyWith(disableAnimations: true),
-                child: child!,
+                child: RepaintBoundary(
+                  key: key,
+                  child: AppMotionSurface(child: child!),
+                ),
               ),
-              home: RepaintBoundary(
-                key: key,
-                child: kind.startsWith('post-')
-                    ? CommunityEditorScreen(
-                        kind: kind == 'post-job' ? 'jobs' : 'events',
-                      )
-                    : CommunityHubScreen(kind: kind),
-              ),
+              home: kind == 'home'
+                  ? const HomeScreen()
+                  : kind.startsWith('post-')
+                  ? CommunityEditorScreen(
+                      kind: kind == 'post-job' ? 'jobs' : 'events',
+                    )
+                  : CommunityHubScreen(kind: kind),
             ),
           ),
         );
         await tester.pumpAndSettle();
         await tester.runAsync(() async {
-          await precacheImage(
-            AssetImage(
-              'assets/artwork/${kind.contains('event') ? 'events' : 'jobs'}.jpg',
+          final artwork = switch (kind) {
+            'home' => ['shop', 'services', 'bus', 'ride', 'jobs', 'events'],
+            'events' => ['community-concert'],
+            'post-event' => ['events'],
+            _ => ['jobs'],
+          };
+          await Future.wait([
+            precacheImage(
+              const ExactAssetImage('assets/textures/grain.png', scale: 2),
+              key.currentContext!,
             ),
-            key.currentContext!,
-          );
+            for (final image in artwork)
+              precacheImage(
+                AssetImage('assets/artwork/$image.jpg'),
+                key.currentContext!,
+              ),
+          ]);
         });
         await tester.pump();
         expect(tester.takeException(), isNull);

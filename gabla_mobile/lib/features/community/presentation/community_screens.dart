@@ -11,6 +11,7 @@ import '../../../core/motion/design_transitions.dart';
 import '../../../core/network/network_providers.dart';
 import '../../../core/theme/app_theme_style.dart';
 import '../../../core/theme/font_group.dart';
+import '../../../core/widgets/page_band.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../auth/application/session_controller.dart';
 import '../../ride/domain/ride_location.dart';
@@ -93,8 +94,10 @@ class CommunityHubScreen extends ConsumerStatefulWidget {
     super.key,
     required this.kind,
     this.scope = 'browse',
+    this.showWorkers = false,
   });
   final String kind, scope;
+  final bool showWorkers;
   @override
   ConsumerState<CommunityHubScreen> createState() => _CommunityHubScreenState();
 }
@@ -103,6 +106,7 @@ class _CommunityHubScreenState extends ConsumerState<CommunityHubScreen> {
   final _search = TextEditingController();
   String _q = '', _category = '', _type = '', _workplace = '', _district = '';
   int _page = 1;
+  late bool _workers = widget.showWorkers;
   bool get event => widget.kind == 'events';
   String get endpoint => Uri(
     path:
@@ -112,7 +116,8 @@ class _CommunityHubScreenState extends ConsumerState<CommunityHubScreen> {
       'limit': '20',
       if (_q.isNotEmpty) 'q': _q,
       if (_category.isNotEmpty) 'category': _category,
-      if (_type.isNotEmpty) 'jobType': _type,
+      if (!event) 'jobGroup': _workers ? 'workers' : 'openings',
+      if (!event && !_workers && _type.isNotEmpty) 'jobType': _type,
       if (_workplace.isNotEmpty) 'workplace': _workplace,
       if (_district.isNotEmpty) 'district': _district,
     },
@@ -128,6 +133,170 @@ class _CommunityHubScreenState extends ConsumerState<CommunityHubScreen> {
     final c = Theme.of(context).colorScheme,
         style = ref.watch(themeControllerProvider).style;
     final private = widget.scope != 'browse';
+    final postAvailability = !event && (private ? _workers : !_workers);
+    final createPath =
+        '/${widget.kind}/new${postAvailability ? '?type=seeking_work' : ''}';
+    final hero = CommunityBrowseHeader(
+      style: style,
+      event: event,
+      workers: _workers,
+    );
+    final search = TextField(
+      controller: _search,
+      onSubmitted: (v) => setState(() {
+        _q = v.trim();
+        _page = 1;
+      }),
+      decoration:
+          InputDecoration(
+            hintText: event
+                ? 'Artist, venue or event'
+                : _workers
+                ? 'Skill or profession'
+                : 'Role, company or skill',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: IconButton(
+              tooltip: 'Search',
+              onPressed: () => setState(() {
+                _q = _search.text.trim();
+                _page = 1;
+              }),
+              icon: const Icon(Icons.arrow_forward),
+            ),
+          ).applyDefaults(
+            communityTheme(Theme.of(context), style).inputDecorationTheme,
+          ),
+    );
+    final categories = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final cat in ['', ...(event ? eventCategories : jobCategories)])
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(cat.isEmpty ? 'All' : cat),
+                selected: _category == cat,
+                onSelected: (_) => setState(() {
+                  _category = cat;
+                  _page = 1;
+                }),
+              ),
+            ),
+        ],
+      ),
+    );
+    final jobTypes = Wrap(
+      spacing: 8,
+      children: [
+        for (final entry in {
+          '': 'All work',
+          'vacancy': 'Vacancies',
+          'task': 'Paid tasks',
+        }.entries)
+          ChoiceChip(
+            label: Text(entry.value),
+            selected: _type == entry.key,
+            onSelected: (_) => setState(() {
+              _type = entry.key;
+              _page = 1;
+            }),
+          ),
+      ],
+    );
+    final filters = Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        icon: const Icon(Icons.tune, size: 18),
+        label: Text(
+          _district.isEmpty && _workplace.isEmpty
+              ? 'Location & filters'
+              : 'Filters active',
+        ),
+        onPressed: () async {
+          final result = await communityForm(
+            context,
+            title: 'Narrow your search',
+            initial: {'district': _district, 'workplace': _workplace},
+            fields: [
+              const WorkspaceField('district', 'District'),
+              if (!event)
+                const WorkspaceField(
+                  'workplace',
+                  'Workplace',
+                  type: 'select',
+                  options: ['', 'onsite', 'hybrid', 'remote'],
+                ),
+            ],
+          );
+          if (result != null && mounted) {
+            setState(() {
+              _district = '${result['district'] ?? ''}'.trim();
+              _workplace = '${result['workplace'] ?? ''}';
+              _page = 1;
+            });
+          }
+        },
+      ),
+    );
+    Widget results() => AsyncValueView<Map<String, dynamic>>(
+      value: ref.watch(communityEndpointProvider(endpoint)),
+      onRetry: () => ref.invalidate(communityEndpointProvider(endpoint)),
+      data: (context, data) {
+        final items = communityItems(data),
+            total = (data['total'] as num?)?.toInt() ?? items.length;
+        if (items.isEmpty) {
+          return CommunityEmptyState(
+            event: event,
+            private: private,
+            workers: _workers,
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '$total ${event ? (total == 1 ? 'event' : 'events') : (_workers ? (total == 1 ? 'worker' : 'workers') : (total == 1 ? 'opportunity' : 'opportunities'))}',
+              style: TextStyle(color: c.onSurfaceVariant, fontSize: 12),
+            ),
+            const SizedBox(height: 14),
+            for (var i = 0; i < items.length; i++)
+              Padding(
+                padding: EdgeInsets.only(
+                  bottom: style == AppThemeStyle.editorial ? 22 : 16,
+                ),
+                child: DesignEntrance(
+                  index: i,
+                  child: CommunityPostCard(
+                    post: items[i],
+                    style: style,
+                    onTap: () =>
+                        context.push('/${widget.kind}/p/${items[i]['id']}'),
+                  ),
+                ),
+              ),
+            if (total > 20)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: _page > 1 ? () => setState(() => _page--) : null,
+                    child: const Text('Previous'),
+                  ),
+                  Text('Page $_page'),
+                  TextButton(
+                    onPressed: _page * 20 < total
+                        ? () => setState(() => _page++)
+                        : null,
+                    child: const Text('Next'),
+                  ),
+                ],
+              ),
+          ],
+        );
+      },
+    );
+
     return CommunityDesignScope(
       style: style,
       child: Scaffold(
@@ -140,11 +309,18 @@ class _CommunityHubScreenState extends ConsumerState<CommunityHubScreen> {
               ? 'Events'
               : 'Jobs',
           actions: [
+            if (widget.kind == 'events')
+              IconButton(
+                tooltip: 'My event tickets',
+                onPressed: () => context.push('/events/tickets'),
+                icon: const Icon(Icons.confirmation_number_outlined),
+              ),
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_horiz),
               onSelected: (v) {
-                if (communitySignIn(context, ref, '/${widget.kind}/$v'))
-                  context.push('/${widget.kind}/$v');
+                final next =
+                    '/${widget.kind}/$v${_workers && v != 'applications' ? '?view=workers' : ''}';
+                if (communitySignIn(context, ref, next)) context.push(next);
               },
               itemBuilder: (_) => [
                 PopupMenuItem(value: 'mine', child: Text('My ${widget.kind}')),
@@ -172,11 +348,17 @@ class _CommunityHubScreenState extends ConsumerState<CommunityHubScreen> {
               padding: const EdgeInsets.fromLTRB(18, 10, 18, 10),
               child: FilledButton.icon(
                 onPressed: () {
-                  if (communitySignIn(context, ref, '/${widget.kind}/new'))
-                    context.push('/${widget.kind}/new');
+                  if (communitySignIn(context, ref, createPath))
+                    context.push(createPath);
                 },
                 icon: const Icon(Icons.add, size: 18),
-                label: Text(event ? 'Create an event' : 'Post a job or task'),
+                label: Text(
+                  event
+                      ? 'Create an event'
+                      : postAvailability
+                      ? 'Post your availability'
+                      : 'Post a job or task',
+                ),
               ),
             ),
           ),
@@ -197,193 +379,134 @@ class _CommunityHubScreenState extends ConsumerState<CommunityHubScreen> {
                   ref.invalidate(communityEndpointProvider(endpoint));
                 },
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+                  padding: event && !private
+                      ? EdgeInsets.zero
+                      : const EdgeInsets.fromLTRB(18, 8, 18, 24),
                   children: [
+                    if (!event)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: SegmentedButton<bool>(
+                          segments: const [
+                            ButtonSegment(
+                              value: false,
+                              label: Text('Find work'),
+                            ),
+                            ButtonSegment(
+                              value: true,
+                              label: Text('Find workers'),
+                            ),
+                          ],
+                          selected: {_workers},
+                          showSelectedIcon: false,
+                          onSelectionChanged: (value) => setState(() {
+                            _workers = value.single;
+                            _page = 1;
+                          }),
+                        ),
+                      ),
                     if (!private) ...[
-                      CommunityBrowseHeader(style: style, event: event),
-                      const SizedBox(height: 22),
-                      TextField(
-                        controller: _search,
-                        onSubmitted: (v) => setState(() {
-                          _q = v.trim();
-                          _page = 1;
-                        }),
-                        decoration:
-                            InputDecoration(
-                              hintText: event
-                                  ? 'Artist, venue or event'
-                                  : 'Role, company or skill',
-                              prefixIcon: const Icon(Icons.search),
-                              suffixIcon: IconButton(
-                                tooltip: 'Search',
-                                onPressed: () => setState(() {
-                                  _q = _search.text.trim();
-                                  _page = 1;
-                                }),
-                                icon: const Icon(Icons.arrow_forward),
-                              ),
-                            ).applyDefaults(
-                              communityTheme(
-                                Theme.of(context),
-                                style,
-                              ).inputDecorationTheme,
-                            ),
-                      ),
-                      const SizedBox(height: 12),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            for (final cat in [
-                              '',
-                              ...(event ? eventCategories : jobCategories),
-                            ])
-                              Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: ChoiceChip(
-                                  label: Text(cat.isEmpty ? 'All' : cat),
-                                  selected: _category == cat,
-                                  onSelected: (_) => setState(() {
-                                    _category = cat;
-                                    _page = 1;
-                                  }),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      if (!event)
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            for (final entry in {
-                              '': 'All work',
-                              'vacancy': 'Vacancies',
-                              'task': 'Paid tasks',
-                            }.entries)
-                              ChoiceChip(
-                                label: Text(entry.value),
-                                selected: _type == entry.key,
-                                onSelected: (_) => setState(() {
-                                  _type = entry.key;
-                                  _page = 1;
-                                }),
-                              ),
-                          ],
-                        ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          icon: const Icon(Icons.tune, size: 18),
-                          label: Text(
-                            _district.isEmpty && _workplace.isEmpty
-                                ? 'Location & filters'
-                                : 'Filters active',
-                          ),
-                          onPressed: () async {
-                            final result = await communityForm(
-                              context,
-                              title: 'Narrow your search',
-                              initial: {
-                                'district': _district,
-                                'workplace': _workplace,
-                              },
-                              fields: [
-                                const WorkspaceField('district', 'District'),
-                                if (!event)
-                                  const WorkspaceField(
-                                    'workplace',
-                                    'Workplace',
-                                    type: 'select',
-                                    options: ['', 'onsite', 'hybrid', 'remote'],
-                                  ),
-                              ],
-                            );
-                            if (result != null && mounted)
-                              setState(() {
-                                _district = '${result['district'] ?? ''}'
-                                    .trim();
-                                _workplace = '${result['workplace'] ?? ''}';
-                                _page = 1;
-                              });
-                          },
-                        ),
-                      ),
+                      if (event)
+                        ..._eventSections(
+                          Theme.of(context),
+                          style,
+                          hero,
+                          search,
+                          categories,
+                          filters,
+                          results(),
+                        )
+                      else ...[
+                        hero,
+                        const SizedBox(height: 22),
+                        search,
+                        const SizedBox(height: 12),
+                        categories,
+                        if (!_workers) jobTypes,
+                        filters,
+                      ],
                     ],
-                    const SizedBox(height: 16),
-                    AsyncValueView<Map<String, dynamic>>(
-                      value: ref.watch(communityEndpointProvider(endpoint)),
-                      onRetry: () =>
-                          ref.invalidate(communityEndpointProvider(endpoint)),
-                      data: (context, data) {
-                        final items = communityItems(data),
-                            total =
-                                (data['total'] as num?)?.toInt() ??
-                                items.length;
-                        if (items.isEmpty)
-                          return CommunityEmptyState(
-                            event: event,
-                            private: private,
-                          );
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              '$total ${event ? (total == 1 ? 'event' : 'events') : (total == 1 ? 'opportunity' : 'opportunities')}',
-                              style: TextStyle(
-                                color: c.onSurfaceVariant,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            for (var i = 0; i < items.length; i++)
-                              Padding(
-                                padding: EdgeInsets.only(
-                                  bottom: style == AppThemeStyle.editorial
-                                      ? 22
-                                      : 16,
-                                ),
-                                child: DesignEntrance(
-                                  index: i,
-                                  child: CommunityPostCard(
-                                    post: items[i],
-                                    style: style,
-                                    onTap: () => context.push(
-                                      '/${widget.kind}/p/${items[i]['id']}',
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            if (total > 20)
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  TextButton(
-                                    onPressed: _page > 1
-                                        ? () => setState(() => _page--)
-                                        : null,
-                                    child: const Text('Previous'),
-                                  ),
-                                  Text('Page $_page'),
-                                  TextButton(
-                                    onPressed: _page * 20 < total
-                                        ? () => setState(() => _page++)
-                                        : null,
-                                    child: const Text('Next'),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        );
-                      },
-                    ),
+                    if (!event || private) ...[
+                      const SizedBox(height: 16),
+                      results(),
+                    ],
                   ],
                 ),
               ),
       ),
     );
   }
+}
+
+List<Widget> _eventSections(
+  ThemeData theme,
+  AppThemeStyle style,
+  Widget hero,
+  Widget search,
+  Widget categories,
+  Widget filters,
+  Widget results,
+) {
+  final colors = theme.colorScheme;
+  final controlSurface = Color.lerp(colors.surface, colors.primary, .10)!;
+  const gap = SizedBox(height: 12);
+  final listing = PageBand(
+    color: colors.surface,
+    padding: const EdgeInsets.fromLTRB(18, 22, 18, 32),
+    children: [
+      Text(
+        'Upcoming events',
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: colors.onSurface,
+        ),
+      ),
+      gap,
+      results,
+    ],
+  );
+  return switch (style) {
+    AppThemeStyle.gabla => [
+      PageBand(color: colors.surface, children: [hero]),
+      PageBand(
+        color: controlSurface,
+        children: [search, gap, categories, filters],
+      ),
+      listing,
+    ],
+    AppThemeStyle.editorial => [
+      PageBand(color: colors.surfaceContainerLow, children: [hero, categories]),
+      PageBand(color: controlSurface, children: [search, filters]),
+      listing,
+    ],
+    AppThemeStyle.discover => [
+      PageBand(color: controlSurface, children: [search]),
+      PageBand(color: theme.scaffoldBackgroundColor, children: [hero]),
+      PageBand(color: controlSurface, children: [categories, filters]),
+      listing,
+    ],
+    AppThemeStyle.cinematic => [
+      PageBand(
+        color: colors.surface,
+        padding: EdgeInsets.zero,
+        children: [hero],
+      ),
+      PageBand(
+        color: controlSurface,
+        children: [search, gap, filters, categories],
+      ),
+      listing,
+    ],
+    AppThemeStyle.orbit => [
+      PageBand(color: theme.scaffoldBackgroundColor, children: [hero]),
+      PageBand(
+        color: controlSurface,
+        children: [categories, gap, search, filters],
+      ),
+      listing,
+    ],
+  };
 }
 
 class CommunityPostCard extends StatelessWidget {
@@ -399,15 +522,23 @@ class CommunityPostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final event = post['kind'] == 'event', c = Theme.of(context).colorScheme;
+    final worker = post['jobType'] == 'seeking_work';
     final media = (post['media'] as List? ?? []).cast<Map>();
     final poster =
         media.where((m) => m['type'] == 'image').firstOrNull?['url'] as String?;
+    final eventPlaceholder = ColoredBox(
+      color: c.secondaryContainer,
+      child: Center(
+        child: Icon(
+          Icons.local_activity_outlined,
+          size: 40,
+          color: c.onSecondaryContainer,
+        ),
+      ),
+    );
     final picture = poster == null
         ? (event
-              ? Image.asset(
-                  'assets/artwork/community-concert.jpg',
-                  fit: BoxFit.cover,
-                )
+              ? eventPlaceholder
               : ColoredBox(
                   color: c.primaryContainer,
                   child: Center(
@@ -426,7 +557,8 @@ class CommunityPostCard extends StatelessWidget {
         : Image.network(
             poster,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const Icon(Icons.image_outlined),
+            errorBuilder: (_, _, _) =>
+                event ? eventPlaceholder : const Icon(Icons.image_outlined),
           );
     final radius = communityRadius(style);
     Widget words({Color? ink}) => Column(
@@ -435,7 +567,11 @@ class CommunityPostCard extends StatelessWidget {
       children: [
         Text(
           '${post['organization'] ?? ''}'.isEmpty
-              ? (event ? 'LOCAL EVENT' : 'OPPORTUNITY')
+              ? (event
+                    ? 'LOCAL EVENT'
+                    : worker
+                    ? 'AVAILABLE FOR WORK'
+                    : 'OPPORTUNITY')
               : '${post['organization']}',
           style: TextStyle(
             fontSize: 10,
@@ -704,7 +840,11 @@ class CommunityPostCard extends StatelessWidget {
                 const Spacer(),
                 Chip(
                   label: Text(
-                    post['jobType'] == 'task' ? 'Paid task' : 'Vacancy',
+                    worker
+                        ? 'Available for work'
+                        : post['jobType'] == 'task'
+                        ? 'Paid task'
+                        : 'Vacancy',
                   ),
                 ),
               ],
@@ -748,7 +888,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     setState(() => _busy = true);
     try {
       await action();
-      ref.invalidate(communityEndpointProvider(endpoint));
+      if (mounted) ref.invalidate(communityEndpointProvider(endpoint));
     } catch (e) {
       if (mounted)
         ScaffoldMessenger.of(
@@ -765,6 +905,18 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     child: Scaffold(
       appBar: CommunityAppBar(
         title: widget.kind == 'events' ? 'Event details' : 'Opportunity',
+        leading: widget.kind == 'events'
+            ? BackButton(
+                onPressed: () {
+                  final router = GoRouter.of(context);
+                  if (router.canPop()) {
+                    router.pop();
+                  } else {
+                    router.go('/events');
+                  }
+                },
+              )
+            : null,
         actions: [
           if (ref.watch(communityEndpointProvider(endpoint)).value?['status'] ==
               'approved')
@@ -790,6 +942,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                 post['details'] as Map? ?? {},
               ),
               media = (post['media'] as List? ?? []).cast<Map>();
+          final worker = post['jobType'] == 'seeking_work';
+          final canDelete = event && post['canDelete'] == true;
+          final onlinePrice = (post['onlineTickets'] as Map?)?['price'];
           final mine = post['canManage'] == true,
               poster =
                   media.where((m) => m['type'] == 'image').firstOrNull?['url']
@@ -869,7 +1024,11 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
               ],
               const SizedBox(height: 22),
               Text(
-                event ? 'About the event' : 'About this opportunity',
+                event
+                    ? 'About the event'
+                    : worker
+                    ? 'About this worker'
+                    : 'About this opportunity',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
@@ -974,7 +1133,14 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   icon: const Icon(Icons.edit_outlined),
                   label: const Text('Edit post'),
                 ),
-                if (!event)
+                if (event && post['status'] == 'approved')
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        context.push('/events/p/${widget.id}/door'),
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Door check-in'),
+                  ),
+                if (!event && !worker)
                   OutlinedButton(
                     onPressed: () =>
                         context.push('/jobs/applicants/${widget.id}'),
@@ -982,7 +1148,8 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                       'View applicants (${post['applicationCount'] ?? 0})',
                     ),
                   ),
-                if (!['closed', 'cancelled'].contains(post['status']))
+                if (canDelete ||
+                    !['closed', 'cancelled'].contains(post['status']))
                   TextButton(
                     onPressed: _busy
                         ? null
@@ -991,12 +1158,16 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                               context: context,
                               builder: (ctx) => AlertDialog(
                                 title: Text(
-                                  event
+                                  canDelete
+                                      ? 'Delete this event?'
+                                      : event
                                       ? 'Cancel this event?'
                                       : 'Close this opportunity?',
                                 ),
-                                content: const Text(
-                                  'It will be removed from public discovery.',
+                                content: Text(
+                                  canDelete
+                                      ? 'This permanently removes the event and its RSVPs.'
+                                      : 'It will be removed from public discovery.',
                                 ),
                                 actions: [
                                   TextButton(
@@ -1005,22 +1176,50 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                                   ),
                                   FilledButton(
                                     onPressed: () => Navigator.pop(ctx, true),
-                                    child: const Text('Confirm'),
+                                    child: Text(
+                                      canDelete ? 'Delete event' : 'Confirm',
+                                    ),
                                   ),
                                 ],
                               ),
                             );
-                            if (yes == true)
-                              _mutate(() async {
-                                await ref
-                                    .read(apiClientProvider)
-                                    .post('$endpoint/close');
+                            if (yes == true && mounted) {
+                              await _mutate(() async {
+                                final api = ref.read(apiClientProvider);
+                                if (canDelete) {
+                                  await api.delete(endpoint);
+                                  if (!mounted) return;
+                                  ref.invalidate(communityEndpointProvider);
+                                  final router = GoRouter.of(this.context);
+                                  if (router.canPop()) {
+                                    router.pop();
+                                  } else {
+                                    router.go('/events');
+                                  }
+                                } else {
+                                  await api.post('$endpoint/close');
+                                }
                               });
+                            }
                           },
-                    child: Text(event ? 'Cancel event' : 'Close post'),
+                    child: Text(
+                      canDelete
+                          ? 'Delete event'
+                          : event
+                          ? 'Cancel event'
+                          : 'Close post',
+                    ),
                   ),
               ] else if (available) ...[
-                if (event)
+                if (event && onlinePrice is int)
+                  FilledButton.icon(
+                    onPressed: () => context.push(
+                      '/events/p/${widget.id}/buy?price=$onlinePrice',
+                    ),
+                    icon: const Icon(Icons.confirmation_number_outlined),
+                    label: const Text('Get tickets'),
+                  )
+                else if (event)
                   FilledButton.icon(
                     onPressed: _busy
                         ? null
@@ -1034,7 +1233,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                           : 'I’m going',
                     ),
                   )
-                else
+                else if (!worker)
                   FilledButton(
                     onPressed: _busy || post['myApplication'] != null
                         ? null
@@ -1096,6 +1295,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   ),
                 ),
                 if (event &&
+                    onlinePrice == null &&
                     '${details['bookingUrl'] ?? ''}'.startsWith('https://'))
                   TextButton.icon(
                     onPressed: () => launchUrl(

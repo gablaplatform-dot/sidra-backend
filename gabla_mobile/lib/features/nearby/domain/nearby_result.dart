@@ -66,6 +66,7 @@ class NearbyOrigin {
     this.point,
     this.district,
     this.isGps = false,
+    this.radiusKm = 15,
   });
   static const kampala = NearbyOrigin(
     label: 'Around Kampala',
@@ -75,8 +76,17 @@ class NearbyOrigin {
   final LatLng? point;
   final String? district;
   final bool isGps;
+  final double radiusKm;
+
+  NearbyOrigin withRadius(double radius) => NearbyOrigin(
+    label: label,
+    point: point,
+    district: district,
+    isGps: isGps,
+    radiusKm: radius,
+  );
   Map<String, dynamic> get query => point != null
-      ? {'lat': point!.latitude, 'lng': point!.longitude, 'radiusKm': 15}
+      ? {'lat': point!.latitude, 'lng': point!.longitude, 'radiusKm': radiusKm}
       : {'around': district};
 }
 

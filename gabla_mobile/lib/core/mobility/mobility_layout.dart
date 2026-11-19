@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../motion/design_transitions.dart';
 import '../theme/app_theme_style.dart';
 import '../theme/font_group.dart';
+import '../widgets/page_band.dart';
 import '../../features/settings/application/theme_controller.dart';
 
 /// Five compositions share actions and data, while retaining independent
@@ -389,22 +390,12 @@ class MobilityPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
+    return PageBand(
+      color: c.surface,
+      elevation: 4,
+      borderRadius: BorderRadius.circular(radius),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: c.outlineVariant.withValues(alpha: .5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .06),
-            blurRadius: 28,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: child,
+      children: [child],
     );
   }
 }

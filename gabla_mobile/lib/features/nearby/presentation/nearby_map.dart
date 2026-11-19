@@ -362,9 +362,7 @@ class _NearbyMapState extends ConsumerState<NearbyMap> {
                       markers: markers,
                       padding:
                           NearbyMapInsets.of(context) +
-                          (widget.style == AppThemeStyle.orbit
-                              ? const EdgeInsets.fromLTRB(65, 0, 65, 55)
-                              : const EdgeInsets.only(bottom: 12)),
+                          const EdgeInsets.only(bottom: 12),
                       onCreated: (controller) {
                         _map = controller;
                         if (widget.focus != null) _move(widget.focus!);
@@ -393,7 +391,7 @@ class _NearbyMapState extends ConsumerState<NearbyMap> {
                   ),
                 ),
                 Positioned(
-                  top: 12,
+                  top: NearbyMapInsets.of(context).top + 12,
                   right: 12,
                   child: Column(
                     children: [
@@ -420,7 +418,7 @@ class _NearbyMapState extends ConsumerState<NearbyMap> {
                 ),
                 Positioned(
                   left: 12,
-                  top: 12,
+                  top: NearbyMapInsets.of(context).top + 12,
                   child: IgnorePointer(
                     child: Container(
                       padding: const EdgeInsets.symmetric(

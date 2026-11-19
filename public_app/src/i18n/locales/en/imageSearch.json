@@ -1,0 +1,8 @@
+{
+  "imageSearch": {
+    "label": "Search with a photo",
+    "nothing": "We couldn't tell what's in that photo. Try another one or type what you want.",
+    "errType": "Choose a normal photo (JPEG, PNG or WebP).",
+    "errFailed": "Photo search didn't work. Try again or type what you want."
+  }
+}

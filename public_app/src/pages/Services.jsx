@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import ImageSearchButton from "../components/ImageSearchButton";
 import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
@@ -70,6 +71,7 @@ export default function Services() {
         >
           <IconFind />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("services.searchPlaceholder")} aria-label={t("services.searchLabel")} enterKeyHint="search" />
+          <ImageSearchButton onResult={(phrase) => navigate(`/search?q=${encodeURIComponent(phrase)}`)} />
         </form>
 
         <div className="mh-head"><h2>{t("services.categories")}</h2><Link to="/services/all">{t("services.seeAllServices")}</Link></div>

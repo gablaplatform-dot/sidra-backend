@@ -594,6 +594,7 @@ function BusTripPage({ tripId }) {
         {blocked ? null : (
         <aside className="bus-summary bus-stepcard" aria-label={tr("bus.trip.summaryAria")}>
           <h2 className="bus-section-title">{tr("bus.trip.yourOrder")}</h2>
+          {trip.route.boardingPoint?<div className="bus-alert bus-alert-info" style={{marginTop:12}}><strong>Pickup: {trip.route.boardingPoint}</strong><p><a target="_blank" rel="noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(trip.route.boardingLat!=null&&trip.route.boardingLng!=null?`${trip.route.boardingLat},${trip.route.boardingLng}`:`${trip.route.boardingPoint}, Uganda`)}`}>Directions to this boarding stage ↗</a></p></div>:null}
           <p className="bus-hint">{trip.route.originName} → {trip.route.destinationName} · {dayLabel(eatDate(trip.departureAt))}, {eatTime(trip.departureAt)}</p>
           <div style={{ marginTop: 14 }}>
             {count < 1 ? <p className="bus-hint">{tr("bus.trip.noneChosen")}</p> : types.filter((t) => qty[t.id] > 0).map((t) => (
@@ -601,6 +602,11 @@ function BusTripPage({ tripId }) {
             ))}
             <div className="bus-line is-total"><span>{tr("bus.trip.total")}</span><span>{ugx(total)}</span></div>
           </div>
+          <section className="bus-alert bus-alert-info" style={{marginTop:16}}>
+            <strong>Cancellation policy</strong>
+            <p style={{marginTop:6}}>Cancel until {trip.cancellationMinutes ?? 120} minutes before departure. After that the booking is non-refundable, except if Gabla or the company cancels the trip.</p>
+            <p style={{marginTop:6}}>Gabla coordinates your booking directly with the bus contact.</p>
+          </section>
           {!signedIn && !blocked ? <div className="bus-alert bus-alert-info" style={{ marginTop: 14 }}>{tr("bus.trip.signInNote")}</div> : null}
           {formError ? <div className="bus-alert bus-alert-error" role="alert" style={{ marginTop: 14 }}>{formError.message || tr("bus.trip.genericError")}</div> : null}
           {submitted && signedIn && Object.keys(errors).length && !formError ? <div className="bus-alert bus-alert-warn" role="alert" style={{ marginTop: 14 }}>{tr("bus.trip.fixDetails")}</div> : null}

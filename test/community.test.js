@@ -51,19 +51,48 @@ test('job posting, moderation, private application workflow and owner isolation'
  assert.equal((await call(`/jobs/${id}/close`,{user:'poster',method:'POST'})).status,200);
  assert.equal((await call(`/jobs/${id}/apply`,{user:'outsider',method:'POST',body:apply})).status,404);
 });
-test('event validation, RSVP, saved list and cancellation without ticket sales',async()=>{
+test('events publish immediately, support RSVP, and respect admin suspension',async()=>{
  const start=new Date(Date.now()+86400000),end=new Date(start.getTime()+7200000);
  const event={address:'The Garden, Kampala',title:'Live band at the garden',description:'An evening of live music, friends and local food in the garden.',organization:'Garden Sessions',category:'Music',payMin:25000,payMax:25000,startsAt:start.toISOString(),endsAt:end.toISOString(),media:[{url:'https://example.test/poster.png',type:'image'},{url:'https://example.test/trailer.mp4',type:'video'}],details:{entranceNote:'Pay at the door'}};
  assert.equal((await call('/events',{user:'poster',method:'POST',body:{...event,endsAt:start.toISOString()}})).status,400);
  const post=(await call('/events',{user:'poster',method:'POST',body:event})).data;
- await call(`/events/admin/${post.id}`,{user:'reviewer',method:'PATCH',body:{status:'approved'}});
+ assert.equal(post.status,'approved');
+ assert.equal((await call('/events')).data.items[0].id,post.id);
+ const edit=await call(`/events/${post.id}`,{user:'poster',method:'PATCH',body:{title:'Live music at the garden'}});
+ assert.equal(edit.data.status,'approved');
  assert.equal((await call(`/events/${post.id}/response`,{user:'applicant',method:'PUT',body:{status:'going'}})).data.status,'going');
  assert.equal((await call('/events/saved',{user:'applicant'})).data.total,1);
  assert.equal((await call(`/events/${post.id}`)).data.myResponse,null);
  assert.equal((await call(`/events/${post.id}`,{user:'applicant'})).data.myResponse,'going');
+ const suspended=await call(`/events/admin/${post.id}`,{user:'reviewer',method:'PATCH',body:{status:'suspended',note:'Fixture suspension'}});
+ assert.equal(suspended.data.status,'suspended');
+ const editedSuspended=await call(`/events/${post.id}`,{user:'poster',method:'PATCH',body:{title:'Updated event'}});
+ assert.equal(editedSuspended.data.status,'suspended');
+ assert.equal((await call(`/events/${post.id}`,{user:'poster'})).data.moderationNote,'Fixture suspension');
+ assert.equal((await call(`/events/${post.id}`)).status,404);
  await call(`/events/${post.id}/close`,{user:'poster',method:'POST'});
  assert.equal((await call('/events')).data.total,0);
  assert.equal((await call(`/events/${post.id}/response`,{user:'applicant',method:'PUT',body:{status:'going'}})).status,404);
+ const path=`/events/${post.id}`;
+ assert.equal((await call(path,{method:'DELETE'})).status,401);
+ assert.equal((await call(path,{user:'outsider',method:'DELETE'})).status,404);
+ assert.equal((await call(path,{user:'poster'})).data.canDelete,true);
+ const payment=await db.transaction.create({data:{type:'event_ticket',status:'failed',userId:'applicant',amount:25000,netAmount:25000}});
+ try {
+   await db.eventTicketOrder.create({data:{
+     eventId:post.id,buyerId:'applicant',buyerName:'Applicant',buyerEmail:'worker@example.com',
+     payPhone:'0700000000',transactionId:payment.id,quantity:1,unitPrice:25000,total:25000,
+     status:'failed',expiresAt:new Date(0)
+   }});
+   assert.equal((await call(path,{user:'poster'})).data.canDelete,false);
+   assert.equal((await call(path,{user:'poster',method:'DELETE'})).status,409);
+ } finally {
+   await db.eventTicketOrder.deleteMany({where:{transactionId:payment.id}});
+   await db.transaction.delete({where:{id:payment.id}});
+ }
+ assert.equal((await call(path,{user:'poster',method:'DELETE'})).data.deleted,true);
+ assert.equal((await call(path,{user:'poster'})).status,404);
+ assert.equal(await db.communityResponse.count({where:{postId:post.id}}),0);
 });
 test('provider choices include descendants and breadcrumbs, excluding sibling branches',()=>{
  const directory=[{id:'electronics',parentId:null},{id:'phones',parentId:'electronics'},{id:'laptops',parentId:'electronics'},{id:'cars',parentId:null}];
@@ -72,4 +101,34 @@ test('provider choices include descendants and breadcrumbs, excluding sibling br
  assert.equal(own[0].children[0].effectiveProviderCategoryId,'phones');
  assert.deepEqual(scopedProductTree(products,directory,'cars').map(p=>p.id),['cars']);
  assert.deepEqual(scopedProductTree(products,directory,'unassigned'),[]);
+});
+
+test('job openings and worker availability stay separate through review and discovery', async () => {
+  const worker = { ...job, title: 'Sound engineer available for work', jobType: 'seeking_work', details: {} };
+  const missing = await call('/jobs', { user: 'applicant', method: 'POST', body: worker });
+  assert.equal(missing.error.code, 'WORKER_CONTACT_REQUIRED');
+
+  const opening = (await call('/jobs', { user: 'poster', method: 'POST', body: job })).data;
+  const submission = await call('/jobs', {
+    user: 'applicant', method: 'POST', body: { ...worker, details: { email: 'worker@example.com' } }
+  });
+  assert.equal(submission.status, 200, JSON.stringify(submission.error));
+  const profile = submission.data;
+  assert.equal(profile.jobType, 'seeking_work');
+  assert.equal((await call('/jobs?jobGroup=workers')).data.total, 0);
+  const mine = (await call('/jobs/mine?jobGroup=workers', { user: 'applicant' })).data;
+  assert.deepEqual(mine.items.map(({ id }) => id), [profile.id]);
+
+  for (const id of [opening.id, profile.id]) {
+    assert.equal((await call(`/jobs/admin/${id}`, { user: 'reviewer', method: 'PATCH', body: { status: 'approved' } })).status, 200);
+  }
+  for (const [group, id] of [['openings', opening.id], ['workers', profile.id]]) {
+    const result = (await call(`/jobs?jobGroup=${group}&q=Sound&limit=1`)).data;
+    assert.equal(result.total, 1);
+    assert.deepEqual(result.items.map((item) => item.id), [id]);
+  }
+  assert.equal((await call(`/jobs/${profile.id}`)).data.details.email, 'worker@example.com');
+  assert.equal((await call(`/jobs/${profile.id}/apply`, {
+    user: 'poster', method: 'POST', body: { coverLetter: 'This post should not receive any applications.' }
+  })).error.code, 'JOB_CLOSED');
 });

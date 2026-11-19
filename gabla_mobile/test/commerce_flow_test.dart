@@ -353,7 +353,18 @@ void main() {
                 'stats': {'listingCount': 1},
               },
             ),
-            providerListingsProvider.overrideWith((ref, id) async => [product]),
+            providerListingsProvider.overrideWith(
+              (ref, id) async => [
+                product,
+                const Product(
+                  id: 'service',
+                  name: 'Bag repairs',
+                  price: 10000,
+                  type: 'service',
+                ),
+              ],
+            ),
+            providerShopCategoriesProvider.overrideWith((ref, id) async => []),
             providerCategoryTreeProvider.overrideWith((ref) async => []),
             productDetailProvider('a').overrideWith((ref) async => product),
             similarProductsProvider('a').overrideWith((ref) async => []),
@@ -366,7 +377,15 @@ void main() {
             browseResultsProvider.overrideWith(
               (ref, q) async => {
                 'items': [
-                  {'id': 'a', 'name': 'A find', 'price': 20000},
+                  if (q.providerId == 'seller-a' && q.kind == 'service')
+                    {
+                      'id': 'service',
+                      'name': 'Bag repairs',
+                      'price': 10000,
+                      'type': 'service',
+                    }
+                  else
+                    {'id': 'a', 'name': 'A find', 'price': 20000},
                 ],
                 'total': 1,
               },
@@ -455,6 +474,33 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
+        expect(find.text('Products (1)'), findsOneWidget);
+        expect(find.text('Services (1)'), findsOneWidget);
+        if (style == AppThemeStyle.gabla) {
+          await tester.tap(find.text('Browse listings'));
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(find.byTooltip('List view'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byTooltip('List view'));
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(find.text('Services (1)'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Services (1)'));
+          await tester.pumpAndSettle();
+          expect(find.text('Browse services'), findsOneWidget);
+          expect(find.text('Bag repairs'), findsOneWidget);
+          await tester.ensureVisible(
+            find.text('Contact seller', skipOffstage: false),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Contact seller'));
+          await tester.pumpAndSettle();
+          expect(
+            find.text('Unlock seller contact').hitTestable(),
+            findsOneWidget,
+          );
+          expect(tester.takeException(), isNull);
+        }
         await tester.pumpWidget(const SizedBox());
         await tester.pumpAndSettle();
         await tester.pumpWidget(

@@ -1,5 +1,4 @@
 import '../../nearby/presentation/nearby_entry.dart';
-import '../../categories/presentation/widgets/category_cover.dart';
 import '../../../core/motion/design_transitions.dart';
 import 'design_launcher.dart';
 import '../../settings/application/theme_controller.dart';
@@ -7,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_theme_style.dart';
 import '../../../core/theme/style_tokens.dart';
+import '../../../core/widgets/page_band.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../auth/application/session_controller.dart';
-import '../../categories/application/category_providers.dart';
-import '../../categories/domain/category.dart';
 import '../../provider/application/provider_providers.dart';
 import '../../provider/domain/provider_summary.dart';
 
@@ -23,82 +22,110 @@ class HomeScreen extends ConsumerWidget {
     final design = ref.watch(themeControllerProvider).style;
     final signedIn = ref.watch(isSignedInProvider);
     final session = ref.watch(sessionControllerProvider).valueOrNull;
-    final categories = ref.watch(directoryCategoriesProvider);
     final providers = ref.watch(topRatedProvidersProvider);
+
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final canvas = theme.scaffoldBackgroundColor;
+    final header = _HomeHeader(
+      signedIn: signedIn,
+      initial: _initial(session?.user.name),
+    );
+    final search = _SearchBar(onTap: () => context.push('/nearby'));
+    final nearby = NearbyEntry(style: design);
+    final launcher = AnimatedSwitcher(
+      duration: Duration(
+        milliseconds: MediaQuery.disableAnimationsOf(context) ? 0 : 450,
+      ),
+      child: DesignLauncher(key: ValueKey(design), style: design),
+    );
+    Widget raisedSection(Color color, List<Widget> children) => Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      child: PageBand(
+        color: color,
+        elevation: 2,
+        borderRadius: BorderRadius.circular(
+          theme.extension<StyleTokens>()?.cardRadius ?? 16,
+        ),
+        children: children,
+      ),
+    );
+    final directory = raisedSection(colors.surface, [
+      _SectionHeader(title: 'Top rated providers', onSeeAll: null),
+      const SizedBox(height: 12),
+      AsyncValueView<List<ProviderSummary>>(
+        value: providers,
+        onRetry: () => ref.invalidate(topRatedProvidersProvider),
+        data: (context, items) => items.isEmpty
+            ? const Text('No providers yet.')
+            : Column(
+                children: [
+                  for (var i = 0; i < items.length; i++) ...[
+                    DesignEntrance(
+                      index: i,
+                      child: _ProviderRow(provider: items[i]),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ],
+              ),
+      ),
+    ]);
+    final sections = switch (design) {
+      AppThemeStyle.gabla => [
+        PageBand(
+          color: colors.surface,
+          children: [header, const SizedBox(height: 16), search],
+        ),
+        PageBand(color: canvas, children: [nearby, launcher]),
+        directory,
+      ],
+      AppThemeStyle.editorial => [
+        PageBand(color: colors.surface, children: [header]),
+        PageBand(color: canvas, children: [launcher]),
+        PageBand(
+          color: colors.surface,
+          children: [search, const SizedBox(height: 12), nearby],
+        ),
+        directory,
+      ],
+      AppThemeStyle.discover => [
+        PageBand(
+          color: colors.surfaceContainerHigh,
+          children: [header, const SizedBox(height: 16), search, launcher],
+        ),
+        PageBand(color: canvas, children: [nearby]),
+        directory,
+      ],
+      AppThemeStyle.cinematic => [
+        PageBand(color: canvas, children: [header, launcher]),
+        PageBand(
+          color: colors.surfaceContainerHigh,
+          children: [search, const SizedBox(height: 12), nearby],
+        ),
+        directory,
+      ],
+      AppThemeStyle.orbit => [
+        PageBand(
+          color: colors.surfaceContainerLow,
+          children: [header, const SizedBox(height: 16), nearby],
+        ),
+        PageBand(color: canvas, children: [launcher]),
+        PageBand(color: colors.surfaceContainerHigh, children: [search]),
+        directory,
+      ],
+    };
 
     return Scaffold(
       bottomNavigationBar: _HomeDock(signedIn: signedIn),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            ref.invalidate(directoryCategoriesProvider);
             ref.invalidate(topRatedProvidersProvider);
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              _HomeHeader(
-                signedIn: signedIn,
-                initial: _initial(session?.user.name),
-              ),
-              const SizedBox(height: 20),
-              _SearchBar(onTap: () => context.push('/nearby')),
-              const SizedBox(height: 14),
-              NearbyEntry(style: design),
-              AnimatedSwitcher(
-                duration: Duration(
-                  milliseconds: MediaQuery.disableAnimationsOf(context)
-                      ? 0
-                      : 450,
-                ),
-                child: DesignLauncher(key: ValueKey(design), style: design),
-              ),
-              const SizedBox(height: 28),
-              _SectionHeader(
-                title: 'Categories',
-                onSeeAll: () => context.push('/shop/categories'),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 184,
-                child: AsyncValueView<List<Category>>(
-                  value: categories,
-                  onRetry: () => ref.invalidate(directoryCategoriesProvider),
-                  data: (context, items) => items.isEmpty
-                      ? const Center(child: Text('No categories yet.'))
-                      : ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: items.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 12),
-                          itemBuilder: (context, i) => DesignEntrance(
-                            index: i,
-                            child: _CategoryTile(category: items[i]),
-                          ),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 28),
-              _SectionHeader(title: 'Top rated providers', onSeeAll: null),
-              const SizedBox(height: 12),
-              AsyncValueView<List<ProviderSummary>>(
-                value: providers,
-                onRetry: () => ref.invalidate(topRatedProvidersProvider),
-                data: (context, items) => items.isEmpty
-                    ? const Text('No providers yet.')
-                    : Column(
-                        children: [
-                          for (var i = 0; i < items.length; i++) ...[
-                            DesignEntrance(
-                              index: i,
-                              child: _ProviderRow(provider: items[i]),
-                            ),
-                            const SizedBox(height: 10),
-                          ],
-                        ],
-                      ),
-              ),
-            ],
+            children: sections,
           ),
         ),
       ),
@@ -306,60 +333,6 @@ class _SectionHeader extends StatelessWidget {
 /// A photo category card: image + gradient scrim + bold white label -
 /// mirrors the `TallCard` convention from the real site, used regardless of
 /// the selected app style since it's about the photography, not the chrome.
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({required this.category});
-
-  final Category category;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = Theme.of(context).extension<StyleTokens>();
-    final radius = tokens?.cardRadius ?? 20;
-    return GestureDetector(
-      onTap: () => context.push('/category/${category.id}'),
-      child: Container(
-        width: 136,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(radius),
-          color: Colors.grey.shade800,
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            CategoryCover(category: category),
-            Container(
-              padding: const EdgeInsets.all(14),
-              alignment: Alignment.bottomLeft,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(radius),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0),
-                    Colors.black.withValues(alpha: 0.65),
-                  ],
-                ),
-              ),
-              child: Text(
-                category.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _ProviderRow extends StatelessWidget {
   const _ProviderRow({required this.provider});
 
@@ -450,6 +423,11 @@ class _HomeDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final active =
+        ThemeData.estimateBrightnessForColor(colors.onSurface) ==
+            ThemeData.estimateBrightnessForColor(colors.secondary)
+        ? colors.surface
+        : colors.secondary;
     return SafeArea(
       top: false,
       child: Padding(
@@ -498,7 +476,7 @@ class _HomeDock extends StatelessWidget {
                             Icon(
                               item.$1,
                               color: item.$3 == '/home'
-                                  ? colors.secondary
+                                  ? active
                                   : colors.surface,
                               size: 22,
                             ),
@@ -507,7 +485,7 @@ class _HomeDock extends StatelessWidget {
                               item.$2,
                               style: TextStyle(
                                 color: item.$3 == '/home'
-                                    ? colors.secondary
+                                    ? active
                                     : colors.surface,
                                 fontSize: 9,
                                 fontWeight: FontWeight.w600,

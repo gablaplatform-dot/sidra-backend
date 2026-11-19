@@ -587,6 +587,7 @@ model Transaction {
   order Order?
   rideTrip RideTrip?
   busBooking BusBooking?
+  eventOrder EventTicketOrder?
 
   @@index([providerId, createdAt])
   @@index([userId, createdAt])
@@ -1096,6 +1097,9 @@ model BusType {
 }
 
 model BusOperator {
+  managedByGabla    Boolean   @default(false)
+  isDemo            Boolean   @default(false)
+  contactName       String    @default("")
   id                String    @id @default(cuid())
   userId            String    @unique
   companyName       String
@@ -1124,7 +1128,8 @@ model BusOperator {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicles      BusVehicle[]
   invitations   BusOperatorInvitation[]
   routes        BusRoute[]
   schedules     BusSchedule[]
@@ -1160,23 +1165,42 @@ model BusOperatorInvitation {
   @@map("bus_operator_invitations")
 }
 
+model BusCorridor {
+  id String @id @default(cuid())
+  key String @unique
+  originName String
+  destinationName String
+  durationMinutes Int @default(180)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  departures BusRoute[]
+  @@map("bus_corridors")
+}
+
 model BusRoute {
-  id                  String   @id @default(cuid())
+  corridorId String?
+  corridor BusCorridor? @relation(fields: [corridorId], references: [id], onDelete: SetNull)
+  boardingLat Float?
+  boardingLng Float?
+  vehicleId           String?
+  vehicle             BusVehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  id                  String      @id @default(cuid())
   operatorId          String
   name                String
   originName          String
   originDistrict      String?
   destinationName     String
   destinationDistrict String?
-  boardingPoint       String   @default("")
-  dropoffPoint        String   @default("")
+  boardingPoint       String      @default("")
+  dropoffPoint        String      @default("")
   distanceKm          Int?
-  durationMinutes     Int      @default(180)
-  stops               Json     @default("[]") // [{ name, offsetMinutes }]
+  durationMinutes     Int         @default(180)
+  stops               Json        @default("[]") // [{ name, offsetMinutes }]
   busTypeId           String?
-  isActive            Boolean  @default(true)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  isActive            Boolean     @default(true)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
   operator    BusOperator     @relation(fields: [operatorId], references: [id], onDelete: Cascade)
   busType     BusType?        @relation(fields: [busTypeId], references: [id], onDelete: SetNull)
@@ -1233,25 +1257,30 @@ model BusSchedule {
 
 // One real departure on a date. Generated from a schedule (or created as a one-off).
 model BusTrip {
-  id           String   @id @default(cuid())
-  scheduleId   String?
-  operatorId   String
-  routeId      String
-  busTypeId    String?
-  departureAt  DateTime
-  seats        Int      @default(60)
-  status       String   @default("scheduled") // scheduled | cancelled | departed | completed
-  delayMinutes Int      @default(0)
-  note         String   @default("")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  vehicleId             String?
+  vehicle               BusVehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  availability          String      @default("available")
+  availabilityCheckedAt DateTime?
+  availabilityNote      String      @default("")
+  id                    String      @id @default(cuid())
+  scheduleId            String?
+  operatorId            String
+  routeId               String
+  busTypeId             String?
+  departureAt           DateTime
+  seats                 Int         @default(60)
+  status                String      @default("scheduled") // scheduled | cancelled | departed | completed
+  delayMinutes          Int         @default(0)
+  note                  String      @default("")
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
-  schedule BusSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
-  operator BusOperator  @relation(fields: [operatorId], references: [id], onDelete: Cascade)
-  route    BusRoute     @relation(fields: [routeId], references: [id], onDelete: Cascade)
-  busType  BusType?     @relation(fields: [busTypeId], references: [id], onDelete: SetNull)
-  bookings BusBooking[]
-  tickets  BusTicket[]
+  schedule      BusSchedule?      @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  operator      BusOperator       @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  route         BusRoute          @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  busType       BusType?          @relation(fields: [busTypeId], references: [id], onDelete: SetNull)
+  bookings      BusBooking[]
+  tickets       BusTicket[]
   announcements BusAnnouncement[]
 
   @@unique([scheduleId, departureAt])
@@ -1262,26 +1291,44 @@ model BusTrip {
 }
 
 model BusBooking {
-  id             String    @id @default(cuid())
-  reference      String    @unique
-  userId         String
-  tripId         String
-  operatorId     String
-  transactionId  String?   @unique
-  status         String    @default("pending_payment") // pending_payment | confirmed | failed | expired | cancelled | refund_due
-  seatCount      Int       @default(1)
-  passengerName  String
-  passengerPhone String
-  passengerEmail String?
-  payPhone       String?
-  subtotal       Decimal   @default(0)
-  fee            Decimal   @default(0)
-  total          Decimal   @default(0)
-  lines          Json      @default("[]") // [{ ticketTypeId, name, quantity, unitPrice }]
-  expiresAt      DateTime
-  confirmedAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  cancellationMinutes  Int               @default(120)
+  cancellationClosesAt DateTime?
+  lockedAt             DateTime?
+  cancelledAt          DateTime?
+  operationStatus      String            @default("awaiting_call")
+  operationNote        String            @default("")
+  checkedById          String?
+  checkedAt            DateTime?
+  handoverAt           DateTime?
+  handoverAmount       Decimal?
+  handoverRecipient    String?
+  handoverPhone        String?
+  handoverReference    String?
+  handoverById         String?
+  refundedAt           DateTime?
+  refundedById         String?
+  refundReference      String?
+  notifications        BusNotification[]
+  id                   String            @id @default(cuid())
+  reference            String            @unique
+  userId               String
+  tripId               String
+  operatorId           String
+  transactionId        String?           @unique
+  status               String            @default("pending_payment") // pending_payment | confirmed | failed | expired | cancelled | refund_due
+  seatCount            Int               @default(1)
+  passengerName        String
+  passengerPhone       String
+  passengerEmail       String?
+  payPhone             String?
+  subtotal             Decimal           @default(0)
+  fee                  Decimal           @default(0)
+  total                Decimal           @default(0)
+  lines                Json              @default("[]") // [{ ticketTypeId, name, quantity, unitPrice }]
+  expiresAt            DateTime
+  confirmedAt          DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip        BusTrip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
@@ -1435,6 +1482,9 @@ model CommunityPost {
   owner User @relation(fields:[ownerId], references:[id], onDelete:Cascade)
   applications CommunityApplication[]
   responses CommunityResponse[]
+  ticketSales EventTicketSales?
+  ticketOrders EventTicketOrder[]
+  ticketPayouts EventTicketPayout[]
   @@index([kind,status,createdAt])
   @@index([kind,status,startsAt])
   @@index([ownerId,kind,createdAt])
@@ -1466,4 +1516,108 @@ model CommunityResponse {
   user User @relation(fields:[userId], references:[id], onDelete:Cascade)
   @@unique([postId,userId])
   @@map("community_responses")
+}
+
+model EventTicketSales {
+  eventId String @id
+  enabled Boolean @default(false)
+  price Int
+  capacity Int
+  event CommunityPost @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  @@map("event_ticket_sales")
+}
+
+model EventTicketOrder {
+  id String @id @default(cuid())
+  eventId String
+  buyerId String
+  buyerName String
+  buyerEmail String
+  payPhone String
+  transactionId String @unique
+  quantity Int
+  unitPrice Int
+  total Int
+  status String @default("pending_payment")
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  paidAt DateTime?
+  emailStatus String @default("pending")
+  payoutId String?
+  event CommunityPost @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  payout EventTicketPayout? @relation(fields: [payoutId], references: [id], onDelete: Restrict)
+  tickets EventAdmission[]
+  @@index([eventId, status, expiresAt])
+  @@index([buyerId, createdAt])
+  @@index([payoutId])
+  @@map("event_ticket_orders")
+}
+
+model EventAdmission {
+  number String @id
+  orderId String
+  usedAt DateTime?
+  order EventTicketOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  @@index([orderId])
+  @@map("event_admissions")
+}
+
+model EventTicketPayout {
+  id String @id @default(cuid())
+  eventId String
+  ownerId String
+  adminId String
+  phone String
+  amount Decimal
+  status String @default("processing")
+  createdAt DateTime @default(now())
+  settledAt DateTime?
+  reconciliationNote String?
+  event CommunityPost @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  orders EventTicketOrder[]
+  @@index([eventId, createdAt])
+  @@map("event_ticket_payouts")
+}
+
+
+model BusVehicle {
+  id                  String      @id @default(cuid())
+  operatorId          String
+  name                String
+  registration        String
+  contactName         String
+  contactPhone        String
+  seats               Int         @default(60)
+  cancellationMinutes Int         @default(120)
+  amenities           Json        @default("[]")
+  imageUrl            String?
+  isActive            Boolean     @default(true)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  operator            BusOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  routes              BusRoute[]
+  trips               BusTrip[]
+
+  @@unique([operatorId, registration])
+  @@map("bus_vehicles")
+}
+
+
+model BusNotification {
+  id            String     @id @default(cuid())
+  bookingId     String
+  kind          String
+  status        String     @default("pending")
+  attempts      Int        @default(0)
+  nextAttemptAt DateTime   @default(now())
+  leaseUntil    DateTime?
+  sentAt        DateTime?
+  lastError     String     @default("")
+  createdAt     DateTime   @default(now())
+  booking       BusBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId, kind])
+  @@index([status, nextAttemptAt])
+  @@map("bus_notifications")
 }

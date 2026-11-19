@@ -1,3 +1,4 @@
+import { buildEventTicketRoutes } from "./eventTickets.routes.js";
 import Joi from "joi";
 import { buildCommunityRoutes } from "./community.routes.js";
 import { Router } from "express";
@@ -50,12 +51,14 @@ export const buildRoutes = ({
   documentService,
   aiSettingsService,
   aiSearchService,
-  serviceBookingService
+  serviceBookingService,
+  eventTicketsService
 }) => {
   const router = Router();
 
   router.get("/health", (_req, res) => res.status(200).json({ data: { ok: true } }));
   router.use("/jobs", buildCommunityRoutes("job"));
+  if (eventTicketsService) router.use("/events", buildEventTicketRoutes(eventTicketsService));
   router.use("/events", buildCommunityRoutes("event"));
   router.use("/auth", buildAuthRoutes({ authController }));
   router.use("/providers", buildProviderRoutes({ providerController }));

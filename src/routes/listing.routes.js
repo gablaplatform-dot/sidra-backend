@@ -14,7 +14,7 @@ export const buildListingRoutes = ({ listingController }) => {
     gallery: Joi.array().items(Joi.string().uri({ scheme: ["http", "https"] }).max(1000)).max(40).optional()
   });
   const id = Joi.string().trim().min(1).max(64);
-  const sortOptions = ["newest", "price_asc", "price_desc", "bestsellers", "featured"];
+  const sortOptions = ["newest", "price_asc", "price_desc", "bestsellers", "featured", "discovery"];
   const enrichmentFields = {
     originalPrice: Joi.number().min(0).allow(null).optional(),
     discountPercent: Joi.number().integer().min(1).max(100).allow(null).optional(),
@@ -61,6 +61,7 @@ export const buildListingRoutes = ({ listingController }) => {
         page: Joi.number().integer().min(1).optional(),
         limit: Joi.number().integer().min(1).max(100).optional(),
         sort: Joi.string().valid(...sortOptions).optional(),
+        seed: Joi.string().alphanum().min(1).max(64).optional(),
         ...browseQuery
       }).and("lat", "lng", "radiusKm"),
       "query"

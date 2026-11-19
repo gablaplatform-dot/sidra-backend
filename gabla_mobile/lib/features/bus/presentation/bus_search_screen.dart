@@ -1,3 +1,4 @@
+import '../../../core/widgets/page_band.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -44,9 +45,9 @@ class _BusSearchScreenState extends ConsumerState<BusSearchScreen> {
         title: const Text('Find your departure'),
         actions: [
           IconButton(
-            tooltip: 'Design Studio',
-            onPressed: () => context.push('/settings/appearance'),
-            icon: const Icon(Icons.tune),
+            tooltip: 'My bus bookings',
+            onPressed: () => context.push('/bus/tickets'),
+            icon: const Icon(Icons.confirmation_number_outlined),
           ),
         ],
       ),
@@ -61,6 +62,14 @@ class _BusSearchScreenState extends ConsumerState<BusSearchScreen> {
                   Text(
                     '${q.from} → ${q.to}',
                     style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => context.go('/bus'),
+                      icon: const Icon(Icons.edit_outlined, size: 16),
+                      label: const Text('Change route or date'),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -93,65 +102,75 @@ class _BusSearchScreenState extends ConsumerState<BusSearchScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  PopupMenuButton<String>(
-                    initialValue: _sort,
-                    onSelected: (v) => setState(() => _sort = v),
-                    itemBuilder: (_) => [
-                      for (final s in ['Departure', 'Lowest price', 'Fastest'])
-                        PopupMenuItem(value: s, child: Text(s)),
-                    ],
-                    child: Chip(
-                      avatar: const Icon(Icons.sort, size: 18),
-                      label: Text(_sort),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  PopupMenuButton<String>(
-                    initialValue: _time,
-                    onSelected: (v) => setState(() => _time = v),
-                    itemBuilder: (_) => [
-                      for (final s in [
-                        'All day',
-                        'Morning',
-                        'Afternoon',
-                        'Evening',
-                        'Night',
-                      ])
-                        PopupMenuItem(value: s, child: Text(s)),
-                    ],
-                    child: Chip(
-                      avatar: const Icon(Icons.schedule, size: 18),
-                      label: Text(_time),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  PopupMenuButton<String>(
-                    initialValue: _company,
-                    onSelected: (v) => setState(() => _company = v),
-                    itemBuilder: (_) => [
-                      for (final s in {
-                        'All operators',
-                        ...?result.valueOrNull?.map(
-                          (t) => t.companyName ?? 'Bus operator',
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: PageBand(
+              color: Theme.of(context).colorScheme.surfaceContainer,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+              children: [
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      PopupMenuButton<String>(
+                        initialValue: _sort,
+                        onSelected: (v) => setState(() => _sort = v),
+                        itemBuilder: (_) => [
+                          for (final s in [
+                            'Departure',
+                            'Lowest price',
+                            'Fastest',
+                          ])
+                            PopupMenuItem(value: s, child: Text(s)),
+                        ],
+                        child: Chip(
+                          avatar: const Icon(Icons.sort, size: 18),
+                          label: Text(_sort),
                         ),
-                      })
-                        PopupMenuItem(value: s, child: Text(s)),
+                      ),
+                      const SizedBox(width: 8),
+                      PopupMenuButton<String>(
+                        initialValue: _time,
+                        onSelected: (v) => setState(() => _time = v),
+                        itemBuilder: (_) => [
+                          for (final s in [
+                            'All day',
+                            'Morning',
+                            'Afternoon',
+                            'Evening',
+                            'Night',
+                          ])
+                            PopupMenuItem(value: s, child: Text(s)),
+                        ],
+                        child: Chip(
+                          avatar: const Icon(Icons.schedule, size: 18),
+                          label: Text(_time),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      PopupMenuButton<String>(
+                        initialValue: _company,
+                        onSelected: (v) => setState(() => _company = v),
+                        itemBuilder: (_) => [
+                          for (final s in {
+                            'All operators',
+                            ...?result.valueOrNull?.map(
+                              (t) => t.companyName ?? 'Bus operator',
+                            ),
+                          })
+                            PopupMenuItem(value: s, child: Text(s)),
+                        ],
+                        child: Chip(label: Text(_company)),
+                      ),
+                      const SizedBox(width: 8),
+                      FilterChip(
+                        label: const Text('Available only'),
+                        selected: _available,
+                        onSelected: (v) => setState(() => _available = v),
+                      ),
                     ],
-                    child: Chip(label: Text(_company)),
                   ),
-                  const SizedBox(width: 8),
-                  FilterChip(
-                    label: const Text('Available only'),
-                    selected: _available,
-                    onSelected: (v) => setState(() => _available = v),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           Expanded(

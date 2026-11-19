@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import ImageSearchButton from "../components/ImageSearchButton";
 import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
@@ -83,6 +84,7 @@ export default function SearchResults() {
             onChange={handleInputChange}
             placeholder={t("services.search.placeholder")}
           />
+          <ImageSearchButton onResult={(phrase) => { setInputValue(phrase); navigate(`/search?q=${encodeURIComponent(phrase)}`); }} />
           <button type="submit" className="cta-button">{t("nav.search")}</button>
         </form>
       </section>

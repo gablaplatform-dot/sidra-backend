@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
+import useOrderUpdates from "../hooks/useOrderUpdates";
 import { docTypeLabel, openDocumentPdf } from "../lib/documents";
 import { clearSession, getSession } from "../lib/session";
 import SiteHeader from "../components/SiteHeader";
@@ -44,6 +45,8 @@ export default function ProviderOrderView() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useOrderUpdates(() => load({ quiet: true }), !loading && !busy && !quoting && !openingDoc);
 
   const back = () => navigate("/profile?tab=orders");
 

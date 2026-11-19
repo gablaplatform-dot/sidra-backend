@@ -1,0 +1,24 @@
+{
+  "batch": "catalog-20261112",
+  "before": {
+    "user": 18,
+    "provider": 5,
+    "serviceProduct": 7,
+    "order": 5,
+    "transaction": 22
+  },
+  "after": {
+    "user": 78,
+    "provider": 65,
+    "serviceProduct": 607,
+    "order": 5,
+    "transaction": 22
+  },
+  "existingRowsPreserved": true,
+  "batchCounts": {
+    "user": 60,
+    "provider": 60,
+    "serviceProduct": 600
+  },
+  "manifestSha256": "ecffd29d2eb200a01c2b819a8c60f2f7a837b1fc717b5399150af535171a52d5"
+}

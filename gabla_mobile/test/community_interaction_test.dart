@@ -134,7 +134,7 @@ void main() {
                 const CommunityEditorScreen(kind: 'events', id: 'event'),
           ),
           GoRoute(
-            path: '/events/mine',
+            path: '/events/p/:id',
             builder: (_, __) => const Scaffold(body: Text('Submitted fixture')),
           ),
         ],
@@ -167,7 +167,7 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump();
-      await tester.tap(find.text('Submit for review'));
+      await tester.tap(find.text('Save changes'));
       await tester.pumpAndSettle();
       expect(api.body?['address'], 'A complete new address, Kampala');
       expect(api.body?['lat'], isNull);

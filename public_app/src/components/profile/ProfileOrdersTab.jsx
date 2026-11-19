@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { request } from "../../lib/api";
+import useOrderUpdates from "../../hooks/useOrderUpdates";
 import { IconBox, IconClose, IconGrid, IconList, IconSearch } from "../icons";
 import { SectionSkeleton } from "../Skeleton";
 import QuotationModal from "./QuotationModal";
@@ -146,6 +147,9 @@ export default function ProfileOrdersTab({ focusOrderId = null }) {
     [query, filters]
   );
 
+  const refreshScope = useRef(buildPath);
+  refreshScope.current = buildPath;
+
   const load = useCallback(
     ({ quiet = false } = {}) => {
       if (!quiet) setLoading(true);
@@ -165,6 +169,16 @@ export default function ProfileOrdersTab({ focusOrderId = null }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  useOrderUpdates(async (isCurrent) => {
+    const scope = buildPath;
+    const pages = await Promise.all(
+      Array.from({ length: page }, (_, index) => request(buildPath(index + 1)))
+    );
+    if (!isCurrent() || refreshScope.current !== scope) return;
+    setOrders(pages.flatMap((result) => result?.items || []));
+    setTotal(pages[0]?.total || 0);
+  }, !loading && !loadingMore && !updatingId && !quoteOrder);
 
   const loadMore = async () => {
     setLoadingMore(true);

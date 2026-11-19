@@ -29,6 +29,7 @@ export class PaymentService {
     this.rideDriverWalletService = rideDriverWalletService;
     this.orderNotificationService = orderNotificationService;
     this.busBookingService = null;
+    this.eventTicketsService = null;
     this.serviceBookingService = null;
     this.documentService = null;
   }
@@ -41,6 +42,10 @@ export class PaymentService {
   // Bus ticketing is wired in after construction (it needs this service's callback URLs).
   attachBusBooking(busBookingService) {
     this.busBookingService = busBookingService;
+  }
+
+  attachEventTickets(eventTicketsService) {
+    this.eventTicketsService = eventTicketsService;
   }
 
   // Bookings are wired in after construction too (they need this service to take payments).
@@ -545,7 +550,13 @@ export class PaymentService {
   // Called from the mobile money webhook once a deposit actually completes. Credits the
   // provider's wallet for a purchase (plus the platform wallet for its cut), or the platform
   // wallet outright for a contact unlock.
-  async handleMobileMoneySuccess(payload) {
+  assertEventWebhook(transaction, verified) {
+    if (transaction.type === "event_ticket" && !verified) {
+      throw new AppError({ message: "Forbidden", statusCode: 403, code: "WEBHOOK_FORBIDDEN" });
+    }
+  }
+
+  async handleMobileMoneySuccess(payload, { verified = false } = {}) {
     const reference = String(payload?.external_ref || "").trim();
     if (!reference) {
       throw new AppError({ message: "external_ref is required", statusCode: 400, code: "MISSING_EXTERNAL_REF" });
@@ -555,12 +566,14 @@ export class PaymentService {
     const paidOrderIds = [];
     const paidBookingIds = [];
     let busBookingToEmail = null;
+    let eventOrderToEmail = null;
 
     const result = await prisma.$transaction(async (tx) => {
       const transaction = await tx.transaction.findFirst({ where: { reference } });
       if (!transaction) {
         return { ok: false, reason: "unknown_reference" };
       }
+      this.assertEventWebhook(transaction, verified);
       // A payment the gateway later confirms still counts after we marked it failed (a timeout can fail a
       // request that the gateway had in fact accepted), so "failed" is a valid state to succeed from.
       if (transaction.status !== "pending" && transaction.status !== "failed") {
@@ -589,7 +602,12 @@ export class PaymentService {
       // (the figure may include its own charges), holding on it could park every genuine payment.
       const reportedAmount = Number(payload.amount ?? payload.amount_paid ?? payload.paid_amount);
       if (Number.isFinite(reportedAmount) && reportedAmount > 0 && Math.round(reportedAmount) !== Math.round(Number(transaction.amount))) {
-        if (process.env.MOBILE_MONEY_ENFORCE_AMOUNT === "true") {
+        if (process.env.MOBILE_MONEY_ENFORCE_AMOUNT === "true" || transaction.type === "event_ticket") {
+          if (transaction.type === "event_ticket") {
+            await this.eventTicketsService.failPayment(transaction, tx, "refund_due");
+            await tx.transaction.update({ where: { id: transaction.id },
+              data: { metadata: { ...transaction.metadata, ...networkMetadata, refundAmount: reportedAmount } } });
+          }
           await flagRefundDue({ db: tx, transactionId: transaction.id, reason: `amount_mismatch: paid ${reportedAmount}, expected ${transaction.amount}` });
           return { ok: true, transactionId: transaction.id, type: transaction.type, held: true };
         }
@@ -768,6 +786,10 @@ export class PaymentService {
         if (Number(transaction.fee) > 0) {
           await this.walletService.creditBalance({ providerId: null, amountDec: transaction.fee, session: tx });
         }
+      } else if (transaction.type === "event_ticket") {
+        const outcome = await this.eventTicketsService.confirmPayment(tx, transaction);
+        eventOrderToEmail = outcome.orderId;
+        if (outcome.refundDue) await flagRefundDue({ db: tx, transactionId: transaction.id, reason: "event_admission_unavailable" });
       } else if (transaction.type === "bus_ticket" && this.busBookingService) {
         const outcome = await this.busBookingService.confirmPayment({ tx, transaction, walletService: this.walletService });
         if (outcome?.confirmed) busBookingToEmail = outcome.bookingId;
@@ -776,6 +798,8 @@ export class PaymentService {
 
       return { ok: true, transactionId: transaction.id, type: transaction.type };
     });
+
+    if (eventOrderToEmail) await this.eventTicketsService.sendConfirmation(eventOrderToEmail).catch(() => {});
 
     if (busBookingToEmail) {
       this.busBookingService.sendTicketEmail(busBookingToEmail).catch(() => {});
@@ -798,7 +822,7 @@ export class PaymentService {
     return result;
   }
 
-  async handleMobileMoneyFailed(payload) {
+  async handleMobileMoneyFailed(payload, { verified = false } = {}) {
     const reference = String(payload?.failed_transaction_reference || "").trim();
     if (!reference) {
       throw new AppError({ message: "failed_transaction_reference is required", statusCode: 400, code: "MISSING_REFERENCE" });
@@ -808,8 +832,18 @@ export class PaymentService {
     if (!transaction) {
       return { ok: false, reason: "unknown_reference" };
     }
+    this.assertEventWebhook(transaction, verified);
     if (transaction.status !== "pending") {
       return { ok: true, reason: "already_processed" };
+    }
+
+    if (transaction.type === "event_ticket") {
+      return prisma.$transaction(async (tx) => {
+        const moved = await tx.transaction.updateMany({ where: { id: transaction.id, status: "pending" }, data: { status: "failed" } });
+        if (moved.count === 0) return { ok: true, reason: "already_processed" };
+        await this.eventTicketsService.failPayment(transaction, tx);
+        return { ok: true, transactionId: transaction.id };
+      });
     }
 
     const moved = await prisma.transaction.updateMany({ where: { id: transaction.id, status: "pending" }, data: { status: "failed" } });
@@ -1033,7 +1067,7 @@ export class PaymentService {
   // outside the system (mobile money), then settled here.
   async listRefundQueue() {
     const rows = await prisma.transaction.findMany({
-      where: { status: "succeeded", type: { in: ["purchase", "service_booking", "bus_ticket", "contact_unlock", "subscription"] } },
+      where: { status: "succeeded", type: { in: ["purchase", "service_booking", "bus_ticket", "event_ticket", "contact_unlock", "subscription"] } },
       orderBy: { createdAt: "desc" },
       take: 1500,
       include: { user: { select: { name: true, email: true, phone: true } }, provider: { select: { businessName: true } } }
@@ -1043,7 +1077,7 @@ export class PaymentService {
       .map((t) => ({
         transactionId: t.id,
         type: t.type,
-        amount: t.amount.toString(),
+        amount: String(t.metadata.refundAmount ?? t.amount),
         net: t.netAmount.toString(),
         fee: t.fee.toString(),
         reason: t.metadata.refundReason ?? "",
@@ -1081,6 +1115,9 @@ export class PaymentService {
         where: { id: transaction.id },
         data: { status: "refunded", metadata: { ...transaction.metadata, refundedAt: new Date().toISOString(), refundedBy: adminUserId, refundNote: note ?? null, reversalSkipped: Boolean(skipReversal) } }
       });
+      if (transaction.type === "event_ticket") {
+        await tx.eventTicketOrder.updateMany({ where: { transactionId, status: "refund_due" }, data: { status: "refunded" } });
+      }
       const orderId = transaction.metadata?.orderId;
       if (orderId) {
         const order = await tx.order.findUnique({ where: { id: orderId } });

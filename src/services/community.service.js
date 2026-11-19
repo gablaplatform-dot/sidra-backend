@@ -14,23 +14,35 @@ export class CommunityService {
     const data={...existing,...input};
     if(data.payMax && Number(data.payMax)<Number(data.payMin))fail('Maximum pay must be at least minimum pay','INVALID_PAY',400);
     if(kind==='event' && (!data.startsAt || !data.endsAt || new Date(data.endsAt)<=new Date(data.startsAt)))fail('Choose an end time after the start','INVALID_EVENT_DATES',400);
+    if(kind==='job' && data.jobType==='seeking_work' && !data.details?.phone?.trim() && !data.details?.email?.trim())fail('Add a public contact phone or email so employers can reach you.','WORKER_CONTACT_REQUIRED',400);
     const result={};
     for(const k of ['title','description','organization','category','district','address','lat','lng','jobType','employmentType','workplace','payMin','payMax','currency','media','details']) if(data[k]!==undefined)result[k]=data[k];
     for(const k of ['startsAt','endsAt','deadline']) if(data[k]!==undefined)result[k]=data[k]?new Date(data[k]):null;
     if(kind==='event') {result.jobType=null;result.employmentType=null;result.workplace=null;result.deadline=null;}
-    else {result.startsAt=null;result.endsAt=null;}
+    else {result.startsAt=null;result.endsAt=null;if(data.jobType==='seeking_work')result.deadline=null;}
     return result;
   }
   dto(post,{includeModeration=false}={}) {
-    return {...post,moderationNote:includeModeration?post.moderationNote:undefined,payMin:Number(post.payMin),payMax:Number(post.payMax),owner:post.owner && {id:post.owner.id,name:post.owner.name,avatarUrl:post.owner.avatarUrl},applicationCount:post._count?.applications ?? 0,responseCount:post._count?.responses ?? 0,_count:undefined};
+    const {ticketSales,...fields}=post;
+    const onlineTickets=ticketSales?.enabled && post.status==='approved' && post.startsAt>new Date()
+      ? {price:ticketSales.price,currency:'UGX'} : null;
+    return {...fields,...(post.kind==='event'?{onlineTickets}:{}),moderationNote:includeModeration?post.moderationNote:undefined,payMin:Number(post.payMin),payMax:Number(post.payMax),owner:post.owner && {id:post.owner.id,name:post.owner.name,avatarUrl:post.owner.avatarUrl},applicationCount:post._count?.applications ?? 0,responseCount:post._count?.responses ?? 0,_count:undefined};
   }
   async create(kind,userId,input) {
     const data=this.normalize(kind,input);
-    return this.dto(await this.db.communityPost.create({data:{...data,kind,ownerId:userId,status:'pending'},include:{owner:{select:publicOwner}}}));
+    const status=kind==='event'?'approved':'pending';
+    return this.dto(await this.db.communityPost.create({data:{...data,kind,ownerId:userId,status},include:{owner:{select:publicOwner}}}));
   }
   async edit(kind,id,userId,input) {
-    const post=await this.owned(kind,id,userId);
-    return this.dto(await this.db.communityPost.update({where:{id},data:{...this.normalize(kind,input,post),status:'pending',moderationNote:''},include:{owner:{select:publicOwner}}}));
+    const update=async(db)=>{
+      const post=await db.communityPost.findFirst({where:{kind,id,ownerId:userId}});
+      if(!post)fail('Post not found');
+      if(kind==='event')await this.ensureEventEditable(db,id);
+      const status=kind==='job'?'pending':['pending','approved'].includes(post.status)?'approved':post.status;
+      const moderationNote=kind==='job'||status==='approved'?'':post.moderationNote;
+      return this.dto(await db.communityPost.update({where:{id},data:{...this.normalize(kind,input,post),status,moderationNote},include:{owner:{select:publicOwner}}}));
+    };
+    return kind==='event'?this.db.$transaction(update):update(this.db);
   }
   async list(kind,query={},userId=null,{mine=false,admin=false,saved=false}={}) {
     const page=Math.max(1,Number(query.page)||1),limit=Math.min(40,Math.max(1,Number(query.limit)||20));
@@ -42,23 +54,59 @@ export class CommunityService {
     if(query.q)where.OR=['title','description','organization'].map((key)=>({[key]:{contains:query.q}}));
     for(const key of ['category','district','jobType','workplace','employmentType'])if(query[key])where[key]=query[key];
     if(query.minPay!==undefined)where.payMax={gte:Number(query.minPay)};
-    if(kind==='event' && !mine && !admin) {
-      where.endsAt={gte:new Date()};
+    if(kind==='event') {
+      if(!mine && !admin)where.endsAt={gte:new Date()};
       if(query.from || query.to)where.startsAt={...(query.from?{gte:new Date(query.from)}:{}),...(query.to?{lte:new Date(query.to)}:{})};
+      if(admin && query.ticketSales==='enabled')where.ticketSales={is:{enabled:true}};
+      if(admin && query.ticketSales==='disabled')where.AND=[{OR:[{ticketSales:{is:null}},{ticketSales:{is:{enabled:false}}}]}];
     }
-    if(kind==='job' && !mine && !admin)where.AND=[{OR:[{deadline:null},{deadline:{gte:new Date()}}]}];
-    const [items,total]=await Promise.all([this.db.communityPost.findMany({where,include:{owner:{select:publicOwner},_count:{select:{applications:true,responses:true}}},orderBy:kind==='event' && !mine ? [{startsAt:'asc'},{createdAt:'desc'}]:{createdAt:'desc'},skip:(page-1)*limit,take:limit}),this.db.communityPost.count({where})]);
+    if(kind==='job') {
+      const filters=[];
+      if(query.jobGroup==='openings')filters.push({OR:[{jobType:{in:['vacancy','task']}},{jobType:null}]});
+      if(query.jobGroup==='workers')filters.push({jobType:'seeking_work'});
+      if(!mine && !admin)filters.push({OR:[{deadline:null},{deadline:{gte:new Date()}}]});
+      if(filters.length)where.AND=filters;
+    }
+    const [items,total]=await Promise.all([this.db.communityPost.findMany({where,include:{...(kind==='event'?{ticketSales:true}:{}),owner:{select:publicOwner},_count:{select:{applications:true,responses:true}}},orderBy:kind==='event' && !mine ? [{startsAt:'asc'},{createdAt:'desc'}]:{createdAt:'desc'},skip:(page-1)*limit,take:limit}),this.db.communityPost.count({where})]);
     return {items:items.map((p)=>this.dto(p,{includeModeration:mine||admin})),total,page,limit};
   }
   async detail(kind,id,viewer) {
-    const post=await this.db.communityPost.findFirst({where:{id,kind},include:{owner:{select:publicOwner},_count:{select:{responses:true,applications:true}}}});
+    const post=await this.db.communityPost.findFirst({where:{id,kind},include:{...(kind==='event'?{ticketSales:true}:{}),owner:{select:publicOwner},_count:{select:{responses:true,applications:true}}}});
     if(!post || (post.owner?.isActive===false && viewer?.id!==post.ownerId && viewer?.role!=='admin') || (post.status!=='approved' && post.ownerId!==viewer?.id && viewer?.role!=='admin'))fail('Post not found');
     const [response,application]=viewer ? await Promise.all([this.db.communityResponse.findUnique({where:{postId_userId:{postId:id,userId:viewer.id}}}),this.db.communityApplication.findUnique({where:{postId_userId:{postId:id,userId:viewer.id}}})]):[null,null];
-    return {...this.dto(post,{includeModeration:viewer?.id===post.ownerId||viewer?.role==='admin'}),myResponse:response?.status||null,myApplication:application,canManage:viewer?.id===post.ownerId};
+    const canManage=viewer?.id===post.ownerId;
+    const canDelete=kind==='event' && canManage && !(await this.db.eventTicketOrder.findFirst({
+      where:{eventId:id},select:{id:true}
+    }));
+    return {...this.dto(post,{includeModeration:canManage||viewer?.role==='admin'}),myResponse:response?.status||null,myApplication:application,canManage,...(kind==='event'&&canManage?{canDelete}:{})};
+  }
+  async deleteEvent(id,userId) {
+    try {
+      const result=await this.db.communityPost.deleteMany({
+        where:{id,kind:'event',ownerId:userId,ticketOrders:{none:{}}}
+      });
+      if(result.count) return {deleted:true};
+      await this.owned('event',id,userId);
+    } catch(error) {
+      if(error.code!=='P2003')throw error;
+    }
+    fail('Events with ticket orders cannot be deleted.','EVENT_HAS_TICKETS',409);
   }
   async close(kind,id,userId) {
+    if(kind==='event')return this.db.$transaction(async(db)=>{
+      const post=await db.communityPost.findFirst({where:{kind,id,ownerId:userId}});
+      if(!post)fail('Post not found');
+      await this.ensureEventEditable(db,id);
+      return db.communityPost.update({where:{id},data:{status:'cancelled'}});
+    });
     await this.owned(kind,id,userId);
-    return this.db.communityPost.update({where:{id},data:{status:kind==='event'?'cancelled':'closed'}});
+    return this.db.communityPost.update({where:{id},data:{status:'closed'}});
+  }
+  async ensureEventEditable(db,id) {
+    const order=await db.eventTicketOrder.findFirst({where:{eventId:id,OR:[
+      {status:'paid'}, {status:'pending_payment',expiresAt:{gt:new Date()}}
+    ]},select:{id:true}});
+    if(order)fail('This event has ticket orders. Contact Gabla support to change or cancel it.','EVENT_HAS_TICKETS',409);
   }
   async respond(kind,id,userId,status) {
     const post=await this.detail(kind,id,{id:userId});

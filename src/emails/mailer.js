@@ -10,17 +10,18 @@ import { env } from "../config/env.js";
 // "Gabla <a@b.c>" -> "a@b.c"
 export const addressOf = (from) => (String(from).match(/<([^>]+)>/)?.[1] ?? String(from)).trim();
 
-const post = async (payload) => {
+const post = async (payload, idempotencyKey) => {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${env.resendApiKey}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${env.resendApiKey}`, "Content-Type": "application/json", ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}) },
+    signal: AbortSignal.timeout(10000),
     body: JSON.stringify(payload)
   });
   const body = await response.json().catch(() => ({}));
   return { response, body };
 };
 
-export const sendMail = async ({ to, email, from, replyTo, attachments }) => {
+export const sendMail = async ({ to, email, from, replyTo, attachments, idempotencyKey }) => {
   if (!env.resendApiKey || !env.resendFromEmail) return { sent: false, deliveryStatus: "not_configured" };
   if (!to) return { sent: false, deliveryStatus: "no_recipient" };
   const common = {
@@ -37,7 +38,7 @@ export const sendMail = async ({ to, email, from, replyTo, attachments }) => {
       // 404 = no such published template; 422 = the template and its variables disagree. Either way, send the in-code copy.
       if (result.response.ok || ![404, 422].includes(result.response.status)) return finish(result);
     }
-    return finish(await post({ ...common, html: email.html, text: email.text }));
+    return finish(await post({ ...common, html: email.html, text: email.text }, idempotencyKey));
   } catch {
     return { sent: false, deliveryStatus: "delivery_failed" };
   }

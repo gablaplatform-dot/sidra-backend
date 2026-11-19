@@ -184,6 +184,18 @@ class AppearanceScreen extends ConsumerWidget {
                   'Motion follows your phone’s accessibility settings. Scroll reveals replay when cards return into view.',
                 ),
                 const SizedBox(height: 20),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Background grain'),
+                  subtitle: const Text(
+                    'Adds a fine texture to page backgrounds.',
+                  ),
+                  value: preferences.backgroundGrainEnabled,
+                  onChanged: ref
+                      .read(themeControllerProvider.notifier)
+                      .setBackgroundGrain,
+                ),
+                const SizedBox(height: 20),
                 Text('Brightness', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 12),
                 if (preferences.style.isDarkOnly)

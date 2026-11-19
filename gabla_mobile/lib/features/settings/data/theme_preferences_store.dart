@@ -11,6 +11,7 @@ import '../domain/background_motion.dart';
 class ThemePreferencesStore {
   static const _styleKey = 'gabla_theme_style';
   static const _modeKey = 'gabla_theme_mode';
+  static const _grainKey = 'gabla_background_grain';
 
   Future<ThemePreferences> read() async {
     final prefs = await SharedPreferences.getInstance();
@@ -45,6 +46,9 @@ class ThemePreferencesStore {
           ? productImageSeconds.clamp(1.0, 10.0)
           : 1.5,
       mode: mode,
+      backgroundGrainEnabled:
+          prefs.getBool(_grainKey) ??
+          ThemePreferences.defaults.backgroundGrainEnabled,
       palettes: palettes,
       fontGroup: FontGroup.values.firstWhere(
         (g) => g.name == prefs.getString('gabla_font_group'),
@@ -76,6 +80,7 @@ class ThemePreferencesStore {
       'gabla_product_image_seconds',
       preferences.productImageSeconds,
     );
+    await prefs.setBool(_grainKey, preferences.backgroundGrainEnabled);
     await prefs.setString(_styleKey, preferences.style.name);
     await prefs.setString(_modeKey, preferences.mode.name);
   }

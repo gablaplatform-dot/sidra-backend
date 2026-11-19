@@ -32,9 +32,12 @@ class BusTrip {
     this.delayMinutes = 0,
     this.bookable = false,
     this.maxPerBooking = 10,
+    this.cancellationMinutes = 120,
     this.ticketTypes = const [],
     this.amenities = const [],
     this.boardingPoint,
+    this.boardingLat,
+    this.boardingLng,
     this.dropoffPoint,
     this.contactPhone,
     this.busTypeName,
@@ -45,7 +48,10 @@ class BusTrip {
   factory BusTrip.fromJson(Map<String, dynamic> j) {
     final r = j['route'] as Map<String, dynamic>? ?? const {};
     final o = j['operator'] as Map<String, dynamic>? ?? const {};
-    final b = j['busType'] as Map<String, dynamic>? ?? const {};
+    final b =
+        j['vehicle'] as Map<String, dynamic>? ??
+        j['busType'] as Map<String, dynamic>? ??
+        const {};
     return BusTrip(
       id: j['id'] as String? ?? '',
       originName:
@@ -68,12 +74,15 @@ class BusTrip {
       durationMinutes: asInt(r['durationMinutes']) ?? 0,
       delayMinutes: asInt(j['delayMinutes']) ?? 0,
       bookable: j['bookable'] == true,
+      cancellationMinutes: asInt(j['cancellationMinutes']) ?? 120,
       maxPerBooking: asInt(j['maxPerBooking']) ?? 10,
       ticketTypes: (j['ticketTypes'] as List? ?? [])
           .map((t) => BusTicketType.fromJson(Map<String, dynamic>.from(t)))
           .toList(),
       amenities: (b['amenities'] as List? ?? []).map((a) => '$a').toList(),
       boardingPoint: r['boardingPoint'] as String?,
+      boardingLat: double.tryParse('${r['boardingLat']}'),
+      boardingLng: double.tryParse('${r['boardingLng']}'),
       dropoffPoint: r['dropoffPoint'] as String?,
       contactPhone: o['contactPhone'] as String?,
       busTypeName: b['name'] as String?,
@@ -94,8 +103,10 @@ class BusTrip {
       imageUrl,
       note,
       operatorSlug;
+  final double? boardingLat, boardingLng;
   final int? seatsAvailable;
   final int durationMinutes, delayMinutes, maxPerBooking;
+  final int cancellationMinutes;
   final bool bookable;
   final List<BusTicketType> ticketTypes;
   final List<String> amenities;

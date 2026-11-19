@@ -45,6 +45,11 @@ class ThemeController extends Notifier<ThemePreferences> {
     ref.read(themePreferencesStoreProvider).write(state);
   }
 
+  void setBackgroundGrain(bool enabled) {
+    state = state.copyWith(backgroundGrainEnabled: enabled);
+    ref.read(themePreferencesStoreProvider).write(state);
+  }
+
   void setMotion(BackgroundMotion motion) {
     state = state.copyWith(motion: motion);
     ref.read(themePreferencesStoreProvider).write(state);

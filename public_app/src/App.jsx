@@ -1,8 +1,11 @@
+import { EventDoor, EventTicketList, EventTicketOrder } from "./pages/community/EventTickets";
 import {CommunityHub,CommunityDetail,CommunityEditor,CommunityApplications} from './pages/community/Community';
 import React, { Suspense, lazy } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import { loginPath } from "./lib/authRedirect";
+import BottomNav from "./components/BottomNav";
+const Account = lazy(() => import("./pages/Account"));
 
 const ProviderOnboarding = lazy(() => import("./pages/ProviderOnboarding"));
 const Login = lazy(() => import("./pages/Login"));
@@ -37,7 +40,7 @@ const BusOperatorPortal = lazy(() => import("./pages/bus/BusOperatorPortal"));
 
 // Pages that only make sense signed in: if the API rejects the saved token there, go to sign-in and come back
 // afterwards, instead of leaving a bare "Unauthorized" under a header that still says "Log out".
-const SIGNED_IN_ONLY = ["/profile", "/orders", "/welcome"];
+const SIGNED_IN_ONLY = ["/profile", "/orders", "/welcome", "/events/tickets", "/me"];
 
 function SessionGuard() {
   const location = useLocation();
@@ -68,6 +71,7 @@ export default function App() {
       <Route path="/provider/:providerId" element={<ProviderDetail />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/profile/orders/:orderId" element={<ProviderOrderView />} />
+      <Route path="/me" element={<Account />} />
       <Route path="/account/delete" element={<DeleteAccount />} />
       <Route path="/profile/listings/new" element={<ListingForm />} />
       <Route path="/profile/listings/:listingId/edit" element={<ListingForm />} />
@@ -80,6 +84,9 @@ export default function App() {
         <Route path={`/${kind}/edit/:id`} element={<CommunityEditor kind={kind}/>}/>
         <Route path={`/${kind}/p/:id`} element={<CommunityDetail kind={kind}/>}/>
       </React.Fragment>)}
+      <Route path="/events/tickets" element={<EventTicketList/>}/>
+      <Route path="/events/tickets/:id" element={<EventTicketOrder/>}/>
+      <Route path="/events/p/:id/door" element={<EventDoor/>}/>
       <Route path="/jobs/applications" element={<CommunityApplications/>}/>
       <Route path="/jobs/applicants/:id" element={<CommunityApplications/>}/>
       <Route path="/cart" element={<Cart />} />
@@ -108,6 +115,7 @@ export default function App() {
       <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
     </Suspense>
+    <BottomNav />
     </>
   );
 }

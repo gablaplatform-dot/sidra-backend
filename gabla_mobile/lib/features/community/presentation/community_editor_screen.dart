@@ -19,9 +19,15 @@ import '../application/community_providers.dart';
 import 'community_screens.dart';
 
 class CommunityEditorScreen extends ConsumerStatefulWidget {
-  const CommunityEditorScreen({super.key, required this.kind, this.id});
+  const CommunityEditorScreen({
+    super.key,
+    required this.kind,
+    this.id,
+    this.workerPost = false,
+  });
   final String kind;
   final String? id;
+  final bool workerPost;
   @override
   ConsumerState<CommunityEditorScreen> createState() => _EditorState();
 }
@@ -44,6 +50,9 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
   DateTime? start, end, deadline;
   RideLocation? location;
   bool get event => widget.kind == 'events';
+  bool get worker =>
+      !event &&
+      (widget.id == null ? widget.workerPost : jobType == 'seeking_work');
   TextEditingController field(String key) =>
       fields.putIfAbsent(key, () => TextEditingController());
   @override
@@ -191,7 +200,8 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
     field('payMin').text = '${post?['payMin'] ?? 0}';
     field('payMax').text = '${post?['payMax'] ?? 0}';
     category = '${post?['category'] ?? ''}';
-    jobType = '${post?['jobType'] ?? 'vacancy'}';
+    jobType =
+        '${post?['jobType'] ?? (widget.workerPost ? 'seeking_work' : 'vacancy')}';
     employment = '${post?['employmentType'] ?? 'full_time'}';
     workplace = '${post?['workplace'] ?? 'onsite'}';
     currency = '${post?['currency'] ?? 'UGX'}';
@@ -229,7 +239,19 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
     if (field('address').text.trim().isEmpty) {
       setState(() {
         step = 2;
-        error = 'Add a location using search, a complete address, or the map.';
+        error = worker
+            ? 'Add a city or area where you can work.'
+            : 'Add a location using search, a complete address, or the map.';
+      });
+      return;
+    }
+    if (worker &&
+        field('phone').text.trim().isEmpty &&
+        field('email').text.trim().isEmpty) {
+      setState(() {
+        step = 3;
+        error =
+            'Add a public contact phone or email so employers can reach you.';
       });
       return;
     }
@@ -293,22 +315,37 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
           'jobType': jobType,
           'employmentType': employment,
           'workplace': workplace,
-          'deadline': deadline?.toUtc().toIso8601String(),
+          'deadline': worker ? null : deadline?.toUtc().toIso8601String(),
         },
       };
       final api = ref.read(apiClientProvider);
-      if (widget.id == null) {
-        await api.post('/${widget.kind}', body: body);
-      } else {
-        await api.patch('/${widget.kind}/${widget.id}', body: body);
-      }
+      final saved = widget.id == null
+          ? await api.post<Map<String, dynamic>>('/${widget.kind}', body: body)
+          : await api.patch<Map<String, dynamic>>(
+              '/${widget.kind}/${widget.id}',
+              body: body,
+            );
       ref.invalidate(communityEndpointProvider);
       if (mounted) {
-        context.go('/${widget.kind}/mine');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+        final messenger = ScaffoldMessenger.of(context);
+        if (event) {
+          final router = GoRouter.of(context);
+          if (widget.id != null && router.canPop()) {
+            router.pop();
+          } else {
+            router.pushReplacement('/events/p/${saved['id']}');
+          }
+        } else {
+          context.go('/jobs/mine${worker ? '?view=workers' : ''}');
+        }
+        messenger.showSnackBar(
+          SnackBar(
             content: Text(
-              'Submitted for review. Manage your post in My posts.',
+              event
+                  ? (saved['status'] == 'approved'
+                        ? 'Your event is live.'
+                        : 'Event changes saved.')
+                  : 'Submitted for review. Manage your post in My posts.',
             ),
           ),
         );
@@ -341,46 +378,52 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
     return [
       input(
         'title',
-        event ? 'Event title' : 'Job or task title',
+        event
+            ? 'Event title'
+            : worker
+            ? 'Role or skill you offer'
+            : 'Job or task title',
         required: true,
       ),
-      input(
-        'organization',
-        event ? 'Organizer or band' : 'Company or organization',
-      ),
+      if (!worker)
+        input(
+          'organization',
+          event ? 'Organizer or band' : 'Company or organization',
+        ),
       pick('Category', category, [
         ...cats,
         if (category.isNotEmpty && !cats.contains(category)) category,
       ], (v) => category = v),
       if (!event) ...[
-        const Text(
-          'What are you posting?',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        if (!worker) ...[
+          const Text(
+            'What are you posting?',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final entry in {
+                'vacancy': 'Employment vacancy',
+                'task': 'Paid task',
+              }.entries)
+                ChoiceChip(
+                  label: Text(entry.value),
+                  selected: jobType == entry.key,
+                  onSelected: (_) => setState(() => jobType = entry.key),
+                ),
+            ],
+          ),
+          const SizedBox(height: 18),
+        ],
+        pick(
+          worker ? 'Work you’re looking for' : 'Employment type',
+          employment,
+          ['full_time', 'part_time', 'contract', 'temporary', 'internship'],
+          (v) => employment = v,
         ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final entry in {
-              'vacancy': 'Employment vacancy',
-              'task': 'Paid task',
-            }.entries)
-              ChoiceChip(
-                label: Text(entry.value),
-                selected: jobType == entry.key,
-                onSelected: (_) => setState(() => jobType = entry.key),
-              ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        pick('Employment type', employment, [
-          'full_time',
-          'part_time',
-          'contract',
-          'temporary',
-          'internship',
-        ], (v) => employment = v),
         const Text(
           'Workplace',
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
@@ -406,11 +449,20 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
   List<Widget> details() => [
     input(
       'description',
-      event ? 'About your event' : 'About the role or task',
+      event
+          ? 'About your event'
+          : worker
+          ? 'About your experience and availability'
+          : 'About the role or task',
       required: true,
       lines: 4,
     ),
-    if (!event) input('requirements', 'Skills and requirements', lines: 3),
+    if (!event)
+      input(
+        'requirements',
+        worker ? 'Skills and qualifications' : 'Skills and requirements',
+        lines: 3,
+      ),
     pair(
       pick('Currency', currency, [
         'UGX',
@@ -447,7 +499,7 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
       const SizedBox(height: 10),
       dateButton('Ends', end, (v) => end = v),
       const SizedBox(height: 24),
-    ] else ...[
+    ] else if (!worker) ...[
       dateButton(
         'Application deadline',
         deadline,
@@ -465,6 +517,7 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
       controller: field('address'),
       location: location,
       event: event,
+      worker: worker,
       onSelected: (place) => setState(() => location = place),
     ),
     const SizedBox(height: 20),
@@ -553,8 +606,8 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
   List<Widget> contact() => [
     attachments(),
     const SizedBox(height: 24),
-    input('phone', 'Contact phone'),
-    input('email', 'Contact email'),
+    input('phone', worker ? 'Public contact phone' : 'Contact phone'),
+    input('email', worker ? 'Public contact email' : 'Contact email'),
     input('website', 'Website URL (optional)'),
   ];
   final sectionNames = ['Basics', 'Details', 'Location', 'Media & contact'];
@@ -710,9 +763,11 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
               const SizedBox(height: 16),
               Text(title, style: AppTypography.of(context).display(size: 32)),
               const SizedBox(height: 12),
-              const Text(
-                'Build your post. We review it before it goes live.',
-                style: TextStyle(fontSize: 12, height: 1.5),
+              Text(
+                event
+                    ? 'New events go live as soon as you publish.'
+                    : 'Build your post. We review it before it goes live.',
+                style: const TextStyle(fontSize: 12, height: 1.5),
               ),
             ],
           ),
@@ -761,7 +816,9 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Your post is reviewed before appearing publicly.',
+            event
+                ? 'New events go live as soon as you publish.'
+                : 'Your post is reviewed before appearing publicly.',
             style: TextStyle(
               color: c.onSurfaceVariant,
               fontSize: 12,
@@ -859,8 +916,14 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
                   for (var i = 0; i < 3; i++)
                     DesignEntrance(index: i + 1, child: section(i, groups[i])),
                   section(3, [
-                    input('phone', 'Contact phone'),
-                    input('email', 'Contact email'),
+                    input(
+                      'phone',
+                      worker ? 'Public contact phone' : 'Contact phone',
+                    ),
+                    input(
+                      'email',
+                      worker ? 'Public contact email' : 'Contact email',
+                    ),
                     input('website', 'Website URL (optional)'),
                   ]),
                 ] else
@@ -914,6 +977,10 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
                             ? 'Submitting…'
                             : wizard && step < 3
                             ? 'Continue'
+                            : event
+                            ? (widget.id == null
+                                  ? 'Publish event'
+                                  : 'Save changes')
                             : 'Submit for review',
                       ),
                     ),
@@ -934,7 +1001,9 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
       builder: (context) => Scaffold(
         appBar: CommunityAppBar(
           title: widget.id == null
-              ? 'Post ${event ? 'an event' : 'a job'}'
+              ? (worker
+                    ? 'Post your availability'
+                    : 'Post ${event ? 'an event' : 'a job'}')
               : 'Edit post',
         ),
         body: !ref.watch(isSignedInProvider)
@@ -942,8 +1011,11 @@ class _EditorState extends ConsumerState<CommunityEditorScreen> {
                 title: 'Create with Gabla',
                 message: 'Sign in to publish your post.',
                 action: 'Sign in',
-                onAction: () =>
-                    communitySignIn(context, ref, '/${widget.kind}/new'),
+                onAction: () => communitySignIn(
+                  context,
+                  ref,
+                  '/${widget.kind}/new${widget.workerPost ? '?type=seeking_work' : ''}',
+                ),
               )
             : widget.id == null
             ? Builder(builder: (inner) => content(null))

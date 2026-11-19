@@ -39,6 +39,8 @@ String communityPay(Map post) {
   String amount(num n) => n
       .toStringAsFixed(0)
       .replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+  final onlinePrice = (post['onlineTickets'] as Map?)?['price'];
+  if (onlinePrice is num) return 'UGX ${amount(onlinePrice)}';
   if (min == 0 && max == 0)
     return post['kind'] == 'event' ? 'Free entry' : 'Pay negotiable';
   return '${post['currency'] ?? 'UGX'} ${amount(min)}${max > min ? ' – ${amount(max)}' : ''}';

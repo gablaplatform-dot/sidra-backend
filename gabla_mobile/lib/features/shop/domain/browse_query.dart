@@ -11,6 +11,7 @@ class BrowseQuery {
     this.q = '',
     this.around = '',
     this.sort = 'featured',
+    this.discoverySeed,
     this.page = 1,
     this.min,
     this.max,
@@ -23,7 +24,7 @@ class BrowseQuery {
     this.culture = '',
     this.attrs = const {},
   });
-  final String? categoryId, providerId, shopCategoryId;
+  final String? categoryId, providerId, shopCategoryId, discoverySeed;
   final String kind, collection, q, sort, district, country, culture, around;
   final int page;
   final double? min, max, lat, lng;
@@ -58,11 +59,13 @@ class BrowseQuery {
     'page': page,
     'limit': 24,
     'sort': sort,
+    if (discoverySeed != null) 'seed': discoverySeed,
   };
   BrowseQuery copyWith({
     String? q,
     String? around,
     String? sort,
+    String? discoverySeed,
     int? page,
     double? min,
     double? max,
@@ -80,6 +83,7 @@ class BrowseQuery {
     String? shopCategoryId,
     bool clearCategory = false,
   }) => BrowseQuery(
+    discoverySeed: discoverySeed ?? this.discoverySeed,
     kind: kind,
     collection: collection,
     categoryId: clearCategory ? null : categoryId ?? this.categoryId,

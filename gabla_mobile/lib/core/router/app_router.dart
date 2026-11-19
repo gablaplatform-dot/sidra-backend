@@ -1,9 +1,9 @@
+import '../../features/community/presentation/event_ticket_screens.dart';
 import '../sharing/share_links.dart';
 import '../../features/community/presentation/community_screens.dart';
 import '../../features/community/presentation/community_editor_screen.dart';
 import '../../features/workspace/presentation/workspace_screen.dart';
 import '../../features/workspace/presentation/document_design_screen.dart';
-import '../../features/shop/presentation/shop_browse_screen.dart';
 import '../../features/shop/domain/product_navigation.dart';
 import '../../features/settings/application/theme_controller.dart';
 import '../theme/app_theme_style.dart';
@@ -52,7 +52,7 @@ import '../../features/shop/presentation/shop_screen.dart';
 /// Pages that only make sense signed in - mirrors `SIGNED_IN_ONLY` in
 /// `public_app/src/App.jsx`. Anything under these paths bounces to
 /// `/login?next=<path>` when there is no session.
-const _signedInOnly = ['/profile', '/orders', '/welcome'];
+const _signedInOnly = ['/profile', '/orders', '/welcome', '/events/tickets'];
 
 /// Rebuilds the router (and so re-evaluates `redirect`) whenever sign-in
 /// state flips, same effect as the web app's `SessionGuard` listening for
@@ -87,15 +87,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
         GoRoute(
           path: '/$kind/mine',
-          builder: (c, s) => CommunityHubScreen(kind: kind, scope: 'mine'),
+          builder: (c, s) => CommunityHubScreen(
+            kind: kind,
+            scope: 'mine',
+            showWorkers:
+                kind == 'jobs' && s.uri.queryParameters['view'] == 'workers',
+          ),
         ),
         GoRoute(
           path: '/$kind/saved',
-          builder: (c, s) => CommunityHubScreen(kind: kind, scope: 'saved'),
+          builder: (c, s) => CommunityHubScreen(
+            kind: kind,
+            scope: 'saved',
+            showWorkers:
+                kind == 'jobs' && s.uri.queryParameters['view'] == 'workers',
+          ),
         ),
         GoRoute(
           path: '/$kind/new',
-          builder: (c, s) => CommunityEditorScreen(kind: kind),
+          builder: (c, s) => CommunityEditorScreen(
+            kind: kind,
+            workerPost:
+                kind == 'jobs' &&
+                s.uri.queryParameters['type'] == 'seeking_work',
+          ),
         ),
         GoRoute(
           path: '/$kind/edit/:id',
@@ -108,6 +123,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               CommunityDetailScreen(kind: kind, id: s.pathParameters['id']!),
         ),
       ],
+      GoRoute(
+        path: '/events/tickets',
+        builder: (c, s) => const EventTicketListScreen(),
+      ),
+      GoRoute(
+        path: '/events/tickets/:id',
+        builder: (c, s) => EventTicketOrderScreen(id: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/events/p/:id/buy',
+        redirect: (c, s) => ref.read(isSignedInProvider)
+            ? null
+            : '/login?next=${Uri.encodeComponent(s.uri.toString())}',
+        builder: (c, s) => EventTicketCheckout(
+          eventId: s.pathParameters['id']!,
+          price: int.tryParse(s.uri.queryParameters['price'] ?? '') ?? 0,
+        ),
+      ),
+      GoRoute(
+        path: '/events/p/:id/door',
+        redirect: (c, s) => ref.read(isSignedInProvider)
+            ? null
+            : '/login?next=${Uri.encodeComponent(s.uri.toString())}',
+        builder: (c, s) => EventDoorScreen(id: s.pathParameters['id']!),
+      ),
       GoRoute(
         path: '/jobs/applications',
         builder: (c, s) => const CommunityApplicationsScreen(),
@@ -191,8 +231,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/provider/:providerId',
-        builder: (c, s) =>
-            ProviderDetailScreen(providerId: s.pathParameters['providerId']!),
+        builder: (c, s) => ProviderDetailScreen(
+          providerId: s.pathParameters['providerId']!,
+          parameters: s.uri.queryParameters,
+        ),
       ),
       GoRoute(path: '/profile', builder: (c, s) => const ProfileScreen()),
       GoRoute(
@@ -267,7 +309,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/profile/listings/new',
-        builder: (c, s) => const ListingFormScreen(),
+        builder: (c, s) => ListingFormScreen(
+          initialType: switch (s.uri.queryParameters['type']) {
+            'product' => 'product',
+            'service' => 'service',
+            _ => null,
+          },
+        ),
       ),
       GoRoute(
         path: '/profile/listings/:listingId/edit',
@@ -357,9 +405,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/provider/:providerId/catalog',
-        builder: (c, s) => ShopBrowseScreen(
-          providerId: s.pathParameters['providerId'],
-          kind: s.uri.queryParameters['type'] ?? 'product',
+        builder: (c, s) => ProviderDetailScreen(
+          providerId: s.pathParameters['providerId']!,
           parameters: s.uri.queryParameters,
         ),
       ),

@@ -42,6 +42,11 @@ android {
 
     buildTypes {
         release {
+            // Allow a release-mode presentation APK on low-memory build machines.
+            // Store builds keep normal shrinking unless explicitly overridden.
+            val shrinkRelease = providers.gradleProperty("gablaMinifyRelease").orNull != "false"
+            isMinifyEnabled = shrinkRelease
+            isShrinkResources = shrinkRelease
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")

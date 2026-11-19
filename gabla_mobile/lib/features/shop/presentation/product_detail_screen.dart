@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme_style.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/widgets/page_band.dart';
+import '../../../core/motion/design_transitions.dart';
 import '../../cart/application/cart_controller.dart';
 import '../../provider/presentation/provider_contact_panel.dart';
 import '../application/shop_providers.dart';
@@ -123,6 +125,23 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         fraction: style == AppThemeStyle.discover ? .92 : 1,
       ),
     );
+    Widget section(
+      List<Widget> children, {
+      Color? color,
+      double elevation = 2,
+      EdgeInsets padding = const EdgeInsets.fromLTRB(14, 4, 14, 16),
+    }) => Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DesignEntrance(
+        child: PageBand(
+          color: color ?? c.surface,
+          elevation: elevation,
+          borderRadius: BorderRadius.circular(commerceRadius(style)),
+          padding: padding,
+          children: children,
+        ),
+      ),
+    );
     return Scaffold(
       appBar: CommerceAppBar(
         title:
@@ -143,33 +162,33 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       ),
       bottomNavigationBar: SafeArea(
         top: false,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-          decoration: BoxDecoration(
-            color: c.surface,
-            border: Border(top: BorderSide(color: c.outlineVariant)),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  p.price > 0 ? formatUgx(p.price) : 'Contact for price',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
+        child: Material(
+          color: c.surface,
+          elevation: 8,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    p.price > 0 ? formatUgx(p.price) : 'Contact for price',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              FilledButton(
-                onPressed: fetched.isLoading ? null : primary,
-                child: Text(
-                  p.type == 'service'
-                      ? (p.bookable ? 'Check availability' : 'Contact provider')
-                      : 'Order now',
+                const SizedBox(width: 10),
+                FilledButton(
+                  onPressed: fetched.isLoading ? null : primary,
+                  child: Text(
+                    p.type == 'service'
+                        ? (p.bookable ? 'Book now' : 'Contact provider')
+                        : 'Order now',
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -191,121 +210,160 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 label: Text(node?['name']?.toString() ?? 'Back to category'),
               ),
             ),
-          if (style == AppThemeStyle.editorial) title,
-          gallery,
-          if (style != AppThemeStyle.editorial) title,
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  p.price > 0
-                      ? '${formatUgx(p.price)}${p.bookable ? ' / ${p.booking?.unit.name ?? 'booking'}' : ''}'
-                      : 'Contact for price',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+          const SizedBox(height: 8),
+          section(
+            [if (style == AppThemeStyle.editorial) title, gallery],
+            color: c.surfaceContainerLow,
+            elevation: 3,
+            padding: EdgeInsets.zero,
+          ),
+          section(
+            [
+              if (style != AppThemeStyle.editorial) title,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      p.price > 0
+                          ? '${formatUgx(p.price)}${p.bookable ? ' / ${p.booking?.unit.name ?? 'booking'}' : ''}'
+                          : 'Contact for price',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
                   ),
-                ),
+                  if (p.isOnSale)
+                    Chip(
+                      label: Text(
+                        p.discountPercent == null
+                            ? 'On sale'
+                            : '−${p.discountPercent}%',
+                      ),
+                    ),
+                ],
               ),
               if (p.isOnSale)
-                Chip(
-                  label: Text(
-                    p.discountPercent == null
-                        ? 'On sale'
-                        : '−${p.discountPercent}%',
-                  ),
+                Text(
+                  'Was ${formatUgx(p.originalPrice)} · Save ${formatUgx(p.originalPrice! - p.price)}',
+                  style: TextStyle(color: c.primary, fontSize: 12),
                 ),
+              const SizedBox(height: 18),
+              if (p.type == 'product')
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.tonalIcon(
+                      onPressed: fetched.isLoading
+                          ? null
+                          : () {
+                              ref
+                                  .read(cartControllerProvider.notifier)
+                                  .add(p.id);
+                              trackCommerce(ref, {
+                                'type': 'cart',
+                                'listingId': p.id,
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Added to your shopping bag'),
+                                ),
+                              );
+                            },
+                      icon: const Icon(Icons.add_shopping_cart, size: 18),
+                      label: const Text('Add to bag'),
+                    ),
+                    if (p.canPayOnline)
+                      OutlinedButton(
+                        onPressed: fetched.isLoading
+                            ? null
+                            : () => order('cash'),
+                        child: const Text('Pay on delivery'),
+                      ),
+                  ],
+                ),
+              const SizedBox(height: 12),
+              Text(
+                p.type == 'service'
+                    ? (p.bookable
+                          ? 'Choose an available date and time to book.'
+                          : 'Arrange service details directly with the provider.')
+                    : (p.canPayOnline
+                          ? 'Pay online after the seller accepts, or pay cash on pickup or delivery.'
+                          : 'Pay cash on pickup or delivery.'),
+                style: TextStyle(
+                  color: c.onSurfaceVariant,
+                  fontSize: 12,
+                  height: 1.5,
+                ),
+              ),
             ],
+            color: Color.lerp(c.surface, c.primary, .085),
+            elevation: 4,
           ),
-          if (p.isOnSale)
-            Text(
-              'Was ${formatUgx(p.originalPrice)} · Save ${formatUgx(p.originalPrice! - p.price)}',
-              style: TextStyle(color: c.primary, fontSize: 12),
-            ),
-          const SizedBox(height: 18),
-          if (p.type == 'product')
-            Wrap(
-              spacing: 10,
-              runSpacing: 8,
-              children: [
-                FilledButton.tonalIcon(
-                  onPressed: fetched.isLoading
-                      ? null
-                      : () {
-                          ref.read(cartControllerProvider.notifier).add(p.id);
-                          trackCommerce(ref, {
-                            'type': 'cart',
-                            'listingId': p.id,
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Added to your shopping bag'),
-                            ),
-                          );
-                        },
-                  icon: const Icon(Icons.add_shopping_cart, size: 18),
-                  label: const Text('Add to bag'),
-                ),
-                if (p.canPayOnline)
-                  OutlinedButton(
-                    onPressed: fetched.isLoading ? null : () => order('cash'),
-                    child: const Text('Pay on delivery'),
-                  ),
+          if ((p.description?.isNotEmpty ?? false) || p.customFields.isNotEmpty)
+            section([
+              if (p.description?.isNotEmpty ?? false) ...[
+                const CommerceTitle('Description'),
+                Text(p.description!, style: const TextStyle(height: 1.6)),
               ],
+              if (p.customFields.isNotEmpty) ...[
+                const CommerceTitle('Specifications'),
+                CommerceAttributes(values: p.customFields, fields: fields),
+              ],
+            ]),
+          if (p.providerId != null)
+            section([
+              CommerceTitle(
+                p.providerName ?? 'Seller',
+                action: () => context.push('/provider/${p.providerId}'),
+                label: 'Visit shop',
+              ),
+              ProviderContactPanel(providerId: p.providerId!),
+            ], color: c.surfaceContainerLow),
+          if (p.type == 'product')
+            section(
+              [
+                const CommerceTitle('Buying on Gabla'),
+                const Text(
+                  'Inspect the item before paying cash. Confirm the condition and delivery arrangements with the seller.',
+                  style: TextStyle(height: 1.5),
+                ),
+              ],
+              color: c.surfaceContainerLow,
+              elevation: 0,
             ),
-          const SizedBox(height: 12),
-          Text(
-            p.type == 'service'
-                ? 'Arrange service details directly with the provider.'
-                : 'No payment is collected when placing an order. Pay online after the seller accepts, or pay cash on pickup / delivery.',
-            style: TextStyle(
-              color: c.onSurfaceVariant,
-              fontSize: 12,
-              height: 1.5,
+          if (similar.valueOrNull?.isNotEmpty ?? false)
+            section(
+              [
+                CommerceTitle(
+                  p.type == 'service'
+                      ? 'Similar services'
+                      : 'You might also like',
+                ),
+                ProductLayout(items: similar.valueOrNull!),
+              ],
+              elevation: 0,
+              padding: EdgeInsets.zero,
             ),
-          ),
-          if (p.description?.isNotEmpty ?? false) ...[
-            const CommerceTitle('The details'),
-            Text(p.description!, style: const TextStyle(height: 1.6)),
-          ],
-          if (p.customFields.isNotEmpty) ...[
-            const CommerceTitle('Specifications'),
-            CommercePanel(
-              child: CommerceAttributes(values: p.customFields, fields: fields),
+          if (seller.valueOrNull?.any((s) => s.id != p.id) ?? false)
+            section(
+              [
+                CommerceTitle(
+                  'More from this seller',
+                  action: () => context.push('/provider/${p.providerId}'),
+                  label: 'Visit shop',
+                ),
+                ProductLayout(
+                  items: seller.valueOrNull!
+                      .where((s) => s.id != p.id)
+                      .take(6)
+                      .toList(),
+                ),
+              ],
+              elevation: 0,
+              padding: EdgeInsets.zero,
             ),
-          ],
-          if (p.providerId != null) ...[
-            CommerceTitle(
-              'Meet your seller',
-              action: () => context.push('/provider/${p.providerId}'),
-              label: 'Visit shop',
-            ),
-            ProviderContactPanel(providerId: p.providerId!),
-          ],
-          const CommerceTitle('Shop with confidence'),
-          const Text(
-            'Inspect items before paying cash. Confirm the price, condition, and delivery arrangements with the seller. Keep payments and order records together on Gabla.',
-            style: TextStyle(fontSize: 12, height: 1.5),
-          ),
-          if (similar.valueOrNull?.isNotEmpty ?? false) ...[
-            CommerceTitle(
-              p.type == 'service' ? 'Similar services' : 'You might also like',
-            ),
-            ProductLayout(items: similar.valueOrNull!),
-          ],
-          if (seller.valueOrNull?.any((s) => s.id != p.id) ?? false) ...[
-            CommerceTitle(
-              'More from this seller',
-              action: () => context.push('/provider/${p.providerId}'),
-              label: 'Visit shop',
-            ),
-            ProductLayout(
-              items: seller.valueOrNull!
-                  .where((s) => s.id != p.id)
-                  .take(6)
-                  .toList(),
-            ),
-          ],
           const SizedBox(height: 28),
         ],
       ),

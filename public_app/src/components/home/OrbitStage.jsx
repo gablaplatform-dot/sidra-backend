@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { todayEat, ugx } from "../../lib/bus";
 import LanguageSwitcher from "../LanguageSwitcher";
 import NearbyOverlay from "./NearbyOverlay";
+import ImageSearchButton from "../ImageSearchButton";
 import { BookScreen, FindScreen, UnlockScreen } from "./ContactPhone";
 import { IconArrowRight, IconBike, IconChevronLeft, IconBus, IconCar, IconCart, IconPin, IconSearch, IconSparkles, IconTicket } from "../icons";
 
@@ -243,7 +244,9 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
       lastW = w;
       // Small growth is just the address bar hiding (ignored); a big one means the keyboard closed.
       if (!tallest || window.innerHeight > tallest + 120) tallest = window.innerHeight;
-      const h = (coarse ? tallest : window.innerHeight) - hdr;
+      // The phone's bottom bar (BottomNav) covers the last stretch of the screen, so the story lives above it.
+      const bar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--bn-px")) || 0;
+      const h = (coarse ? tallest : window.innerHeight) - hdr - bar;
       setSize((cur) => (cur.w === w && cur.h === h && cur.hdr === hdr ? cur : { w, h, hdr, compact: w < COMPACT_W }));
     };
     update();
@@ -685,6 +688,12 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
     glideToV(next === undefined ? beats.end : next);
   };
 
+  // A photo becomes a search phrase and goes straight into the same nearby search.
+  const onPhotoQuery = (phrase) => {
+    onSearchChange(phrase);
+    setNearbyOpen(true);
+  };
+
   // The home search finds things near the visitor: submitting opens the nearby map + list.
   const submit = (event) => {
     event.preventDefault();
@@ -739,6 +748,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
               <form className="ho-search ho-ui ho-ui-search" ref={(el) => { uiRefs.current[0] = el; }} style={{ width: ui.full }} onSubmit={submit}>
                 <span className="ho-search-icon"><IconSearch /></span>
                 <input type="text" value={searchValue} onChange={(e) => onSearchChange(e.target.value)} placeholder={t("nearby.placeholder")} aria-label={t("nearby.ariaLabel")} />
+                <ImageSearchButton onResult={onPhotoQuery} />
                 <button type="submit" className="ho-search-go" aria-label={t("landing.searchButton")}><IconArrowRight /></button>
               </form>
               {[["/shop", IconCart, "landing.shop"], ["/ride", IconCar, "landing.ride"], ["/bus", IconBus, "landing.bus"]].map(([to, Icon, label], k) => (
@@ -821,6 +831,7 @@ export default function OrbitStage({ categories, shopCards = [], categoryCards =
                 placeholder={t("nearby.placeholder")}
                 aria-label={t("nearby.ariaLabel")}
               />
+              <ImageSearchButton onResult={onPhotoQuery} />
               <button type="submit" className="ho-search-go">{t("landing.searchButton")} <IconArrowRight /></button>
             </form>
 

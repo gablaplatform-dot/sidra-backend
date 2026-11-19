@@ -10,19 +10,22 @@ import '../../../core/media/sound_video_screen.dart';
 import '../../../core/network/network_providers.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/async_value_view.dart';
+import '../../../core/widgets/order_updates.dart';
 import '../../auth/application/session_controller.dart';
 import '../../orders/presentation/my_orders_screen.dart';
 import '../../payments/presentation/payment_sheet.dart';
 import '../../provider/domain/provider_summary.dart';
-import '../../shop/domain/product.dart';
+import '../../services/domain/booking_selection.dart';
 import '../../shop/presentation/commerce_widgets.dart';
 import '../../shop/presentation/product_gallery.dart';
 import '../application/workspace_providers.dart';
 import 'workspace_form.dart';
+import 'workspace_listings.dart';
 
 const workspacePaths = {
   'listings': '/listings/me?limit=100',
   'business': '/providers/me',
+  'gallery': '/providers/me',
   'wallet': '/payments/wallet',
   'documents': '/documents?limit=100',
   'orders': '/engagement/provider/orders?limit=50',
@@ -35,7 +38,8 @@ const workspacePaths = {
 };
 const workspaceTitles = {
   'listings': 'My listings',
-  'business': 'My business',
+  'business': 'About the business',
+  'gallery': 'Gallery',
   'wallet': 'Wallet',
   'documents': 'Quotes & receipts',
   'orders': 'Seller orders',
@@ -48,7 +52,12 @@ const workspaceTitles = {
 };
 
 class WorkspaceScreen extends ConsumerStatefulWidget {
-  const WorkspaceScreen({super.key, required this.section});
+  const WorkspaceScreen({
+    super.key,
+    required this.section,
+    this.embedded = false,
+  });
+  final bool embedded;
   final String section;
   @override
   ConsumerState<WorkspaceScreen> createState() => _WorkspaceScreenState();
@@ -114,6 +123,62 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
           ),
         ),
       );
+    final body = OrderUpdates(
+      enabled: widget.section == 'orders',
+      refresh: () async {
+        await ref.refresh(workspaceDataProvider(path).future);
+      },
+      child: AsyncValueView(
+        value: ref.watch(workspaceDataProvider(path)),
+        onRetry: reload,
+        data: (context, data) => RefreshIndicator(
+          onRefresh: () async => reload(),
+          child: ListView(
+            padding: widget.section == 'listings'
+                ? EdgeInsets.zero
+                : const EdgeInsets.all(18),
+            children: widget.section == 'listings'
+                ? [
+                    WorkspaceListings(
+                      rows: workspaceItems(data),
+                      onRemove: _removeListing,
+                    ),
+                  ]
+                : [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _description,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ...switch (widget.section) {
+                      'business' => _business(Map<String, dynamic>.from(data)),
+                      'gallery' => _gallery(Map<String, dynamic>.from(data)),
+                      'wallet' => _wallet(Map<String, dynamic>.from(data)),
+                      'documents' => _documents(data),
+                      'orders' => _orders(data),
+                      'bookings' => _bookings(data),
+                      'categories' => _categories(data),
+                      'analytics' => _analytics(
+                        Map<String, dynamic>.from(data),
+                      ),
+                      'ads' => _ads(data),
+                      'saved' => _saved(data),
+                      'inquiries' => _inquiries(data),
+                      _ => <Widget>[],
+                    },
+                  ],
+          ),
+        ),
+      ),
+    );
+    if (widget.embedded) return body;
     return Scaffold(
       appBar: CommerceAppBar(
         title: title,
@@ -125,47 +190,14 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
           ),
         ],
       ),
-      body: AsyncValueView(
-        value: ref.watch(workspaceDataProvider(path)),
-        onRetry: reload,
-        data: (context, data) => RefreshIndicator(
-          onRefresh: () async => reload(),
-          child: ListView(
-            padding: const EdgeInsets.all(18),
-            children: [
-              Text(title, style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 8),
-              Text(
-                _description,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 24),
-              ...switch (widget.section) {
-                'listings' => _listings(data),
-                'business' => _business(Map<String, dynamic>.from(data)),
-                'wallet' => _wallet(Map<String, dynamic>.from(data)),
-                'documents' => _documents(data),
-                'orders' => _orders(data),
-                'bookings' => _bookings(data),
-                'categories' => _categories(data),
-                'analytics' => _analytics(Map<String, dynamic>.from(data)),
-                'ads' => _ads(data),
-                'saved' => _saved(data),
-                'inquiries' => _inquiries(data),
-                _ => <Widget>[],
-              },
-            ],
-          ),
-        ),
-      ),
+      body: body,
     );
   }
 
   String get _description => switch (widget.section) {
     'listings' => 'Your products and services, ready for their next customer.',
     'business' => 'Give customers a clear picture of your business.',
+    'gallery' => 'Manage the photos and videos customers see on your profile.',
     'wallet' => 'Your balance, subscriptions, payouts and transaction history.',
     'documents' =>
       'Professional quotations and receipts, designed around your business.',
@@ -176,144 +208,79 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     'ads' => 'Bring your business into the spotlight.',
     _ => 'Keep your trusted businesses close.',
   };
-  List<Widget> _listings(dynamic data) => [
-    FilledButton.icon(
-      onPressed: () => context.push('/profile/listings/new'),
-      icon: const Icon(Icons.add),
-      label: const Text('Create a listing'),
-    ),
-    const SizedBox(height: 18),
-    if (workspaceItems(data).isEmpty)
-      const CommerceEmpty(
-        title: 'Your storefront starts here',
-        message: 'Add your first product or service using the button above.',
-        icon: Icons.storefront_outlined,
-      ),
-    for (final row in workspaceItems(data))
-      Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: CommercePanel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ListingDiscoveryCard(product: Product.fromJson(row)),
-              Text(
-                '${row['status'] ?? 'Pending review'}',
-                style: const TextStyle(fontSize: 12),
-              ),
-              Wrap(
-                spacing: 8,
-                children: [
-                  TextButton.icon(
-                    onPressed: () =>
-                        context.push('/profile/listings/${row['id']}/edit'),
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Edit'),
-                  ),
-                  TextButton.icon(
-                    onPressed: () async {
-                      if (await confirm('Remove ${row['name']}?'))
-                        run(() async {
-                          await ref
-                              .read(apiClientProvider)
-                              .delete('/listings/${row['id']}');
-                        });
-                    },
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Remove'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-  ];
-  List<Widget> _business(Map<String, dynamic> p) {
-    final contact = Map<String, dynamic>.from(p['contact'] as Map? ?? {}),
-        media = Map<String, dynamic>.from(p['media'] as Map? ?? {});
-    final gallery = (media['gallery'] as List? ?? []).map((s) => '$s').toList();
-    Future<void> saveMedia(Map<String, dynamic> patch) => run(() async {
-      await ref
-          .read(apiClientProvider)
-          .put(
-            '/providers/me',
-            body: {
-              'media': {...media, ...patch},
-            },
-          );
+  Future<void> _removeListing(Map<String, dynamic> row) async {
+    if (!await confirm('Remove ${row['name']}?') || !mounted) return;
+    await run(() async {
+      await ref.read(apiClientProvider).delete('/listings/${row['id']}');
     });
+  }
+
+  List<Widget> _business(Map<String, dynamic> p) {
+    final contact = Map<String, dynamic>.from(p['contact'] as Map? ?? {});
     return [
       CommercePanel(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              '${p['businessName'] ?? 'Your business'}',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            if (p['description'] != null) Text('${p['description']}'),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () => showWorkspaceForm(
-                context,
-                title: 'Business details',
-                fields: [
-                  WorkspaceField(
-                    'businessName',
-                    'Business name',
-                    value: p['businessName'],
-                    required: true,
-                  ),
-                  WorkspaceField(
-                    'description',
-                    'Your story',
-                    type: 'long',
-                    value: p['description'],
-                  ),
-                  WorkspaceField('phone', 'Phone', value: contact['phone']),
-                  WorkspaceField(
-                    'whatsapp',
-                    'WhatsApp',
-                    value: contact['whatsapp'],
-                  ),
-                  WorkspaceField(
-                    'website',
-                    'Website',
-                    value: contact['website'],
-                  ),
-                  WorkspaceField(
-                    'onlinePaymentsEnabled',
-                    'Accept online payments',
-                    type: 'bool',
-                    value: p['onlinePaymentsEnabled'] != false,
-                  ),
-                ],
-                save: (v) async {
-                  await ref
-                      .read(apiClientProvider)
-                      .put(
-                        '/providers/me',
-                        body: {
-                          'businessName': v['businessName'],
-                          'description': v['description'],
-                          'onlinePaymentsEnabled': v['onlinePaymentsEnabled'],
-                          'contact': {
-                            ...contact,
-                            'phone': v['phone'],
-                            'whatsapp': v['whatsapp'],
-                            'website': '${v['website']}'.isEmpty
-                                ? null
-                                : v['website'],
-                          },
+            WorkspaceForm(
+              title: 'Business details',
+              action: 'Save changes',
+              inline: true,
+              fields: [
+                WorkspaceField(
+                  'businessName',
+                  'Business name',
+                  value: p['businessName'],
+                  required: true,
+                ),
+                WorkspaceField(
+                  'description',
+                  'Business description',
+                  type: 'long',
+                  value: p['description'],
+                ),
+                WorkspaceField('phone', 'Phone', value: contact['phone']),
+                WorkspaceField(
+                  'whatsapp',
+                  'WhatsApp',
+                  value: contact['whatsapp'],
+                ),
+                WorkspaceField('website', 'Website', value: contact['website']),
+                WorkspaceField(
+                  'onlinePaymentsEnabled',
+                  'Accept online payments',
+                  type: 'bool',
+                  value: p['onlinePaymentsEnabled'] != false,
+                ),
+              ],
+              save: (v) async {
+                await ref
+                    .read(apiClientProvider)
+                    .put(
+                      '/providers/me',
+                      body: {
+                        'businessName': v['businessName'],
+                        'description': v['description'],
+                        'onlinePaymentsEnabled': v['onlinePaymentsEnabled'],
+                        'contact': {
+                          ...contact,
+                          'phone': v['phone'],
+                          'whatsapp': v['whatsapp'],
+                          'website': '${v['website']}'.isEmpty
+                              ? null
+                              : v['website'],
                         },
-                      );
+                      },
+                    );
+                if (mounted) {
                   reload();
-                },
-              ),
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit business'),
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Business details saved.')),
+                  );
+                }
+              },
             ),
+            const SizedBox(height: 12),
             TextButton.icon(
               onPressed: () async {
                 final location = await pickGoogleLocation(
@@ -350,20 +317,43 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
         icon: const Icon(Icons.public),
         label: const Text('Communities & countries served'),
       ),
-      const CommerceTitle('Your visual identity'),
-      MediaUploadButton(
-        folder: 'provider-avatar',
-        video: false,
-        label: 'Update business avatar',
-        onUploaded: (u) => saveMedia({'avatarUrl': u}),
-      ),
-      MediaUploadButton(
-        folder: 'provider-cover',
-        video: false,
-        label: 'Update cover photo',
-        onUploaded: (u) => saveMedia({'coverUrl': u}),
-      ),
-      const CommerceTitle('Gallery'),
+      if (!widget.embedded) ..._gallery(p, includeIdentity: true),
+    ];
+  }
+
+  List<Widget> _gallery(
+    Map<String, dynamic> p, {
+    bool includeIdentity = false,
+  }) {
+    final media = Map<String, dynamic>.from(p['media'] as Map? ?? {});
+    final gallery = (media['gallery'] as List? ?? []).map((s) => '$s').toList();
+    Future<void> saveMedia(Map<String, dynamic> patch) => run(() async {
+      final api = ref.read(apiClientProvider);
+      final latest = await api.get<Map<String, dynamic>>('/providers/me');
+      await api.put(
+        '/providers/me',
+        body: {
+          'media': {...?latest['media'] as Map?, ...patch},
+        },
+      );
+    });
+    return [
+      if (includeIdentity) ...[
+        const CommerceTitle('Your visual identity'),
+        MediaUploadButton(
+          folder: 'provider-avatar',
+          video: false,
+          label: 'Update business avatar',
+          onUploaded: (u) => saveMedia({'avatarUrl': u}),
+        ),
+        MediaUploadButton(
+          folder: 'provider-cover',
+          video: false,
+          label: 'Update cover photo',
+          onUploaded: (u) => saveMedia({'coverUrl': u}),
+        ),
+      ],
+      if (includeIdentity) const CommerceTitle('Gallery'),
       if (gallery.isNotEmpty)
         SizedBox(height: 280, child: ProductGallery(images: gallery)),
       MediaUploadButton(
@@ -372,6 +362,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
           'gallery': [...gallery, u],
         }),
       ),
+      if (gallery.isEmpty) const Text('Add photos or videos of your business.'),
       for (final u in gallery)
         ListTile(
           leading: Icon(
@@ -731,73 +722,131 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
         ),
       ),
   ];
-  List<Widget> _bookings(dynamic data) => [
-    if (workspaceItems(data).isEmpty)
-      const CommerceEmpty(
-        title: 'Your next reservation starts here',
-        message: 'Publish a bookable service to start receiving requests.',
-        icon: Icons.event_available_outlined,
-      ),
-    for (final b in workspaceItems(data))
-      Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: CommercePanel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  List<Widget> _bookings(dynamic data) {
+    final items = workspaceItems(data);
+    final today = bookingDate(eatToday());
+    final pending = <Map<String, dynamic>>[];
+    final upcoming = <Map<String, dynamic>>[];
+    final history = <Map<String, dynamic>>[];
+    for (final booking in items) {
+      if (booking['status'] == 'pending') {
+        pending.add(booking);
+      } else if (booking['status'] == 'confirmed' &&
+          '${booking['endDate'] ?? booking['startDate'] ?? ''}'.compareTo(
+                today,
+              ) >=
+              0) {
+        upcoming.add(booking);
+      } else {
+        history.add(booking);
+      }
+    }
+    return [
+      if (items.isEmpty)
+        const CommerceEmpty(
+          title: 'No bookings yet',
+          message: 'Publish a bookable service to start receiving requests.',
+          icon: Icons.event_available_outlined,
+        ),
+      for (final (heading, bookings) in [
+        ('Needs a response', pending),
+        ('Upcoming', upcoming),
+        ('History', history.reversed),
+      ])
+        if (bookings.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              heading,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          for (final booking in bookings) _reservationCard(booking),
+        ],
+    ];
+  }
+
+  Widget _reservationCard(Map<String, dynamic> b) => Padding(
+    padding: const EdgeInsets.only(bottom: 14),
+    child: CommercePanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${(b['listing'] as Map?)?['name'] ?? 'Reservation'}',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          Text(
+            [
+              b['startDate'],
+              if (b['endDate'] != b['startDate']) b['endDate'],
+            ].whereType<String>().join(' → '),
+          ),
+          if (b['startTime'] != null)
+            Text("${b['startTime']} – ${b['endTime']} EAT"),
+          Text('${b['status']} · ${formatUgx(num.tryParse('${b['total']}'))}'),
+          Text(
+            '${(b['customer'] as Map?)?['name'] ?? ''} · ${(b['customer'] as Map?)?['phone'] ?? ''}',
+          ),
+          if ((b['customer'] as Map?)?['email'] case final String email
+              when email.isNotEmpty)
+            Text(email),
+          if ((b['customer'] as Map?)?['notes'] case final String notes
+              when notes.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text('Booking description\n$notes'),
+            ),
+          if (b['guests'] case final num guests)
+            Text('$guests ${guests == 1 ? 'guest' : 'guests'}'),
+          if (b['paymentStatus'] == 'paid')
+            Text(
+              'Paid online · ${formatUgx(num.tryParse("${b['amountPaid']}"))}',
+            )
+          else if (b['paymentStatus'] == 'payable')
+            Text(
+              'Awaiting payment · ${formatUgx(num.tryParse("${b['amountDue']}"))}',
+            ),
+          if (b['reference'] case final String reference)
+            Text(
+              'Booking $reference',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          Wrap(
             children: [
-              Text(
-                '${(b['listing'] as Map?)?['name'] ?? 'Reservation'}',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              Text('${b['startDate']} → ${b['endDate'] ?? b['startDate']}'),
-              Text(
-                '${b['status']} · ${formatUgx(num.tryParse('${b['total']}'))}',
-              ),
-              Text(
-                '${(b['customer'] as Map?)?['name'] ?? ''} · ${(b['customer'] as Map?)?['phone'] ?? ''}',
-              ),
-              Wrap(
-                children: [
-                  for (final action
-                      in b['status'] == 'pending'
-                          ? ['accept', 'decline']
-                          : b['status'] == 'confirmed'
-                          ? ['complete', 'cancel']
-                          : <String>[])
-                    TextButton(
-                      onPressed: () => showWorkspaceForm(
-                        context,
-                        title:
-                            '${action[0].toUpperCase()}${action.substring(1)} booking',
-                        action: action[0].toUpperCase() + action.substring(1),
-                        fields: const [
-                          WorkspaceField(
-                            'note',
-                            'Note to customer',
-                            type: 'long',
-                          ),
-                        ],
-                        save: (v) async {
-                          await ref
-                              .read(apiClientProvider)
-                              .patch(
-                                '/bookings/provider/${b['id']}',
-                                body: {'action': action, 'note': v['note']},
-                              );
-                          reload();
-                        },
-                      ),
-                      child: Text(
-                        action[0].toUpperCase() + action.substring(1),
-                      ),
-                    ),
-                ],
-              ),
+              for (final action
+                  in b['status'] == 'pending'
+                      ? ['accept', 'decline']
+                      : b['status'] == 'confirmed'
+                      ? [if (b['canComplete'] == true) 'complete', 'cancel']
+                      : <String>[])
+                TextButton(
+                  onPressed: () => showWorkspaceForm(
+                    context,
+                    title:
+                        '${action[0].toUpperCase()}${action.substring(1)} booking',
+                    action: action[0].toUpperCase() + action.substring(1),
+                    fields: const [
+                      WorkspaceField('note', 'Note to customer', type: 'long'),
+                    ],
+                    save: (v) async {
+                      await ref
+                          .read(apiClientProvider)
+                          .patch(
+                            '/bookings/provider/${b['id']}',
+                            body: {'action': action, 'note': v['note']},
+                          );
+                      reload();
+                    },
+                  ),
+                  child: Text(action[0].toUpperCase() + action.substring(1)),
+                ),
             ],
           ),
-        ),
+        ],
       ),
-  ];
+    ),
+  );
   List<Widget> _categories(dynamic data) {
     final items = <Map<String, dynamic>>[];
     void flatten(List<Map<String, dynamic>> nodes) {

@@ -12,11 +12,12 @@ class CommunityLocationInput extends ConsumerStatefulWidget {
     required this.onSelected,
     this.location,
     required this.event,
+    this.worker = false,
   });
   final TextEditingController controller;
   final ValueChanged<RideLocation?> onSelected;
   final RideLocation? location;
-  final bool event;
+  final bool event, worker;
   @override
   ConsumerState<CommunityLocationInput> createState() => _LocationState();
 }
@@ -99,7 +100,11 @@ class _LocationState extends ConsumerState<CommunityLocationInput> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          widget.event ? 'Venue & address' : 'Work location',
+          widget.event
+              ? 'Venue & address'
+              : widget.worker
+              ? 'City or area where you can work'
+              : 'Work location',
           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
@@ -117,6 +122,8 @@ class _LocationState extends ConsumerState<CommunityLocationInput> {
           decoration: InputDecoration(
             hintText: widget.event
                 ? 'Search venue, street or city'
+                : widget.worker
+                ? 'Search a city or area'
                 : 'Search an address or city',
             prefixIcon: const Icon(Icons.search, size: 20),
             suffixIcon: _busy

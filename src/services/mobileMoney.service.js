@@ -61,7 +61,7 @@ export class MobileMoneyService {
         message: result.data?.message || "Unable to start the mobile money payment",
         statusCode: 502,
         code: "MOBILE_MONEY_DEPOSIT_FAILED",
-        details: result.data
+        details: { ...(result.data ?? {}), ambiguous: result.status >= 500 }
       });
     }
 

@@ -10,11 +10,12 @@ class MediaUploadButton extends ConsumerStatefulWidget {
     this.folder = 'listing-media',
     this.label = 'Add photo or video',
     this.video = true,
+    this.iconOnly = false,
     this.registerAsset = true,
   });
   final ValueChanged<String> onUploaded;
   final String folder, label;
-  final bool video, registerAsset;
+  final bool video, registerAsset, iconOnly;
   @override
   ConsumerState<MediaUploadButton> createState() => _MediaUploadButtonState();
 }
@@ -22,8 +23,8 @@ class MediaUploadButton extends ConsumerStatefulWidget {
 class _MediaUploadButtonState extends ConsumerState<MediaUploadButton> {
   bool _busy = false;
   @override
-  Widget build(BuildContext context) => OutlinedButton.icon(
-    onPressed: _busy
+  Widget build(BuildContext context) {
+    final onPressed = _busy
         ? null
         : () async {
             try {
@@ -83,10 +84,22 @@ class _MediaUploadButtonState extends ConsumerState<MediaUploadButton> {
             } finally {
               if (mounted) setState(() => _busy = false);
             }
-          },
-    icon: Icon(
-      _busy ? Icons.hourglass_top : Icons.add_photo_alternate_outlined,
-    ),
-    label: Text(_busy ? 'Uploading…' : widget.label),
-  );
+          };
+    final icon = Icon(
+      _busy ? Icons.hourglass_top : Icons.photo_camera_outlined,
+      size: widget.iconOnly ? 17 : null,
+    );
+    if (widget.iconOnly) {
+      return IconButton.filled(
+        onPressed: onPressed,
+        tooltip: _busy ? 'Uploading…' : widget.label,
+        icon: icon,
+      );
+    }
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: icon,
+      label: Text(_busy ? 'Uploading…' : widget.label),
+    );
+  }
 }

@@ -66,7 +66,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     final product = ref.watch(productDetailProvider(widget.listingId));
     final flow = ref.watch(bookingFlowControllerProvider);
     return Scaffold(
-      appBar: const CommerceAppBar(title: 'Plan your booking'),
+      appBar: const CommerceAppBar(title: 'Book a service'),
       body: AsyncValueView(
         value: product,
         onRetry: () => ref.invalidate(productDetailProvider(widget.listingId)),
@@ -189,7 +189,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Available start times',
+                    'Available start times (EAT)',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 10),
@@ -207,6 +207,9 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                       ),
                       child: const Text('Retry time slots'),
                     ),
+                  if (hourly?.valueOrNull case final day?
+                      when !day.slots.any((slot) => slot.free > 0))
+                    const Text('No times are available. Choose another date.'),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
@@ -322,7 +325,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                     maxLength: 800,
                     maxLines: 3,
                     decoration: const InputDecoration(
-                      labelText: 'Notes for the provider',
+                      labelText: 'Booking description (optional)',
+                      hintText: 'Tell the provider what you need.',
                     ),
                   ),
                 ],

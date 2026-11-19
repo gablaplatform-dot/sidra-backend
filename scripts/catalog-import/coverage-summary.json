@@ -1,0 +1,916 @@
+{
+  "batch": "catalog-coverage-20261112",
+  "added": 1426,
+  "corrected": 58,
+  "visibleProducts": 2032,
+  "fashionProducts": 284,
+  "leafCategories": 148,
+  "categoriesAtTarget": 146,
+  "remainingGaps": [
+    {
+      "category": "Business & Industry > Business for Sale & Investment > Franchise & Dealership",
+      "products": 0,
+      "target": 12,
+      "metTarget": false
+    },
+    {
+      "category": "Business & Industry > Business for Sale & Investment > Investor/Partner Wanted",
+      "products": 3,
+      "target": 12,
+      "metTarget": false
+    }
+  ],
+  "unrelatedRowsPreserved": true,
+  "ordersUnchanged": true,
+  "transactionsUnchanged": true,
+  "categories": [
+    {
+      "category": "Babies & Kids > Baby Gear & Equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Babies & Kids > Care & Feeding",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Babies & Kids > Children's Furniture",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Babies & Kids > Maternity & Pregnancy",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Babies & Kids > Playground Equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Babies & Kids > Toys & Games",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Babies & Kids > Transport & Safety",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Beauty & Personal Care > Body Care",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Beauty & Personal Care > Face Care",
+      "products": 15,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Beauty & Personal Care > Fragrance",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Beauty & Personal Care > Hair Beauty",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Beauty & Personal Care > Makeup",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Beauty & Personal Care > Massagers",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Beauty & Personal Care > Oral Care",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Beauty & Personal Care > Sexual Wellness",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Beauty & Personal Care > Tools & Accessories",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Beauty & Personal Care > Vitamins & Supplements",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Business & Industry > Business for Sale & Investment > Franchise & Dealership",
+      "products": 0,
+      "target": 12,
+      "metTarget": false
+    },
+    {
+      "category": "Business & Industry > Business for Sale & Investment > Investor/Partner Wanted",
+      "products": 3,
+      "target": 12,
+      "metTarget": false
+    },
+    {
+      "category": "Business & Industry > Business for Sale & Investment > Running Business for Sale",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Business & Industry > Wholesale & Bulk",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Commercial Equipment & Tools > Manufacturing Equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Commercial Equipment & Tools > Manufacturing Materials & Supplies",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Commercial Equipment & Tools > Medical Equipment & Supplies",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Commercial Equipment & Tools > Printing & Graphics Equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Commercial Equipment & Tools > Restaurant & Catering Equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Commercial Equipment & Tools > Retail & Store Equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Commercial Equipment & Tools > Safety Equipment & Protective Gear",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Commercial Equipment & Tools > Salon & Beauty Equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Commercial Equipment & Tools > Stage & Event Equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Commercial Equipment & Tools > Stationery & Office Equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Accessories & Supplies for Electronics",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Audio & Music Equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Camera and photography",
+      "products": 28,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Computer Accessories",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Computer Hardware",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Computer Monitors",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Computing and office equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Laptops & Computers",
+      "products": 29,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Mobile phones and tables",
+      "products": 28,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Networking Products",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Photo & Video Cameras",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Printers & Scanners",
+      "products": 20,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Security & Surveillance",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Smart home devices",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Smart wearables",
+      "products": 28,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Software",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > TV & Video Equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Tv",
+      "products": 28,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Video Game Consoles",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Electronics > Video Games",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Baby & Kids' Fashion > Babies & Kids Accessories",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Baby & Kids' Fashion > Children's Clothing",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Baby & Kids' Fashion > Children's Shoes",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Men's Fashion > Men's Bags",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Men's Fashion > Men's Clothing",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Men's Fashion > Men's Clothing Accessories",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Men's Fashion > Men's Jewelry",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Men's Fashion > Men's Shoes",
+      "products": 13,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Men's Fashion > Men's Watches",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Men's Fashion > Men's Wedding Wear & Accessories",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Women's Fashion > Women's Bags",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Women's Fashion > Women's Clothing",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Women's Fashion > Women's Clothing Accessories",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Women's Fashion > Women's Jewelry",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Women's Fashion > Women's Shoes",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Women's Fashion > Women's Watches",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion > Women's Fashion > Women's Wedding Wear & Accessories",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion and Apparels > Men wear > Accessories",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion and Apparels > Men wear > Clothing",
+      "products": 15,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion and Apparels > Men wear > Shoe's",
+      "products": 16,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion and Apparels > Women's Wear > Accessories",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion and Apparels > Women's Wear > Clothing",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Fashion and Apparels > Women's Wear > Shoe's",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Food, Agriculture & Farming > Farm Animal Feed & Supplements",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Food, Agriculture & Farming > Farm Animals",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Food, Agriculture & Farming > Farm Machinery & Equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Food, Agriculture & Farming > Food & Beverages",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Food, Agriculture & Farming > Seeds & Fertilizers",
+      "products": 47,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Furniture > Commercial furniture > Educational furniture",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Furniture > Commercial furniture > Healthcare furniture",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Furniture > Commercial furniture > Hospitality furniture",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Furniture > Commercial furniture > Office furniture",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Furniture > Commercial furniture > Retail furniture",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Furniture > Commercial furniture > Transit furniture",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Furniture > Home furniture > Bedding furniture",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Furniture > Home furniture > Home office desks",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Furniture > Home furniture > Seating furniture",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Furniture > Home furniture > Storage furniture",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Furniture > Home furniture > Tables furniture",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Home Appliances",
+      "products": 30,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Home, Furniture & Appliances > Furniture",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Home, Furniture & Appliances > Garden Supplies",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Home, Furniture & Appliances > Home Accessories",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Home, Furniture & Appliances > Home Appliances",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Home, Furniture & Appliances > Household Chemicals",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Home, Furniture & Appliances > Kitchen Appliances",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Home, Furniture & Appliances > Kitchenware & Cookware",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Home, Furniture & Appliances > Lighting",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Home, Furniture & Appliances > Storage & Organization",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Kitchen Appliances",
+      "products": 30,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Leisure & Activities > Arts, Crafts & Awards",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Leisure & Activities > Books & Table Games",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Leisure & Activities > Music & Video",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Leisure & Activities > Musical Instruments & Gear",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Leisure & Activities > Outdoor Gear",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Leisure & Activities > Smoking Accessories",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Leisure & Activities > Sports Equipment",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Phones & Tablets > Accessories for Phones & Tablets",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Phones & Tablets > Headphones",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Phones & Tablets > Mobile Phones",
+      "products": 25,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Phones & Tablets > Smart Watches",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Phones & Tablets > Tablets",
+      "products": 26,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Property > Commercial Property For Rent",
+      "products": 56,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Property > Commercial Property For Sale",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Property > Event Centres, Venues & Workstations",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Property > Houses & Apartments For Rent",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Property > Houses & Apartments For Sale",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Property > Land & Plots For Sale",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Property > Land & Plots for Rent",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Property > New Builds",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Property > Short Let",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Building Materials & Supplies",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Doors & Security",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Electrical Equipment > Cables & Wires",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Electrical Equipment > Electronic Components & Sensors",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Electrical Equipment > Generators",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Electrical Equipment > Industrial Electrical & Automation",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Electrical Equipment > Inverters & Backup Batteries",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Electrical Equipment > Solar & Renewable",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Electrical Equipment > Stabilizers & Voltage Protection",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Electrical Equipment > Switches, Sockets & Distribution",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Electrical Equipment > Welding Machinery & Construction",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Electrical Hand Tools",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Hand Tools",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Hardware & Fasteners",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Measuring & Testing Tools",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Other Repair & Construction Items",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Plumbing & Water Systems",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Repair & Construction > Windows & Glass",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Vehicles > Buses & Microbuses",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Vehicles > Cars",
+      "products": 47,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Vehicles > Construction & Heavy Machinery",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Vehicles > Motorcycles & Scooters",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Vehicles > Personal Mobility",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Vehicles > Trucks & Trailers",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Vehicles > Vehicle Parts & Accessories",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    },
+    {
+      "category": "Vehicles > Watercraft & Boats",
+      "products": 12,
+      "target": 12,
+      "metTarget": true
+    }
+  ]
+}

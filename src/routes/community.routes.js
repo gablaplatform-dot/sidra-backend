@@ -14,7 +14,7 @@ export function buildCommunityRoutes(kind,{service=new CommunityService()}={}) {
   const handle=(fn)=>(req,res,next)=>Promise.resolve(fn(req)).then((data)=>res.json({data})).catch(next);
   const signed=requireAuth();
   const schema=kind==='job'?job:event;
-  const query=Joi.object({q:text(200),category:text(100),district:text(100),jobType:job.jobType,employmentType:job.employmentType,workplace:job.workplace,minPay:Joi.number().min(0),from:Joi.date().iso(),to:Joi.date().iso(),page:Joi.number().integer().min(1),limit:Joi.number().integer().min(1).max(40),status:Joi.string().valid('pending','approved','declined','suspended','closed','cancelled')});
+  const query=Joi.object({q:text(200),category:text(100),district:text(100),jobType:job.jobType,jobGroup:Joi.string().valid('openings','workers'),employmentType:job.employmentType,workplace:job.workplace,minPay:Joi.number().min(0),ticketSales:Joi.string().valid('enabled','disabled'),from:Joi.date().iso(),to:Joi.date().iso(),page:Joi.number().integer().min(1),limit:Joi.number().integer().min(1).max(40),status:Joi.string().valid('pending','approved','declined','suspended','closed','cancelled')});
   router.get('/',validate(query,'query'),handle((r)=>service.list(kind,r.query)));
   router.get('/mine',signed,validate(query,'query'),handle((r)=>service.list(kind,r.query,r.user.id,{mine:true})));
   router.get('/saved',signed,validate(query,'query'),handle((r)=>service.list(kind,r.query,r.user.id,{saved:true})));
@@ -29,6 +29,7 @@ export function buildCommunityRoutes(kind,{service=new CommunityService()}={}) {
   router.get('/:id',optionalAuth(),handle((r)=>service.detail(kind,r.params.id,r.user)));
   router.post('/',signed,validate(Joi.object({...schema,address:shared.address.required(),title:schema.title.required(),description:schema.description.min(20).required(),category:schema.category.required(),...(kind==='event'?{startsAt:event.startsAt.required(),endsAt:event.endsAt.required()}:{jobType:job.jobType.default('vacancy'),employmentType:job.employmentType.default('full_time'),workplace:job.workplace.default('onsite')})})),handle((r)=>service.create(kind,r.user.id,r.body)));
   router.patch('/:id',signed,validate(Joi.object(schema).min(1)),handle((r)=>service.edit(kind,r.params.id,r.user.id,r.body)));
+  if(kind==='event') router.delete('/:id',signed,handle((r)=>service.deleteEvent(r.params.id,r.user.id)));
   router.post('/:id/close',signed,handle((r)=>service.close(kind,r.params.id,r.user.id)));
   router.put('/:id/response',signed,validate(Joi.object({status:Joi.string().valid('saved','interested','going').allow(null).required()})),handle((r)=>service.respond(kind,r.params.id,r.user.id,r.body.status)));
   return router;

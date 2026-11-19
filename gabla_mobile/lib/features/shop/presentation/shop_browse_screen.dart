@@ -1,3 +1,4 @@
+import '../../../core/widgets/page_band.dart';
 import '../../settings/application/theme_controller.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -5,7 +6,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../core/motion/design_transitions.dart';
 import '../../../core/theme/app_theme_style.dart';
 import '../../../core/theme/font_group.dart';
 import '../../../core/network/network_providers.dart';
@@ -39,8 +39,15 @@ class ShopBrowseScreen extends ConsumerStatefulWidget {
     this.collection = 'all',
     this.kind = 'product',
     this.parameters = const {},
+    this.storefrontHeader,
+    this.storefrontTabs,
+    this.storefrontFooter,
+    this.storefrontName,
+    this.onStorefrontRefresh,
   });
-  final String? categoryId, providerId;
+  final String? categoryId, providerId, storefrontName;
+  final Widget? storefrontHeader, storefrontTabs, storefrontFooter;
+  final Future<void> Function()? onStorefrontRefresh;
   final String collection, kind;
   final Map<String, String> parameters;
   @override
@@ -49,6 +56,7 @@ class ShopBrowseScreen extends ConsumerStatefulWidget {
 
 class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
   late BrowseQuery _query;
+  final _controlsKey = GlobalKey();
   final _search = TextEditingController();
   final _resultsScroll = ScrollController();
   bool _uriRead = false;
@@ -66,7 +74,8 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
         );
     } catch (_) {}
     _query = BrowseQuery(
-      categoryId: widget.categoryId,
+      categoryId: widget.categoryId ?? p['cat'],
+      shopCategoryId: p['shopCat'],
       providerId: widget.providerId,
       collection: widget.collection,
       kind: widget.kind,
@@ -135,7 +144,8 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
     super.didChangeDependencies();
     if (_uriRead) return;
     _uriRead = true;
-    if (GoRouter.maybeOf(context) != null) {
+    if (widget.parameters.keys.any((key) => key.startsWith('a.')) &&
+        GoRouter.maybeOf(context) != null) {
       final all = GoRouterState.of(context).uri.queryParametersAll;
       final attrs = <String, List<String>>{};
       for (final e in all.entries) {
@@ -167,7 +177,15 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
       ),
     );
     setState(() => _query = q);
-    if (_resultsScroll.hasClients) {
+    final controls = _controlsKey.currentContext;
+    if (widget.storefrontHeader != null && controls != null) {
+      Scrollable.ensureVisible(
+        controls,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 280),
+      );
+    } else if (_resultsScroll.hasClients) {
       if (MediaQuery.disableAnimationsOf(context)) {
         _resultsScroll.jumpTo(0);
       } else {
@@ -294,6 +312,40 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
                 ? 'Services'
                 : 'The collection',
         };
+    final collections = widget.providerId == null || widget.kind != 'product'
+        ? const <dynamic>[]
+        : ref
+                  .watch(providerShopCategoriesProvider(widget.providerId!))
+                  .valueOrNull ??
+              [];
+    final scopeFacets = widget.providerId == null
+        ? null
+        : ref
+              .watch(
+                browseFacetsProvider(
+                  BrowseQuery(providerId: widget.providerId, kind: widget.kind),
+                ),
+              )
+              .valueOrNull;
+    final counts =
+        scopeFacets?[collections.isNotEmpty
+                ? 'shopCategoryCounts'
+                : widget.kind == 'service'
+                ? 'serviceCategoryCounts'
+                : 'categoryCounts']
+            as Map? ??
+        const {};
+    final storefrontCategories = _stockedCategories(
+      collections.isNotEmpty ? collections : tree,
+      counts,
+    ).toList();
+    final selectedCategory = collections.isNotEmpty
+        ? _query.shopCategoryId
+        : _query.categoryId;
+    final filterCount =
+        _query.activeCount +
+        (selectedCategory == null ? 0 : 1) +
+        (_query.district.isEmpty && _query.lat == null ? 0 : 1);
     final data = result.valueOrNull;
     final items = (data?['items'] as List? ?? [])
         .map((e) => Product.fromJson(Map<String, dynamic>.from(e)))
@@ -307,6 +359,12 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
             onPressed: () async {
               final params = <String, dynamic>{
                 if (_query.q.isNotEmpty) 'q': _query.q,
+                if (_query.providerId != null)
+                  'tab': _query.kind == 'service' ? 'services' : 'products',
+                if (_query.providerId != null && _query.categoryId != null)
+                  'cat': _query.categoryId,
+                if (_query.providerId != null && _query.shopCategoryId != null)
+                  'cat': _query.shopCategoryId,
                 'sort': _query.sort,
                 if (_query.min != null) 'min': '${_query.min}',
                 if (_query.max != null) 'max': '${_query.max}',
@@ -335,250 +393,270 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
             },
           ),
         ],
-        title: widget.providerId == null ? 'Gabla shop' : 'Seller collection',
+        title:
+            widget.storefrontName ??
+            (widget.providerId == null ? 'Gabla shop' : 'Seller collection'),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(browseResultsProvider(effective));
           ref.invalidate(browseFacetsProvider(effective));
-          await ref.read(browseResultsProvider(effective).future);
+          await Future.wait([
+            ref.read(browseResultsProvider(effective).future),
+            if (widget.onStorefrontRefresh case final refresh?) refresh(),
+          ]);
         },
         child: CustomScrollView(
           controller: _resultsScroll,
           key: PageStorageKey(
-            'browse-${widget.categoryId}-${widget.providerId}',
+            'browse-${widget.categoryId}-${widget.providerId}-${widget.kind}',
           ),
           slivers: [
+            if (widget.storefrontHeader case final Widget header)
+              SliverToBoxAdapter(child: header),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                child: DesignEntrance(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        style == AppThemeStyle.editorial
-                            ? 'THE CATALOGUE'
-                            : style == AppThemeStyle.cinematic
-                            ? 'DISCOVER YOUR NEXT FIND'
-                            : 'FIND YOUR EVERYDAY',
-                        style: TextStyle(
-                          fontSize: 10,
-                          letterSpacing: 2,
-                          color: c.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: AppTypography.of(context).display(
-                                size: style == AppThemeStyle.editorial
-                                    ? 38
-                                    : 30,
-                              ),
-                            ),
-                          ),
-                          if (style == AppThemeStyle.orbit)
-                            CircleAvatar(
-                              radius: 25,
-                              backgroundColor: c.secondaryContainer,
-                              child: Icon(
-                                Icons.explore_outlined,
-                                color: c.onSecondaryContainer,
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 9),
-                      Text(
-                        '${data?['total'] ?? '…'} finds · ${_query.lat != null
-                            ? 'Within 15 km'
-                            : _query.district.isNotEmpty
-                            ? _query.district
-                            : 'All Uganda'}',
-                        style: TextStyle(
-                          color: c.onSurfaceVariant,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      TextField(
-                        controller: _search,
-                        textInputAction: TextInputAction.search,
-                        decoration: InputDecoration(
-                          hintText: 'Search this collection',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: IconButton(
-                            tooltip: 'Search',
-                            icon: const Icon(Icons.arrow_forward),
-                            onPressed: () {
-                              _change(_query.copyWith(q: _search.text));
-                              trackCommerce(ref, {
-                                'type': 'search',
-                                'query': _search.text.trim(),
-                              });
-                            },
-                          ),
-                        ),
-                        onSubmitted: (v) {
-                          _change(_query.copyWith(q: v));
-                          if (v.trim().isNotEmpty)
-                            trackCommerce(ref, {
-                              'type': 'search',
-                              'query': v.trim(),
-                            });
-                        },
-                      ),
-                      const SizedBox(height: 14),
+                key: _controlsKey,
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                child: PageBand(
+                  color: Color.lerp(c.surface, c.primary, .07)!,
+                  elevation: 2,
+                  borderRadius: BorderRadius.circular(commerceRadius(style)),
+                  children: [
+                    if (widget.storefrontTabs case final Widget tabs) ...[
+                      tabs,
+                      const SizedBox(height: 12),
+                    ],
+                    Text(
+                      widget.providerId == null
+                          ? title
+                          : (widget.kind == 'service'
+                                ? 'Browse services'
+                                : 'Browse products'),
+                      style: AppTypography.of(context).display(size: 26),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${data?['total'] ?? '…'} results${widget.providerId != null ? '' : ' · ${_query.lat != null
+                                ? 'Within 15 km'
+                                : _query.district.isNotEmpty
+                                ? _query.district
+                                : 'All Uganda'}'}',
+                      style: TextStyle(color: c.onSurfaceVariant, fontSize: 12),
+                    ),
+                    if (storefrontCategories.isNotEmpty) ...[
+                      const SizedBox(height: 12),
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           children: [
-                            FilledButton.tonalIcon(
-                              onPressed: _filters,
-                              icon: const Icon(Icons.tune, size: 18),
-                              label: Text(
-                                'Filters${_query.activeCount > 0 ? ' · ${_query.activeCount}' : ''}',
-                              ),
+                            ChoiceChip(
+                              label: const Text('All categories'),
+                              selected: selectedCategory == null,
+                              onSelected: (_) =>
+                                  _change(_query.copyWith(clearCategory: true)),
                             ),
-                            const SizedBox(width: 10),
-                            PopupMenuButton<String>(
-                              tooltip: 'Sort products',
-                              initialValue: _query.sort,
-                              onSelected: (s) =>
-                                  _change(_query.copyWith(sort: s)),
-                              itemBuilder: (_) => [
-                                for (final entry in shopSortLabels.entries)
-                                  PopupMenuItem(
-                                    value: entry.key,
-                                    child: Text(entry.value),
+                            for (final category in storefrontCategories)
+                              Padding(
+                                padding: const EdgeInsetsDirectional.only(
+                                  start: 8,
+                                ),
+                                child: ChoiceChip(
+                                  label: Text(
+                                    '${category.name} · ${category.count}',
                                   ),
-                              ],
-                              child: Chip(
-                                avatar: const Icon(Icons.swap_vert, size: 17),
-                                label: Text(
-                                  shopSortLabels[_query.sort] ?? 'Sort',
+                                  selected: selectedCategory == category.id,
+                                  onSelected: (_) => _change(
+                                    _query
+                                        .copyWith(clearCategory: true)
+                                        .copyWith(
+                                          categoryId: collections.isEmpty
+                                              ? category.id
+                                              : null,
+                                          shopCategoryId: collections.isNotEmpty
+                                              ? category.id
+                                              : null,
+                                        ),
+                                  ),
                                 ),
                               ),
-                            ),
-                            IconButton(
-                              tooltip: _list
-                                  ? 'Switch to grid'
-                                  : 'Switch to list',
-                              onPressed: () async {
-                                setState(() => _list = !_list);
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                await prefs.setBool('gabla_shop_list', _list);
-                              },
-                              icon: Icon(
-                                _list
-                                    ? Icons.grid_view
-                                    : Icons.view_agenda_outlined,
-                              ),
-                            ),
                           ],
                         ),
                       ),
-                      if (_query.activeCount > 0 ||
-                          _query.q.isNotEmpty ||
-                          _query.district.isNotEmpty ||
-                          _query.lat != null)
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 2,
-                          children: [
-                            if (_query.q.isNotEmpty)
+                    ],
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: _search,
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        hintText: 'Search this collection',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: IconButton(
+                          tooltip: 'Search',
+                          icon: const Icon(Icons.arrow_forward),
+                          onPressed: () {
+                            _change(_query.copyWith(q: _search.text));
+                            trackCommerce(ref, {
+                              'type': 'search',
+                              'query': _search.text.trim(),
+                            });
+                          },
+                        ),
+                      ),
+                      onSubmitted: (v) {
+                        _change(_query.copyWith(q: v));
+                        if (v.trim().isNotEmpty)
+                          trackCommerce(ref, {
+                            'type': 'search',
+                            'query': v.trim(),
+                          });
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        FilledButton.tonalIcon(
+                          onPressed: _filters,
+                          icon: const Icon(Icons.tune, size: 18),
+                          label: Text(
+                            'Filters${filterCount > 0 ? ' · $filterCount' : ''}',
+                          ),
+                        ),
+                        PopupMenuButton<String>(
+                          tooltip: 'Sort listings',
+                          initialValue: _query.sort,
+                          onSelected: (s) => _change(_query.copyWith(sort: s)),
+                          itemBuilder: (_) => [
+                            for (final entry in shopSortLabels.entries)
+                              PopupMenuItem(
+                                value: entry.key,
+                                child: Text(entry.value),
+                              ),
+                          ],
+                          child: Chip(
+                            avatar: const Icon(Icons.swap_vert, size: 17),
+                            label: Text(shopSortLabels[_query.sort] ?? 'Sort'),
+                          ),
+                        ),
+                        SegmentedButton<bool>(
+                          showSelectedIcon: false,
+                          segments: const [
+                            ButtonSegment(
+                              value: false,
+                              icon: Icon(Icons.grid_view, size: 18),
+                              tooltip: 'Grid view',
+                            ),
+                            ButtonSegment(
+                              value: true,
+                              icon: Icon(Icons.view_agenda_outlined, size: 18),
+                              tooltip: 'List view',
+                            ),
+                          ],
+                          selected: {_list},
+                          onSelectionChanged: (selection) async {
+                            final list = selection.single;
+                            setState(() => _list = list);
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('gabla_shop_list', list);
+                          },
+                        ),
+                      ],
+                    ),
+                    if (_query.activeCount > 0 ||
+                        _query.q.isNotEmpty ||
+                        _query.district.isNotEmpty ||
+                        _query.lat != null)
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 2,
+                        children: [
+                          if (_query.q.isNotEmpty)
+                            InputChip(
+                              label: Text('“${_query.q}”'),
+                              onDeleted: () {
+                                _search.clear();
+                                _change(_query.copyWith(q: ''));
+                              },
+                            ),
+                          if (_query.min != null || _query.max != null)
+                            InputChip(
+                              label: Text(
+                                'UGX ${_query.min?.round() ?? 0} – ${_query.max?.round() ?? 'any'}',
+                              ),
+                              onDeleted: () =>
+                                  _change(_query.copyWith(clearPrice: true)),
+                            ),
+                          if (_query.discount)
+                            InputChip(
+                              label: const Text('On sale'),
+                              onDeleted: () =>
+                                  _change(_query.copyWith(discount: false)),
+                            ),
+                          if (_query.district.isNotEmpty || _query.lat != null)
+                            InputChip(
+                              label: Text(
+                                _query.lat != null
+                                    ? 'Near me'
+                                    : _query.district,
+                              ),
+                              onDeleted: () => _change(
+                                _query.copyWith(
+                                  clearLocation: true,
+                                  everywhere: true,
+                                ),
+                              ),
+                            ),
+                          if (_query.country.isNotEmpty)
+                            InputChip(
+                              label: const Text('Country selected'),
+                              onDeleted: () =>
+                                  _change(_query.copyWith(country: '')),
+                            ),
+                          if (_query.culture.isNotEmpty)
+                            InputChip(
+                              label: const Text('Culture selected'),
+                              onDeleted: () =>
+                                  _change(_query.copyWith(culture: '')),
+                            ),
+                          for (final entry in _query.attrs.entries)
+                            for (final value in entry.value)
                               InputChip(
-                                label: Text('“${_query.q}”'),
+                                label: Text(value),
                                 onDeleted: () {
-                                  _search.clear();
-                                  _change(_query.copyWith(q: ''));
+                                  final attrs = {..._query.attrs};
+                                  attrs[entry.key] = entry.value
+                                      .where((v) => v != value)
+                                      .toList();
+                                  attrs.removeWhere((k, v) => v.isEmpty);
+                                  _change(_query.copyWith(attrs: attrs));
                                 },
                               ),
-                            if (_query.min != null || _query.max != null)
-                              InputChip(
-                                label: Text(
-                                  'UGX ${_query.min?.round() ?? 0} – ${_query.max?.round() ?? 'any'}',
-                                ),
-                                onDeleted: () =>
-                                    _change(_query.copyWith(clearPrice: true)),
-                              ),
-                            if (_query.discount)
-                              InputChip(
-                                label: const Text('On sale'),
-                                onDeleted: () =>
-                                    _change(_query.copyWith(discount: false)),
-                              ),
-                            if (_query.district.isNotEmpty ||
-                                _query.lat != null)
-                              InputChip(
-                                label: Text(
-                                  _query.lat != null
-                                      ? 'Near me'
-                                      : _query.district,
-                                ),
-                                onDeleted: () => _change(
-                                  _query.copyWith(
-                                    clearLocation: true,
-                                    everywhere: true,
-                                  ),
-                                ),
-                              ),
-                            if (_query.country.isNotEmpty)
-                              InputChip(
-                                label: const Text('Country selected'),
-                                onDeleted: () =>
-                                    _change(_query.copyWith(country: '')),
-                              ),
-                            if (_query.culture.isNotEmpty)
-                              InputChip(
-                                label: const Text('Culture selected'),
-                                onDeleted: () =>
-                                    _change(_query.copyWith(culture: '')),
-                              ),
-                            for (final entry in _query.attrs.entries)
-                              for (final value in entry.value)
-                                InputChip(
-                                  label: Text(value),
-                                  onDeleted: () {
-                                    final attrs = {..._query.attrs};
-                                    attrs[entry.key] = entry.value
-                                        .where((v) => v != value)
-                                        .toList();
-                                    attrs.removeWhere((k, v) => v.isEmpty);
-                                    _change(_query.copyWith(attrs: attrs));
-                                  },
-                                ),
-                          ],
+                        ],
+                      ),
+                    if (data?['widened'] == true)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Text(
+                          'We widened your search to find more matches.',
                         ),
-                      if (data?['widened'] == true)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8),
-                          child: Text(
-                            'We widened your search to find more matches.',
-                          ),
-                        ),
-                      if (_notice != null) Text(_notice!),
-                      if (data?['arrangedAround'] != null)
-                        Text('Arranged around ${data!['arrangedAround']}'),
-                      if (district != null &&
-                          _query.district.isEmpty &&
-                          !_query.everywhere)
-                        TextButton.icon(
-                          icon: const Icon(
-                            Icons.location_on_outlined,
-                            size: 16,
-                          ),
-                          onPressed: () =>
-                              _change(_query.copyWith(district: district)),
-                          label: Text('Search around $district'),
-                        ),
-                    ],
-                  ),
+                      ),
+                    if (_notice != null) Text(_notice!),
+                    if (data?['arrangedAround'] != null)
+                      Text('Arranged around ${data!['arrangedAround']}'),
+                    if (widget.providerId == null &&
+                        district != null &&
+                        _query.district.isEmpty &&
+                        !_query.everywhere)
+                      TextButton.icon(
+                        icon: const Icon(Icons.location_on_outlined, size: 16),
+                        onPressed: () =>
+                            _change(_query.copyWith(district: district)),
+                        label: Text('Search around $district'),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -654,10 +732,34 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
                   ),
                 ),
               ),
+            if (widget.storefrontFooter case final Widget footer)
+              SliverToBoxAdapter(child: footer),
             const SliverToBoxAdapter(child: SizedBox(height: 32)),
           ],
         ),
       ),
+    );
+  }
+}
+
+int _categoryCount(Map node, Map counts) =>
+    (counts[node['id']] as num? ?? 0).toInt() +
+    (node['children'] as List? ?? []).whereType<Map>().fold(
+      0,
+      (sum, child) => sum + _categoryCount(child, counts),
+    );
+
+Iterable<({String id, String name, int count})> _stockedCategories(
+  List<dynamic> tree,
+  Map counts,
+) sync* {
+  for (final node in tree.whereType<Map>()) {
+    final count = _categoryCount(node, counts);
+    if (count <= 0 || node['id'] == null) continue;
+    yield (
+      id: node['id'].toString(),
+      name: node['name']?.toString() ?? 'Category',
+      count: count,
     );
   }
 }
@@ -717,7 +819,7 @@ class _ShopFilterSheetState extends ConsumerState<ShopFilterSheet> {
     final defs = (node?['effectiveListingFields'] as List? ?? []);
     final attrs = Map<String, dynamic>.from(facets['attributes'] as Map? ?? {});
     final audience = ref.watch(audienceCatalogProvider).valueOrNull ?? {};
-    final shopCats = _draft.providerId != null
+    final shopCats = _draft.providerId != null && _draft.kind == 'product'
         ? ref
                   .watch(providerShopCategoriesProvider(_draft.providerId!))
                   .valueOrNull ??
@@ -746,40 +848,35 @@ class _ShopFilterSheetState extends ConsumerState<ShopFilterSheet> {
       padding: const EdgeInsets.only(top: 20, bottom: 12),
       child: Text(t, style: Theme.of(context).textTheme.titleMedium),
     );
-    int subtreeCount(Map raw) =>
-        (counts[raw['id']] as num? ?? 0).toInt() +
-        (raw['children'] as List? ?? []).fold<int>(
-          0,
-          (n, c) => n + subtreeCount(c),
-        );
     List<Widget> categories(List<dynamic> nodes, [int depth = 0]) => [
-      for (final raw in nodes) ...[
-        Padding(
-          padding: EdgeInsets.only(left: depth * 14.0),
-          child: RadioListTile<String>(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            value: raw['id'].toString(),
-            groupValue: shopCats.isEmpty
-                ? _draft.categoryId
-                : _draft.shopCategoryId,
-            title: Text(raw['name']?.toString() ?? 'Category'),
-            secondary: Text(
-              '${subtreeCount(raw)}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            onChanged: (id) => _update(
-              _draft
-                  .copyWith(clearCategory: true)
-                  .copyWith(
-                    categoryId: shopCats.isEmpty ? id : null,
-                    shopCategoryId: shopCats.isNotEmpty ? id : null,
-                  ),
+      for (final raw in nodes.whereType<Map>())
+        if (_draft.providerId == null || _categoryCount(raw, counts) > 0) ...[
+          Padding(
+            padding: EdgeInsets.only(left: depth * 14.0),
+            child: RadioListTile<String>(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              value: raw['id'].toString(),
+              groupValue: shopCats.isEmpty
+                  ? _draft.categoryId
+                  : _draft.shopCategoryId,
+              title: Text(raw['name']?.toString() ?? 'Category'),
+              secondary: Text(
+                '${_categoryCount(raw, counts)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              onChanged: (id) => _update(
+                _draft
+                    .copyWith(clearCategory: true)
+                    .copyWith(
+                      categoryId: shopCats.isEmpty ? id : null,
+                      shopCategoryId: shopCats.isNotEmpty ? id : null,
+                    ),
+              ),
             ),
           ),
-        ),
-        ...categories(raw['children'] as List? ?? [], depth + 1),
-      ],
+          ...categories(raw['children'] as List? ?? [], depth + 1),
+        ],
     ];
     return Column(
       children: [
@@ -789,7 +886,7 @@ class _ShopFilterSheetState extends ConsumerState<ShopFilterSheet> {
             children: [
               Expanded(
                 child: Text(
-                  'Make it yours',
+                  'Filters',
                   style: AppTypography.of(context).display(size: 29),
                 ),
               ),
@@ -799,7 +896,9 @@ class _ShopFilterSheetState extends ConsumerState<ShopFilterSheet> {
                   _max.clear();
                   _update(
                     BrowseQuery(
-                      categoryId: widget.query.categoryId,
+                      categoryId: widget.query.providerId == null
+                          ? widget.query.categoryId
+                          : null,
                       providerId: widget.query.providerId,
                       kind: widget.query.kind,
                       collection: widget.query.collection,

@@ -60,9 +60,9 @@ export default function SiteHeader({ session, onLogout }) {
           <Link to="/search" className="icon-button shop-themed-icon" aria-label={t("nav.search")}>
             <IconSearch />
           </Link>
-          <button type="button" className="icon-button shop-themed-icon" aria-label={t("nav.savedProviders")}>
+          <Link to="/me?tab=saved" className="icon-button shop-themed-icon" aria-label={t("nav.savedProviders")}>
             <IconBookmark />
-          </button>
+          </Link>
           <Link to="/cart" className="icon-button shop-themed-icon cart-button" aria-label={t("nav.cart")}>
             <IconCart />
             {cartCount > 0 ? <span className="cart-badge shop-themed-cart-badge">{cartCount}</span> : null}

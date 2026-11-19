@@ -158,17 +158,18 @@ export class PaymentController {
   // trust decision happens inside the service by matching against a transaction we created.
   // Refuses (or, until enforcement is switched on, just logs) a callback that lacks the secret key we put in its URL.
   assertWebhookKey(req) {
-    if (this.paymentService.verifyWebhookKey(req.query?.k)) return;
+    if (this.paymentService.verifyWebhookKey(req.query?.k)) return true;
     if (env.mobileMoneyWebhookEnforce) {
       throw new AppError({ message: "Forbidden", statusCode: 403, code: "WEBHOOK_FORBIDDEN" });
     }
     process.stderr.write(`[webhook] payment callback without a valid key (ref ${req.body?.external_ref ?? req.body?.failed_transaction_reference ?? "?"}); enforcement is off\n`);
+    return false;
   }
 
   mobileMoneySuccessWebhook = async (req, res, next) => {
     try {
-      this.assertWebhookKey(req);
-      const result = await this.paymentService.handleMobileMoneySuccess(req.body);
+      const verified = this.assertWebhookKey(req);
+      const result = await this.paymentService.handleMobileMoneySuccess(req.body, { verified });
       res.status(200).json({ data: result });
     } catch (e) {
       next(e);
@@ -177,8 +178,8 @@ export class PaymentController {
 
   mobileMoneyFailedWebhook = async (req, res, next) => {
     try {
-      this.assertWebhookKey(req);
-      const result = await this.paymentService.handleMobileMoneyFailed(req.body);
+      const verified = this.assertWebhookKey(req);
+      const result = await this.paymentService.handleMobileMoneyFailed(req.body, { verified });
       res.status(200).json({ data: result });
     } catch (e) {
       next(e);

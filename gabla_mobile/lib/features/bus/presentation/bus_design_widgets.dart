@@ -81,6 +81,52 @@ class BusJourneyCard extends ConsumerWidget {
               style: TextStyle(color: c.error, fontSize: 12),
             ),
           ),
+        if (trip.boardingPoint?.isNotEmpty == true)
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: c.secondaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 18,
+                    color: c.onSecondaryContainer,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'PICKUP STAGE',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1,
+                            color: c.onSecondaryContainer,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          trip.boardingPoint!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: c.onSecondaryContainer,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         const SizedBox(height: 18),
         Divider(color: c.outlineVariant),
         const SizedBox(height: 8),
@@ -105,7 +151,7 @@ class BusJourneyCard extends ConsumerWidget {
               ),
             ),
             IconButton.filledTonal(
-              tooltip: 'View trip',
+              tooltip: 'Choose this bus',
               onPressed: () => context.push('/bus/trip/${trip.id}'),
               icon: const Icon(Icons.arrow_forward),
             ),

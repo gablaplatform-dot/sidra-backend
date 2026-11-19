@@ -3,6 +3,7 @@ import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { request } from "../lib/api";
+import useOrderUpdates from "../hooks/useOrderUpdates";
 import { clearSession, getSession } from "../lib/session";
 import { loginPath } from "../lib/authRedirect";
 import { formatUgx } from "../lib/format";
@@ -176,10 +177,9 @@ export default function MyOrders() {
 
   const load = useCallback(() => {
     setError("");
-    request("/engagement/orders/mine?limit=50")
+    return request("/engagement/orders/mine?limit=50")
       .then((result) => setOrders(result?.items || []))
       .catch((e) => {
-        setOrders([]);
         setError(e.message || t("orders.loadFailed"));
       });
   }, []);
@@ -188,6 +188,8 @@ export default function MyOrders() {
     document.title = `${t("nav.myOrders")} | Gabla`;
     if (session) load();
   }, [session, load]);
+
+  useOrderUpdates(load, Boolean(session) && tab === "orders");
 
   const logout = () => {
     clearSession();

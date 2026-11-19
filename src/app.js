@@ -1,3 +1,6 @@
+import { BusRouteDeskService } from './services/busRouteDesk.service.js';
+import { BusManagementService } from './services/busManagement.service.js';
+import { EventTicketsService } from "./services/eventTickets.service.js";
 import { buildShareRoutes } from "./sharing/sharePreview.js";
 import express from "express";
 import helmet from "helmet";
@@ -65,7 +68,7 @@ import { signAccessToken } from "./utils/jwt.js";
 import { env } from "./config/env.js";
 
 // The Android and iOS apps (Capacitor) load the storefront from the phone itself, so their requests carry these origins.
-const NATIVE_APP_ORIGINS = ["https://localhost", "capacitor://localhost"];
+const NATIVE_APP_ORIGINS = ["https://localhost", "capacitor://localhost", "https://sidra-api.fly.dev"];
 
 export const buildApp = () => {
   const app = express();
@@ -164,7 +167,7 @@ export const buildApp = () => {
   const engagementController = new EngagementController({ engagementService });
 
   const searchService = new SearchService();
-  const searchController = new SearchController({ searchService });
+  const searchController = new SearchController({ searchService, aiSearchService });
 
   const rideService = new RideService();
   const rideController = new RideController({ rideService });
@@ -191,11 +194,19 @@ export const buildApp = () => {
     callbackUrls: () => paymentService.mobileMoneyCallbackUrls()
   });
   paymentService.attachBusBooking(busBookingService);
+  const eventTicketsService = new EventTicketsService({
+    gateway: paymentService.mobileMoneyService,
+    callbackUrls: () => paymentService.mobileMoneyCallbackUrls()
+  });
+  paymentService.attachEventTickets(eventTicketsService);
   paymentService.attachServiceBooking(serviceBookingService);
   const busOperationsService = new BusOperationsService({ emailService: busEmailService, catalogService: busCatalogService, bookingService: busBookingService });
 
   app.locals.ensureAudiences = () => audienceService.ensureCountries();
-  app.locals.runMaintenance = () => runMaintenance({ serviceBookingService });
+  const busManagementService = new BusManagementService({ catalogService:busCatalogService,operatorService:busOperatorService,bookingService:busBookingService });
+  busBookingService.management=busManagementService;
+  const busRouteDeskService=new BusRouteDeskService({catalogService:busCatalogService});
+  app.locals.runMaintenance = () => runMaintenance({ serviceBookingService, eventTicketsService, busManagementService });
 
   app.use(
     "/api/v1",
@@ -220,7 +231,8 @@ export const buildApp = () => {
       rideController,
       promotionController,
       interestController,
-      bus: { busBookingService, busOperatorService, busCatalogService, busOperationsService, storageService },
+      eventTicketsService,
+      bus: { busBookingService, busOperatorService, busCatalogService, busOperationsService, busManagementService, busRouteDeskService, storageService },
       documentService,
       aiSettingsService,
       aiSearchService,
@@ -231,6 +243,20 @@ export const buildApp = () => {
   app.use(buildShareRoutes());
 
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const adminDist=path.resolve(__dirname,'..','admin_dist');
+  if(fs.existsSync(adminDist)) {
+    // The separately hosted admin already uses these vendors. Keep its policy scoped to /admin.
+    app.use('/login-assets',express.static(path.join(adminDist,'login-assets'),{maxAge:'1h'}));
+    app.use('/admin',helmet.contentSecurityPolicy({directives:{
+      scriptSrc:["'self'","'unsafe-eval'",'https://unpkg.com','https://cdn.jsdelivr.net','https://maps.googleapis.com','https://maps.gstatic.com'],
+      imgSrc:["'self'",'data:','https:'],
+      connectSrc:["'self'",'https://*.googleapis.com','https://*.google.com','https://*.gstatic.com','https://*.r2.cloudflarestorage.com','https://*.r2.dev'],
+      workerSrc:["'self'",'blob:'],
+      frameSrc:["'self'",'https://*.google.com']
+    }}));
+    app.use('/admin',express.static(adminDist,{maxAge:'1h',setHeaders(res,file){if(file.endsWith('index.html'))res.setHeader('Cache-Control','no-cache');}}));
+    app.get(['/admin','/admin/*'],(_req,res)=>res.sendFile(path.join(adminDist,'index.html')));
+  }
   const publicDist = path.resolve(__dirname, "..", "public_dist");
   if (fs.existsSync(publicDist)) {
     app.use(

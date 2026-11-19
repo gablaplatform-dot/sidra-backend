@@ -15,7 +15,6 @@ final nearbyRepositoryProvider = Provider(
 class NearbyState {
   const NearbyState({
     this.query = '',
-    this.type,
     this.origin = NearbyOrigin.kampala,
     this.result = const AsyncData(NearbyResponse()),
     this.selectedId,
@@ -23,7 +22,6 @@ class NearbyState {
     this.notice,
   });
   final String query;
-  final String? type;
   final NearbyOrigin origin;
   final AsyncValue<NearbyResponse> result;
   final String? selectedId, notice;
@@ -31,8 +29,6 @@ class NearbyState {
   List<NearbyItem> get items => result.valueOrNull?.items ?? [];
   NearbyState copyWith({
     String? query,
-    String? type,
-    bool clearType = false,
     NearbyOrigin? origin,
     AsyncValue<NearbyResponse>? result,
     String? selectedId,
@@ -42,7 +38,6 @@ class NearbyState {
     bool clearNotice = false,
   }) => NearbyState(
     query: query ?? this.query,
-    type: clearType ? null : type ?? this.type,
     origin: origin ?? this.origin,
     result: result ?? this.result,
     selectedId: clearSelected ? null : selectedId ?? this.selectedId,
@@ -90,9 +85,14 @@ class NearbyController extends AutoDisposeNotifier<NearbyState> {
     }
   }
 
-  void setType(String? type) {
-    state = state.copyWith(type: type, clearType: type == null);
-    search();
+  Future<void> setRadius(double radius) async {
+    if (!radius.isFinite || radius < 1 || radius > 100) return;
+    state = state.copyWith(origin: state.origin.withRadius(radius));
+    if (state.origin.point == null && state.origin.district != null) {
+      await useTown(state.origin.district!);
+    } else {
+      await search();
+    }
   }
 
   void select(String id) {
@@ -107,12 +107,11 @@ class NearbyController extends AutoDisposeNotifier<NearbyState> {
     if (state.query.trim().length < 2) return;
     final query = state.query;
     final origin = state.origin;
-    final type = state.type;
     state = state.copyWith(result: const AsyncLoading(), clearSelected: true);
     try {
       final response = await ref
           .read(nearbyRepositoryProvider)
-          .search(query: query, origin: origin, type: type);
+          .search(query: query, origin: origin);
       if (!_alive || request != _generation) return;
       state = state.copyWith(
         result: AsyncData(response),
@@ -127,7 +126,11 @@ class NearbyController extends AutoDisposeNotifier<NearbyState> {
 
   void searchArea(LatLng point) {
     state = state.copyWith(
-      origin: NearbyOrigin(label: 'Selected map area', point: point),
+      origin: NearbyOrigin(
+        label: 'Selected map area',
+        point: point,
+        radiusKm: state.origin.radiusKm,
+      ),
       clearNotice: true,
     );
     search();
@@ -144,6 +147,7 @@ class NearbyController extends AutoDisposeNotifier<NearbyState> {
       if (!_alive) return;
       state = state.copyWith(
         origin: NearbyOrigin(
+          radiusKm: state.origin.radiusKm,
           label: 'Near your location',
           point: LatLng(location.lat, location.lng),
           isGps: true,
@@ -165,6 +169,7 @@ class NearbyController extends AutoDisposeNotifier<NearbyState> {
   Future<void> usePlace(RideLocation place) async {
     state = state.copyWith(
       origin: NearbyOrigin(
+        radiusKm: state.origin.radiusKm,
         label: 'Around ${place.address}',
         point: LatLng(place.lat, place.lng),
       ),
@@ -185,6 +190,7 @@ class NearbyController extends AutoDisposeNotifier<NearbyState> {
       if (!_alive) return;
       state = state.copyWith(
         origin: NearbyOrigin(
+          radiusKm: state.origin.radiusKm,
           label: 'Around ${town.trim()}',
           point: LatLng(location.lat, location.lng),
         ),

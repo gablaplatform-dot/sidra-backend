@@ -1,3 +1,4 @@
+import '../domain/bus_booking.dart';
 import '../../../core/network/api_client.dart';
 import '../domain/bus_ticket.dart';
 import '../domain/bus_trip.dart';
@@ -51,6 +52,20 @@ class BusRepository {
 
   Future<Map<String, dynamic>> fetchPark(String slug) =>
       _client.get<Map<String, dynamic>>('/bus/parks/$slug');
+
+  Future<List<BusBooking>> fetchMyBookings() async {
+    final data = await _client.get<Map<String, dynamic>>('/bus/my-tickets');
+    return [
+      for (final b in [
+        ...?data['upcoming'] as List?,
+        ...?data['past'] as List?,
+      ])
+        BusBooking.fromJson(Map<String, dynamic>.from(b)),
+    ];
+  }
+
+  Future<Map<String, dynamic>> cancelBooking(String id) =>
+      _client.post('/bus/bookings/${Uri.encodeComponent(id)}/cancel');
 
   Future<List<BusTicket>> fetchMyTickets() async {
     final data = await _client.get<Map<String, dynamic>>('/bus/my-tickets');

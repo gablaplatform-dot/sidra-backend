@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/settings/application/theme_controller.dart';
 import '../../features/settings/domain/background_motion.dart';
+import '../theme/background_grain.dart';
 
 /// A background behind route content, never an overlay on text or artwork.
 class AppMotionSurface extends ConsumerWidget {
@@ -24,11 +25,21 @@ class AppMotionSurface extends ConsumerWidget {
             speed: preferences.motionSpeed,
           ),
         ),
+        if (preferences.backgroundGrainEnabled)
+          const Positioned.fill(
+            child: IgnorePointer(
+              child: RepaintBoundary(
+                child: DecoratedBox(decoration: backgroundGrain),
+              ),
+            ),
+          ),
         Theme(
           data: theme.copyWith(
-            scaffoldBackgroundColor: preferences.motion == BackgroundMotion.none
-                ? theme.scaffoldBackgroundColor
-                : Colors.transparent,
+            scaffoldBackgroundColor:
+                preferences.backgroundGrainEnabled ||
+                    preferences.motion != BackgroundMotion.none
+                ? Colors.transparent
+                : theme.scaffoldBackgroundColor,
           ),
           child: child,
         ),

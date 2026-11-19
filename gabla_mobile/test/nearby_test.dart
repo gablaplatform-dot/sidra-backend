@@ -8,10 +8,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gabla_mobile/core/network/api_client.dart';
+import 'package:gabla_mobile/core/network/network_providers.dart';
 import 'package:gabla_mobile/core/theme/app_theme_style.dart';
 import 'package:gabla_mobile/features/auth/application/session_controller.dart';
 import 'package:gabla_mobile/features/auth/domain/session.dart';
 import 'package:gabla_mobile/features/nearby/application/nearby_controller.dart';
+import 'package:gabla_mobile/features/nearby/application/nearby_events_provider.dart';
 import 'package:gabla_mobile/features/nearby/data/nearby_repository.dart';
 import 'package:gabla_mobile/features/nearby/domain/nearby_result.dart';
 import 'package:gabla_mobile/features/nearby/presentation/nearby_map.dart';
@@ -90,6 +92,38 @@ Widget _fakeNativeMap(NearbyMapConfiguration configuration) {
       ),
     ),
   );
+}
+
+class _EventsApi extends ApiClient {
+  _EventsApi()
+    : super(
+        getToken: () => null,
+        onTokenRenewed: (_) {},
+        onUnauthorized: () {},
+      );
+
+  @override
+  Future<T> get<T>(String path, {Map<String, dynamic>? query}) async {
+    if (path == '/listings/nearby-map') {
+      return {'items': <dynamic>[], 'total': 0} as T;
+    }
+    expect(path, '/events');
+    return {
+          'total': 3,
+          'items': [
+            {
+              'id': 'garden',
+              'title': 'Garden jazz',
+              'lat': .35,
+              'lng': 32.58,
+              'startsAt': '2026-11-20T18:00:00Z',
+            },
+            {'id': 'far', 'title': 'Faraway festival', 'lat': .45, 'lng': 33.2},
+            {'id': 'unknown', 'title': 'No coordinates'},
+          ],
+        }
+        as T;
+  }
 }
 
 class _DeniedLocation extends DeviceLocationService {
@@ -213,6 +247,43 @@ void main() {
     expect(origin.isGps, isFalse);
     expect(NearbyOrigin.kampala.query['radiusKm'], 15);
   });
+  test('radius follows location changes and filters the events feed', () async {
+    final repository = _Repository();
+    final container = ProviderContainer(
+      overrides: [
+        nearbyRepositoryProvider.overrideWithValue(repository),
+        sessionControllerProvider.overrideWith(_Session.new),
+        apiClientProvider.overrideWithValue(_EventsApi()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final subscription = container.listen(nearbyControllerProvider, (_, _) {});
+    addTearDown(subscription.close);
+    await container.read(nearbyControllerProvider.notifier).setRadius(100);
+    container
+        .read(nearbyControllerProvider.notifier)
+        .searchArea(NearbyOrigin.kampala.point!);
+    final origin = container.read(nearbyControllerProvider).origin;
+    expect(origin.query['radiusKm'], 100);
+    final events = container.listen(nearbyEventsProvider(origin), (_, _) {});
+    addTearDown(events.close);
+    final result = await container
+        .read(nearbyEventsProvider(origin))
+        .when(
+          data: (items) async => items,
+          loading: () async {
+            await Future<void>.delayed(Duration.zero);
+            return container.read(nearbyEventsProvider(origin)).value!;
+          },
+          error: (e, s) => Error.throwWithStackTrace(e, s),
+        );
+    expect(
+      result.map((event) => event.post['id']),
+      containsAll(['garden', 'far']),
+    );
+    expect(result.map((event) => event.post['id']), isNot(contains('unknown')));
+  });
+
   testWidgets(
     'missing native key keeps nearby results usable without a platform map',
     (tester) async {
@@ -223,6 +294,7 @@ void main() {
               () => _Theme(AppThemeStyle.discover),
             ),
             nearbyControllerProvider.overrideWith(_WithResults.new),
+            apiClientProvider.overrideWithValue(_EventsApi()),
             googleMapsConfiguredProvider.overrideWith((ref) async => false),
             nearbyNativeMapBuilderProvider.overrideWithValue(
               (_) => throw StateError(
@@ -235,6 +307,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Map unavailable right now'), findsOneWidget);
+      await tester.tap(find.byTooltip('Show list'));
+      await tester.pumpAndSettle();
       expect(find.text('Phone repair near you'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
@@ -253,6 +327,7 @@ void main() {
             overrides: [
               themeControllerProvider.overrideWith(() => _Theme(style)),
               nearbyControllerProvider.overrideWith(_WithResults.new),
+              apiClientProvider.overrideWithValue(_EventsApi()),
               googleMapsConfiguredProvider.overrideWith((ref) async => true),
               nearbyNativeMapBuilderProvider.overrideWithValue(_fakeNativeMap),
             ],
@@ -274,13 +349,45 @@ void main() {
           findsOneWidget,
         );
         expect(find.byTooltip('Use my location'), findsOneWidget);
+        expect(
+          tester.getSize(find.byKey(const ValueKey('google-map-test-surface'))),
+          const Size(320, 800),
+        );
+        await tester.tap(find.text('Events'));
+        await tester.pumpAndSettle();
+        expect(find.text('Garden jazz'), findsOneWidget);
+        expect(find.text('Faraway festival'), findsNothing);
+        expect(find.text('No coordinates'), findsNothing);
+        expect(find.text('Everything'), findsNothing);
         expect(tester.takeException(), isNull);
+        await tester.tap(find.text('Results'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Hide results'));
+        await tester.pumpAndSettle();
+        expect(find.text('Show results'), findsOneWidget);
+        await tester.tap(find.text('Show results'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Hide search'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Show search'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('2'));
         await tester.pumpAndSettle();
         final container = ProviderScope.containerOf(
           tester.element(find.byType(NearbyScreen)),
         );
         expect(container.read(nearbyControllerProvider).selectedId, 'b');
+        await tester.tap(find.byTooltip('Search radius'));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is CheckedPopupMenuItem<double> && widget.value == 25,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('25 km'), findsOneWidget);
+        expect(container.read(nearbyControllerProvider).origin.radiusKm, 25);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
         await tester.pumpAndSettle();

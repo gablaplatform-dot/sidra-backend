@@ -1015,7 +1015,7 @@ class _BusOperatorPortalScreenState
     MediaUploadButton(
       video: false,
       folder: 'bus-operators',
-        registerAsset: false,
+      registerAsset: false,
       label: 'Update logo',
       onUploaded: (u) => run(() async {
         await ref
@@ -1026,7 +1026,7 @@ class _BusOperatorPortalScreenState
     MediaUploadButton(
       video: false,
       folder: 'bus-operators',
-        registerAsset: false,
+      registerAsset: false,
       label: 'Update cover photo',
       onUploaded: (u) => run(() async {
         await ref

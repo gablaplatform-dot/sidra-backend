@@ -11,6 +11,7 @@ import { findCategoryPath } from "../lib/categories";
 import SiteHeader from "../components/SiteHeader";
 import { ProviderPageSkeleton } from "../components/Skeleton";
 import UnlockModal from "../components/UnlockModal";
+import SaveBusinessButton from "../components/SaveBusinessButton";
 import ProviderContactCard from "../components/ProviderContactCard";
 import ProviderLayoutDefault from "../components/layouts/ProviderLayoutDefault";
 import ProviderLayoutGallery from "../components/layouts/ProviderLayoutGallery";
@@ -114,6 +115,7 @@ export default function ProviderDetail() {
       ) : (
         <div className="pcc-page">
           <div className="pcc-page-main">
+            <SaveBusinessButton providerId={provider.id} />
             {provider.audiences?.length ? (
               <div className="aud-serves">
                 <strong>{t("audience.serves")}</strong>

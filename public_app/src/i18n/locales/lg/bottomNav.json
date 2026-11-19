@@ -1,0 +1,23 @@
+{
+  "bottomNav": {
+    "aria": "Okutambula okukulu",
+    "home": "Ewaka",
+    "shop": "Edduuka",
+    "services": "Obuweereza",
+    "bus": "Ebbaasi",
+    "ride": "Entambula",
+    "me": "Nze",
+    "categories": "Ebika",
+    "cart": "Ekibbo",
+    "book": "Wandiisa",
+    "parks": "Ebifo",
+    "tickets": "Amatikiti",
+    "browse": "Laba",
+    "search": "Noonya",
+    "jobs": "Emirimu",
+    "saved": "Ebiterekeddwa",
+    "mine": "Byange",
+    "events": "Emikolo",
+    "eventTickets": "Amatikiti"
+  }
+}

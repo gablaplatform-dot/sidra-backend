@@ -1,6 +1,7 @@
 import '../../../core/location/map_mode.dart';
 import '../../../core/location/google_place_picker.dart';
 import 'nearby_search_chrome.dart';
+import 'nearby_events_rail.dart';
 import '../../../core/theme/font_group.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,82 +24,67 @@ class NearbyScreen extends ConsumerStatefulWidget {
 class _NearbyScreenState extends ConsumerState<NearbyScreen> {
   final _query = TextEditingController();
   final _queryFocus = FocusNode();
-  final _deck = PageController(viewportFraction: .91);
   final _listScroll = ScrollController();
   final _sheetController = DraggableScrollableController();
   ScrollController? _activeResultsScroll;
-  bool _listOnly = false, _mapExpanded = false, _areaMoved = false;
+  bool _listOnly = false, _areaMoved = false;
+  bool _searchHidden = false, _sheetHidden = false, _events = false;
   LatLng? _camera;
-  double _zoom = 13;
+  double _zoom = 13, _sheetExtent = .34;
   int _focusRevision = 0;
-  double _sheetExtent = .28;
-  bool _syncingDeck = false;
+
   @override
   void dispose() {
     _query.dispose();
     _queryFocus.dispose();
-    _deck.dispose();
     _listScroll.dispose();
     _sheetController.dispose();
     super.dispose();
   }
 
+  void _setSheetExtent(double extent) {
+    if (!_sheetController.isAttached) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _sheetController.jumpTo(extent);
+    } else {
+      _sheetController.animateTo(
+        extent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
   void _pick(NearbyItem item) {
-    setState(() => _focusRevision++);
+    setState(() {
+      _focusRevision++;
+      _events = false;
+      _sheetHidden = false;
+    });
     ref.read(nearbyControllerProvider.notifier).select(item.id);
-    final index = ref
-        .read(nearbyControllerProvider)
-        .items
-        .indexWhere((i) => i.id == item.id);
-    if (_deck.hasClients && index >= 0) {
-      _syncingDeck = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_listOnly) _setSheetExtent(.65);
+      final scroll = _activeResultsScroll;
+      final index = ref
+          .read(nearbyControllerProvider)
+          .items
+          .indexWhere((i) => i.id == item.id);
+      if (scroll == null || !scroll.hasClients || index < 0) return;
+      final scale = MediaQuery.textScalerOf(context).scale(1);
+      final target = (100 * scale + index * 180 * scale)
+          .clamp(0.0, scroll.position.maxScrollExtent)
+          .toDouble();
       if (MediaQuery.disableAnimationsOf(context)) {
-        _deck.jumpToPage(index);
-        WidgetsBinding.instance.addPostFrameCallback(
-          (_) => _syncingDeck = false,
-        );
+        scroll.jumpTo(target);
       } else {
-        _deck
-            .animateToPage(
-              index,
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeOutCubic,
-            )
-            .whenComplete(() => _syncingDeck = false);
+        scroll.animateTo(
+          target,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        );
       }
-    }
-    if (!_deck.hasClients) {
-      if (_sheetController.isAttached && !_listOnly) {
-        if (MediaQuery.disableAnimationsOf(context)) {
-          _sheetController.jumpTo(.55);
-        } else {
-          _sheetController.animateTo(
-            .55,
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeOutCubic,
-          );
-        }
-      }
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final scroll = _activeResultsScroll;
-        if (!mounted || scroll == null || !scroll.hasClients || index < 0) {
-          return;
-        }
-        final scale = MediaQuery.textScalerOf(context).scale(1);
-        final target = (100 * scale + index * 180 * scale)
-            .clamp(0.0, scroll.positions.last.maxScrollExtent)
-            .toDouble();
-        if (MediaQuery.disableAnimationsOf(context)) {
-          scroll.jumpTo(target);
-        } else {
-          scroll.animateTo(
-            target,
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeOutCubic,
-          );
-        }
-      });
-    }
+    });
   }
 
   void _open(NearbyItem item) {
@@ -126,297 +112,173 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(nearbyControllerProvider);
     final style = ref.watch(themeControllerProvider).style;
-    final c = Theme.of(context).colorScheme;
+    final safe = MediaQuery.paddingOf(context);
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
     final selected = state.items
         .where((i) => i.id == state.selectedId)
         .firstOrNull;
     final focus =
         selected?.pin ?? state.result.valueOrNull?.centre ?? state.origin.point;
-    final dark = style == AppThemeStyle.cinematic;
     final tools = NearbySearchChrome(
       style: style,
       state: state,
       controller: _query,
       focus: _queryFocus,
       listOnly: _listOnly,
-      onBack: () => context.pop(),
+      onBack: () => context.canPop() ? context.pop() : context.go('/home'),
       onQuery: ref.read(nearbyControllerProvider.notifier).setQuery,
       onSubmit: ref.read(nearbyControllerProvider.notifier).search,
       onClear: () {
         _query.clear();
         ref.read(nearbyControllerProvider.notifier).setQuery('');
       },
-      onType: ref.read(nearbyControllerProvider.notifier).setType,
       onArea: _chooseArea,
+      onRadius: ref.read(nearbyControllerProvider.notifier).setRadius,
       onLocate: () {
         setState(() => _areaMoved = false);
         ref.read(nearbyControllerProvider.notifier).useMyLocation();
       },
-      onToggleView: () => setState(() => _listOnly = !_listOnly),
-    );
-    final map = NearbyMap(
-      style: style,
-      items: state.items,
-      initialCentre:
-          _camera ??
-          state.result.valueOrNull?.centre ??
-          state.origin.point ??
-          NearbyOrigin.kampala.point!,
-      initialZoom: _zoom,
-      focus: focus,
-      focusRevision: _focusRevision,
-      you: state.origin.isGps ? state.origin.point : null,
-      selectedId: state.selectedId,
-      onSelect: (id) => _pick(state.items.firstWhere((i) => i.id == id)),
-      onCameraChanged: (point, zoom, gesture) {
-        _camera = point;
-        _zoom = zoom;
-        if (gesture && !_areaMoved) setState(() => _areaMoved = true);
+      onHide: () {
+        _queryFocus.unfocus();
+        setState(() => _searchHidden = true);
+      },
+      onToggleView: () {
+        _queryFocus.unfocus();
+        setState(() {
+          _listOnly = !_listOnly;
+          _sheetHidden = false;
+        });
       },
     );
-    final mapWithControls = Stack(
-      children: [
-        Positioned.fill(child: map),
-        const Positioned(top: 12, right: 12, child: MapModeButton()),
-        if (_areaMoved)
-          Positioned(
-            top: 38,
-            left: 16,
-            right: 76,
-            child: Center(
-              child: FilledButton.tonalIcon(
-                icon: const Icon(Icons.search, size: 16),
-                label: const Text('Search this area'),
-                onPressed: () {
-                  if (_camera != null) {
-                    setState(() => _areaMoved = false);
-                    ref
-                        .read(nearbyControllerProvider.notifier)
-                        .searchArea(_camera!);
-                  }
-                },
-              ),
-            ),
+    if (_listOnly) {
+      return Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(padding: const EdgeInsets.all(8), child: tools),
+              Expanded(child: _sheet(state, style, _listScroll)),
+            ],
           ),
-      ],
-    );
-    final duration = Duration(
-      milliseconds: MediaQuery.disableAnimationsOf(context) ? 0 : 420,
-    );
+        ),
+      );
+    }
+    final controlsTop = safe.top + (_searchHidden ? 62 : 150);
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: SafeArea(
-        child: Column(
+      body: LayoutBuilder(
+        builder: (context, bounds) => Stack(
           children: [
-            tools,
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, bounds) => AnimatedSwitcher(
-                  duration: duration,
-                  child: _listOnly
-                      ? KeyedSubtree(
-                          key: const ValueKey('list'),
-                          child: _results(state, style),
-                        )
-                      : KeyedSubtree(
-                          key: ValueKey(style),
-                          child: switch (style) {
-                            AppThemeStyle.gabla => Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: NearbyMapInsets(
-                                    padding: EdgeInsets.only(
-                                      bottom: bounds.maxHeight * _sheetExtent,
-                                    ),
-                                    child: mapWithControls,
-                                  ),
-                                ),
-                                NotificationListener<
-                                  DraggableScrollableNotification
-                                >(
-                                  onNotification: (notification) {
-                                    final extent = notification.extent;
-                                    WidgetsBinding.instance
-                                        .addPostFrameCallback((_) {
-                                          if (mounted &&
-                                              (_sheetExtent - extent).abs() >
-                                                  .003)
-                                            setState(
-                                              () => _sheetExtent = extent,
-                                            );
-                                        });
-                                    return false;
-                                  },
-                                  child: DraggableScrollableSheet(
-                                    controller: _sheetController,
-                                    initialChildSize: .28,
-                                    minChildSize: .16,
-                                    maxChildSize: .8,
-                                    snap: true,
-                                    snapSizes: const [.28, .55, .8],
-                                    builder: (context, scroll) =>
-                                        _sheet(state, style, scroll),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            AppThemeStyle.editorial => Column(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  child: AnimatedContainer(
-                                    duration: duration,
-                                    height: _mapExpanded
-                                        ? bounds.maxHeight * .65
-                                        : (bounds.maxHeight * .4)
-                                              .clamp(80, 145)
-                                              .toDouble(),
-                                    child: Stack(
-                                      children: [
-                                        Positioned.fill(
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            child: mapWithControls,
-                                          ),
-                                        ),
-                                        Positioned(
-                                          bottom: 24,
-                                          right: 10,
-                                          child: IconButton.filled(
-                                            tooltip: _mapExpanded
-                                                ? 'Shrink map'
-                                                : 'Expand map',
-                                            onPressed: () => setState(
-                                              () =>
-                                                  _mapExpanded = !_mapExpanded,
-                                            ),
-                                            icon: Icon(
-                                              _mapExpanded
-                                                  ? Icons.fullscreen_exit
-                                                  : Icons.fullscreen,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Expanded(child: _results(state, style)),
-                              ],
-                            ),
-                            AppThemeStyle.discover => Stack(
-                              children: [
-                                Positioned.fill(
-                                  bottom: (bounds.maxHeight * .42)
-                                      .clamp(80, 210)
-                                      .toDouble(),
-                                  child: mapWithControls,
-                                ),
-                                Positioned(
-                                  bottom: 0,
-                                  left: 0,
-                                  right: 0,
-                                  height: (bounds.maxHeight * .42)
-                                      .clamp(80, 214)
-                                      .toDouble(),
-                                  child: _rail(state, style),
-                                ),
-                              ],
-                            ),
-                            AppThemeStyle.cinematic => Stack(
-                              children: [
-                                Positioned.fill(
-                                  bottom: (bounds.maxHeight * .46)
-                                      .clamp(
-                                        80,
-                                        state.items.isEmpty ? 150 : 245,
-                                      )
-                                      .toDouble(),
-                                  child: mapWithControls,
-                                ),
-                                Positioned(
-                                  left: 0,
-                                  right: 0,
-                                  bottom: 0,
-                                  height: (bounds.maxHeight * .46)
-                                      .clamp(
-                                        80,
-                                        state.items.isEmpty ? 160 : 245,
-                                      )
-                                      .toDouble(),
-                                  child: _rail(state, style, cinematic: dark),
-                                ),
-                              ],
-                            ),
-                            AppThemeStyle.orbit => Column(
-                              children: [
-                                AnimatedContainer(
-                                  duration: duration,
-                                  height:
-                                      bounds.maxHeight *
-                                      (_mapExpanded ? .82 : .55),
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      16,
-                                      0,
-                                      16,
-                                      8,
-                                    ),
-                                    child: AnimatedContainer(
-                                      duration: duration,
-                                      clipBehavior: Clip.antiAlias,
-                                      decoration: BoxDecoration(
-                                        border: Border.all(
-                                          color: c.primary.withValues(
-                                            alpha: .25,
-                                          ),
-                                          width: 3,
-                                        ),
-                                        borderRadius: BorderRadius.circular(
-                                          _mapExpanded ? 24 : 200,
-                                        ),
-                                      ),
-                                      child: Stack(
-                                        children: [
-                                          Positioned.fill(
-                                            child: mapWithControls,
-                                          ),
-                                          Positioned(
-                                            bottom: 30,
-                                            right: 22,
-                                            child: IconButton.filled(
-                                              tooltip: _mapExpanded
-                                                  ? 'Circular view'
-                                                  : 'Expand map',
-                                              onPressed: () => setState(
-                                                () => _mapExpanded =
-                                                    !_mapExpanded,
-                                              ),
-                                              icon: Icon(
-                                                _mapExpanded
-                                                    ? Icons.circle_outlined
-                                                    : Icons.open_in_full,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(child: _results(state, style)),
-                              ],
-                            ),
-                          },
-                        ),
+            Positioned.fill(
+              child: NearbyMapInsets(
+                padding: EdgeInsets.only(
+                  top: controlsTop,
+                  bottom: _sheetHidden
+                      ? safe.bottom + 64
+                      : bounds.maxHeight * _sheetExtent,
+                ),
+                child: NearbyMap(
+                  style: style,
+                  items: state.items,
+                  initialCentre:
+                      _camera ??
+                      state.origin.point ??
+                      NearbyOrigin.kampala.point!,
+                  initialZoom: _zoom,
+                  focus: focus,
+                  focusRevision: _focusRevision,
+                  you: state.origin.isGps ? state.origin.point : null,
+                  selectedId: state.selectedId,
+                  onSelect: (id) =>
+                      _pick(state.items.firstWhere((i) => i.id == id)),
+                  onCameraChanged: (point, zoom, gesture) {
+                    _camera = point;
+                    _zoom = zoom;
+                    if (gesture && !_areaMoved)
+                      setState(() => _areaMoved = true);
+                  },
                 ),
               ),
             ),
+            Positioned(
+              top: safe.top + 8,
+              left: 12,
+              right: 12,
+              child: _searchHidden
+                  ? Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: FilledButton.tonalIcon(
+                        onPressed: () => setState(() => _searchHidden = false),
+                        icon: const Icon(Icons.search),
+                        label: const Text('Show search'),
+                      ),
+                    )
+                  : tools,
+            ),
+            Positioned(
+              top: controlsTop + 118,
+              right: 12,
+              child: const MapModeButton(),
+            ),
+            if (_areaMoved)
+              Positioned(
+                top: controlsTop + 8,
+                left: 12,
+                right: 72,
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: FilledButton.tonalIcon(
+                    icon: const Icon(Icons.search, size: 16),
+                    label: const Text('Search this area'),
+                    onPressed: () {
+                      final camera = _camera;
+                      if (camera == null) return;
+                      setState(() => _areaMoved = false);
+                      ref
+                          .read(nearbyControllerProvider.notifier)
+                          .searchArea(camera);
+                    },
+                  ),
+                ),
+              ),
+            if (!_sheetHidden && keyboard == 0)
+              NotificationListener<DraggableScrollableNotification>(
+                onNotification: (notification) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted &&
+                        (_sheetExtent - notification.extent).abs() > .003) {
+                      setState(() => _sheetExtent = notification.extent);
+                    }
+                  });
+                  return false;
+                },
+                child: DraggableScrollableSheet(
+                  controller: _sheetController,
+                  initialChildSize: .34,
+                  minChildSize: .16,
+                  maxChildSize: .86,
+                  snap: true,
+                  snapSizes: const [.16, .34, .65, .86],
+                  builder: (context, scroll) => _sheet(state, style, scroll),
+                ),
+              ),
+            if (_sheetHidden || keyboard > 0)
+              Positioned(
+                bottom: safe.bottom + keyboard + 16,
+                left: 20,
+                right: 20,
+                child: Center(
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      _queryFocus.unfocus();
+                      setState(() => _sheetHidden = false);
+                    },
+                    icon: const Icon(Icons.keyboard_arrow_up),
+                    label: Text(
+                      _events ? 'Show nearby events' : 'Show results',
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -447,7 +309,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
           const SizedBox(height: 5),
           Text(
             response?.widened == true
-                ? 'Search widened beyond 15 km · pins are approximate'
+                ? 'Search widened beyond ${state.origin.radiusKm.round()} km · pins are approximate'
                 : 'Nearest matches first · pins are approximate',
             style: TextStyle(
               fontSize: 10,
@@ -556,6 +418,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
                 item: state.items[index],
                 selected: state.selectedId == state.items[index].id,
                 editorial: style == AppThemeStyle.editorial,
+                photo: style == AppThemeStyle.cinematic,
                 onPick: () => _pick(state.items[index]),
                 onOpen: () => _open(state.items[index]),
               ),
@@ -572,82 +435,113 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
     NearbyState state,
     AppThemeStyle style,
     ScrollController scroll,
-  ) => Material(
-    elevation: 8,
-    color: Theme.of(context).colorScheme.surface,
-    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-    clipBehavior: Clip.antiAlias,
-    child: Column(
-      children: [
-        Center(
-          child: Container(
-            width: 38,
-            height: 4,
-            margin: const EdgeInsets.only(top: 10),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.outlineVariant,
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        ),
-        Expanded(child: _results(state, style, scroll: scroll)),
-      ],
-    ),
-  );
-  Widget _rail(
-    NearbyState state,
-    AppThemeStyle style, {
-    bool cinematic = false,
-  }) {
-    if (state.items.isEmpty) {
-      return Material(
-        color: Theme.of(context).colorScheme.surface,
-        child: _empty(state),
-      );
-    }
-    return LayoutBuilder(
-      builder: (context, bounds) {
-        if (bounds.maxHeight < 180) return _results(state, style);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
-              child: Text(
-                '${state.items.length} matches · swipe to explore',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            Expanded(
-              child: PageView.builder(
-                controller: _deck,
-                itemCount: state.items.length,
-                onPageChanged: (index) {
-                  if (!_syncingDeck) {
-                    setState(() => _focusRevision++);
-                    ref
-                        .read(nearbyControllerProvider.notifier)
-                        .select(state.items[index].id);
-                  }
-                },
-                itemBuilder: (context, index) => Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 0, 12, 12),
-                  child: _ResultCard(
-                    item: state.items[index],
-                    selected: state.selectedId == state.items[index].id,
-                    photo: cinematic,
-                    onPick: () => _pick(state.items[index]),
-                    onOpen: () => _open(state.items[index]),
+  ) {
+    final c = Theme.of(context).colorScheme;
+    final radius = switch (style) {
+      AppThemeStyle.editorial => 4.0,
+      AppThemeStyle.orbit => 10.0,
+      AppThemeStyle.cinematic => 12.0,
+      AppThemeStyle.gabla => 20.0,
+      AppThemeStyle.discover => 24.0,
+    };
+    return Material(
+      elevation: 12,
+      color: c.surface,
+      borderRadius: BorderRadius.vertical(top: Radius.circular(radius)),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onVerticalDragUpdate: _listOnly
+                ? null
+                : (details) {
+                    if (!_sheetController.isAttached) return;
+                    final extent =
+                        _sheetController.size -
+                        details.delta.dy / MediaQuery.sizeOf(context).height;
+                    _sheetController.jumpTo(extent.clamp(.16, .86));
+                  },
+            child: Column(
+              children: [
+                if (!_listOnly)
+                  Semantics(
+                    button: true,
+                    label: 'Expand or collapse results',
+                    child: InkWell(
+                      onTap: () =>
+                          _setSheetExtent(_sheetExtent < .5 ? .65 : .16),
+                      child: SizedBox(
+                        height: 22,
+                        width: double.infinity,
+                        child: Center(
+                          child: Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: c.outlineVariant,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 4, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SegmentedButton<bool>(
+                          showSelectedIcon: false,
+                          segments: const [
+                            ButtonSegment(value: false, label: Text('Results')),
+                            ButtonSegment(value: true, label: Text('Events')),
+                          ],
+                          selected: {_events},
+                          onSelectionChanged: (selection) => setState(() {
+                            _events = selection.single;
+                            _activeResultsScroll = null;
+                          }),
+                        ),
+                      ),
+                      if (!_listOnly)
+                        IconButton(
+                          tooltip: 'Hide results',
+                          onPressed: () => setState(() => _sheetHidden = true),
+                          icon: const Icon(Icons.keyboard_arrow_down),
+                        ),
+                    ],
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        );
-      },
+          ),
+          Expanded(
+            child: _events
+                ? ListView(
+                    controller: scroll,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      NearbyEventsRail(origin: state.origin, style: style),
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          18,
+                          8,
+                          18,
+                          MediaQuery.paddingOf(context).bottom + 18,
+                        ),
+                        child: Text(
+                          'Within ${state.origin.radiusKm.round()} km · next 30 days',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  )
+                : _results(state, style, scroll: scroll),
+          ),
+        ],
+      ),
     );
   }
 }

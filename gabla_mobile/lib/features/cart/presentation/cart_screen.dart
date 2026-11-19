@@ -1,3 +1,4 @@
+import '../../../core/widgets/page_band.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +24,7 @@ class CartScreen extends ConsumerWidget {
     final cart = ref.watch(cartControllerProvider);
     final products = ref.watch(cartProductsProvider);
     final style = commerceStyle(ref);
+    final c = Theme.of(context).colorScheme;
     final total = products.valueOrNull?.entries.fold<double>(
       0,
       (sum, e) => sum + e.value.price * (cart[e.key] ?? 0),
@@ -115,15 +117,20 @@ class CartScreen extends ConsumerWidget {
           : ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                CommerceTitle(
-                  style == AppThemeStyle.orbit
-                      ? 'In your orbit.'
-                      : style == AppThemeStyle.cinematic
-                      ? 'Your selected finds.'
-                      : 'A few good choices.',
-                  subtitle:
-                      'Orders go directly to each seller. No payment is taken now.',
+                PageBand(
+                  color: Color.lerp(c.surface, c.primary, .08)!,
+                  elevation: 3,
+                  borderRadius: BorderRadius.circular(commerceRadius(style)),
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                  children: const [
+                    CommerceTitle(
+                      'Your shopping bag',
+                      subtitle:
+                          'Orders go directly to each seller. No payment is taken now.',
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 16),
                 products.when(
                   loading: () => const CommerceLoading(),
                   error: (e, _) => Column(

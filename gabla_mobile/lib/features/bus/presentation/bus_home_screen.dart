@@ -1,3 +1,4 @@
+import '../../../core/widgets/page_band.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,11 +70,12 @@ class _BusHomeScreenState extends ConsumerState<BusHomeScreen> {
     ref.watch(busPlacesProvider);
     return MobilityLayout(
       bus: true,
-      title: 'A window seat\nto somewhere.',
-      subtitle: 'Find your route. Pick your ticket. Let the journey begin.',
+      title: 'Book a bus',
+      subtitle:
+          'Choose your route and travel date. Compare buses, pickup stages and fares.',
       actions: [
         IconButton(
-          tooltip: 'My tickets',
+          tooltip: 'My bus bookings',
           onPressed: () => context.push('/bus/tickets'),
           icon: const Icon(Icons.confirmation_number_outlined),
         ),
@@ -161,78 +163,101 @@ class _BusHomeScreenState extends ConsumerState<BusHomeScreen> {
       footer: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          MobilitySection(
-            title: 'Routes worth the ride',
-            child: AsyncValueView(
-              value: routes,
-              onRetry: () => ref.invalidate(popularRoutesProvider),
-              data: (context, items) => items.isEmpty
-                  ? const Text('Choose your towns above to find a departure.')
-                  : Column(
-                      children: [
-                        for (var i = 0; i < items.length; i++)
-                          DesignEntrance(
-                            index: i,
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Material(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerLow,
-                                borderRadius: BorderRadius.circular(20),
-                                child: InkWell(
+          FilledButton.tonalIcon(
+            onPressed: () => context.push('/bus/tickets'),
+            icon: const Icon(Icons.confirmation_number_outlined),
+            label: const Text('My bookings & travel updates'),
+          ),
+          const SizedBox(height: 18),
+          PageBand(
+            color: Color.lerp(
+              Theme.of(context).colorScheme.surface,
+              Theme.of(context).colorScheme.primary,
+              .08,
+            )!,
+            elevation: 2,
+            borderRadius: BorderRadius.circular(14),
+            children: [
+              Text(
+                'Popular bus routes',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 14),
+              AsyncValueView(
+                value: routes,
+                onRetry: () => ref.invalidate(popularRoutesProvider),
+                data: (context, items) => items.isEmpty
+                    ? const Text('Choose your towns above to find a departure.')
+                    : Column(
+                        children: [
+                          for (var i = 0; i < items.length; i++)
+                            DesignEntrance(
+                              index: i,
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Material(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerLow,
                                   borderRadius: BorderRadius.circular(20),
-                                  onTap: () => _search(
-                                    items[i].originName,
-                                    items[i].destinationName,
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(18),
-                                    child: Row(
-                                      children: [
-                                        CircleAvatar(
-                                          child: Text(
-                                            items[i].destinationName.isEmpty
-                                                ? '→'
-                                                : items[i].destinationName
-                                                      .substring(0, 1),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(20),
+                                    onTap: () => _search(
+                                      items[i].originName,
+                                      items[i].destinationName,
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(18),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                            child: Text(
+                                              items[i].destinationName.isEmpty
+                                                  ? '→'
+                                                  : items[i].destinationName
+                                                        .substring(0, 1),
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 14),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                '${items[i].originName} → ${items[i].destinationName}',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w700,
+                                          const SizedBox(width: 14),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  '${items[i].originName} → ${items[i].destinationName}',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
                                                 ),
-                                              ),
-                                              Text(
-                                                items[i].price > 0
-                                                    ? 'From ${formatUgx(items[i].price)}'
-                                                    : 'View departures',
-                                                style: const TextStyle(
-                                                  fontSize: 12,
+                                                Text(
+                                                  items[i].price > 0
+                                                      ? 'From ${formatUgx(items[i].price)}'
+                                                      : 'View departures',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                        const Icon(Icons.north_east, size: 18),
-                                      ],
+                                          const Icon(
+                                            Icons.north_east,
+                                            size: 18,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-            ),
+                        ],
+                      ),
+              ),
+            ],
           ),
+          const SizedBox(height: 14),
           OutlinedButton.icon(
             onPressed: () => context.push('/bus/parks'),
             icon: const Icon(Icons.location_city_outlined),

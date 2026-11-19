@@ -47,7 +47,8 @@ final listingFormDataProvider =
     });
 
 class ListingFormScreen extends ConsumerStatefulWidget {
-  const ListingFormScreen({super.key, this.listingId});
+  const ListingFormScreen({super.key, this.listingId, this.initialType});
+  final String? initialType;
   final String? listingId;
   @override
   ConsumerState<ListingFormScreen> createState() => _ListingFormScreenState();
@@ -62,15 +63,16 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       _discount = TextEditingController(),
       _inventory = TextEditingController(),
       _sku = TextEditingController();
-  String _kind = 'product', _bookingMode = 'none';
+  String _kind = 'product';
+  String _bookingMode = 'none';
   String? _category, _collection, _image;
   List<String> _gallery = [];
   Map<String, dynamic> _answers = {},
       _booking = {
-        'unit': 'night',
+        'unit': 'hour',
         'advanceDays': 90,
         'minUnits': 1,
-        'maxUnits': 30,
+        'maxUnits': 12,
         'inventory': 1,
         'capacity': 1,
         'depositPercent': 0,
@@ -134,7 +136,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
           _inventory.text = '${listing?['inventory'] ?? ''}';
           _sku.text = '${listing?['sku'] ?? ''}';
           _kind =
-              '${listing?['type'] ?? ((data['products'] as List).isEmpty && (data['services'] as List).isNotEmpty ? 'service' : 'product')}';
+              '${listing?['type'] ?? widget.initialType ?? ((data['products'] as List).isEmpty && (data['services'] as List).isNotEmpty ? 'service' : 'product')}';
           _category =
               (listing?['productCategoryId'] ?? listing?['serviceCategoryId'])
                   as String?;
@@ -403,28 +405,36 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                 CommercePanel(
                   child: Column(
                     children: [
-                      DropdownButtonFormField<String>(
-                        initialValue: _bookingMode,
-                        decoration: const InputDecoration(
-                          labelText: 'Booking mode',
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Accept online bookings'),
+                        subtitle: const Text(
+                          'Let customers select an available date for this service.',
                         ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'none',
-                            child: Text('Contact only'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'request',
-                            child: Text('Provider approval'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'instant',
-                            child: Text('Instant booking'),
-                          ),
-                        ],
-                        onChanged: (v) => setState(() => _bookingMode = v!),
+                        value: _bookingMode != 'none',
+                        onChanged: (enabled) => setState(() {
+                          _bookingMode = enabled ? 'request' : 'none';
+                        }),
                       ),
                       if (_bookingMode != 'none') ...[
+                        DropdownButtonFormField<String>(
+                          initialValue: _bookingMode,
+                          decoration: const InputDecoration(
+                            labelText: 'Booking approval',
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'request',
+                              child: Text('Review each request'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'instant',
+                              child: Text('Confirm automatically'),
+                            ),
+                          ],
+                          onChanged: (value) =>
+                              setState(() => _bookingMode = value!),
+                        ),
                         const SizedBox(height: 14),
                         DropdownButtonFormField<String>(
                           initialValue: '${_booking['unit']}',

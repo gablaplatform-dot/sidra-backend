@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:pdfrx/pdfrx.dart';
 import '../../../core/network/network_providers.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/widgets/order_updates.dart';
 import '../../payments/presentation/payment_sheet.dart';
 import '../../shop/presentation/commerce_widgets.dart';
 import '../application/order_providers.dart';
@@ -33,82 +34,88 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(myOrdersProvider);
-          await ref.read(myOrdersProvider.future);
+      body: OrderUpdates(
+        refresh: () async {
+          await ref.refresh(myOrdersProvider.future);
         },
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            const CommerceTitle(
-              'From shop to doorstep.',
-              subtitle:
-                  'Track progress, pay accepted orders, and keep your documents together.',
-            ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final entry in {
-                    'all': 'All',
-                    'open': 'In progress',
-                    'done': 'Completed',
-                    'closed': 'Closed',
-                  }.entries)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(
-                          '${entry.value} · ${(orders.valueOrNull ?? []).where((o) => entry.key == 'all' || o.bucket == entry.key).length}',
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(myOrdersProvider);
+            await ref.read(myOrdersProvider.future);
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              const CommerceTitle(
+                'From shop to doorstep.',
+                subtitle:
+                    'Track progress, pay accepted orders, and keep your documents together.',
+              ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final entry in {
+                      'all': 'All',
+                      'open': 'In progress',
+                      'done': 'Completed',
+                      'closed': 'Closed',
+                    }.entries)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(
+                            '${entry.value} · ${(orders.valueOrNull ?? []).where((o) => entry.key == 'all' || o.bucket == entry.key).length}',
+                          ),
+                          selected: _filter == entry.key,
+                          onSelected: (_) =>
+                              setState(() => _filter = entry.key),
                         ),
-                        selected: _filter == entry.key,
-                        onSelected: (_) => setState(() => _filter = entry.key),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            orders.when(
-              loading: () => const CommerceLoading(),
-              error: (e, _) => CommerceEmpty(
-                title: 'Couldn’t load your orders',
-                message: '$e',
-                action: 'Try again',
-                onAction: () => ref.invalidate(myOrdersProvider),
-              ),
-              data: (items) {
-                final shown = items
-                    .where((o) => _filter == 'all' || o.bucket == _filter)
-                    .toList();
-                return shown.isEmpty
-                    ? CommerceEmpty(
-                        title: items.isEmpty
-                            ? 'Your next find starts here'
-                            : 'No orders in this view',
-                        message: items.isEmpty
-                            ? 'Your orders will appear here once sent to a seller.'
-                            : 'Try another status filter.',
-                        onAction: items.isEmpty
-                            ? () => context.push('/shop')
-                            : null,
-                      )
-                    : Column(
-                        children: [
-                          for (var i = 0; i < shown.length; i++)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 20),
-                              child: OrderReceiptCard(
-                                order: shown[i],
-                                index: i,
+              const SizedBox(height: 20),
+              orders.when(
+                loading: () => const CommerceLoading(),
+                error: (e, _) => CommerceEmpty(
+                  title: 'Couldn’t load your orders',
+                  message: '$e',
+                  action: 'Try again',
+                  onAction: () => ref.invalidate(myOrdersProvider),
+                ),
+                data: (items) {
+                  final shown = items
+                      .where((o) => _filter == 'all' || o.bucket == _filter)
+                      .toList();
+                  return shown.isEmpty
+                      ? CommerceEmpty(
+                          title: items.isEmpty
+                              ? 'Your next find starts here'
+                              : 'No orders in this view',
+                          message: items.isEmpty
+                              ? 'Your orders will appear here once sent to a seller.'
+                              : 'Try another status filter.',
+                          onAction: items.isEmpty
+                              ? () => context.push('/shop')
+                              : null,
+                        )
+                      : Column(
+                          children: [
+                            for (var i = 0; i < shown.length; i++)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 20),
+                                child: OrderReceiptCard(
+                                  order: shown[i],
+                                  index: i,
+                                ),
                               ),
-                            ),
-                        ],
-                      );
-              },
-            ),
-          ],
+                          ],
+                        );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -434,7 +434,7 @@ export class ServiceBookingService {
   }
 
   _when(b) {
-    if (b.unit === "hour") return `${b.startDate}, ${b.startTime} to ${b.endTime}`;
+    if (b.unit === "hour") return `${b.startDate}, ${b.startTime} to ${b.endTime} EAT`;
     return b.startDate === b.endDate ? b.startDate : `${b.startDate} to ${b.endDate}`;
   }
 

@@ -333,6 +333,13 @@ export class AuthService {
     if (openRide) throw blocked("You have a ride in progress. Finish or cancel it first.", "DELETE_BLOCKED_RIDE");
     const tickets = await prisma.busBooking.count({ where: { userId: user.id, status: "confirmed", trip: { departureAt: { gt: now } } } });
     if (tickets) throw blocked("You have bus tickets for upcoming trips. Cancel them or travel first.", "DELETE_BLOCKED_TICKETS");
+    const eventTickets = await prisma.eventTicketOrder.count({ where: {
+      OR: [
+        { buyerId: user.id, event: { endsAt: { gt: now } }, OR: [{ status: "paid" }, { status: "pending_payment", expiresAt: { gt: now } }] },
+        { event: { ownerId: user.id }, status: "paid", OR: [{ payoutId: null }, { payout: { status: { not: "paid" } } }] }
+      ]
+    } });
+    if (eventTickets) throw blocked("You have active event tickets or an unsettled event payout. Contact Gabla support if you need help.", "DELETE_BLOCKED_EVENT_TICKETS");
     const openOrders = await prisma.order.count({ where: { userId: user.id, status: { in: ["pending", "accepted", "delivering"] } } });
     if (openOrders) throw blocked("You have orders that are not delivered yet. Wait until they are completed or cancel them.", "DELETE_BLOCKED_ORDERS");
     const openBookings = await prisma.serviceBooking.count({ where: { userId: user.id, status: { in: ["pending", "confirmed"] } } });
@@ -389,6 +396,7 @@ export class AuthService {
       await tx.inquiry.updateMany({ where: { userId: user.id }, data: { name: gone, email: null, phone: null } });
       await tx.order.updateMany({ where: { userId: user.id }, data: { customer: { name: gone } } });
       await tx.serviceBooking.updateMany({ where: { userId: user.id }, data: { customer: { name: gone } } });
+      await tx.eventTicketOrder.updateMany({ where: { buyerId: user.id }, data: { buyerName: gone, buyerEmail: "", payPhone: "" } });
       await tx.busBooking.updateMany({ where: { userId: user.id }, data: { passengerName: gone, passengerPhone: "", passengerEmail: null, payPhone: null } });
       await tx.rideTrip.updateMany({ where: { riderId: user.id }, data: { pickupAddress: "", dropoffAddress: "" } });
       await tx.user.update({

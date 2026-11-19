@@ -88,6 +88,15 @@ in the app through authenticated PDF requests.
 See [shopping behavior map and verification](docs/SHOP_EXPERIENCE.md) for the web/backend audit,
 endpoint coverage, design differences and remaining live-account checks.
 
+The category search accepts product descriptions such as “I need a laptop”. Descriptions
+without a matching category open product results after a short debounce; submitting the
+keyboard search action always searches products. The photo icon opens camera/gallery
+selection, a preview, and an explicit search action. Photos are resized and converted to PNG
+before `POST /search/image`. Photo recognition and typed searches share the backend's
+catalogue-aware AI interpretation, with exact names ranked ahead of related items before
+pagination. Existing price, seller, category and attribute filters still apply. AI credentials
+stay on the server in the existing admin AI settings.
+
 ## Appearance / theming
 
 `lib/core/theme/` holds 5 selectable design styles (`AppThemeStyle`), each with its own light +
@@ -121,3 +130,38 @@ were modeled on an unused component (`components/mobilehome/MobileHome.jsx`, dea
 `/home` page is `pages/Home.jsx`) instead of what's actually live. Most other screens still use
 Flutter's default Material widgets, which already pick up each style's colors/shapes/typography
 automatically but haven't been hand-redesigned to the same degree yet.
+
+### Gabla-managed buses
+
+The admin transport desk creates companies directly, with a contact person,
+boarding-stage coordinates and a cropped logo. Each physical bus has its own
+contact, capacity, included amenities and cancellation cutoff in minutes.
+Routes carry fares and recurring departures in East Africa Time. Paid bookings
+snapshot their cancellation policy; adjusting a bus policy affects new bookings.
+A delayed departure can extend an open cancellation window, but never reopens a
+locked one. A passenger can cancel all tickets in a booking before its deadline.
+
+My bus bookings groups tickets, shows a live departure countdown and cancellation
+state, and refreshes the server state every 30 seconds. The backend checks the
+actual deadline on cancellation requests and updates trip clocks/booking locks
+every minute, even without a customer browsing. Booking and deadline emails use
+an idempotent persistent queue with retries.
+
+The updated dashboard is also built at `https://sidra-api.fly.dev/admin/`, using the same
+admin accounts and `busticketing` permission as the separate admin site. A staff
+member records the availability call, then records a physical cash handover after
+cancellation closes. Handover/refund references, recipient details, staff IDs and
+timestamps are retained. These actions record payments made outside Gabla; they
+do not initiate withdrawals or refunds through the gateway.
+
+For an isolated Uganda demo catalogue:
+
+```sh
+DATABASE_URL=file:/tmp/gabla-bus-demo.db node scripts/sqlite-push.js
+DATABASE_URL=file:/tmp/gabla-bus-demo.db node scripts/seed-managed-bus.js
+```
+
+Run these from the repository root. This adds four fictional demo companies,
+11 buses, 11 routes and three daily departures per route. It does not remove
+existing accounts or create any bookings or transactions. Demo companies are
+clearly labelled and cannot accept mobile money payments.

@@ -1,0 +1,910 @@
+{
+  "batch": "catalog-coverage-20261112",
+  "added": 1426,
+  "corrected": 58,
+  "withheld": 0,
+  "unrelatedRowsPreserved": true,
+  "ordersBefore": 5,
+  "ordersAfter": 5,
+  "transactionsBefore": 22,
+  "transactionsAfter": 22,
+  "coverage": [
+    {
+      "_count": {
+        "_all": 28
+      },
+      "productCategoryId": "cmufy5mm4000nublngkorppsn"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmufy6ma1000rubln7ixjg2i5"
+    },
+    {
+      "_count": {
+        "_all": 28
+      },
+      "productCategoryId": "cmufy742v000vublns1jky8f5"
+    },
+    {
+      "_count": {
+        "_all": 28
+      },
+      "productCategoryId": "cmufy7xip000zublnr2uzywp3"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmufy8snf0015ublnqy9cwe0l"
+    },
+    {
+      "_count": {
+        "_all": 28
+      },
+      "productCategoryId": "cmufy9k5x0019ublniihpxnn9"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmufyl3nh001publn5xr1fn7n"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmufymrng001zublnstl1hpf7"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmufyo07f0023ublnv9pobznp"
+    },
+    {
+      "_count": {
+        "_all": 15
+      },
+      "productCategoryId": "cmufyoqgt0027ublnaublu5hy"
+    },
+    {
+      "_count": {
+        "_all": 16
+      },
+      "productCategoryId": "cmufyp52a002bubln1fvtipah"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmufypqup002dublnvxo26pt9"
+    },
+    {
+      "_count": {
+        "_all": 30
+      },
+      "productCategoryId": "cmufyswry002jublnts2r1xq4"
+    },
+    {
+      "_count": {
+        "_all": 30
+      },
+      "productCategoryId": "cmufyudb1002rublngd3bslnv"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmug49zyp0039ublnlirt8hwd"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmug4as2o003dublnrm04nt1a"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmug4blwg003hubln4vnz34eo"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmug4c68m003lublnymccas2p"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmug4ebbo003publn4rbyjbrn"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmug4fdvo003vublnst6n5bu7"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmug4g9wm003zubln6a7dwz7e"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmug4gzag0045ubln4op6ihip"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmug4hps00049ubln7kq1ym95"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmug4intw004fublnbm6bxsti"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmug4jejy004jublnrkq8n0m2"
+    },
+    {
+      "_count": {
+        "_all": 47
+      },
+      "productCategoryId": "cmul6cmqn0003ubm8jaglbea5"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmqq0005ubm84ov9l7w8"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmqs0007ubm8edo058w9"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmqw0009ubm8w8us7ulj"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmqy000bubm8mvki3bo9"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmr0000dubm84alcf8l4"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmr2000fubm8d7oelh2u"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmr5000hubm83bu2pky1"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmr8000lubm8kpjujbjs"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmra000nubm85h1vmcqo"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmrc000pubm8hqijf3ck"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmre000rubm89m3zbxqu"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmrg000tubm8d4kpnx9m"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmri000vubm8gn66gmbm"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmrk000xubm8sbdvenr5"
+    },
+    {
+      "_count": {
+        "_all": 56
+      },
+      "productCategoryId": "cmul6cmrm000zubm8k212ebvz"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmro0011ubm8dsoec0bx"
+    },
+    {
+      "_count": {
+        "_all": 25
+      },
+      "productCategoryId": "cmul6cmrr0015ubm81iehsw9b"
+    },
+    {
+      "_count": {
+        "_all": 26
+      },
+      "productCategoryId": "cmul6cmrt0017ubm8szm8d0wz"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmrw0019ubm8cur9huv8"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmry001bubm8wn7z7gf8"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cms0001dubm8ptlx6stm"
+    },
+    {
+      "_count": {
+        "_all": 29
+      },
+      "productCategoryId": "cmul6cms4001fubm8fx9p8naj"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cms6001hubm87mq6uac7"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cms7001jubm8ca0dgtsr"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cms9001lubm8f695pi45"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmsb001nubm8tsesn5ug"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmsc001pubm8nk7j5s8o"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmse001rubm88jzve7ld"
+    },
+    {
+      "_count": {
+        "_all": 20
+      },
+      "productCategoryId": "cmul6cmsg001tubm86e11mvkr"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmsh001vubm8bh10sx6t"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmsj001xubm80vmo4xzm"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmsl001zubm8s2zr0bb1"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmsm0021ubm8nt6x86q3"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmsn0023ubm8n53xv29z"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmsp0025ubm8oeszgrev"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmss0029ubm83itaxid9"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmsu002bubm8q0ylx5zl"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmsw002dubm8xqp91gqd"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmsx002fubm8748gyrzn"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmsz002hubm87gm0dk1y"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmt1002jubm81nmgnumu"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmt2002lubm8tlou2hh1"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmt6002nubm85sj0dxvn"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmta002pubm8dmb80c7t"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmti002vubm88yjrt0i8"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmtk002xubm8ca5h7e6t"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmtm002zubm8bdwp7ove"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmto0031ubm8jacrv7pi"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmtq0033ubm8ealy6nrq"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmts0035ubm8qhziog5u"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmtu0037ubm89rb1dunt"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmtw003bubm8ntpvwgub"
+    },
+    {
+      "_count": {
+        "_all": 13
+      },
+      "productCategoryId": "cmul6cmty003dubm8ykobj7i8"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmu0003fubm89yyj74ur"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmu2003hubm8imh687nq"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmu4003jubm89jxy1x5u"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmu7003lubm8nhsowxnh"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmu9003nubm8p5mqh6pi"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmud003rubm8pzg5q9gp"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmug003tubm8k1onmbz8"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmuj003vubm88yyn82vt"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmum003zubm87517uq3h"
+    },
+    {
+      "_count": {
+        "_all": 15
+      },
+      "productCategoryId": "cmul6cmup0041ubm8wihwmuiq"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmur0043ubm88zzkn7sg"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmut0045ubm80p32to1i"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmuv0047ubm84mj19yig"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmux0049ubm8ldlc3af9"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmuy004bubm8qeu0sc1l"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmv0004dubm8o57tt1bs"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmv1004fubm8yru3ai8y"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmv7004hubm8pehs7fxb"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmvd004nubm8q5lptuw4"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmvf004pubm8ncz5va08"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmvh004rubm8g2yzb95f"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmvl004tubm8o1kruooj"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmvn004vubm80zm4ys90"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmvo004xubm89jmbqru8"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmvp004zubm8ewh5sb92"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmvr0051ubm8wo5wf3by"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmvs0053ubm8x02csib8"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmvu0055ubm841kcq7wp"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmvw0057ubm8abs241yf"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmvy0059ubm8lmrjyps9"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmw0005bubm8olevcuri"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmw2005dubm8p3wbxbdk"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmw3005fubm8trfmta2z"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmw5005hubm8d4y51d78"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmw8005jubm8w9miqee0"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwa005lubm87sixaxxd"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwg005pubm8i07ybt2p"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwh005rubm8t6b1txdo"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwj005tubm8p3pu96c7"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwk005vubm8is7586yq"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwl005xubm830ywzs9h"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwn005zubm839p0mawb"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwo0061ubm8hd1ktdzv"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwq0063ubm84qhx3u37"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwr0065ubm8q1pzzkma"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwt0067ubm8sj9vp9q0"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwv006bubm84w1lhdmx"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwx006dubm8nzenouh6"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmwy006fubm8r3uqmn0f"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmx0006hubm8s4aa1l5v"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmx2006jubm8l7jdd1jk"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmx4006lubm84qif8ywb"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmx5006nubm8whek5k3m"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmx8006rubm8hmhlyo0o"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmx9006tubm8a8g3a8lu"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmxb006vubm8go18o6kt"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmxd006xubm897kycu7b"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmxf006zubm8k334i480"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmxh0071ubm8b2ew4hig"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmxj0073ubm8jup84ug6"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmxm0077ubm8ej8aa3jn"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmxn0079ubm81chmnbiw"
+    },
+    {
+      "_count": {
+        "_all": 47
+      },
+      "productCategoryId": "cmul6cmxp007bubm8igpar5ak"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmxq007dubm83v8qvmvt"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmxs007fubm85jczywq2"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmy60081ubm88zbaa3n3"
+    },
+    {
+      "_count": {
+        "_all": 3
+      },
+      "productCategoryId": "cmul6cmy80083ubm8v74p1llh"
+    },
+    {
+      "_count": {
+        "_all": 12
+      },
+      "productCategoryId": "cmul6cmy90085ubm89vpbklkj"
+    }
+  ],
+  "manifestSha256": "d7435d05a5b18845da51b5ec8b1d55aa520d2d501b1d3aec2b3daacf916994ed",
+  "gaps": [
+    {
+      "category": "Business & Industry > Business for Sale & Investment > Franchise & Dealership",
+      "count": 0,
+      "needed": 12,
+      "candidatesRemaining": 0
+    },
+    {
+      "category": "Business & Industry > Business for Sale & Investment > Investor/Partner Wanted",
+      "count": 3,
+      "needed": 9,
+      "candidatesRemaining": 0
+    }
+  ]
+}

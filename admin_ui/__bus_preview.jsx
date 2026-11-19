@@ -1,0 +1,1 @@
+import React from'react';import{createRoot}from'react-dom/client';import{RouteFirstDesk}from'./src/features/bus-ticketing/RouteFirstDesk.jsx';import'./src/styles.css';import'@fontsource/manrope/400.css';import'@fontsource/manrope/700.css';createRoot(document.getElementById('root')).render(<div style={{padding:24}}><RouteFirstDesk token="local-preview-only"/></div>);

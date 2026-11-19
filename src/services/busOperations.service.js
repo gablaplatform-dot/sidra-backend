@@ -1,9 +1,17 @@
+import { departureTime } from "../domain/busPolicy.js";
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
-import { addDaysToDateString, eatDateString, eatDayBounds, isDateString, todayEat } from "../utils/busTime.js";
+import {
+  addDaysToDateString,
+  eatDateString,
+  eatDayBounds,
+  isDateString,
+  todayEat,
+} from "../utils/busTime.js";
 import { parseMoneyToCents, centsToDecimal } from "../utils/money.js";
 
-const bad = (message, code, statusCode = 400) => new AppError({ message, statusCode, code });
+const bad = (message, code, statusCode = 400) =>
+  new AppError({ message, statusCode, code });
 const money = (v) => (v === null || v === undefined ? "0" : v.toString());
 const MIN_PAYOUT_UGX = 10000;
 
@@ -23,19 +31,45 @@ export class BusOperationsService {
     await this.catalogService.ensureTripsForOperator(operatorId, start, end);
 
     const trips = await prisma.busTrip.findMany({
-      where: { operatorId, departureAt: { gte: eatDayBounds(start).start, lt: eatDayBounds(end).end }, ...(status ? { status } : {}) },
-      include: { route: { select: { name: true, originName: true, destinationName: true } }, busType: { select: { name: true } } },
+      where: {
+        operatorId,
+        departureAt: {
+          gte: eatDayBounds(start).start,
+          lt: eatDayBounds(end).end,
+        },
+        ...(status ? { status } : {}),
+      },
+      include: {
+        route: {
+          select: { name: true, originName: true, destinationName: true },
+        },
+        vehicle: true,
+        busType: { select: { name: true } },
+      },
       orderBy: { departureAt: "asc" },
-      take: 500
+      take: 500,
     });
     const taken = await this.bookingService.seatsTaken(trips.map((t) => t.id));
-    const sales = await prisma.busTicket.groupBy({ by: ["tripId"], where: { tripId: { in: trips.map((t) => t.id) }, status: { not: "cancelled" } }, _sum: { price: true }, _count: true });
+    const sales = await prisma.busTicket.groupBy({
+      by: ["tripId"],
+      where: {
+        tripId: { in: trips.map((t) => t.id) },
+        status: { not: "cancelled" },
+      },
+      _sum: { price: true },
+      _count: true,
+    });
     const salesByTrip = new Map(sales.map((s) => [s.tripId, s]));
     return {
       from: start,
       to: end,
       items: trips.map((t) => ({
         id: t.id,
+        availability: t.availability,
+        availabilityNote: t.availabilityNote,
+        availabilityCheckedAt: t.availabilityCheckedAt,
+        vehicle: t.vehicle,
+        effectiveDepartureAt: departureTime(t),
         departureAt: t.departureAt,
         status: t.status,
         delayMinutes: t.delayMinutes,
@@ -46,13 +80,16 @@ export class BusOperationsService {
         revenue: money(salesByTrip.get(t.id)?._sum.price),
         route: t.route,
         busType: t.busType?.name ?? null,
-        fromSchedule: Boolean(t.scheduleId)
-      }))
+        fromSchedule: Boolean(t.scheduleId),
+      })),
     };
   }
 
   async _requireTrip(operatorId, tripId) {
-    const trip = await prisma.busTrip.findFirst({ where: { id: tripId, operatorId }, include: { route: true, operator: true } });
+    const trip = await prisma.busTrip.findFirst({
+      where: { id: tripId, operatorId },
+      include: { route: true, operator: true },
+    });
     if (!trip) throw bad("Trip not found", "BUS_TRIP_NOT_FOUND", 404);
     return trip;
   }
@@ -62,9 +99,14 @@ export class BusOperationsService {
     const tickets = await prisma.busTicket.findMany({
       where: { tripId },
       orderBy: { seatNumber: "asc" },
-      include: { booking: { select: { reference: true, passengerPhone: true, status: true } } }
+      include: {
+        booking: {
+          select: { reference: true, passengerPhone: true, status: true },
+        },
+      },
     });
-    const taken = (await this.bookingService.seatsTaken([tripId])).get(tripId) ?? 0;
+    const taken =
+      (await this.bookingService.seatsTaken([tripId])).get(tripId) ?? 0;
     return {
       id: trip.id,
       departureAt: trip.departureAt,
@@ -73,7 +115,12 @@ export class BusOperationsService {
       note: trip.note,
       seats: trip.seats,
       seatsTaken: taken,
-      route: { name: trip.route.name, originName: trip.route.originName, destinationName: trip.route.destinationName, boardingPoint: trip.route.boardingPoint },
+      route: {
+        name: trip.route.name,
+        originName: trip.route.originName,
+        destinationName: trip.route.destinationName,
+        boardingPoint: trip.route.boardingPoint,
+      },
       passengers: tickets.map((t) => ({
         id: t.id,
         ticketNumber: t.ticketNumber,
@@ -83,44 +130,92 @@ export class BusOperationsService {
         phone: t.booking.passengerPhone,
         reference: t.booking.reference,
         status: t.status,
-        checkedInAt: t.checkedInAt
-      }))
+        checkedInAt: t.checkedInAt,
+      })),
     };
   }
 
   // People who must be told about something that happens to a trip.
   async _tripAudience(tripId) {
-    const bookings = await prisma.busBooking.findMany({ where: { tripId, status: "confirmed" }, include: { user: { select: { email: true } } } });
+    const bookings = await prisma.busBooking.findMany({
+      where: { tripId, status: "confirmed" },
+      include: { user: { select: { email: true } } },
+    });
     const byEmail = new Map();
     for (const b of bookings) {
       const email = b.passengerEmail || b.user?.email;
-      if (email && !byEmail.has(email.toLowerCase())) byEmail.set(email.toLowerCase(), email);
+      if (email && !byEmail.has(email.toLowerCase()))
+        byEmail.set(email.toLowerCase(), email);
     }
     return [...byEmail.values()];
   }
 
   async _notify({ operator, trip, route, title, message, kind, emails }) {
     // Fire the emails without blocking the request: a slow mail provider must not stall the operator.
-    Promise.allSettled(emails.map((to) => this.emailService.sendAnnouncement({ to, operator, title, message, kind, trip, route }))).catch(() => {});
-    return prisma.busAnnouncement.create({ data: { operatorId: operator.id, tripId: trip?.id ?? null, title, message, kind, recipients: emails.length } });
+    Promise.allSettled(
+      emails.map((to) =>
+        this.emailService.sendAnnouncement({
+          to,
+          operator,
+          title,
+          message,
+          kind,
+          trip: trip
+            ? { ...trip, departureAt: departureTime(trip) }
+            : undefined,
+          route,
+        }),
+      ),
+    ).catch(() => {});
+    return prisma.busAnnouncement.create({
+      data: {
+        operatorId: operator.id,
+        tripId: trip?.id ?? null,
+        title,
+        message,
+        kind,
+        recipients: emails.length,
+      },
+    });
   }
 
   async cancelTrip({ operatorId, tripId, reason }) {
     const trip = await this._requireTrip(operatorId, tripId);
-    if (trip.status === "cancelled") throw bad("This trip is already cancelled", "BUS_TRIP_CANCELLED", 409);
-    if (trip.status === "departed" || trip.status === "completed") throw bad("This trip has already left", "BUS_TRIP_DEPARTED", 409);
+    if (trip.status === "cancelled")
+      throw bad("This trip is already cancelled", "BUS_TRIP_CANCELLED", 409);
+    if (trip.status === "departed" || trip.status === "completed")
+      throw bad("This trip has already left", "BUS_TRIP_DEPARTED", 409);
 
     const emails = await this._tripAudience(tripId);
     await prisma.$transaction(async (tx) => {
-      const confirmed = await tx.busBooking.findMany({ where: { tripId, status: "confirmed" }, include: { transaction: true } });
+      const confirmed = await tx.busBooking.findMany({
+        where: { tripId, status: "confirmed" },
+        include: { transaction: true },
+      });
       for (const b of confirmed) {
-        await tx.busBooking.update({ where: { id: b.id }, data: { status: "refund_due" } });
-        await tx.busTicket.updateMany({ where: { bookingId: b.id }, data: { status: "cancelled" } });
+        await tx.busBooking.update({
+          where: { id: b.id },
+          data: { status: "refund_due" },
+        });
+        await tx.busTicket.updateMany({
+          where: { bookingId: b.id },
+          data: { status: "cancelled" },
+        });
         // The takings from a cancelled trip are no longer the company's to withdraw.
-        if (b.transaction) await tx.busOperator.update({ where: { id: operatorId }, data: { walletBalance: { decrement: b.transaction.netAmount } } });
+        if (b.transaction && !b.handoverAt)
+          await tx.busOperator.update({
+            where: { id: operatorId },
+            data: { walletBalance: { decrement: b.transaction.netAmount } },
+          });
       }
-      await tx.busBooking.updateMany({ where: { tripId, status: "pending_payment" }, data: { status: "expired" } });
-      await tx.busTrip.update({ where: { id: tripId }, data: { status: "cancelled", note: reason ?? "" } });
+      await tx.busBooking.updateMany({
+        where: { tripId, status: "pending_payment" },
+        data: { status: "expired" },
+      });
+      await tx.busTrip.update({
+        where: { id: tripId },
+        data: { status: "cancelled", note: reason ?? "" },
+      });
     });
 
     if (emails.length) {
@@ -131,7 +226,7 @@ export class BusOperationsService {
         kind: "cancellation",
         title: "Your trip has been cancelled",
         message: `We're sorry - this trip has been cancelled${reason ? `: ${reason}` : "."}\nYour money will be refunded to the mobile money number you paid from. Contact ${trip.operator.companyName}${trip.operator.contactPhone ? ` on ${trip.operator.contactPhone}` : ""} if you need help.`,
-        emails
+        emails,
       });
     }
     return { ok: true, notified: emails.length };
@@ -139,9 +234,62 @@ export class BusOperationsService {
 
   async delayTrip({ operatorId, tripId, delayMinutes, note }) {
     const trip = await this._requireTrip(operatorId, tripId);
-    if (trip.status !== "scheduled") throw bad("Only upcoming trips can be delayed", "BUS_TRIP_NOT_SCHEDULED", 409);
-    const minutes = Math.max(0, Math.min(720, Math.floor(Number(delayMinutes) || 0)));
-    await prisma.busTrip.update({ where: { id: tripId }, data: { delayMinutes: minutes, note: note ?? "" } });
+    if (!["scheduled", "departed"].includes(trip.status))
+      throw bad(
+        "Only scheduled or recently departed trips can be adjusted",
+        "BUS_TRIP_NOT_SCHEDULED",
+        409,
+      );
+    const minutes = Math.max(
+      0,
+      Math.min(720, Math.floor(Number(delayMinutes) || 0)),
+    );
+    if (
+      trip.status === "departed" &&
+      new Date(trip.departureAt).getTime() + minutes * 60000 <=
+        Date.now() + 10 * 60000
+    )
+      throw bad(
+        "Choose a new departure at least 10 minutes from now to return this bus to scheduled.",
+        "BUS_NEW_DEPARTURE_REQUIRED",
+        409,
+      );
+    if (
+      trip.status === "departed" &&
+      (await prisma.busTicket.count({ where: { tripId, status: "used" } }))
+    )
+      throw bad(
+        "Passengers have already boarded. Review this trip before changing its departure.",
+        "BUS_TRIP_BOARDED",
+        409,
+      );
+    await prisma.$transaction(async (tx) => {
+      await tx.busTrip.update({
+        where: { id: tripId },
+        data: { status: "scheduled", delayMinutes: minutes, note: note ?? "" },
+      });
+      // Extend only still-open cancellation windows; a locked booking is never reopened.
+      const bookings = await tx.busBooking.findMany({
+        where: { tripId, status: "confirmed", lockedAt: null },
+      });
+      for (const b of bookings) {
+        const oldDeadline =
+          b.cancellationClosesAt ||
+          new Date(
+            departureTime(trip).getTime() - b.cancellationMinutes * 60000,
+          );
+        if (oldDeadline > new Date())
+          await tx.busBooking.update({
+            where: { id: b.id },
+            data: {
+              cancellationClosesAt: new Date(
+                new Date(trip.departureAt).getTime() +
+                  (minutes - b.cancellationMinutes) * 60000,
+              ),
+            },
+          });
+      }
+    });
 
     const emails = minutes ? await this._tripAudience(tripId) : [];
     if (emails.length) {
@@ -150,21 +298,50 @@ export class BusOperationsService {
       const human = `${hrs ? `${hrs} hour${hrs > 1 ? "s" : ""}` : ""}${hrs && mins ? " " : ""}${mins ? `${mins} minutes` : ""}`;
       await this._notify({
         operator: trip.operator,
-        trip,
+        trip: { ...trip, delayMinutes: minutes },
         route: trip.route,
         kind: "delay",
         title: `Your bus is delayed by ${human}`,
         message: `Your trip will now leave about ${human} later than planned.${note ? `\n${note}` : ""}\nYour ticket stays valid - please keep it handy.`,
-        emails
+        emails,
       });
     }
     return { ok: true, notified: emails.length };
   }
 
-  async markTrip({ operatorId, tripId, status }) {
-    if (!["departed", "completed"].includes(status)) throw bad("Invalid status", "BUS_TRIP_STATUS_INVALID");
+  async setAvailability({ operatorId, tripId, available, note }) {
     const trip = await this._requireTrip(operatorId, tripId);
-    if (trip.status === "cancelled") throw bad("This trip was cancelled", "BUS_TRIP_CANCELLED", 409);
+    if (trip.status !== "scheduled")
+      throw bad(
+        "Only scheduled trips can change availability",
+        "BUS_TRIP_NOT_SCHEDULED",
+        409,
+      );
+    return prisma.busTrip.update({
+      where: { id: tripId },
+      data: {
+        availability: available ? "available" : "unavailable",
+        availabilityNote: note,
+        availabilityCheckedAt: new Date(),
+      },
+    });
+  }
+
+  async markTrip({ operatorId, tripId, status }) {
+    if (!["departed", "completed"].includes(status))
+      throw bad("Invalid status", "BUS_TRIP_STATUS_INVALID");
+    const trip = await this._requireTrip(operatorId, tripId);
+    if (trip.status === "cancelled")
+      throw bad("This trip was cancelled", "BUS_TRIP_CANCELLED", 409);
+    if (
+      trip.status === "completed" ||
+      (status === "completed" && trip.status !== "departed")
+    )
+      throw bad(
+        "Depart the bus before completing the trip",
+        "BUS_TRIP_STATUS_INVALID",
+        409,
+      );
     await prisma.busTrip.update({ where: { id: tripId }, data: { status } });
     return { ok: true };
   }
@@ -174,7 +351,20 @@ export class BusOperationsService {
     const where = {
       operatorId,
       status: status || { in: ["confirmed", "refund_due", "cancelled"] },
-      ...(q ? { OR: [{ reference: { contains: q.toUpperCase() } }, { passengerName: { contains: q } }, { passengerPhone: { contains: q } }, { tickets: { some: { ticketNumber: { contains: q.toUpperCase() } } } }] } : {})
+      ...(q
+        ? {
+            OR: [
+              { reference: { contains: q.toUpperCase() } },
+              { passengerName: { contains: q } },
+              { passengerPhone: { contains: q } },
+              {
+                tickets: {
+                  some: { ticketNumber: { contains: q.toUpperCase() } },
+                },
+              },
+            ],
+          }
+        : {}),
     };
     const [total, rows] = await Promise.all([
       prisma.busBooking.count({ where }),
@@ -183,8 +373,19 @@ export class BusOperationsService {
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
-        include: { trip: { include: { route: { select: { name: true, originName: true, destinationName: true } } } }, tickets: { select: { ticketNumber: true, status: true, ticketTypeName: true } } }
-      })
+        include: {
+          trip: {
+            include: {
+              route: {
+                select: { name: true, originName: true, destinationName: true },
+              },
+            },
+          },
+          tickets: {
+            select: { ticketNumber: true, status: true, ticketTypeName: true },
+          },
+        },
+      }),
     ]);
     return {
       total,
@@ -201,15 +402,25 @@ export class BusOperationsService {
         createdAt: b.createdAt,
         departureAt: b.trip.departureAt,
         route: b.trip.route,
-        tickets: b.tickets
-      }))
+        tickets: b.tickets,
+      })),
     };
   }
 
   async verifyTicket({ operatorId, ticketNumber, checkIn = false }) {
-    const code = String(ticketNumber ?? "").trim().toUpperCase();
-    const ticket = await prisma.busTicket.findUnique({ where: { ticketNumber: code }, include: { trip: { include: { route: true } }, booking: true } });
-    if (!ticket || ticket.operatorId !== operatorId) return { valid: false, reason: "not_found", message: "No ticket with this number for your company." };
+    const code = String(ticketNumber ?? "")
+      .trim()
+      .toUpperCase();
+    const ticket = await prisma.busTicket.findUnique({
+      where: { ticketNumber: code },
+      include: { trip: { include: { route: true } }, booking: true },
+    });
+    if (!ticket || ticket.operatorId !== operatorId)
+      return {
+        valid: false,
+        reason: "not_found",
+        message: "No ticket with this number for your company.",
+      };
 
     const base = {
       ticketNumber: ticket.ticketNumber,
@@ -218,19 +429,58 @@ export class BusOperationsService {
       ticketTypeName: ticket.ticketTypeName,
       route: ticket.trip.route.name,
       departureAt: ticket.trip.departureAt,
-      checkedInAt: ticket.checkedInAt
+      checkedInAt: ticket.checkedInAt,
     };
-    if (ticket.status === "cancelled" || ticket.trip.status === "cancelled") return { valid: false, reason: "cancelled", message: "This ticket was cancelled.", ...base };
-    if (ticket.status === "used") return { valid: false, reason: "used", message: "This ticket has already been used.", ...base };
-    if (ticket.booking.status !== "confirmed") return { valid: false, reason: "unpaid", message: "This ticket isn't paid for.", ...base };
+    if (ticket.status === "cancelled" || ticket.trip.status === "cancelled")
+      return {
+        valid: false,
+        reason: "cancelled",
+        message: "This ticket was cancelled.",
+        ...base,
+      };
+    if (ticket.status === "used")
+      return {
+        valid: false,
+        reason: "used",
+        message: "This ticket has already been used.",
+        ...base,
+      };
+    if (ticket.booking.status !== "confirmed")
+      return {
+        valid: false,
+        reason: "unpaid",
+        message: "This ticket isn't paid for.",
+        ...base,
+      };
     // Tickets are only good around their own trip: from the day before until a day after.
     const gap = Math.abs(Date.now() - ticket.trip.departureAt.getTime());
-    if (gap > 36 * 3600 * 1000) return { valid: false, reason: "wrong_day", message: "This ticket is for a different day.", ...base };
+    if (gap > 36 * 3600 * 1000)
+      return {
+        valid: false,
+        reason: "wrong_day",
+        message: "This ticket is for a different day.",
+        ...base,
+      };
 
     if (checkIn) {
-      const result = await prisma.busTicket.updateMany({ where: { id: ticket.id, status: "valid" }, data: { status: "used", checkedInAt: new Date() } });
-      if (!result.count) return { valid: false, reason: "used", message: "This ticket has already been used.", ...base };
-      return { valid: true, checkedIn: true, message: "Checked in. Welcome aboard!", ...base, checkedInAt: new Date() };
+      const result = await prisma.busTicket.updateMany({
+        where: { id: ticket.id, status: "valid" },
+        data: { status: "used", checkedInAt: new Date() },
+      });
+      if (!result.count)
+        return {
+          valid: false,
+          reason: "used",
+          message: "This ticket has already been used.",
+          ...base,
+        };
+      return {
+        valid: true,
+        checkedIn: true,
+        message: "Checked in. Welcome aboard!",
+        ...base,
+        checkedInAt: new Date(),
+      };
     }
     return { valid: true, checkedIn: false, message: "Valid ticket.", ...base };
   }
@@ -239,25 +489,50 @@ export class BusOperationsService {
   async listCustomers({ operatorId, q }) {
     const bookings = await prisma.busBooking.findMany({
       where: { operatorId, status: "confirmed" },
-      include: { trip: { select: { departureAt: true } }, user: { select: { id: true, email: true } } },
+      include: {
+        trip: { select: { departureAt: true } },
+        user: { select: { id: true, email: true } },
+      },
       orderBy: { createdAt: "desc" },
-      take: 5000
+      take: 5000,
     });
     const people = new Map();
     for (const b of bookings) {
       const key = b.userId;
-      const person = people.get(key) ?? { userId: key, name: b.passengerName, phone: b.passengerPhone, email: b.passengerEmail || b.user?.email || null, bookings: 0, tickets: 0, spent: 0n, lastTravelAt: null, firstBookedAt: b.createdAt };
+      const person = people.get(key) ?? {
+        userId: key,
+        name: b.passengerName,
+        phone: b.passengerPhone,
+        email: b.passengerEmail || b.user?.email || null,
+        bookings: 0,
+        tickets: 0,
+        spent: 0n,
+        lastTravelAt: null,
+        firstBookedAt: b.createdAt,
+      };
       person.bookings += 1;
       person.tickets += b.seatCount;
       person.spent += parseMoneyToCents(b.total);
-      if (!person.lastTravelAt || b.trip.departureAt > person.lastTravelAt) person.lastTravelAt = b.trip.departureAt;
-      if (b.createdAt < person.firstBookedAt) person.firstBookedAt = b.createdAt;
+      if (!person.lastTravelAt || b.trip.departureAt > person.lastTravelAt)
+        person.lastTravelAt = b.trip.departureAt;
+      if (b.createdAt < person.firstBookedAt)
+        person.firstBookedAt = b.createdAt;
       people.set(key, person);
     }
-    let items = [...people.values()].map((p) => ({ ...p, spent: money(centsToDecimal(p.spent)), loyal: p.bookings >= 3 }));
+    let items = [...people.values()].map((p) => ({
+      ...p,
+      spent: money(centsToDecimal(p.spent)),
+      loyal: p.bookings >= 3,
+    }));
     if (q) {
       const needle = q.toLowerCase();
-      items = items.filter((p) => [p.name, p.phone, p.email].some((v) => String(v ?? "").toLowerCase().includes(needle)));
+      items = items.filter((p) =>
+        [p.name, p.phone, p.email].some((v) =>
+          String(v ?? "")
+            .toLowerCase()
+            .includes(needle),
+        ),
+      );
     }
     items.sort((a, b) => new Date(b.lastTravelAt) - new Date(a.lastTravelAt));
     return { total: items.length, items };
@@ -265,28 +540,65 @@ export class BusOperationsService {
 
   // ------------------------------------------------------------------ announcements
   async listAnnouncements(operatorId) {
-    const rows = await prisma.busAnnouncement.findMany({ where: { operatorId }, orderBy: { createdAt: "desc" }, take: 50 });
+    const rows = await prisma.busAnnouncement.findMany({
+      where: { operatorId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
     return { items: rows };
   }
 
   // audience: "all" (everyone who has travelled with the company), "upcoming" (people with a trip
   // still to take) or a tripId.
-  async sendAnnouncement({ operatorId, title, message, kind = "notice", audience = "all", tripId }) {
-    const operator = await prisma.busOperator.findUnique({ where: { id: operatorId } });
+  async sendAnnouncement({
+    operatorId,
+    title,
+    message,
+    kind = "notice",
+    audience = "all",
+    tripId,
+  }) {
+    const operator = await prisma.busOperator.findUnique({
+      where: { id: operatorId },
+    });
     let trip = null;
     let bookings;
     if (tripId) {
       trip = await this._requireTrip(operatorId, tripId);
-      bookings = await prisma.busBooking.findMany({ where: { tripId, status: "confirmed" }, include: { user: { select: { email: true } } } });
+      bookings = await prisma.busBooking.findMany({
+        where: { tripId, status: "confirmed" },
+        include: { user: { select: { email: true } } },
+      });
     } else {
       bookings = await prisma.busBooking.findMany({
-        where: { operatorId, status: "confirmed", ...(audience === "upcoming" ? { trip: { departureAt: { gt: new Date() }, status: "scheduled" } } : {}) },
-        include: { user: { select: { email: true } } }
+        where: {
+          operatorId,
+          status: "confirmed",
+          ...(audience === "upcoming"
+            ? { trip: { departureAt: { gt: new Date() }, status: "scheduled" } }
+            : {}),
+        },
+        include: { user: { select: { email: true } } },
       });
     }
-    const emails = [...new Set(bookings.map((b) => (b.passengerEmail || b.user?.email || "").toLowerCase()).filter(Boolean))];
-    if (!emails.length) throw bad("There is nobody to send this to yet", "BUS_NO_RECIPIENTS");
-    const row = await this._notify({ operator, trip, route: trip?.route, title, message, kind, emails });
+    const emails = [
+      ...new Set(
+        bookings
+          .map((b) => (b.passengerEmail || b.user?.email || "").toLowerCase())
+          .filter(Boolean),
+      ),
+    ];
+    if (!emails.length)
+      throw bad("There is nobody to send this to yet", "BUS_NO_RECIPIENTS");
+    const row = await this._notify({
+      operator,
+      trip,
+      route: trip?.route,
+      title,
+      message,
+      kind,
+      emails,
+    });
     return { announcement: row, recipients: emails.length };
   }
 
@@ -295,19 +607,67 @@ export class BusOperationsService {
     const today = todayEat();
     const { start: todayStart, end: todayEnd } = eatDayBounds(today);
     const monthStart = eatDayBounds(`${today.slice(0, 8)}01`).start;
-    const [operator, todayAgg, monthAgg, allAgg, upcomingTrips, todaysTrips, pendingRefunds, topRoutes] = await Promise.all([
+    const [
+      operator,
+      todayAgg,
+      monthAgg,
+      allAgg,
+      upcomingTrips,
+      todaysTrips,
+      pendingRefunds,
+      topRoutes,
+    ] = await Promise.all([
       prisma.busOperator.findUnique({ where: { id: operatorId } }),
-      prisma.busBooking.aggregate({ where: { operatorId, status: "confirmed", confirmedAt: { gte: todayStart, lt: todayEnd } }, _sum: { total: true, seatCount: true }, _count: true }),
-      prisma.busBooking.aggregate({ where: { operatorId, status: "confirmed", confirmedAt: { gte: monthStart } }, _sum: { total: true, seatCount: true }, _count: true }),
-      prisma.busBooking.aggregate({ where: { operatorId, status: "confirmed" }, _sum: { total: true, seatCount: true }, _count: true }),
-      prisma.busTrip.count({ where: { operatorId, status: "scheduled", departureAt: { gt: new Date() } } }),
-      prisma.busTrip.count({ where: { operatorId, status: "scheduled", departureAt: { gte: todayStart, lt: todayEnd } } }),
+      prisma.busBooking.aggregate({
+        where: {
+          operatorId,
+          status: "confirmed",
+          confirmedAt: { gte: todayStart, lt: todayEnd },
+        },
+        _sum: { total: true, seatCount: true },
+        _count: true,
+      }),
+      prisma.busBooking.aggregate({
+        where: {
+          operatorId,
+          status: "confirmed",
+          confirmedAt: { gte: monthStart },
+        },
+        _sum: { total: true, seatCount: true },
+        _count: true,
+      }),
+      prisma.busBooking.aggregate({
+        where: { operatorId, status: "confirmed" },
+        _sum: { total: true, seatCount: true },
+        _count: true,
+      }),
+      prisma.busTrip.count({
+        where: {
+          operatorId,
+          status: "scheduled",
+          departureAt: { gt: new Date() },
+        },
+      }),
+      prisma.busTrip.count({
+        where: {
+          operatorId,
+          status: "scheduled",
+          departureAt: { gte: todayStart, lt: todayEnd },
+        },
+      }),
       prisma.busBooking.count({ where: { operatorId, status: "refund_due" } }),
-      prisma.busTicket.groupBy({ by: ["tripId"], where: { operatorId, status: { not: "cancelled" } }, _count: true })
+      prisma.busTicket.groupBy({
+        by: ["tripId"],
+        where: { operatorId, status: { not: "cancelled" } },
+        _count: true,
+      }),
     ]);
 
     // Revenue per route for the best performers.
-    const tripRoutes = await prisma.busTrip.findMany({ where: { id: { in: topRoutes.map((t) => t.tripId) } }, select: { id: true, route: { select: { name: true } } } });
+    const tripRoutes = await prisma.busTrip.findMany({
+      where: { id: { in: topRoutes.map((t) => t.tripId) } },
+      select: { id: true, route: { select: { name: true } } },
+    });
     const routeName = new Map(tripRoutes.map((t) => [t.id, t.route.name]));
     const perRoute = new Map();
     for (const row of topRoutes) {
@@ -317,8 +677,15 @@ export class BusOperationsService {
 
     // Seven-day sales trend.
     const since = eatDayBounds(addDaysToDateString(today, -6)).start;
-    const recent = await prisma.busBooking.findMany({ where: { operatorId, status: "confirmed", confirmedAt: { gte: since } }, select: { confirmedAt: true, total: true, seatCount: true } });
-    const trend = Array.from({ length: 7 }, (_, i) => ({ date: addDaysToDateString(today, i - 6), revenue: 0, tickets: 0 }));
+    const recent = await prisma.busBooking.findMany({
+      where: { operatorId, status: "confirmed", confirmedAt: { gte: since } },
+      select: { confirmedAt: true, total: true, seatCount: true },
+    });
+    const trend = Array.from({ length: 7 }, (_, i) => ({
+      date: addDaysToDateString(today, i - 6),
+      revenue: 0,
+      tickets: 0,
+    }));
     for (const b of recent) {
       const slot = trend.find((d) => d.date === eatDateString(b.confirmedAt));
       if (slot) {
@@ -327,53 +694,116 @@ export class BusOperationsService {
       }
     }
 
-    const pendingPayouts = await prisma.busPayout.aggregate({ where: { operatorId, status: "requested" }, _sum: { amount: true } });
+    const pendingPayouts = await prisma.busPayout.aggregate({
+      where: { operatorId, status: "requested" },
+      _sum: { amount: true },
+    });
     return {
-      today: { revenue: money(todayAgg._sum.total), tickets: todayAgg._sum.seatCount ?? 0, bookings: todayAgg._count, trips: todaysTrips },
-      month: { revenue: money(monthAgg._sum.total), tickets: monthAgg._sum.seatCount ?? 0, bookings: monthAgg._count },
-      allTime: { revenue: money(allAgg._sum.total), tickets: allAgg._sum.seatCount ?? 0, bookings: allAgg._count },
+      today: {
+        revenue: money(todayAgg._sum.total),
+        tickets: todayAgg._sum.seatCount ?? 0,
+        bookings: todayAgg._count,
+        trips: todaysTrips,
+      },
+      month: {
+        revenue: money(monthAgg._sum.total),
+        tickets: monthAgg._sum.seatCount ?? 0,
+        bookings: monthAgg._count,
+      },
+      allTime: {
+        revenue: money(allAgg._sum.total),
+        tickets: allAgg._sum.seatCount ?? 0,
+        bookings: allAgg._count,
+      },
       upcomingTrips,
       pendingRefunds,
       walletBalance: money(operator.walletBalance),
       pendingPayouts: money(pendingPayouts._sum.amount),
       commissionPercent: money(operator.commissionPercent),
-      topRoutes: [...perRoute.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, tickets]) => ({ name, tickets })),
-      trend
+      topRoutes: [...perRoute.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name, tickets]) => ({ name, tickets })),
+      trend,
     };
   }
 
   // ------------------------------------------------------------------ payouts
   async listPayouts(operatorId) {
-    const rows = await prisma.busPayout.findMany({ where: { operatorId }, orderBy: { createdAt: "desc" }, take: 50 });
+    const rows = await prisma.busPayout.findMany({
+      where: { operatorId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
     return { items: rows.map((p) => ({ ...p, amount: money(p.amount) })) };
   }
 
   async requestPayout({ operatorId, amount, phone }) {
     const cents = parseMoneyToCents(amount);
-    if (cents < BigInt(MIN_PAYOUT_UGX) * 100n) throw bad(`The smallest payout is UGX ${MIN_PAYOUT_UGX.toLocaleString("en-US")}`, "BUS_PAYOUT_TOO_SMALL");
+    if (cents < BigInt(MIN_PAYOUT_UGX) * 100n)
+      throw bad(
+        `The smallest payout is UGX ${MIN_PAYOUT_UGX.toLocaleString("en-US")}`,
+        "BUS_PAYOUT_TOO_SMALL",
+      );
     return prisma.$transaction(async (tx) => {
       // The balance is taken off straight away, so two requests can't spend the same money.
-      const result = await tx.busOperator.updateMany({ where: { id: operatorId, walletBalance: { gte: centsToDecimal(cents) } }, data: { walletBalance: { decrement: centsToDecimal(cents) } } });
-      if (!result.count) throw bad("That is more than your available balance", "BUS_INSUFFICIENT_FUNDS", 409);
-      const payout = await tx.busPayout.create({ data: { operatorId, amount: centsToDecimal(cents), phone } });
+      const result = await tx.busOperator.updateMany({
+        where: {
+          id: operatorId,
+          walletBalance: { gte: centsToDecimal(cents) },
+        },
+        data: { walletBalance: { decrement: centsToDecimal(cents) } },
+      });
+      if (!result.count)
+        throw bad(
+          "That is more than your available balance",
+          "BUS_INSUFFICIENT_FUNDS",
+          409,
+        );
+      const payout = await tx.busPayout.create({
+        data: { operatorId, amount: centsToDecimal(cents), phone },
+      });
       return { ...payout, amount: money(payout.amount) };
     });
   }
 
   // ------------------------------------------------------------------ admin side
   async adminListPayouts({ status } = {}) {
-    const rows = await prisma.busPayout.findMany({ where: status ? { status } : {}, orderBy: { createdAt: "desc" }, take: 200, include: { operator: { select: { id: true, companyName: true, contactPhone: true, logoUrl: true } } } });
+    const rows = await prisma.busPayout.findMany({
+      where: status ? { status } : {},
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      include: {
+        operator: {
+          select: {
+            id: true,
+            companyName: true,
+            contactPhone: true,
+            logoUrl: true,
+          },
+        },
+      },
+    });
     return { items: rows.map((p) => ({ ...p, amount: money(p.amount) })) };
   }
 
   async adminProcessPayout({ payoutId, status, note }) {
-    if (!["paid", "rejected"].includes(status)) throw bad("Choose paid or rejected", "BUS_PAYOUT_STATUS_INVALID");
+    if (!["paid", "rejected"].includes(status))
+      throw bad("Choose paid or rejected", "BUS_PAYOUT_STATUS_INVALID");
     return prisma.$transaction(async (tx) => {
       const payout = await tx.busPayout.findUnique({ where: { id: payoutId } });
       if (!payout) throw bad("Payout not found", "BUS_PAYOUT_NOT_FOUND", 404);
-      if (payout.status !== "requested") throw bad("This payout was already processed", "BUS_PAYOUT_DONE", 409);
-      if (status === "rejected") await tx.busOperator.update({ where: { id: payout.operatorId }, data: { walletBalance: { increment: payout.amount } } });
-      const updated = await tx.busPayout.update({ where: { id: payoutId }, data: { status, note: note ?? "", processedAt: new Date() } });
+      if (payout.status !== "requested")
+        throw bad("This payout was already processed", "BUS_PAYOUT_DONE", 409);
+      if (status === "rejected")
+        await tx.busOperator.update({
+          where: { id: payout.operatorId },
+          data: { walletBalance: { increment: payout.amount } },
+        });
+      const updated = await tx.busPayout.update({
+        where: { id: payoutId },
+        data: { status, note: note ?? "", processedAt: new Date() },
+      });
       return { ...updated, amount: money(updated.amount) };
     });
   }
@@ -381,7 +811,15 @@ export class BusOperationsService {
   async adminListBookings({ status, q, page = 1, limit = 40 } = {}) {
     const where = {
       ...(status ? { status } : {}),
-      ...(q ? { OR: [{ reference: { contains: q.toUpperCase() } }, { passengerName: { contains: q } }, { passengerPhone: { contains: q } }] } : {})
+      ...(q
+        ? {
+            OR: [
+              { reference: { contains: q.toUpperCase() } },
+              { passengerName: { contains: q } },
+              { passengerPhone: { contains: q } },
+            ],
+          }
+        : {}),
     };
     const [total, rows] = await Promise.all([
       prisma.busBooking.count({ where }),
@@ -390,36 +828,98 @@ export class BusOperationsService {
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
-        include: { operator: { select: { id: true, companyName: true, logoUrl: true } }, trip: { include: { route: { select: { name: true } } } } }
-      })
+        include: {
+          operator: { select: { id: true, companyName: true, logoUrl: true } },
+          trip: { include: { route: { select: { name: true } } } },
+        },
+      }),
     ]);
     return {
       total,
-      items: rows.map((b) => ({ id: b.id, reference: b.reference, status: b.status, operatorId: b.operator.id, company: b.operator.companyName, companyLogoUrl: b.operator.logoUrl, route: b.trip.route.name, departureAt: b.trip.departureAt, passengerName: b.passengerName, passengerPhone: b.passengerPhone, payPhone: b.payPhone, seatCount: b.seatCount, total: money(b.total), fee: money(b.fee), createdAt: b.createdAt }))
+      items: rows.map((b) => ({
+        id: b.id,
+        reference: b.reference,
+        status: b.status,
+        operatorId: b.operator.id,
+        company: b.operator.companyName,
+        companyLogoUrl: b.operator.logoUrl,
+        route: b.trip.route.name,
+        departureAt: b.trip.departureAt,
+        passengerName: b.passengerName,
+        passengerPhone: b.passengerPhone,
+        payPhone: b.payPhone,
+        seatCount: b.seatCount,
+        total: money(b.total),
+        fee: money(b.fee),
+        createdAt: b.createdAt,
+      })),
     };
   }
 
   // The admin refunds the customer by mobile money outside the system, then marks it done here.
-  async adminMarkRefunded(bookingId) {
-    const booking = await prisma.busBooking.findUnique({ where: { id: bookingId } });
+  async adminMarkRefunded(bookingId, { actorId, reference } = {}) {
+    const booking = await prisma.busBooking.findUnique({
+      where: { id: bookingId },
+    });
     if (!booking) throw bad("Booking not found", "BUS_BOOKING_NOT_FOUND", 404);
-    if (booking.status !== "refund_due") throw bad("This booking isn't waiting for a refund", "BUS_NOT_REFUND_DUE", 409);
+    if (booking.status !== "refund_due")
+      throw bad(
+        "This booking isn't waiting for a refund",
+        "BUS_NOT_REFUND_DUE",
+        409,
+      );
+    if (!reference)
+      throw bad(
+        "Enter the refund payment reference",
+        "BUS_REFUND_REFERENCE_REQUIRED",
+      );
     await prisma.$transaction(async (tx) => {
-      await tx.busBooking.update({ where: { id: bookingId }, data: { status: "cancelled" } });
-      if (booking.transactionId) await tx.transaction.update({ where: { id: booking.transactionId }, data: { status: "refunded" } });
+      const changed = await tx.busBooking.updateMany({
+        where: { id: bookingId, status: "refund_due", refundedAt: null },
+        data: {
+          status: "cancelled",
+          refundedAt: new Date(),
+          refundedById: actorId,
+          refundReference: reference,
+        },
+      });
+      if (!changed.count)
+        throw bad("Refund already recorded", "BUS_REFUND_DONE", 409);
+      if (booking.confirmedAt && Number(booking.fee) > 0)
+        await tx.wallet.updateMany({
+          where: { providerId: null },
+          data: { balance: { decrement: booking.fee } },
+        });
+      if (booking.transactionId)
+        await tx.transaction.update({
+          where: { id: booking.transactionId },
+          data: { status: "refunded" },
+        });
     });
     return { ok: true };
   }
 
   async adminOverview() {
-    const [bookings, revenue, operators, tickets, refunds, payouts] = await Promise.all([
-      prisma.busBooking.count({ where: { status: "confirmed" } }),
-      prisma.busBooking.aggregate({ where: { status: "confirmed" }, _sum: { total: true, fee: true } }),
-      prisma.busOperator.count({ where: { onboardingStatus: "registered" } }),
-      prisma.busTicket.count({ where: { status: { not: "cancelled" } } }),
-      prisma.busBooking.count({ where: { status: "refund_due" } }),
-      prisma.busPayout.count({ where: { status: "requested" } })
-    ]);
-    return { bookings, tickets, operators, grossSales: money(revenue._sum.total), commissionEarned: money(revenue._sum.fee), refundsDue: refunds, payoutsPending: payouts };
+    const [bookings, revenue, operators, tickets, refunds, payouts] =
+      await Promise.all([
+        prisma.busBooking.count({ where: { status: "confirmed" } }),
+        prisma.busBooking.aggregate({
+          where: { status: "confirmed" },
+          _sum: { total: true, fee: true },
+        }),
+        prisma.busOperator.count({ where: { onboardingStatus: "registered" } }),
+        prisma.busTicket.count({ where: { status: { not: "cancelled" } } }),
+        prisma.busBooking.count({ where: { status: "refund_due" } }),
+        prisma.busPayout.count({ where: { status: "requested" } }),
+      ]);
+    return {
+      bookings,
+      tickets,
+      operators,
+      grossSales: money(revenue._sum.total),
+      commissionEarned: money(revenue._sum.fee),
+      refundsDue: refunds,
+      payoutsPending: payouts,
+    };
   }
 }

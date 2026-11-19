@@ -148,6 +148,7 @@ export const busApi = {
   book: (body) => request("/bus/bookings", { method: "POST", body: json(body) }),
   booking: (id) => request(`/bus/bookings/${id}`),
   myTickets: () => request("/bus/my-tickets"),
+  cancelBooking: (id) => request(`/bus/bookings/${encodeURIComponent(id)}/cancel`,{method:'POST'}),
   myTicket: (ticketNumber) => request(`/bus/my-tickets/${encodeURIComponent(ticketNumber)}`),
   myMessages: () => request("/bus/my-messages")
 };

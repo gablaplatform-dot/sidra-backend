@@ -10,6 +10,7 @@ import { trackInterest } from "../../lib/tracking";
 import { formatUgx } from "../../lib/format";
 import { listingCover } from "../../lib/shopMappers";
 import { Skel } from "../Skeleton";
+import ImageSearchButton from "../ImageSearchButton";
 import LazyImg from "../LazyImg";
 import { IconClose } from "../icons";
 import { IconFind } from "./HomeIcons";
@@ -249,6 +250,7 @@ export default function NearbyFinder({ session, initialText = "", onTextChange, 
       >
         <IconFind />
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t("nearby.placeholder")} aria-label={t("nearby.ariaLabel")} enterKeyHint="search" autoComplete="off" autoFocus={autoFocus} />
+        <ImageSearchButton onResult={(phrase) => setText(phrase)} />
         {text ? (
           <button type="button" className="mh-search-clear" onClick={() => setText("")} aria-label={t("nearby.clear")}><IconClose width={16} height={16} /></button>
         ) : null}

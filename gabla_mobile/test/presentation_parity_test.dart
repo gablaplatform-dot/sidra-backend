@@ -23,8 +23,13 @@ import 'package:gabla_mobile/features/bus/presentation/bus_operator_portal_scree
 import 'package:gabla_mobile/features/bus/presentation/bus_route_editor.dart';
 import 'package:gabla_mobile/features/categories/domain/category.dart';
 import 'package:gabla_mobile/features/categories/presentation/category_detail_screen.dart';
+import 'package:gabla_mobile/features/home/presentation/home_screen.dart';
 import 'package:gabla_mobile/features/profile/presentation/profile_screen.dart';
 import 'package:gabla_mobile/features/provider/presentation/listing_form_screen.dart';
+import 'package:gabla_mobile/features/provider/application/provider_providers.dart';
+import 'package:gabla_mobile/features/provider/presentation/provider_contact_panel.dart';
+import 'package:gabla_mobile/features/payments/presentation/payment_sheet.dart';
+import 'package:gabla_mobile/features/shop/presentation/shop_screen.dart';
 import 'package:gabla_mobile/features/provider/presentation/provider_onboarding_screen.dart';
 import 'package:gabla_mobile/features/search/application/search_providers.dart';
 import 'package:gabla_mobile/features/search/presentation/search_results_screen.dart';
@@ -146,6 +151,20 @@ class FixtureApi extends ApiClient {
           },
         ],
       };
+    } else if (path == '/listings/me?limit=100') {
+      value = {
+        'items': [
+          {..._service, 'status': 'approved'},
+          {
+            'id': 'mug',
+            'name': 'Ceramic mug',
+            'type': 'product',
+            'price': 18000,
+            'status': 'pending',
+            'sku': 'MUG-24',
+          },
+        ],
+      };
     } else if (path == '/listings' || path == '/listings/me') {
       value = {
         'items': [_service],
@@ -177,6 +196,27 @@ class FixtureApi extends ApiClient {
           'payment': {'instructions': ''},
           'email': {'sendQuotation': true},
         },
+      };
+    } else if (path == '/bookings/provider') {
+      value = {
+        'items': [
+          {
+            'id': 'reservation',
+            'listing': {'name': 'Private consultation'},
+            'startDate': '2026-11-15',
+            'endDate': '2026-11-15',
+            'startTime': '10:00',
+            'endTime': '11:00',
+            'status': 'pending',
+            'total': 50000,
+            'customer': {
+              'name': 'Amina',
+              'phone': '0772123456',
+              'email': 'amina@example.test',
+              'notes': 'Please prepare a room with step-free access.',
+            },
+          },
+        ],
       };
     } else if (path == '/bookings/availability') {
       value = {
@@ -476,7 +516,117 @@ void main() {
       expect(video.disposed, 1);
     },
   );
+  testWidgets(
+    'provider profile opens bookings and displays time and description',
+    (tester) async {
+      final api = FixtureApi();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            themeControllerProvider.overrideWith(
+              () => _Theme(AppThemeStyle.gabla),
+            ),
+            sessionControllerProvider.overrideWith(_Session.new),
+            apiClientProvider.overrideWithValue(api),
+          ],
+          child: const MaterialApp(home: ProfileScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Lake House'), findsWidgets);
+      expect(find.text('Change cover'), findsOneWidget);
+      expect(find.byTooltip('Change profile photo'), findsOneWidget);
+      await tester.ensureVisible(find.text('Bookings'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bookings'));
+      await tester.pumpAndSettle();
+      expect(api.requests, contains('/bookings/provider'));
+      expect(find.text('10:00 – 11:00 EAT'), findsOneWidget);
+      expect(find.textContaining('step-free access'), findsOneWidget);
+      expect(find.text('Accept'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('provider listings switch between types, layouts, and filters', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          themeControllerProvider.overrideWith(
+            () => _Theme(AppThemeStyle.gabla),
+          ),
+          sessionControllerProvider.overrideWith(_Session.new),
+          apiClientProvider.overrideWithValue(FixtureApi()),
+        ],
+        child: const MaterialApp(home: WorkspaceScreen(section: 'listings')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Ceramic mug'), findsOneWidget);
+    expect(find.text('A weekend by the lake'), findsNothing);
+    await tester.tap(find.byTooltip('List view'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'MUG-24');
+    await tester.pumpAndSettle();
+    expect(find.text('Ceramic mug'), findsOneWidget);
+    await tester.tap(find.text('Filters'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All statuses'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Approved').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Apply filters'));
+    await tester.tap(find.text('Apply filters'));
+    await tester.pumpAndSettle();
+    expect(find.text('No matching listings'), findsOneWidget);
+    await tester.tap(find.text('Services (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('A weekend by the lake'), findsOneWidget);
+    expect(find.text('Ceramic mug'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'the contact pass opens the existing payment sheet with the seller fee',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            themeControllerProvider.overrideWith(
+              () => _Theme(AppThemeStyle.gabla),
+            ),
+            sessionControllerProvider.overrideWith(_Session.new),
+            providerDetailProvider('business').overrideWith(
+              (ref) async => {
+                ..._business,
+                'contactLocked': true,
+                'contactFee': '2000',
+              },
+            ),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: ProviderContactPanel(providerId: 'business')),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Unlock seller contact'), findsOneWidget);
+      expect(find.text('0772123456'), findsNothing);
+      await tester.tap(find.text('Continue to payment'));
+      await tester.pumpAndSettle();
+      final sheet = tester.widget<PaymentSheet>(find.byType(PaymentSheet));
+      expect(sheet.endpoint, '/payments/contacts/unlock');
+      expect(sheet.amount, 2000);
+      expect(sheet.providerId, 'business');
+    },
+  );
+
   final pages = <String, Widget>{
+    'home': const HomeScreen(),
+    'shop': const ShopScreen(),
+    'profile-listings': const WorkspaceScreen(section: 'listings'),
     'services': const ServicesScreen(),
     'search': const SearchResultsScreen(initialQuery: 'Lake'),
     'directory': const CategoryDetailScreen(categoryId: 'directory'),

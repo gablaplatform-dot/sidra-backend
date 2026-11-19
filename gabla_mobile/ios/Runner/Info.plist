@@ -47,6 +47,10 @@
 		<true/>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
+		<key>NSCameraUsageDescription</key>
+		<string>Gabla uses the camera to search for items by photo and scan event tickets at the door.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Choose an item photo to find similar products on Gabla or add photos to your listings.</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Gabla uses your location to find your pickup point for rides and to show nearby providers.</string>
 		<key>CFBundleURLTypes</key>

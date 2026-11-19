@@ -102,17 +102,22 @@ class CommunityBrowseHeader extends StatelessWidget {
     super.key,
     required this.style,
     required this.event,
+    this.workers = false,
   });
   final AppThemeStyle style;
-  final bool event;
+  final bool event, workers;
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).colorScheme;
     final title = event
         ? 'Good nights.\nGreat company.'
+        : workers
+        ? 'Find people\nready to work.'
         : 'Find work\nthat fits you.';
     final subtitle = event
         ? 'Music, culture and gatherings near you.'
+        : workers
+        ? 'Browse skills and availability, then contact a worker directly.'
         : 'Vacancies & paid tasks, in one place.';
     Widget text(String value, {Color? color, double size = 32}) => Text(
       value,
@@ -384,8 +389,9 @@ class CommunityEmptyState extends StatelessWidget {
     super.key,
     required this.event,
     required this.private,
+    this.workers = false,
   });
-  final bool event, private;
+  final bool event, private, workers;
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).colorScheme;
@@ -405,6 +411,8 @@ class CommunityEmptyState extends StatelessWidget {
                 ? 'Nothing here yet'
                 : event
                 ? 'No events found'
+                : workers
+                ? 'No matching workers'
                 : 'No matching opportunities',
             textAlign: TextAlign.center,
             style: Theme.of(
@@ -415,7 +423,11 @@ class CommunityEmptyState extends StatelessWidget {
           Text(
             private
                 ? 'Your posts and saved discoveries will appear here.'
-                : 'Try another search or share the first ${event ? 'event' : 'opportunity'}.',
+                : 'Try another search or share the first ${event
+                      ? 'event'
+                      : workers
+                      ? 'worker post'
+                      : 'opportunity'}.',
             textAlign: TextAlign.center,
             style: TextStyle(color: c.onSurfaceVariant, height: 1.5),
           ),
@@ -586,12 +598,22 @@ class CommunityDetailMasthead extends StatelessWidget {
 }
 
 class CommunityAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const CommunityAppBar({super.key, required this.title, this.actions});
+  const CommunityAppBar({
+    super.key,
+    required this.title,
+    this.actions,
+    this.leading,
+  });
+  final Widget? leading;
   final String title;
   final List<Widget>? actions;
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
   @override
-  Widget build(BuildContext context) =>
-      AppBar(title: Text(title), actions: actions, scrolledUnderElevation: 0);
+  Widget build(BuildContext context) => AppBar(
+    title: Text(title),
+    leading: leading,
+    actions: actions,
+    scrolledUnderElevation: 0,
+  );
 }

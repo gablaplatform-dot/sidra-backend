@@ -9,6 +9,7 @@ class ThemePreferences {
     required this.style,
     required this.mode,
     this.palettes = const {},
+    this.backgroundGrainEnabled = true,
     this.motion = BackgroundMotion.none,
     this.fontGroup = FontGroup.design,
     this.motionIntensity = .55,
@@ -23,6 +24,7 @@ class ThemePreferences {
 
   final AppThemeStyle style;
   final ThemeMode mode;
+  final bool backgroundGrainEnabled;
   final BackgroundMotion motion;
   final FontGroup fontGroup;
   final double motionIntensity;
@@ -36,6 +38,7 @@ class ThemePreferences {
     AppThemeStyle? style,
     ThemeMode? mode,
     Map<String, List<int>>? palettes,
+    bool? backgroundGrainEnabled,
     BackgroundMotion? motion,
     FontGroup? fontGroup,
     double? motionIntensity,
@@ -45,6 +48,8 @@ class ThemePreferences {
     style: style ?? this.style,
     mode: mode ?? this.mode,
     palettes: palettes ?? this.palettes,
+    backgroundGrainEnabled:
+        backgroundGrainEnabled ?? this.backgroundGrainEnabled,
     motion: motion ?? this.motion,
     fontGroup: fontGroup ?? this.fontGroup,
     motionIntensity: motionIntensity ?? this.motionIntensity,

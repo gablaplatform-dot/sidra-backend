@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gabla_mobile/core/motion/motion_background.dart';
+import 'package:gabla_mobile/core/theme/background_grain.dart';
 import 'package:gabla_mobile/features/settings/data/theme_preferences_store.dart';
 import 'package:gabla_mobile/features/settings/domain/background_motion.dart';
 import 'package:gabla_mobile/features/settings/domain/theme_preferences.dart';
@@ -89,6 +90,39 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('Display toggles background grain and saves the choice', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          builder: (context, child) => AppMotionSurface(child: child!),
+          home: const AppearanceScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final grain = find.byWidgetPredicate(
+      (widget) =>
+          widget is DecoratedBox && widget.decoration == backgroundGrain,
+    );
+    expect(grain, findsOneWidget);
+    await tester.ensureVisible(find.text('Display'));
+    await tester.tap(find.text('Display'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Background grain'));
+    await tester.pumpAndSettle();
+    expect(grain, findsNothing);
+    expect(
+      (await ThemePreferencesStore().read()).backgroundGrainEnabled,
+      false,
+    );
+    await tester.tap(find.text('Background grain'));
+    await tester.pumpAndSettle();
+    expect(grain, findsOneWidget);
+    expect((await ThemePreferencesStore().read()).backgroundGrainEnabled, true);
+  });
+
   testWidgets('visual color picker previews a color and saves only on Apply', (
     tester,
   ) async {

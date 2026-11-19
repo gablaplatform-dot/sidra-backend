@@ -105,6 +105,19 @@ class ApiClient {
   Future<T> post<T>(String path, {Object? body}) =>
       _send<T>(() => _dio.post(path, data: body));
 
+  Future<Map<String, dynamic>> searchByPhoto(Uint8List pngBytes) =>
+      _send<Map<String, dynamic>>(
+        () => _dio.post(
+          '/search/image',
+          data: pngBytes,
+          options: Options(
+            contentType: 'image/png',
+            sendTimeout: const Duration(seconds: 30),
+            receiveTimeout: const Duration(seconds: 40),
+          ),
+        ),
+      );
+
   Future<T> put<T>(String path, {Object? body}) =>
       _send<T>(() => _dio.put(path, data: body));
 

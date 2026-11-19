@@ -225,7 +225,7 @@ export const bookingEmail = ({ event, to, ctx }) => {
   const copy = copies[`${event}:${to}`];
   if (!copy) return null;
   const alias = `gabla-booking-${event.replace(/_/g, "-")}-${to}${event === "created" ? (c.status === "confirmed" ? "-instant" : "-request") : ""}`;
-  return renderEmail({ alias, subject: copy.subject, preheader: copy.intro, badge: copy.badge, badgeTone: copy.tone, title: copy.title, intro: copy.intro, blocks: copy.blocks, cta: copy.cta, footer: "You can see this booking any time under Orders, then Bookings, on Gabla." });
+  return renderEmail({ alias, subject: copy.subject, preheader: copy.intro, badge: copy.badge, badgeTone: copy.tone, title: copy.title, intro: copy.intro, blocks: copy.blocks, cta: copy.cta, footer: to === "provider" ? "Open the Bookings tab on your Gabla business profile to manage this booking." : "You can see this booking any time under Orders, then Bookings, on Gabla." });
 };
 
 // ======================================================================================= bus

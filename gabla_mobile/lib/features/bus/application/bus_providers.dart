@@ -1,3 +1,4 @@
+import '../domain/bus_booking.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/network_providers.dart';
@@ -75,4 +76,8 @@ final busSearchResultsProvider =
 
 final busPlacesProvider = FutureProvider<Map<String, dynamic>>(
   (ref) => ref.watch(busRepositoryProvider).fetchPlaces(),
+);
+
+final myBusBookingsProvider = FutureProvider<List<BusBooking>>(
+  (ref) => ref.watch(busRepositoryProvider).fetchMyBookings(),
 );

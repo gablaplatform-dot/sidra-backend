@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { request } from "../../lib/api";
+import ImageSearchButton from "../ImageSearchButton";
 import { getCurrentPosition } from "../../lib/geolocation";
 import { getPreferredDistrict } from "../../lib/userLocation";
 import { trackInterest } from "../../lib/tracking";
@@ -19,6 +20,7 @@ const LOCATION_NOTICE_CODES = ["denied", "unsupported", "timeout", "unavailable"
 
 export default function NearbySearchModal({ onClose }) {
   const { t } = useTranslation();
+  const formRef = useRef(null);
   const [query, setQuery] = useState("");
   const [district, setDistrict] = useState("");
   const [districts, setDistricts] = useState([]);
@@ -118,7 +120,7 @@ export default function NearbySearchModal({ onClose }) {
         </button>
 
         <h2>{t("shop.nearby.title")}</h2>
-        <form className="nearby-search-form" onSubmit={submit}>
+        <form className="nearby-search-form" ref={formRef} onSubmit={submit}>
           <div className="nearby-search-input">
             <IconSearch />
             <input
@@ -128,6 +130,7 @@ export default function NearbySearchModal({ onClose }) {
               placeholder={t("shop.nearby.placeholder")}
               autoFocus
             />
+            <ImageSearchButton onResult={(phrase) => { setQuery(phrase); setTimeout(() => formRef.current?.requestSubmit(), 0); }} />
           </div>
           <button type="submit" className="primary-button" disabled={loading}>
             {loading ? t("shop.nearby.searching") : t("shop.nearby.search")}

@@ -1,3 +1,5 @@
+import { discoveryOrder } from "../domain/discoveryOrder.js";
+import { rankSearchResults } from "../domain/searchIntent.js";
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 import { findNearbyProviderIds } from "./geoProviderSearch.js";
@@ -136,8 +138,11 @@ export class ListingService {
   // The "what the AI understood" part of a search: related words plus the product and provider
   // categories they point at (children included), as one OR condition on the listing.
   async _aiSearchClauses(text, ai) {
-    const or = [{ name: { contains: text } }];
-    for (const term of ai.terms) or.push({ name: { contains: term } });
+    // Once we know the shelf, anchor results there. Otherwise "Apple laptop"
+    // could return iPhones merely because "apple" was one of the search terms.
+    const categoryScoped = ai.productCategoryIds.length || ai.serviceCategoryIds.length || ai.listingServiceCategoryIds?.length;
+    const or = categoryScoped ? [] : [{ name: { contains: text } }];
+    if (!categoryScoped) for (const term of ai.terms) or.push({ name: { contains: term } });
 
     if (ai.productCategoryIds.length) {
       const groups = await Promise.all(ai.productCategoryIds.map((id) => this._expandProductCategoryIds(id)));
@@ -673,8 +678,25 @@ export class ListingService {
   // One page of products for a plain (non-geo) filter. Attribute answers live inside the
   // customFields JSON, so when any are requested the match runs in memory over a capped candidate
   // set (already ordered by the DB); otherwise it stays a straight indexed query.
-  async _fetchPage({ filter, attrs, sort, skip, take }) {
+  async _fetchPage({ filter, attrs, sort, seed = "gabla", skip, take, q, ai }) {
     const include = { provider: { select: PROVIDER_CARD_SELECT } };
+    if (sort === "discovery" || (q && (!sort || sort === "featured"))) {
+      const candidates = await prisma.serviceProduct.findMany({
+        where: filter,
+        select: { id: true, productCategoryId: true, serviceCategoryId: true,
+          ...(q ? {name: true} : {}),
+          ...(Object.keys(attrs).length ? { customFields: true } : {}) },
+        ...(sort !== "discovery" ? {orderBy: this._orderByForSort(sort)} : {}),
+      });
+      const matched = candidates.filter((item) => matchesAttrs(item.customFields, attrs));
+      const ordered = rankSearchResults(sort === "discovery" ? discoveryOrder(matched, seed) : matched, q, ai);
+      const pageIds = ordered.slice(skip, skip + take).map((item) => item.id);
+      const rows = pageIds.length ? await prisma.serviceProduct.findMany({
+        where: { ...filter, id: { in: pageIds } }, include,
+      }) : [];
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      return { items: pageIds.map((id) => byId.get(id)).filter(Boolean), total: matched.length };
+    }
     const orderBy = this._orderByForSort(sort);
     if (!Object.keys(attrs).length) {
       const [items, total] = await Promise.all([
@@ -739,16 +761,18 @@ export class ListingService {
   }
 
   async publicList(args) {
-    const result = await this._publicList(args);
+    const ai = args.ai === undefined && args.q ? await this.aiSearchService?.expand(args.q) : args.ai;
+    const result = await this._publicList({...args, ai});
+    result.interpretedAs = ai?.intent || null;
     // Listings from providers that named the chosen country or culture come first (stable within each group).
-    if ((args.countryId || args.cultureId) && result.items?.length) {
+    if (args.sort !== "discovery" && (args.countryId || args.cultureId) && result.items?.length) {
       const matched = await this.audienceService.matchedProviderIds(result.items.map((i) => i.providerId), [args.countryId, args.cultureId]);
       result.items = [...result.items.filter((i) => matched.has(i.providerId)), ...result.items.filter((i) => !matched.has(i.providerId))];
     }
     return result;
   }
 
-  async _publicList({ page = 1, limit = 20, type, q, ai, countryId, cultureId, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, sort, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, around, minPrice, maxPrice, attrs: rawAttrs }) {
+  async _publicList({ page = 1, limit = 20, type, q, ai, countryId, cultureId, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, sort, seed = "gabla", discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, around, minPrice, maxPrice, attrs: rawAttrs }) {
     const normalizedPage = Math.max(1, Number(page) || 1);
     const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
     const skip = (normalizedPage - 1) * normalizedLimit;
@@ -799,7 +823,8 @@ export class ListingService {
       }
 
       const total = ranked.length;
-      const pageItems = ranked.slice(skip, skip + normalizedLimit);
+      const ordered = sort === "discovery" ? rankSearchResults(discoveryOrder(ranked, seed, (entry) => entry.item), q, ai, entry => entry.item) : ranked;
+      const pageItems = ordered.slice(skip, skip + normalizedLimit);
 
       return {
         // Distances from a district's middle would read as "km from you", so they are left off.
@@ -816,13 +841,13 @@ export class ListingService {
 
     if (district) {
       let filter = await this._buildPublicFilter({ ...baseArgs, district });
-      let result = await this._fetchPage({ filter, attrs, sort, skip, take: normalizedLimit });
+      let result = await this._fetchPage({ filter, attrs, sort, seed, skip, q, ai, take: normalizedLimit });
       let effectiveDistrict = district;
       let widened = false;
 
       if (result.total === 0) {
         filter = await this._buildPublicFilter(baseArgs);
-        result = await this._fetchPage({ filter, attrs, sort, skip, take: normalizedLimit });
+        result = await this._fetchPage({ filter, attrs, sort, seed, skip, q, ai, take: normalizedLimit });
         effectiveDistrict = null;
         widened = true;
       }
@@ -839,7 +864,7 @@ export class ListingService {
     }
 
     const filter = await this._buildPublicFilter(baseArgs);
-    const result = await this._fetchPage({ filter, attrs, sort, skip, take: normalizedLimit });
+    const result = await this._fetchPage({ filter, attrs, sort, seed, skip, q, ai, take: normalizedLimit });
 
     return {
       items: result.items.map((i) => this._toDto(i, i.provider)),
@@ -857,9 +882,10 @@ export class ListingService {
   // what "Dell" would add) but respect every other active filter, and all of it is scoped to the
   // chosen location, so numbers always match what the result grid would show.
   async facets({ countryId, cultureId, type, q, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals, lat, lng, radiusKm, district, minPrice, maxPrice, attrs: rawAttrs }) {
+    const ai = q ? await this.aiSearchService?.expand(q) : null;
     const attrs = parseAttrs(rawAttrs);
     const hasGeo = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && Number.isFinite(Number(radiusKm));
-    const filter = await this._buildPublicFilter({ countryId, cultureId, type, q, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals });
+    const filter = await this._buildPublicFilter({ countryId, cultureId, type, q, ai, serviceCategoryId, bookable, categoryId, productCategoryId, shopCategoryId, providerId, discountOnly, isNew, newArrivals });
 
     let geo = null;
     if (hasGeo) {
@@ -1098,12 +1124,16 @@ export class ListingService {
       where.providerId = base.providerId;
     }
 
-    const candidates = await prisma.serviceProduct.findMany({
-      where,
-      orderBy: [{ createdAt: "desc" }],
-      take: 150,
-      include: { provider: { select: { ...PROVIDER_CARD_SELECT, lat: true, lng: true } } }
+    const include = { provider: { select: { ...PROVIDER_CARD_SELECT, lat: true, lng: true } } };
+    const exact = base.productCategoryId ? await prisma.serviceProduct.findMany({
+      where: { ...where, productCategoryId: base.productCategoryId },
+      orderBy: [{ createdAt: "desc" }], take: 150, include,
+    }) : [];
+    const broader = exact.length >= take ? [] : await prisma.serviceProduct.findMany({
+      where: { ...where, ...(base.productCategoryId ? { AND: [{ productCategoryId: { not: base.productCategoryId } }] } : {}) },
+      orderBy: [{ createdAt: "desc" }], take: 150, include,
     });
+    const candidates = [...exact, ...broader];
 
     const basePrice = Number(base.price) || 0;
     const baseBrand = new Set([...answerValues(base.customFields, "brand"), ...answerValues(base.customFields, "make")]);
@@ -1140,7 +1170,7 @@ export class ListingService {
       return { item, score, distanceKm };
     });
 
-    scored.sort((a, b) => b.score - a.score || new Date(b.item.createdAt) - new Date(a.item.createdAt));
+    scored.sort((a, b) => Number(b.item.productCategoryId === base.productCategoryId) - Number(a.item.productCategoryId === base.productCategoryId) || b.score - a.score || new Date(b.item.createdAt) - new Date(a.item.createdAt));
     const picked = scored.slice(0, take);
     return {
       items: picked.map(({ item, distanceKm }) => this._toDto(item, item.provider, distanceKm)),

@@ -1,0 +1,23 @@
+{
+  "bottomNav": {
+    "aria": "Main navigation",
+    "home": "Home",
+    "shop": "Shop",
+    "services": "Services",
+    "bus": "Bus",
+    "ride": "Ride",
+    "me": "Me",
+    "categories": "Categories",
+    "cart": "Cart",
+    "book": "Book",
+    "parks": "Parks",
+    "tickets": "Tickets",
+    "browse": "Browse",
+    "search": "Search",
+    "jobs": "Jobs",
+    "saved": "Saved",
+    "mine": "My posts",
+    "events": "Events",
+    "eventTickets": "Tickets"
+  }
+}

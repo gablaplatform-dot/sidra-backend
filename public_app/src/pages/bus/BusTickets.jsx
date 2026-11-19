@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
@@ -48,9 +48,16 @@ function bookingTone(booking) {
   return { state: "valid", tone: "green", label: i18n.t("bus.status.confirmed") };
 }
 
-function BookingCard({ booking }) {
+function BookingCard({ booking, onChanged }) {
   const { t: tr } = useTranslation();
   const { trip, operator } = booking;
+  const [now,setNow]=useState(Date.now()),[busy,setBusy]=useState(false),[error,setError]=useState(''),[confirm,setConfirm]=useState(false);
+  useEffect(()=>{const t=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(t);},[]);
+  const effective=new Date(trip.effectiveDepartureAt || new Date(new Date(trip.departureAt).getTime()+(trip.delayMinutes||0)*60000));
+  const remaining=Math.max(0,Math.ceil((effective-now)/60000));
+  const canCancel=booking.canCancel && trip.status==='scheduled' && now<new Date(booking.cancellationClosesAt).getTime();
+  const deadline=booking.cancellationClosesAt?`${dayLabel(eatDate(booking.cancellationClosesAt))} · ${eatTime(booking.cancellationClosesAt)} EAT`:'';
+  async function cancel(){setBusy(true);setError('');try{await busApi.cancelBooking(booking.id);onChanged?.();setConfirm(false);}catch(e){setError(e.message);}finally{setBusy(false);}}
   const { state, tone, label } = bookingTone(booking);
   const first = booking.tickets[0];
   const href = first ? `/bus/tickets/${first.ticketNumber}` : "/bus/tickets";
@@ -87,6 +94,13 @@ function BookingCard({ booking }) {
           </span>
         ) : <b className="bus-mytrip-total">{ugx(booking.total)}</b>}
       </div>
+      {booking.status==='confirmed'?<div style={{padding:'16px 22px',borderTop:'1px solid var(--bus-line,#dce5ea)'}}><strong>{['bus_confirmed','handed_over'].includes(booking.operationStatus)?'Bus availability confirmed':booking.operationStatus==='needs_attention'?'Gabla is following up your bus':'Gabla is checking bus availability'}</strong>{trip.route.boardingPoint?<p style={{fontSize:13,marginTop:8}}>Pickup: {trip.route.boardingPoint} · <a target="_blank" rel="noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(trip.route.boardingLat!=null&&trip.route.boardingLng!=null?`${trip.route.boardingLat},${trip.route.boardingLng}`:`${trip.route.boardingPoint}, Uganda`)}`}>Directions to pickup ↗</a></p>:null}</div>:null}
+      {booking.status==='confirmed'?<section style={{padding:'18px 22px',borderTop:'1px solid var(--bus-line,#dce5ea)',background:'var(--bus-surface,#f1f5f8)'}}>
+        <strong>{trip.status==='scheduled'?remaining>0?`${Math.floor(remaining/60)}h ${remaining%60}m until departure`:'Departure time reached':trip.status}</strong>
+        <p style={{fontSize:13,marginTop:8}}>{canCancel?`Cancellation available until ${deadline}.`:'Cancellation period closed. This booking is non-refundable unless Gabla or the bus company cancels the trip.'}</p>
+        {canCancel?<div style={{marginTop:12}}>{confirm?<><p>Cancel all {booking.seatCount} tickets? Gabla will arrange your refund.</p><button className="bus-btn bus-btn-primary" disabled={busy} onClick={cancel}>{busy?'Cancelling…':'Confirm cancellation'}</button> <button className="bus-pillbtn" onClick={()=>setConfirm(false)}>Keep booking</button></>:<button className="bus-pillbtn" onClick={()=>setConfirm(true)}>Cancel booking</button>}</div>:null}
+        {error?<p role="alert">{error}</p>:null}
+      </section>:null}
       {!booking.tickets.length ? <p className="bus-hint bus-mytrip-wait">{tr("bus.tickets.issuing")}</p> : null}
     </article>
   );
@@ -105,6 +119,7 @@ export default function BusTickets() {
   const [allNotices, setAllNotices] = useState(false);
   const [shown, setShown] = useState(PAGE);
 
+  useEffect(()=>{if(!signedIn)return;const timer=setInterval(tickets.reload,30000);return()=>clearInterval(timer);},[signedIn,tickets.reload]);
   if (!signedIn || tickets.error?.status === 401) {
     return (
       <BusLayout>
@@ -167,7 +182,7 @@ export default function BusTickets() {
           </EmptyState>
         ) : list.length ? (
           <>
-            <div className="bus-mytrips" role="tabpanel">{list.slice(0, shown).map((b) => <BookingCard key={b.id} booking={b} />)}</div>
+            <div className="bus-mytrips" role="tabpanel">{list.slice(0, shown).map((b) => <BookingCard key={b.id} booking={b} onChanged={tickets.reload} />)}</div>
             {list.length > shown ? (
               <div className="bus-loadmore">
                 <button type="button" className="bus-btn bus-btn-light" onClick={() => setShown((n) => n + PAGE)}>{tr("bus.tickets.showMore", { count: Math.min(PAGE, list.length - shown) })} <small>({tr("bus.tickets.leftCount", { count: list.length - shown })})</small></button>

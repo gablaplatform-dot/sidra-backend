@@ -1,0 +1,23 @@
+{
+  "bottomNav": {
+    "aria": "Hagidaha ugu muhiimsan",
+    "home": "Hoyga",
+    "shop": "Dukaan",
+    "services": "Adeegyo",
+    "bus": "Bas",
+    "ride": "Safar",
+    "me": "Aniga",
+    "categories": "Qaybaha",
+    "cart": "Gaadhi",
+    "book": "Buug",
+    "parks": "Goobaha",
+    "tickets": "Tigidh",
+    "browse": "Fiiri",
+    "search": "Raadi",
+    "jobs": "Shaqooyin",
+    "saved": "La kaydiyay",
+    "mine": "Kuwayga",
+    "events": "Dhacdooyin",
+    "eventTickets": "Tigidh"
+  }
+}

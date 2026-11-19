@@ -8214,11 +8214,12 @@ const TYPE_LABELS_PLATFORM = {
   cart_purchase: 'Cart order fees',
   ride_trip: 'Ride fees',
   bus_ticket: 'Bus ticket fees',
+  event_ticket: 'Event tickets',
   platform_withdrawal: 'Withdrawal'
 };
 
 // Order, ride and bus payments credit the platform only their fee; unlocks and subscriptions credit the whole amount.
-const PLATFORM_FEE_TYPES = ['purchase', 'cart_purchase', 'ride_trip', 'bus_ticket'];
+const PLATFORM_FEE_TYPES = ['purchase', 'cart_purchase', 'ride_trip', 'bus_ticket', 'event_ticket'];
 
 const STATUS_TONE_PLATFORM = {
   completed: { bg: 'bg-emerald-100', fg: 'text-emerald-800' },
@@ -8409,6 +8410,7 @@ const PlatformWalletView = ({ token, onReload }) => {
             <option value="cart_purchase">Cart order fees</option>
             <option value="ride_trip">Ride fees</option>
             <option value="bus_ticket">Bus ticket fees</option>
+            <option value="event_ticket">Event tickets</option>
             <option value="platform_withdrawal">Withdrawals</option>
           </select>
           <select className="text-sm rounded-lg border px-3 py-2" style={{ borderColor: '#E2E8F0' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
@@ -10675,8 +10677,8 @@ const MainContent = ({ activeTab, data, token, currentUser, onReload }) => {
     switch (activeTab) {
       case 'dashboard': return <DashboardView dashboard={data.dashboard} providersData={data.providers} transactionsData={data.transactions} subscriptionsData={data.subscriptions} />;
       case 'users': return <UsersView usersData={data.users} />;
-      case 'jobs': return <CommunityModeration kind="jobs" token={token} request={apiRequest}/>;
-      case 'events': return <CommunityModeration kind="events" token={token} request={apiRequest}/>;
+      case 'jobs': return <CommunityModeration key="jobs" kind="jobs" token={token} request={apiRequest}/>;
+      case 'events': return <CommunityModeration key="events" kind="events" token={token} request={apiRequest}/>;
       case 'providers': return <ProvidersView providersData={data.providers} categoriesData={data.categories} token={token} onReload={onReload} />;
       case 'categories': return <CategoryWorkspace data={data} token={token} onReload={onReload} />;
       case 'shopCategories': return <ShopCategoriesView providerCategories={data.categories} categoriesData={data.shopCategories} token={token} onReload={onReload} />;
@@ -10684,7 +10686,7 @@ const MainContent = ({ activeTab, data, token, currentUser, onReload }) => {
       case 'serviceCategories': return <ShopCategoriesView kind="service" categoriesData={data.serviceCategories} token={token} onReload={onReload} />;
       case 'listings': return <ListingsView listingsData={data.listings} providersData={data.providers} categoriesData={data.categories} token={token} onReload={onReload} />;
       case 'rides': return <RidesView token={token} />;
-      case 'bus': return <BusTicketingView token={token} />;
+      case 'bus': return <BusTicketingView token={token} loadMaps={loadGoogleMaps} />;
       case 'transactions': return <TransactionsView transactionsData={data.transactions} />;
       case 'platform-wallet': return <PlatformWalletView token={token} onReload={onReload} />;
       case 'payouts': return <PayoutsView token={token} onReload={onReload} />;
@@ -11712,7 +11714,7 @@ const AppContent = () => {
 
 const App = () => {
   return (
-    <Router basename="/">
+    <Router basename={import.meta.env.BASE_URL.replace(/\/$/, '') || '/'}>
       <Routes>
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
         <Route path="*" element={<AppContent />} />

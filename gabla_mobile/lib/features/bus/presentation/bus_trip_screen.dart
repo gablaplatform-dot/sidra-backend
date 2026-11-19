@@ -1,3 +1,4 @@
+import 'bus_pickup_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -100,6 +101,32 @@ class _BusTripScreenState extends ConsumerState<BusTripScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Container(
+            margin: const EdgeInsets.only(bottom: 18),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Cancellation policy',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Cancel until ${t.cancellationMinutes} minutes before departure. After that, your booking is confirmed and non-refundable, except if Gabla or the company cancels the trip.',
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Gabla coordinates your booking directly with the bus contact.',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
           Row(
             children: [
               Expanded(
@@ -433,6 +460,12 @@ class _BusTripScreenState extends ConsumerState<BusTripScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if ((t.boardingPoint ?? t.parkName ?? '').isNotEmpty)
+            BusPickupButton(
+              name: t.boardingPoint ?? t.parkName!,
+              latitude: t.boardingLat,
+              longitude: t.boardingLng,
+            ),
           _stop(
             Icons.trip_origin,
             t.originName,

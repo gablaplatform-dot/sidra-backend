@@ -1,3 +1,4 @@
+import '../../../core/widgets/page_band.dart';
 import 'delivery_location_field.dart';
 import '../../ride/domain/ride_location.dart';
 import '../../shop/application/commerce_providers.dart';
@@ -149,6 +150,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       ref.invalidate(myOrdersProvider);
     }
 
+    Widget panel(List<Widget> children, {Color? color}) => Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: PageBand(
+        color: color ?? c.surface,
+        elevation: 2,
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+        borderRadius: BorderRadius.circular(commerceRadius(style)),
+        children: children,
+      ),
+    );
     return Scaffold(
       appBar: const CommerceAppBar(title: 'Checkout'),
       bottomNavigationBar: cart.isEmpty || products.hasError
@@ -297,116 +308,121 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       'Some listings have no seller and cannot be ordered.',
                       style: TextStyle(color: c.error),
                     ),
-                  if (delivery) ...[
-                    const CommerceTitle('How would you like it?'),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(
-                          value: 'pickup',
-                          icon: Icon(Icons.storefront_outlined),
-                          label: Text('Pickup'),
-                        ),
-                        ButtonSegment(
-                          value: 'delivery',
-                          icon: Icon(Icons.local_shipping_outlined),
-                          label: Text('Delivery'),
-                        ),
-                      ],
-                      selected: {_fulfillment},
-                      onSelectionChanged: (v) =>
-                          setState(() => _fulfillment = v.first),
-                    ),
-                    AnimatedSize(
-                      duration: MediaQuery.disableAnimationsOf(context)
-                          ? Duration.zero
-                          : const Duration(milliseconds: 280),
-                      child: _fulfillment == 'delivery'
-                          ? Padding(
-                              padding: const EdgeInsets.only(top: 14),
-                              child: DeliveryLocationField(
-                                controller: _address,
-                                onLocated: (point, source) {
-                                  _point = point;
-                                  _locationSource = source;
-                                },
-                                onEdited: () {
-                                  _point = null;
-                                  _locationSource = null;
-                                },
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                  ],
-                  const CommerceTitle('Payment, your way'),
-                  for (final method in ['cash', 'online'])
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: RadioListTile<String>(
-                        value: method,
-                        groupValue: _payment,
-                        onChanged: (v) => setState(() => _payment = v!),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            commerceRadius(style),
+                  if (delivery)
+                    panel([
+                      const CommerceTitle('Pickup or delivery'),
+                      SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(
+                            value: 'pickup',
+                            icon: Icon(Icons.storefront_outlined),
+                            label: Text('Pickup'),
                           ),
-                          side: BorderSide(
-                            color: method == _payment
-                                ? c.primary
-                                : c.outlineVariant,
+                          ButtonSegment(
+                            value: 'delivery',
+                            icon: Icon(Icons.local_shipping_outlined),
+                            label: Text('Delivery'),
                           ),
-                        ),
-                        title: Text(
-                          method == 'cash'
-                              ? 'Cash on ${_fulfillment == 'pickup' ? 'pickup' : 'delivery'}'
-                              : 'Online after acceptance',
-                        ),
-                        subtitle: Text(
-                          method == 'cash'
-                              ? 'Pay the seller when you receive your order.'
-                              : 'The seller accepts first. Then pay from My orders.',
-                          style: const TextStyle(fontSize: 11),
+                        ],
+                        selected: {_fulfillment},
+                        onSelectionChanged: (v) =>
+                            setState(() => _fulfillment = v.first),
+                      ),
+                      AnimatedSize(
+                        duration: MediaQuery.disableAnimationsOf(context)
+                            ? Duration.zero
+                            : const Duration(milliseconds: 280),
+                        child: _fulfillment == 'delivery'
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 14),
+                                child: DeliveryLocationField(
+                                  controller: _address,
+                                  onLocated: (point, source) {
+                                    _point = point;
+                                    _locationSource = source;
+                                  },
+                                  onEdited: () {
+                                    _point = null;
+                                    _locationSource = null;
+                                  },
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ], color: c.surfaceContainerLow),
+                  panel([
+                    const CommerceTitle('Payment method'),
+                    for (final method in ['cash', 'online'])
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: RadioListTile<String>(
+                          value: method,
+                          groupValue: _payment,
+                          onChanged: (v) => setState(() => _payment = v!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              commerceRadius(style),
+                            ),
+                            side: BorderSide(
+                              color: method == _payment
+                                  ? c.primary
+                                  : c.outlineVariant,
+                            ),
+                          ),
+                          title: Text(
+                            method == 'cash'
+                                ? 'Cash on ${_fulfillment == 'pickup' ? 'pickup' : 'delivery'}'
+                                : 'Online after acceptance',
+                          ),
+                          subtitle: Text(
+                            method == 'cash'
+                                ? 'Pay the seller when you receive your order.'
+                                : 'The seller accepts first. Then pay from My orders.',
+                            style: const TextStyle(fontSize: 11),
+                          ),
                         ),
                       ),
+                  ], color: Color.lerp(c.surface, c.primary, .08)),
+                  panel([
+                    const CommerceTitle('Your details'),
+                    TextFormField(
+                      controller: _name,
+                      autofillHints: const [AutofillHints.name],
+                      decoration: const InputDecoration(labelText: 'Full name'),
+                      validator: (v) =>
+                          v?.trim().isEmpty ?? true ? 'Enter your name.' : null,
                     ),
-                  const CommerceTitle('Your details'),
-                  TextFormField(
-                    controller: _name,
-                    autofillHints: const [AutofillHints.name],
-                    decoration: const InputDecoration(labelText: 'Full name'),
-                    validator: (v) =>
-                        v?.trim().isEmpty ?? true ? 'Enter your name.' : null,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _phone,
-                    keyboardType: TextInputType.phone,
-                    autofillHints: const [AutofillHints.telephoneNumber],
-                    decoration: const InputDecoration(
-                      labelText: 'Phone number',
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _phone,
+                      keyboardType: TextInputType.phone,
+                      autofillHints: const [AutofillHints.telephoneNumber],
+                      decoration: const InputDecoration(
+                        labelText: 'Phone number',
+                      ),
+                      validator: (v) =>
+                          (v ?? '').replaceAll(RegExp(r'\D'), '').length < 7
+                          ? 'Enter a valid phone number.'
+                          : null,
                     ),
-                    validator: (v) =>
-                        (v ?? '').replaceAll(RegExp(r'\D'), '').length < 7
-                        ? 'Enter a valid phone number.'
-                        : null,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _notes,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Notes to your seller (optional)',
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _notes,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes to your seller (optional)',
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 22),
-                  Text(
-                    'One order is sent to each seller. Delivery arrangements and any delivery cost are confirmed with the seller.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      height: 1.5,
-                      color: c.onSurfaceVariant,
+                    const SizedBox(height: 22),
+                    Text(
+                      'One order is sent to each seller. Delivery arrangements and any delivery cost are confirmed with the seller.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: c.onSurfaceVariant,
+                      ),
                     ),
-                  ),
+                  ]),
                   const SizedBox(height: 30),
                 ],
               ),

@@ -1,0 +1,23 @@
+{
+  "bottomNav": {
+    "aria": "ቀንዲ መገሻ",
+    "home": "ገዛ",
+    "shop": "ዕዳጋ",
+    "services": "ኣገልግሎት",
+    "bus": "ባስ",
+    "ride": "ጉዕዞ",
+    "me": "ኣነ",
+    "categories": "ዓይነታት",
+    "cart": "ቅርጫት",
+    "book": "ሓዝ",
+    "parks": "ጣብያታት",
+    "tickets": "ቲኬት",
+    "browse": "ርአ",
+    "search": "ድለ",
+    "jobs": "ስራሕቲ",
+    "saved": "ዝተዓቀበ",
+    "mine": "ናተይ",
+    "events": "ተፈጻምቲ",
+    "eventTickets": "ቲኬት"
+  }
+}
