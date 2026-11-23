@@ -286,6 +286,10 @@ class MobilityLayout extends ConsumerWidget {
     };
     return Scaffold(
       appBar: AppBar(
+        leading: BackButton(
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/home'),
+        ),
         title: Text(bus ? 'Gabla Bus' : 'Get Ride'),
         actions: [
           ...actions,

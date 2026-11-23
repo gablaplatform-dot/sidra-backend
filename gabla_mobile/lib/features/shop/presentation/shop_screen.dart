@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme_style.dart';
 import '../../categories/domain/category.dart';
@@ -302,6 +303,14 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                       IconButton(
                         tooltip: 'Back to categories',
                         onPressed: _backToCategories,
+                        icon: const Icon(Icons.arrow_back_ios_new, size: 23),
+                      )
+                    else
+                      IconButton(
+                        tooltip: 'Back',
+                        onPressed: () => context.canPop()
+                            ? context.pop()
+                            : context.go('/home'),
                         icon: const Icon(Icons.arrow_back_ios_new, size: 23),
                       ),
                     Expanded(
