@@ -1198,6 +1198,8 @@ const ensureColumn = (table, column, definition) => {
   ["categories", "imageUrl", "TEXT"],
   ["shop_categories", "imageUrl", "TEXT"],
   ["service_products", "originalPrice", "DECIMAL NOT NULL DEFAULT 0.00"],
+  ["service_products", "items", "JSONB NOT NULL DEFAULT '[]'"],
+  ["service_bookings", "items", "JSONB NOT NULL DEFAULT '[]'"],
   ["service_products", "discountPercent", "INTEGER"],
   ["service_products", "isNew", "BOOLEAN NOT NULL DEFAULT 0"],
   ["service_products", "soldCount", "INTEGER NOT NULL DEFAULT 0"],

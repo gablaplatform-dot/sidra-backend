@@ -13,6 +13,16 @@ export const buildListingRoutes = ({ listingController }) => {
     imageUrl: Joi.string().uri({ scheme: ["http", "https"] }).max(1000).allow(null).optional(),
     gallery: Joi.array().items(Joi.string().uri({ scheme: ["http", "https"] }).max(1000)).max(40).optional()
   });
+  // A service's add-ons - "price: null" means included rather than priceable.
+  const itemsSchema = Joi.array()
+    .items(
+      Joi.object({
+        name: Joi.string().trim().min(1).max(80).required(),
+        price: Joi.number().min(0).max(10000000).allow(null).optional(),
+        required: Joi.boolean().optional()
+      })
+    )
+    .max(20);
   const id = Joi.string().trim().min(1).max(64);
   const sortOptions = ["newest", "price_asc", "price_desc", "bestsellers", "featured", "discovery"];
   const enrichmentFields = {
@@ -168,6 +178,7 @@ export const buildListingRoutes = ({ listingController }) => {
         serviceCategoryId: id.allow(null).optional(),
         bookingMode: Joi.string().valid("none", "request", "instant").optional(),
         booking: Joi.object().unknown(true).optional(),
+        items: itemsSchema.optional(),
         shopCategoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
         customFields: boundedAnswers().optional(),
@@ -193,6 +204,7 @@ export const buildListingRoutes = ({ listingController }) => {
         serviceCategoryId: id.allow(null).optional(),
         bookingMode: Joi.string().valid("none", "request", "instant").optional(),
         booking: Joi.object().unknown(true).optional(),
+        items: itemsSchema.optional(),
         shopCategoryId: id.allow(null).optional(),
         media: mediaSchema.optional(),
         customFields: boundedAnswers().optional(),

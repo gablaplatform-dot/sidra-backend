@@ -36,6 +36,7 @@ import '../../features/profile/presentation/delete_account_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/services/presentation/booking_screen.dart';
 import '../../features/services/presentation/my_bookings_screen.dart';
+import '../../features/services/presentation/provider_bookings_screen.dart';
 import '../../features/provider/presentation/listing_form_screen.dart';
 import '../../features/provider/presentation/provider_detail_screen.dart';
 import '../../features/provider/presentation/provider_onboarding_screen.dart';
@@ -271,7 +272,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/profile/reservations',
-        builder: (c, s) => const WorkspaceScreen(section: 'bookings'),
+        builder: (c, s) => const ProviderBookingsScreen(),
       ),
       GoRoute(
         path: '/profile/categories',

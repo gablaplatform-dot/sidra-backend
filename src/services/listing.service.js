@@ -5,7 +5,7 @@ import { prisma } from "../config/db.js";
 import { findNearbyProviderIds } from "./geoProviderSearch.js";
 import { haversineDistanceKm } from "../utils/geohash.js";
 import { AudienceService, audienceProviderWhere } from "./audience.service.js";
-import { BOOKING_MODES, normalizeBookingConfig } from "./serviceBooking.service.js";
+import { BOOKING_MODES, normalizeBookingConfig, normalizeServiceItems } from "./serviceBooking.service.js";
 
 import { effectiveProviderCategory, categoryWithin, lineage } from "../domain/productTaxonomy.js";
 
@@ -125,12 +125,17 @@ export class ListingService {
   }
 
   // The gate on a service submission: no phone numbers, links, handles or addresses.
-  async guardService({ name, description, customFields, booking, imageUrls }) {
+  async guardService({ name, description, customFields, booking, items, imageUrls }) {
     if (!this.contactGuardService) return;
     await this.contactGuardService.assertClean({
       name,
       description,
-      customFields: { ...(customFields ?? {}), _bookingInstructions: booking?.instructions ?? "", _bookingDeposit: booking?.depositNote ?? "" },
+      customFields: {
+        ...(customFields ?? {}),
+        _bookingInstructions: booking?.instructions ?? "",
+        _bookingDeposit: booking?.depositNote ?? "",
+        _items: (items ?? []).map((it) => it.name).join(", ")
+      },
       imageUrls
     });
   }
@@ -220,7 +225,7 @@ export class ListingService {
     }
   }
 
-  async createListing({ actorUserId, name, description, price = 0, type, categoryId, productCategoryId, serviceCategoryId, bookingMode, booking, shopCategoryId, media, customFields, featured, onlinePaymentEnabled, originalPrice, discountPercent, isNew, sku, inventory }) {
+  async createListing({ actorUserId, name, description, price = 0, type, categoryId, productCategoryId, serviceCategoryId, bookingMode, booking, items, shopCategoryId, media, customFields, featured, onlinePaymentEnabled, originalPrice, discountPercent, isNew, sku, inventory }) {
     const provider = await this.getProviderForUser(actorUserId);
 
     const normalizedType = String(type ?? "").toLowerCase();
@@ -229,13 +234,15 @@ export class ListingService {
     }
     await this.assertShopCategoryOwnership({ shopCategoryId, providerId: provider.id });
     let bookingFields = { bookingMode: "none", booking: {} };
+    let normalizedItems = [];
     if (normalizedType === "product") {
       await this.assertProductCategory(productCategoryId, provider.categoryId);
     } else {
       await this.assertServiceCategory(serviceCategoryId, provider.categoryId);
       await this.assertRequiredAnswers(serviceCategoryId, customFields);
       bookingFields = this.normalizeBooking({ bookingMode, booking, price });
-      await this.guardService({ name, description, customFields, booking: bookingFields.booking, imageUrls: [media?.imageUrl, ...(media?.gallery ?? [])].filter(Boolean) });
+      normalizedItems = normalizeServiceItems(items);
+      await this.guardService({ name, description, customFields, booking: bookingFields.booking, items: normalizedItems, imageUrls: [media?.imageUrl, ...(media?.gallery ?? [])].filter(Boolean) });
     }
 
     if (discountPercent !== undefined && discountPercent !== null) {
@@ -257,6 +264,7 @@ export class ListingService {
         productCategoryId: normalizedType === "product" ? productCategoryId : null,
         serviceCategoryId: normalizedType === "service" ? serviceCategoryId : null,
         ...bookingFields,
+        items: normalizedItems,
         shopCategoryId: shopCategoryId ?? null,
         name,
         description: description ?? "",
@@ -343,6 +351,7 @@ export class ListingService {
       update.serviceCategoryId = null;
       update.bookingMode = "none";
       update.booking = {};
+      update.items = [];
     }
     if (becomingService) update.productCategoryId = null;
 
@@ -365,7 +374,13 @@ export class ListingService {
         nextBooking = normalized.booking;
       }
 
-      const textTouched = ["name", "description", "customFields"].some((k) => update[k] !== undefined) || updates.booking !== undefined || update.media !== undefined;
+      let nextItems = listing.items;
+      if (updates.items !== undefined) {
+        update.items = normalizeServiceItems(updates.items);
+        nextItems = update.items;
+      }
+
+      const textTouched = ["name", "description", "customFields"].some((k) => update[k] !== undefined) || updates.booking !== undefined || updates.items !== undefined || update.media !== undefined;
       if (textTouched) {
         const media = update.media !== undefined ? update.media : null;
         await this.guardService({
@@ -373,6 +388,7 @@ export class ListingService {
           description: update.description ?? listing.description,
           customFields: nextFields,
           booking: nextBooking,
+          items: nextItems,
           imageUrls: media ? [media.imageUrl, ...(media.gallery ?? [])].filter(Boolean) : []
         });
       }
@@ -441,6 +457,7 @@ export class ListingService {
       serviceCategoryId: i.serviceCategoryId ?? null,
       bookingMode: i.bookingMode ?? "none",
       booking: i.bookingMode && i.bookingMode !== "none" ? normalizeBookingConfig(i.booking) : null,
+      items: Array.isArray(i.items) ? i.items : [],
       shopCategoryId: i.shopCategoryId,
       name: i.name,
       description: i.description,

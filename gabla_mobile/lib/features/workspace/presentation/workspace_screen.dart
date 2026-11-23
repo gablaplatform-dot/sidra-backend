@@ -15,7 +15,6 @@ import '../../auth/application/session_controller.dart';
 import '../../orders/presentation/my_orders_screen.dart';
 import '../../payments/presentation/payment_sheet.dart';
 import '../../provider/domain/provider_summary.dart';
-import '../../services/domain/booking_selection.dart';
 import '../../shop/presentation/commerce_widgets.dart';
 import '../../shop/presentation/product_gallery.dart';
 import '../application/workspace_providers.dart';
@@ -29,7 +28,6 @@ const workspacePaths = {
   'wallet': '/payments/wallet',
   'documents': '/documents?limit=100',
   'orders': '/engagement/provider/orders?limit=50',
-  'bookings': '/bookings/provider',
   'categories': '/shop-categories/mine',
   'analytics': '/engagement/provider/analytics?days=30',
   'ads': '/promotions/mine',
@@ -43,7 +41,6 @@ const workspaceTitles = {
   'wallet': 'Wallet',
   'documents': 'Quotes & receipts',
   'orders': 'Seller orders',
-  'bookings': 'Service reservations',
   'categories': 'Shop collections',
   'analytics': 'Business insights',
   'ads': 'My promotions',
@@ -163,7 +160,6 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
                       'wallet' => _wallet(Map<String, dynamic>.from(data)),
                       'documents' => _documents(data),
                       'orders' => _orders(data),
-                      'bookings' => _bookings(data),
                       'categories' => _categories(data),
                       'analytics' => _analytics(
                         Map<String, dynamic>.from(data),
@@ -202,7 +198,6 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
     'documents' =>
       'Professional quotations and receipts, designed around your business.',
     'orders' => 'Review requests and keep customers updated.',
-    'bookings' => 'Manage dates, guests and reservation requests.',
     'categories' => 'Organize your storefront into collections.',
     'analytics' => 'See how customers discover and engage with your business.',
     'ads' => 'Bring your business into the spotlight.',
@@ -722,131 +717,6 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen> {
         ),
       ),
   ];
-  List<Widget> _bookings(dynamic data) {
-    final items = workspaceItems(data);
-    final today = bookingDate(eatToday());
-    final pending = <Map<String, dynamic>>[];
-    final upcoming = <Map<String, dynamic>>[];
-    final history = <Map<String, dynamic>>[];
-    for (final booking in items) {
-      if (booking['status'] == 'pending') {
-        pending.add(booking);
-      } else if (booking['status'] == 'confirmed' &&
-          '${booking['endDate'] ?? booking['startDate'] ?? ''}'.compareTo(
-                today,
-              ) >=
-              0) {
-        upcoming.add(booking);
-      } else {
-        history.add(booking);
-      }
-    }
-    return [
-      if (items.isEmpty)
-        const CommerceEmpty(
-          title: 'No bookings yet',
-          message: 'Publish a bookable service to start receiving requests.',
-          icon: Icons.event_available_outlined,
-        ),
-      for (final (heading, bookings) in [
-        ('Needs a response', pending),
-        ('Upcoming', upcoming),
-        ('History', history.reversed),
-      ])
-        if (bookings.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              heading,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-          for (final booking in bookings) _reservationCard(booking),
-        ],
-    ];
-  }
-
-  Widget _reservationCard(Map<String, dynamic> b) => Padding(
-    padding: const EdgeInsets.only(bottom: 14),
-    child: CommercePanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${(b['listing'] as Map?)?['name'] ?? 'Reservation'}',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          Text(
-            [
-              b['startDate'],
-              if (b['endDate'] != b['startDate']) b['endDate'],
-            ].whereType<String>().join(' → '),
-          ),
-          if (b['startTime'] != null)
-            Text("${b['startTime']} – ${b['endTime']} EAT"),
-          Text('${b['status']} · ${formatUgx(num.tryParse('${b['total']}'))}'),
-          Text(
-            '${(b['customer'] as Map?)?['name'] ?? ''} · ${(b['customer'] as Map?)?['phone'] ?? ''}',
-          ),
-          if ((b['customer'] as Map?)?['email'] case final String email
-              when email.isNotEmpty)
-            Text(email),
-          if ((b['customer'] as Map?)?['notes'] case final String notes
-              when notes.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Text('Booking description\n$notes'),
-            ),
-          if (b['guests'] case final num guests)
-            Text('$guests ${guests == 1 ? 'guest' : 'guests'}'),
-          if (b['paymentStatus'] == 'paid')
-            Text(
-              'Paid online · ${formatUgx(num.tryParse("${b['amountPaid']}"))}',
-            )
-          else if (b['paymentStatus'] == 'payable')
-            Text(
-              'Awaiting payment · ${formatUgx(num.tryParse("${b['amountDue']}"))}',
-            ),
-          if (b['reference'] case final String reference)
-            Text(
-              'Booking $reference',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          Wrap(
-            children: [
-              for (final action
-                  in b['status'] == 'pending'
-                      ? ['accept', 'decline']
-                      : b['status'] == 'confirmed'
-                      ? [if (b['canComplete'] == true) 'complete', 'cancel']
-                      : <String>[])
-                TextButton(
-                  onPressed: () => showWorkspaceForm(
-                    context,
-                    title:
-                        '${action[0].toUpperCase()}${action.substring(1)} booking',
-                    action: action[0].toUpperCase() + action.substring(1),
-                    fields: const [
-                      WorkspaceField('note', 'Note to customer', type: 'long'),
-                    ],
-                    save: (v) async {
-                      await ref
-                          .read(apiClientProvider)
-                          .patch(
-                            '/bookings/provider/${b['id']}',
-                            body: {'action': action, 'note': v['note']},
-                          );
-                      reload();
-                    },
-                  ),
-                  child: Text(action[0].toUpperCase() + action.substring(1)),
-                ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
   List<Widget> _categories(dynamic data) {
     final items = <Map<String, dynamic>>[];
     void flatten(List<Map<String, dynamic>> nodes) {

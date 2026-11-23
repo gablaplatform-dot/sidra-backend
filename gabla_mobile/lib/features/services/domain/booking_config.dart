@@ -1,11 +1,12 @@
 /// The pricing unit a bookable listing is sold in. Drives which fields a
 /// booking needs: `night`/`day` listings pick a date range, `hour` listings
 /// pick a single day plus a start time and a duration.
-enum BookingUnit { night, day, hour }
+enum BookingUnit { night, day, hour, appointment }
 
 BookingUnit bookingUnitFromString(String? value) => switch (value) {
   'day' => BookingUnit.day,
   'hour' => BookingUnit.hour,
+  'appointment' => BookingUnit.appointment,
   _ => BookingUnit.night,
 };
 

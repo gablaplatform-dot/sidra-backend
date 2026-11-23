@@ -5,7 +5,7 @@ import { AppError } from "../utils/AppError.js";
 import { flagRefundDue } from "../utils/refunds.js";
 import { sendMail } from "../emails/mailer.js";
 import { bookingEmail } from "../emails/templates.js";
-import { addDaysToDateString, eatDateString, eatTimeString, eatToUtc, isDateString, isTimeString, todayEat } from "../utils/busTime.js";
+import { addDaysToDateString, eatDateString, eatTimeString, eatToUtc, isDateString, isTimeString, todayEat, weekdayOf } from "../utils/busTime.js";
 
 const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const makeReference = () => {
@@ -14,6 +14,7 @@ const makeReference = () => {
 };
 
 export const BOOKING_MODES = ["none", "request", "instant"];
+export const BOOKING_UNITS = ["night", "day", "hour", "appointment"];
 export const POLICIES = {
   flexible: "Free cancellation up to 24 hours before the start.",
   moderate: "Free cancellation up to 5 days before the start; after that the provider may keep the deposit.",
@@ -31,10 +32,13 @@ const int = (v, fallback, min, max) => {
 // What a provider sets when they mark a service as a booking service. Anything missing or out of range falls
 // back to a sensible value so a half-filled form can never produce an unbookable listing.
 export const normalizeBookingConfig = (input = {}) => {
-  const unit = ["night", "day", "hour"].includes(input.unit) ? input.unit : "night";
+  const unit = BOOKING_UNITS.includes(input.unit) ? input.unit : "night";
   const maxDefault = unit === "night" ? 30 : unit === "day" ? 14 : 12;
   const time = (v, fallback) => (isTimeString(v) ? v : fallback);
   const blocked = (Array.isArray(input.blockedDates) ? input.blockedDates : []).filter(isDateString);
+  const days = (Array.isArray(input.daysOfWeek) ? input.daysOfWeek : [0, 1, 2, 3, 4, 5, 6])
+    .map((d) => Math.round(Number(d)))
+    .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
   return {
     unit,
     inventory: int(input.inventory, 1, 1, 500),
@@ -48,6 +52,10 @@ export const normalizeBookingConfig = (input = {}) => {
     checkOut: time(input.checkOut, "11:00"),
     openFrom: time(input.openFrom, "08:00"),
     openTo: time(input.openTo, "22:00"),
+    // Appointment-only: which weekdays (0 = Sunday) the provider takes appointments on, and how
+    // long each slot is. Unused for the night/day/hour reservation units.
+    daysOfWeek: [...new Set(days.length ? days : [0, 1, 2, 3, 4, 5, 6])].sort((a, b) => a - b),
+    slotMinutes: int(input.slotMinutes, 30, 5, 240),
     cancellation: Object.keys(POLICIES).includes(input.cancellation) ? input.cancellation : "flexible",
     // Share of the total the guest pays online once the provider has confirmed (0 = no online payment).
     depositPercent: [0, 20, 30, 50, 100].includes(Number(input.depositPercent)) ? Number(input.depositPercent) : 0,
@@ -56,6 +64,21 @@ export const normalizeBookingConfig = (input = {}) => {
     instructions: String(input.instructions ?? "").trim().slice(0, 600),
     blockedDates: [...new Set(blocked)].sort().slice(0, 500)
   };
+};
+
+// What a provider sets per priced/optional add-on, e.g. a venue's "Tents" or "Catering". `price:
+// null` means it's included rather than priceable. Anything malformed is dropped rather than
+// rejected, same tolerance as normalizeBookingConfig.
+export const normalizeServiceItems = (input) => {
+  if (!Array.isArray(input)) return [];
+  return input
+    .slice(0, 20)
+    .map((it) => ({
+      name: String(it?.name ?? "").trim().slice(0, 80),
+      price: it?.price === null || it?.price === undefined || it?.price === "" ? null : Math.max(0, Math.min(10000000, Number(it.price) || 0)),
+      required: Boolean(it?.required)
+    }))
+    .filter((it) => it.name.length > 0);
 };
 
 export class ServiceBookingService {
@@ -89,10 +112,17 @@ export class ServiceBookingService {
     });
   }
 
-  // The time steps a booking occupies: whole days for nights/days, whole hours for slots.
-  _steps(unit, startAt, endAt) {
+  // How finely a listing's calendar is sliced: whole days for nights/days, whole hours for
+  // flexible hourly rentals, one fixed slot length for appointments.
+  _stepMs(config) {
+    if (config.unit === "hour") return HOUR_MS;
+    if (config.unit === "appointment") return config.slotMinutes * 60000;
+    return 24 * HOUR_MS;
+  }
+
+  // The time steps a booking occupies, at the given step size.
+  _steps(stepMs, startAt, endAt) {
     const steps = [];
-    const stepMs = unit === "hour" ? HOUR_MS : 24 * HOUR_MS;
     for (let t = startAt.getTime(); t < endAt.getTime(); t += stepMs) steps.push(new Date(t));
     return steps;
   }
@@ -129,6 +159,19 @@ export class ServiceBookingService {
       const openFrom = eatToUtc(startDate, config.openFrom);
       const closes = eatToUtc(startDate, config.openTo);
       if (startAt < openFrom || endAt > closes) throw err(`Bookings are taken between ${config.openFrom} and ${config.openTo}.`, "OUTSIDE_HOURS");
+    } else if (unit === "appointment") {
+      if (!isTimeString(input.startTime)) throw err("Choose a time.", "INVALID_TIME");
+      if (!config.daysOfWeek.includes(weekdayOf(startDate))) throw err("The provider doesn't take appointments on that day.", "DAY_CLOSED", 409);
+      units = 1;
+      startAt = eatToUtc(startDate, input.startTime);
+      endAt = new Date(startAt.getTime() + config.slotMinutes * 60000);
+      startTime = input.startTime;
+      endTime = eatTimeString(endAt);
+      endDate = startDate;
+      const openFrom = eatToUtc(startDate, config.openFrom);
+      const closes = eatToUtc(startDate, config.openTo);
+      if (startAt < openFrom || endAt > closes) throw err(`Appointments are taken between ${config.openFrom} and ${config.openTo}.`, "OUTSIDE_HOURS");
+      if (Math.round((startAt.getTime() - openFrom.getTime()) / 60000) % config.slotMinutes !== 0) throw err("Choose one of the available time slots.", "INVALID_TIME");
     } else {
       if (!isDateString(input.endDate)) throw err("Choose an end date.", "INVALID_DATES");
       endDate = input.endDate;
@@ -147,11 +190,13 @@ export class ServiceBookingService {
       startAt = eatToUtc(startDate, "00:00");
     }
 
+    const dateOnly = unit === "night" || unit === "day";
+    const slotBased = unit === "hour" || unit === "appointment";
     if (units < config.minUnits) throw err(`The minimum booking is ${config.minUnits} ${unit}${config.minUnits > 1 ? "s" : ""}.`, "BELOW_MINIMUM");
     if (units > config.maxUnits) throw err(`The maximum booking is ${config.maxUnits} ${unit}s.`, "ABOVE_MAXIMUM");
-    if (unit !== "hour" ? startDate < todayEat() : startAt <= now) throw err("That date has already passed.", "PAST_DATE");
-    if (startAt.getTime() - now.getTime() < config.leadTimeHours * HOUR_MS && unit === "hour") throw err(`Please book at least ${config.leadTimeHours} hours ahead.`, "TOO_SOON");
-    if (unit !== "hour" && config.leadTimeHours >= 24 && eatToUtc(startDate, config.checkIn).getTime() - now.getTime() < config.leadTimeHours * HOUR_MS) throw err(`Please book at least ${Math.round(config.leadTimeHours / 24)} day(s) ahead.`, "TOO_SOON");
+    if (dateOnly ? startDate < todayEat() : startAt <= now) throw err("That date has already passed.", "PAST_DATE");
+    if (startAt.getTime() - now.getTime() < config.leadTimeHours * HOUR_MS && slotBased) throw err(`Please book at least ${config.leadTimeHours} hours ahead.`, "TOO_SOON");
+    if (dateOnly && config.leadTimeHours >= 24 && eatToUtc(startDate, config.checkIn).getTime() - now.getTime() < config.leadTimeHours * HOUR_MS) throw err(`Please book at least ${Math.round(config.leadTimeHours / 24)} day(s) ahead.`, "TOO_SOON");
     if (startAt.getTime() - now.getTime() > config.advanceDays * 24 * HOUR_MS) throw err(`Bookings open up to ${config.advanceDays} days ahead.`, "TOO_FAR");
 
     return { startAt, endAt, units, startDate, endDate, startTime, endTime };
@@ -159,10 +204,11 @@ export class ServiceBookingService {
 
   // Throws when any step of the interval is blocked or out of stock.
   _assertFree({ config, interval, held, quantity }) {
-    const stepMs = config.unit === "hour" ? HOUR_MS : 24 * HOUR_MS;
-    for (const step of this._steps(config.unit, interval.startAt, interval.endAt)) {
-      if (config.unit !== "hour" && config.blockedDates.includes(eatDateString(step))) throw err("The provider isn't taking bookings on some of those dates.", "DATES_BLOCKED", 409);
-      if (config.unit === "hour" && config.blockedDates.includes(eatDateString(step))) throw err("The provider isn't taking bookings on that date.", "DATES_BLOCKED", 409);
+    const stepMs = this._stepMs(config);
+    const singleDay = config.unit === "hour" || config.unit === "appointment";
+    for (const step of this._steps(stepMs, interval.startAt, interval.endAt)) {
+      if (!singleDay && config.blockedDates.includes(eatDateString(step))) throw err("The provider isn't taking bookings on some of those dates.", "DATES_BLOCKED", 409);
+      if (singleDay && config.blockedDates.includes(eatDateString(step))) throw err("The provider isn't taking bookings on that date.", "DATES_BLOCKED", 409);
       if (this._loadAt(held, step, stepMs) + quantity > config.inventory) {
         throw err(config.inventory > 1 ? "There aren't enough available for those dates." : "That time is already taken. Please pick other dates.", "NOT_AVAILABLE", 409);
       }
@@ -179,26 +225,39 @@ export class ServiceBookingService {
     if (last > addDaysToDateString(first, 92)) last = addDaysToDateString(first, 92);
 
     const held = await this._holding(prisma, listing.id, eatToUtc(first, "00:00"), eatToUtc(addDaysToDateString(last, 1), "00:00"));
+    const slotBased = config.unit === "hour" || config.unit === "appointment";
     const days = {};
     for (let d = first; d <= last; d = addDaysToDateString(d, 1)) {
       const dayStart = eatToUtc(d, "00:00");
-      const peak = config.unit === "hour"
-        ? Math.max(0, ...Array.from({ length: 24 }, (_, h) => this._loadAt(held, new Date(dayStart.getTime() + h * HOUR_MS), HOUR_MS)))
-        : this._loadAt(held, dayStart, 24 * HOUR_MS);
-      const blocked = config.blockedDates.includes(d);
+      let peak = 0;
+      if (config.unit === "hour") {
+        peak = Math.max(0, ...Array.from({ length: 24 }, (_, h) => this._loadAt(held, new Date(dayStart.getTime() + h * HOUR_MS), HOUR_MS)));
+      } else if (config.unit === "appointment") {
+        const open = eatToUtc(d, config.openFrom).getTime();
+        const close = eatToUtc(d, config.openTo).getTime();
+        const stepMs = this._stepMs(config);
+        const steps = Math.max(0, Math.floor((close - open) / stepMs));
+        peak = Math.max(0, ...Array.from({ length: steps }, (_, i) => this._loadAt(held, new Date(open + i * stepMs), stepMs)));
+      } else {
+        peak = this._loadAt(held, dayStart, 24 * HOUR_MS);
+      }
+      const closedWeekday = config.unit === "appointment" && !config.daysOfWeek.includes(weekdayOf(d));
+      const blocked = config.blockedDates.includes(d) || closedWeekday;
       const past = d < today || d > addDaysToDateString(today, config.advanceDays);
-      days[d] = { free: blocked || past ? 0 : Math.max(0, config.inventory - (config.unit === "hour" ? 0 : peak)), blocked, past, ...(config.unit === "hour" ? { partlyBooked: peak > 0 } : {}) };
+      days[d] = { free: blocked || past ? 0 : Math.max(0, config.inventory - (slotBased ? 0 : peak)), blocked, past, ...(slotBased ? { partlyBooked: peak > 0 } : {}) };
     }
 
     let slots = null;
-    if (config.unit === "hour" && isDateString(date)) {
+    if (slotBased && isDateString(date)) {
       const open = eatToUtc(date, config.openFrom);
       const close = eatToUtc(date, config.openTo);
+      const stepMs = this._stepMs(config);
       const dayHeld = await this._holding(prisma, listing.id, open, close);
+      const closed = config.blockedDates.includes(date) || (config.unit === "appointment" && !config.daysOfWeek.includes(weekdayOf(date)));
       slots = [];
-      for (let t = open.getTime(); t < close.getTime(); t += HOUR_MS) {
+      for (let t = open.getTime(); t < close.getTime(); t += stepMs) {
         const at = new Date(t);
-        const free = config.blockedDates.includes(date) ? 0 : Math.max(0, config.inventory - this._loadAt(dayHeld, at, HOUR_MS));
+        const free = closed ? 0 : Math.max(0, config.inventory - this._loadAt(dayHeld, at, stepMs));
         slots.push({ time: eatTimeString(at), free: at.getTime() > Date.now() + config.leadTimeHours * HOUR_MS ? free : 0 });
       }
     }
@@ -227,7 +286,13 @@ export class ServiceBookingService {
     const interval = this._interval(config, input);
     const instant = listing.bookingMode === "instant";
     const unitPrice = Number(listing.price);
-    const total = unitPrice * interval.units * quantity;
+    // Required add-ons are always included; the rest are whichever of the guest's requested
+    // names match the listing's catalogue (an unknown name is simply ignored, not rejected).
+    const catalogue = Array.isArray(listing.items) ? listing.items : [];
+    const requestedNames = Array.isArray(input.items) ? input.items.map(String) : [];
+    const selectedItems = catalogue.filter((it) => it.required || requestedNames.includes(it.name));
+    const itemsTotal = selectedItems.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+    const total = unitPrice * interval.units * quantity + itemsTotal;
     // Online payment is asked only after approval; instant bookings are approved on the spot, so it opens right away.
     const amountDue = config.depositPercent > 0 && listing.provider.onlinePaymentsEnabled !== false ? Math.round((total * config.depositPercent) / 100) : 0;
     const paymentStatus = amountDue > 0 ? (instant ? "payable" : "awaiting_approval") : "none";
@@ -255,6 +320,7 @@ export class ServiceBookingService {
           units: interval.units,
           unitPrice,
           total,
+          items: selectedItems.map((it) => ({ name: it.name, price: it.price })),
           customer,
           listingName: listing.name,
           policy: config.cancellation,
@@ -391,6 +457,7 @@ export class ServiceBookingService {
       quantity: b.quantity,
       guests: b.guests,
       unitPrice: Number(b.unitPrice),
+      items: Array.isArray(b.items) ? b.items : [],
       total: Number(b.total),
       policy: b.policy,
       policyText: POLICIES[b.policy] ?? POLICIES.flexible,

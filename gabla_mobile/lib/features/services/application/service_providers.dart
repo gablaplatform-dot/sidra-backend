@@ -6,6 +6,7 @@ import '../../shop/domain/product.dart';
 import '../data/booking_repository.dart';
 import '../domain/availability.dart';
 import '../domain/booking.dart';
+import '../domain/provider_booking.dart';
 
 final bookingRepositoryProvider = Provider<BookingRepository>(
   (ref) => BookingRepository(ref.watch(apiClientProvider)),
@@ -13,6 +14,12 @@ final bookingRepositoryProvider = Provider<BookingRepository>(
 
 final myBookingsProvider = FutureProvider<List<Booking>>((ref) {
   return ref.watch(bookingRepositoryProvider).fetchMine();
+});
+
+final providerBookingsProvider = FutureProvider.autoDispose<List<ProviderBooking>>((
+  ref,
+) {
+  return ref.watch(bookingRepositoryProvider).fetchForProvider();
 });
 
 /// A month-level availability calendar for one listing.

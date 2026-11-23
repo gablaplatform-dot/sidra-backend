@@ -287,6 +287,9 @@ model ServiceProduct {
   // automatically when the dates are free. `booking` holds the details (unit, units on offer, capacity, ...).
   bookingMode  String              @default("none")
   booking      Json                @default("{}")
+  // Add-ons the provider lists alongside the service (e.g. a venue's "tents", "catering") -
+  // [{ name, price: number|null, required: bool }]. `price: null` means included, not priceable.
+  items        Json                @default("[]")
   shopCategoryId String?
   name         String
   description  String              @default("")
@@ -468,6 +471,8 @@ model ServiceBooking {
   unitPrice   Decimal  @default(0.00)
   total       Decimal  @default(0.00)
   customer    Json     @default("{}")
+  // The add-ons the guest picked, snapshotted at booking time: [{ name, price }].
+  items       Json     @default("[]")
   listingName String   @default("")
   policy      String   @default("flexible") // cancellation policy at the time of booking
   providerNote String?

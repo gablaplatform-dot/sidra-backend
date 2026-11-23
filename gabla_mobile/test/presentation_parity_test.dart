@@ -541,9 +541,9 @@ void main() {
       await tester.tap(find.text('Bookings'));
       await tester.pumpAndSettle();
       expect(api.requests, contains('/bookings/provider'));
-      expect(find.text('10:00 – 11:00 EAT'), findsOneWidget);
+      expect(find.text('15 Nov · 10:00 - 11:00'), findsOneWidget);
       expect(find.textContaining('step-free access'), findsOneWidget);
-      expect(find.text('Accept'), findsOneWidget);
+      expect(find.text('Approve'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

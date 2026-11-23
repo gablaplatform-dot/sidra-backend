@@ -7,6 +7,7 @@ import '../../../core/network/network_providers.dart';
 import '../../../core/theme/font_group.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/page_band.dart';
+import '../../services/presentation/provider_bookings_screen.dart';
 import '../../workspace/application/workspace_providers.dart';
 import '../../workspace/presentation/workspace_screen.dart';
 import '../../auth/application/auth_controller.dart';
@@ -306,11 +307,13 @@ class _ProviderProfileState extends ConsumerState<_ProviderProfile> {
               ),
             ),
           ],
-          body: WorkspaceScreen(
-            key: ValueKey(_selected),
-            section: _selected,
-            embedded: true,
-          ),
+          body: _selected == 'bookings'
+              ? const ProviderBookingsScreen(embedded: true)
+              : WorkspaceScreen(
+                  key: ValueKey(_selected),
+                  section: _selected,
+                  embedded: true,
+                ),
         ),
       ),
     );

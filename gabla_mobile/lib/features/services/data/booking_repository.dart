@@ -1,6 +1,7 @@
 import '../../../core/network/api_client.dart';
 import '../domain/availability.dart';
 import '../domain/booking.dart';
+import '../domain/provider_booking.dart';
 
 String _ymd(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -78,5 +79,28 @@ class BookingRepository {
 
   Future<void> cancel(String bookingId) async {
     await _client.post<dynamic>('/bookings/$bookingId/cancel');
+  }
+
+  /// `GET /bookings/provider` - every booking placed against this provider's
+  /// services, newest-starting first. See `ProfileBookingsTab.jsx`.
+  Future<List<ProviderBooking>> fetchForProvider() async {
+    final items = await _client.getList('/bookings/provider');
+    return items
+        .map((e) => ProviderBooking.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// `PATCH /bookings/provider/:id` - accept/decline a pending request, or
+  /// cancel/complete a confirmed one.
+  Future<ProviderBooking> respond(
+    String bookingId,
+    String action, {
+    String? note,
+  }) async {
+    final data = await _client.patch<Map<String, dynamic>>(
+      '/bookings/provider/$bookingId',
+      body: {'action': action, if (note != null) 'note': note},
+    );
+    return ProviderBooking.fromJson(data);
   }
 }

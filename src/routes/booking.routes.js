@@ -40,6 +40,9 @@ export const buildBookingRoutes = ({ serviceBookingService }) => {
         hours: Joi.number().integer().min(1).max(24).optional(),
         quantity: Joi.number().integer().min(1).max(500).default(1),
         guests: Joi.number().integer().min(1).max(100000).default(1),
+        // Names of the listing's add-ons the guest picked; anything the listing doesn't actually
+        // offer is ignored server-side, so this is intentionally permissive here.
+        items: Joi.array().items(Joi.string().trim().max(80)).max(20).optional(),
         customer: Joi.object({
           name: Joi.string().trim().min(2).max(120).required(),
           phone: Joi.string().trim().min(7).max(40).required(),
