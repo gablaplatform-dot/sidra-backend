@@ -10,7 +10,13 @@ if (process.env.DATABASE_URL !== "file:/tmp/gabla-services-test.db")
 
 const key = `svc-${Date.now()}`;
 const listingService = new ListingService();
-const bookingService = new ServiceBookingService({});
+const mails = [];
+const bookingService = new ServiceBookingService({
+  emailService: async (p) => {
+    mails.push(p);
+    return { sent: true, deliveryStatus: "sent" };
+  }
+});
 
 let customer, providerUser, provider, category;
 
@@ -158,6 +164,35 @@ test("selected add-ons are priced into the total; required add-ons are always in
   });
   assert.equal(unselected.total, 20000);
   assert.deepEqual(unselected.items, [{ name: "Hair wash", price: null }]);
+});
+
+test("booking notifications actually fire, to both sides, listing the chosen add-ons", async () => {
+  const tuesday = nextWeekday(2);
+  const listing = await makeListing({
+    unit: "appointment",
+    daysOfWeek: [2],
+    slotMinutes: 30,
+    bookingMode: "request",
+    items: [{ name: "Hot towel treatment", price: 5000 }, { name: "Hair wash", price: null, required: true }]
+  });
+
+  mails.length = 0;
+  await bookingService.create({
+    userId: customer.id,
+    input: { listingId: listing.id, startDate: tuesday, startTime: "09:00", items: ["Hot towel treatment"], customer: { name: "Jane Guest", phone: "0772000111" } }
+  });
+  // create() fires its notification without awaiting it, so give the microtask queue a turn.
+  await new Promise((r) => setTimeout(r, 20));
+
+  assert.equal(mails.length, 2, "both the provider and the customer should be emailed");
+  const toProvider = mails.find((m) => m.to === providerUser.email);
+  const toCustomer = mails.find((m) => m.to === customer.email);
+  assert.ok(toProvider, "provider did not receive a notification");
+  assert.ok(toCustomer, "customer did not receive a notification");
+  for (const m of [toProvider, toCustomer]) {
+    assert.match(m.email.text, /Hot towel treatment - UGX 5,000/);
+    assert.match(m.email.text, /Hair wash - Included/);
+  }
 });
 
 test("flexible hourly booking (unaffected by the appointment changes) still books a multi-hour slot", async () => {

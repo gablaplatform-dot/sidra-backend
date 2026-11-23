@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/font_group.dart';
+import '../../../core/theme/style_tokens.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../workspace/presentation/workspace_form.dart';
@@ -101,13 +103,87 @@ class _ProviderBookingsScreenState
       ),
     );
     if (widget.embedded) return body;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Bookings & appointments')),
-      body: body,
+    return Scaffold(body: SafeArea(child: Column(children: [_header(), Expanded(child: body)])));
+  }
+
+  Widget _header() {
+    final canPop = Navigator.of(context).canPop();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 40,
+            child: canPop
+                ? _roundIconButton(
+                    icon: Icons.arrow_back_ios_new_rounded,
+                    tooltip: 'Back',
+                    onTap: () => Navigator.of(context).maybePop(),
+                  )
+                : null,
+          ),
+          Expanded(
+            child: Center(
+              child: Text(
+                'Bookings & appointments',
+                style: AppTypography.of(context).display(size: 18),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 40,
+            child: _roundIconButton(
+              icon: Icons.refresh_rounded,
+              tooltip: 'Refresh',
+              onTap: () => ref.invalidate(providerBookingsProvider),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _roundIconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    String? tooltip,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        shape: BoxShape.circle,
+        border: Border.all(color: colors.outlineVariant),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Tooltip(
+            message: tooltip ?? '',
+            child: Icon(icon, size: 17, color: colors.onSurface),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _body(List<ProviderBooking> items) {
+    final theme = Theme.of(context);
+    final tokens = theme.extension<StyleTokens>();
     final pending = items.where((b) => b.status == BookingStatus.pending).toList()
       ..sort((a, b) => a.startDate.compareTo(b.startDate));
     final rest = items.where((b) => b.status != BookingStatus.pending).toList();
@@ -120,17 +196,43 @@ class _ProviderBookingsScreenState
     }
 
     if (items.isEmpty) {
+      final colors = theme.colorScheme;
       return ListView(
-        children: const [
-          SizedBox(height: 120),
-          Icon(Icons.event_available_outlined, size: 48, color: Colors.grey),
-          SizedBox(height: 12),
-          Center(child: Text('No bookings yet')),
-          SizedBox(height: 4),
+        children: [
+          const SizedBox(height: 100),
           Center(
+            child: Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                color: colors.primary.withValues(alpha: .1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.event_available_rounded,
+                size: 34,
+                color: colors.primary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Center(
+            child: Text(
+              'No bookings yet',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
               'Publish a bookable or appointment service to start receiving requests.',
               textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
             ),
           ),
         ],
@@ -138,24 +240,28 @@ class _ProviderBookingsScreenState
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
       children: [
         if (pending.isNotEmpty) ...[
-          Text('Needs a response', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 10),
+          _sectionHeader('Needs a response', tokens),
+          const SizedBox(height: 12),
           for (final b in pending) _card(b, highlight: true),
-          const SizedBox(height: 22),
+          const SizedBox(height: 24),
         ],
-        Text('Schedule', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 10),
+        _sectionHeader('Schedule', tokens),
+        const SizedBox(height: 12),
         _dayStrip(counts),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         if (onSelectedDay.isEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Text(
-              'No bookings on ${_friendlyDate(_selectedDay)}.',
-              style: Theme.of(context).textTheme.bodyMedium,
+            padding: const EdgeInsets.symmetric(vertical: 28),
+            child: Center(
+              child: Text(
+                'No bookings on ${_friendlyDate(_selectedDay)}.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
             ),
           )
         else
@@ -164,14 +270,21 @@ class _ProviderBookingsScreenState
     );
   }
 
+  Widget _sectionHeader(String title, StyleTokens? tokens) => Text(
+    title,
+    style:
+        tokens?.sectionTitleStyle ?? Theme.of(context).textTheme.titleMedium,
+  );
+
   Widget _dayStrip(Map<String, int> counts) {
     final days = List.generate(14, (i) => eatToday().add(Duration(days: i)));
     return SizedBox(
-      height: 74,
+      height: 76,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
         itemCount: days.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 9),
         itemBuilder: (context, i) {
           final d = days[i];
           final key = bookingDate(d);
@@ -179,48 +292,70 @@ class _ProviderBookingsScreenState
           final count = counts[key] ?? 0;
           final colors = Theme.of(context).colorScheme;
           return SizedBox(
-            width: 52,
-            child: Material(
-              color: selected ? colors.primary : colors.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(16),
-              child: InkWell(
+            width: 54,
+            child: Container(
+              decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                onTap: () => setState(() => _selectedDay = d),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _weekdayAbbr(d.weekday),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: selected
-                              ? colors.onPrimary.withValues(alpha: .75)
-                              : colors.onSurfaceVariant,
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: colors.primary.withValues(alpha: .35),
+                          blurRadius: 16,
+                          offset: const Offset(0, 7),
                         ),
-                      ),
-                      Text(
-                        '${d.day}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: selected ? colors.onPrimary : colors.onSurface,
+                      ]
+                    : null,
+              ),
+              child: Material(
+                color: selected ? colors.primary : colors.surface,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => setState(() => _selectedDay = d),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: selected
+                          ? null
+                          : Border.all(color: colors.outlineVariant),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _weekdayAbbr(d.weekday),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: .3,
+                            color: selected
+                                ? colors.onPrimary.withValues(alpha: .75)
+                                : colors.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                      Container(
-                        margin: const EdgeInsets.only(top: 2),
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: count > 0
-                              ? (selected ? colors.onPrimary : colors.primary)
-                              : Colors.transparent,
+                        const SizedBox(height: 2),
+                        Text(
+                          '${d.day}',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: selected ? colors.onPrimary : colors.onSurface,
+                          ),
                         ),
-                      ),
-                    ],
+                        Container(
+                          margin: const EdgeInsets.only(top: 3),
+                          width: 4,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: count > 0
+                                ? (selected ? colors.onPrimary : colors.primary)
+                                : Colors.transparent,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -231,140 +366,279 @@ class _ProviderBookingsScreenState
     );
   }
 
+  String _initials(String name) {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
   Widget _card(ProviderBooking b, {bool highlight = false}) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final tokens = theme.extension<StyleTokens>();
+    final radius = tokens?.cardRadius ?? 18.0;
+    final pillRadius = tokens?.pillRadius ?? 999.0;
+    final floating = tokens?.cardStyle == CardVisualStyle.floating;
     final tag = _statusTag(b.status);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      color: highlight ? colors.primaryContainer.withValues(alpha: .25) : null,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colors.outlineVariant),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: highlight
+            ? colors.primaryContainer.withValues(alpha: .2)
+            : colors.surface,
+        borderRadius: BorderRadius.circular(radius),
+        border: floating
+            ? null
+            : Border.all(color: colors.outlineVariant.withValues(alpha: .7)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: floating ? .08 : .035),
+            blurRadius: floating ? 24 : 12,
+            offset: Offset(0, floating ? 12 : 5),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 21,
+                backgroundColor: colors.primary.withValues(alpha: .12),
+                child: Text(
+                  _initials(b.customer.name),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    color: colors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      b.listingName,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.schedule_rounded,
+                          size: 13,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            _when(b),
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: tag.$1,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  tag.$2,
+                  style: TextStyle(
+                    color: tag.$3,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.call_outlined,
+                size: 14,
+                color: colors.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '${b.customer.name} · ${b.customer.phone}',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          ),
+          if (b.customer.notes case final notes? when notes.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.sticky_note_2_outlined,
+                    size: 14,
+                    color: colors.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      notes,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontStyle: FontStyle.italic,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (b.items.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Wrap(
+                spacing: 7,
+                runSpacing: 7,
+                children: [
+                  for (final it in b.items)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 11,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        it.price == null || it.price == 0
+                            ? it.name
+                            : '${it.name} · ${formatUgx(it.price)}',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: colors.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 14),
+          Divider(height: 1, color: colors.outlineVariant.withValues(alpha: .6)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Text(
+                formatUgx(b.total),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const Spacer(),
+              if (b.status == BookingStatus.confirmed) ...[
+                TextButton(
+                  onPressed: () => _act(b, 'cancel', title: 'Cancel booking'),
+                  style: TextButton.styleFrom(foregroundColor: colors.error),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                if (b.canComplete) ...[
+                  const SizedBox(width: 6),
+                  FilledButton.tonal(
+                    onPressed: () =>
+                        _act(b, 'complete', title: 'Mark as completed?'),
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(pillRadius),
+                      ),
+                    ),
+                    child: const Text(
+                      'Mark complete',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ],
+            ],
+          ),
+          if (b.status == BookingStatus.pending) ...[
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        b.listingName,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
+                  child: OutlinedButton(
+                    onPressed: () => _act(
+                      b,
+                      'decline',
+                      title: 'Decline this request?',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: colors.error,
+                      side: BorderSide(
+                        color: colors.error.withValues(alpha: .45),
                       ),
-                      Text(
-                        _when(b),
-                        style: Theme.of(context).textTheme.bodySmall,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(pillRadius),
                       ),
-                    ],
+                    ),
+                    child: const Text(
+                      'Decline',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tag.$1,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    tag.$2,
-                    style: TextStyle(
-                      color: tag.$3,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () =>
+                        _act(b, 'accept', title: 'Approve this request?'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      elevation: 6,
+                      shadowColor: colors.primary.withValues(alpha: .5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(pillRadius),
+                      ),
+                    ),
+                    child: const Text(
+                      'Approve',
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text('${b.customer.name} · ${b.customer.phone}'),
-            if (b.customer.notes case final notes? when notes.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  notes,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-                ),
-              ),
-            if (b.items.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final it in b.items)
-                      Chip(
-                        visualDensity: VisualDensity.compact,
-                        label: Text(
-                          it.price == null || it.price == 0
-                              ? it.name
-                              : '${it.name} · ${formatUgx(it.price)}',
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 6),
-            Text(
-              formatUgx(b.total),
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-            if (b.status == BookingStatus.pending) ...[
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _act(
-                        b,
-                        'decline',
-                        title: 'Decline this request?',
-                      ),
-                      child: const Text('Decline'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () =>
-                          _act(b, 'accept', title: 'Approve this request?'),
-                      child: const Text('Approve'),
-                    ),
-                  ),
-                ],
-              ),
-            ] else if (b.status == BookingStatus.confirmed) ...[
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () => _act(b, 'cancel', title: 'Cancel booking'),
-                    child: const Text('Cancel'),
-                  ),
-                  if (b.canComplete) ...[
-                    const Spacer(),
-                    FilledButton.tonal(
-                      onPressed: () =>
-                          _act(b, 'complete', title: 'Mark as completed?'),
-                      child: const Text('Mark complete'),
-                    ),
-                  ],
-                ],
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }

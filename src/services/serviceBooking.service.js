@@ -83,7 +83,9 @@ export const normalizeServiceItems = (input) => {
 
 export class ServiceBookingService {
   constructor({ emailService } = {}) {
-    this.email = emailService ?? null;
+    // Overridable so tests can capture what would have been sent, instead of always hitting the
+    // real Resend API (which silently no-ops without an API key - the production default).
+    this.email = emailService ?? sendMail;
   }
 
   // ----- availability -------------------------------------------------------------------------
@@ -493,7 +495,7 @@ export class ServiceBookingService {
 
   async _send({ to, email }) {
     if (!to || !email) return;
-    await sendMail({ to, email });
+    await this.email({ to, email });
   }
 
   notifyPaid(id) {
@@ -515,6 +517,7 @@ export class ServiceBookingService {
       listingName: b.listingName,
       when: this._when(b),
       size: `${b.quantity > 1 ? `${b.quantity} × ` : ""}${b.units} ${b.unit}${b.units > 1 ? "s" : ""}`,
+      items: b.items,
       total: b.total,
       reference: b.reference,
       status: b.status,
