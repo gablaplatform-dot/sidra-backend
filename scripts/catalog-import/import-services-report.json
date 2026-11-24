@@ -1,0 +1,20 @@
+{
+  "batch": "services-20261124",
+  "before": {
+    "user": 89,
+    "provider": 68,
+    "serviceProduct": 2033
+  },
+  "after": {
+    "user": 129,
+    "provider": 108,
+    "serviceProduct": 2163
+  },
+  "existingRowsPreserved": true,
+  "batchCounts": {
+    "user": 40,
+    "provider": 40,
+    "serviceProduct": 130
+  },
+  "note": "Reconstructed from a post-apply read-only dry-run (alreadyPresent matched the full batch exactly, before/after deltas match the planned 40 providers / 130 listings) after the apply's own in-container report.json was lost to a subsequent container redeploy. No manifestSha256 available for this reconstruction."
+}
