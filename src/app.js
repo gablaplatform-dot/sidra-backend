@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { defaultRateLimit } from "./middlewares/rateLimit.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import { buildRoutes } from "./routes/index.js";
+import { pingDb } from "./config/db.js";
 
 import { AuthService } from "./services/auth.service.js";
 import { AuthController } from "./controllers/auth.controller.js";
@@ -102,8 +103,16 @@ export const buildApp = () => {
   morgan.token("safe-referrer", (req) => redact(req.headers.referer || req.headers.referrer));
   app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :safe-url HTTP/:http-version" :status :res[content-length] ":safe-referrer" ":user-agent"'));
 
-  app.get("/health", (_req, res) => {
-    res.json({ ok: true, service: "sidra-backend" });
+  app.get("/health", async (_req, res) => {
+    try {
+      await pingDb();
+      res.json({ ok: true, service: "sidra-backend" });
+    } catch {
+      // Fly's own check (fly.toml) hits this path - answering 503 when the database is wedged,
+      // instead of a plain 200, is what lets it stop routing traffic here and (via the watchdog
+      // in server.js) what eventually triggers a self-restart instead of needing a manual one.
+      res.status(503).json({ ok: false, service: "sidra-backend", error: "database unavailable" });
+    }
   });
 
   const authService = new AuthService({

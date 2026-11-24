@@ -18,3 +18,13 @@ export const connectDb = async () => {
 export const disconnectDb = async () => {
   await prisma.$disconnect();
 };
+
+// A bare SELECT 1 the health check and the watchdog can race against a timeout - a query that
+// never resolves (stuck connection, wedged I/O) is exactly the failure mode a plain "is Express
+// listening" check can't see, since the HTTP layer above it is still perfectly responsive.
+export const pingDb = async (timeoutMs = 1500) => {
+  await Promise.race([
+    prisma.$queryRawUnsafe("SELECT 1"),
+    new Promise((_, reject) => setTimeout(() => reject(new Error("db ping timed out")), timeoutMs))
+  ]);
+};
