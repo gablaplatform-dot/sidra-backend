@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { geohashEncode } from '../../src/utils/geohash.js';
+import { BOOKING_PROFILES, DEFAULT_PROFILE } from './booking-profiles.js';
 
 const prisma = new PrismaClient();
 const args = new Set(process.argv.slice(2));
@@ -69,7 +70,7 @@ function planProviders(byName) {
       const key = `${category.id}-${index + 1}`;
       plans.push({
         key, userId: id('user', key), providerId: id('provider', key), categoryId: category.id,
-        name: `Demo · ${name} ${String(index + 1).padStart(2, '0')}`, rows
+        name: `Demo · ${name} ${String(index + 1).padStart(2, '0')}`, categoryName: name, rows
       });
     });
   }
@@ -125,6 +126,7 @@ async function main() {
           }
         });
       }
+      const profile = BOOKING_PROFILES[provider.categoryName] ?? DEFAULT_PROFILE;
       for (const item of provider.rows) {
         const listingId = id('listing', item.sourceUrl);
         if (present.serviceProduct.has(listingId)) continue;
@@ -132,14 +134,14 @@ async function main() {
           data: {
             id: listingId, providerId: provider.providerId, categoryId: provider.categoryId, serviceCategoryId: provider.categoryId,
             name: item.name,
-            description: `Demo catalogue item: ${item.name}. Reference price: UGX ${item.price.toLocaleString('en-US')}${item.pricePeriod ? ` (${item.pricePeriod})` : ''}. Photograph and factual details sourced from ${item.sourceUrl}. Availability and price are not a live offer from this demo provider.`,
+            description: `Demo catalogue item: ${item.name}. Reference price: UGX ${item.price.toLocaleString('en-US')}${item.pricePeriod ? ` (${item.pricePeriod})` : ''}. Photograph and factual details sourced from ${item.sourceUrl}. Availability and price are not a live offer from this demo provider - requests and bookings submitted against it will not be fulfilled.`,
             price: item.price, type: 'service', status: 'approved', onlinePaymentEnabled: false,
             media: {
               imageUrl: item.imageUrl, gallery: [item.imageUrl], seedBatch: batch, isDemo: true,
               sourceUrl: item.sourceUrl, sourceId: item.sourceId, source: 'Jiji Uganda',
               imageWidth: item.imageWidth, imageHeight: item.imageHeight, collectedAt: manifest.createdAt
             },
-            customFields: {}, bookingMode: 'none'
+            customFields: {}, bookingMode: profile.bookingMode, booking: profile.booking, items: profile.items
           }
         });
       }
