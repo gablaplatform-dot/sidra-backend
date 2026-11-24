@@ -143,7 +143,7 @@ async function main() {
           }
         });
       }
-    }, { timeout: 30000 });
+    }, { timeout: 120000 });
   }
   for (const model of Object.keys(wanted)) {
     const oldIds = existing[model].map(row => row.id);
