@@ -66,6 +66,10 @@
         "title": "Tunoonya omuvuzi…",
         "subtitle": "Kiseera kitono nnyo."
       },
+      "matchedPending": {
+        "title": "Tukakasa omuvuzi…",
+        "subtitle": "Tulindirira akkiriza."
+      },
       "matched": {
         "title": "Omuvuzi ajja",
         "subtitle": "Mukoleko wansi."

@@ -66,6 +66,10 @@
         "title": "Darawal ayaa la raadinayaa…",
         "subtitle": "Badanaa waxay qaadataa dhowr ilbiriqsi."
       },
+      "matchedPending": {
+        "title": "Darawalka ayaa la xaqiijinayaa…",
+        "subtitle": "Sugaya inuu aqbalo."
+      },
       "matched": {
         "title": "Darawalku wuu soo socdaa",
         "subtitle": "Hoos ka daawo."

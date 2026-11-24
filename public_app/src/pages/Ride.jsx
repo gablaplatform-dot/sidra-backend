@@ -340,6 +340,19 @@ export default function Ride() {
           return;
         }
         setTrip(result);
+        // The map and address fields otherwise stay blank on a resumed trip (e.g. after a page
+        // reload) since pickup/dropoff only normally get set while picking locations - restore
+        // them from the trip itself so the route and pins actually show while tracking.
+        if (result.pickup) {
+          setPickup(result.pickup);
+          setPickupText(result.pickup.address || t("ride.droppedPin"));
+          placeMarker(pickupMarkerRef, result.pickup, "#0b2046");
+        }
+        if (result.dropoff) {
+          setDropoff(result.dropoff);
+          setDropoffText(result.dropoff.address || t("ride.droppedPin"));
+          placeMarker(dropoffMarkerRef, result.dropoff, "#e11d48");
+        }
         if (result.status === "matched" && !result.riderConfirmedAt) {
           setStage("confirm");
           return;
@@ -449,6 +462,10 @@ export default function Ride() {
 
   const selectedEstimate = estimates[vehicleType];
   const hasStatusCopy = trip ? STATUS_COPY_KEYS.includes(trip.status) : false;
+  // "matched" covers two very different moments: waiting on the driver to accept vs. already
+  // accepted and en route. Without this split, a rider sees "Driver is on the way" the instant
+  // they confirm, before that driver has even seen the request.
+  const statusCopyKey = (t_) => (t_.status === "matched" && !t_.acceptedAt ? "matchedPending" : t_.status);
   const rideTypeLabel = (value) => t(`ride.types.${value}.label`, { defaultValue: value });
   const formatEta = (min) => (min < 1 ? t("ride.eta.underMinute") : t("ride.eta.minutes", { count: Math.round(min) }));
 
@@ -633,8 +650,8 @@ export default function Ride() {
 
         {stage === "live" && trip && hasStatusCopy ? (
           <div className="ride-status-panel">
-            <h3>{t(`ride.status.${trip.status}.title`)}</h3>
-            <p>{t(`ride.status.${trip.status}.subtitle`)}</p>
+            <h3>{t(`ride.status.${statusCopyKey(trip)}.title`)}</h3>
+            <p>{t(`ride.status.${statusCopyKey(trip)}.subtitle`)}</p>
 
             {trip.driver ? (
               <div className="ride-driver-card">

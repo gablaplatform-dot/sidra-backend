@@ -14,6 +14,11 @@ const GEOHASH_PRECISION_FINE = 6; // ~1.2km x 0.6km cells - the primary search
 const GEOHASH_PRECISION_COARSE = 5; // ~4.9km x 4.9km cells - fallback if the fine search is empty
 // How long a driver has to accept/decline an offer before the dispatcher moves on without them.
 const OFFER_TIMEOUT_MS = 20_000;
+// How long a rider has to review/confirm an auto-matched driver before the request is treated
+// as abandoned (closed tab, lost connectivity, etc). Unlike OFFER_TIMEOUT_MS this isn't a
+// dispatch step - there's no one to pass the trip on to since the rider never confirmed it -
+// so this cancels the trip outright instead of reassigning it.
+const UNCONFIRMED_MATCH_TIMEOUT_MS = 90_000;
 
 const decToString = (v) => (v ? v.toString() : "0.00");
 
@@ -55,18 +60,20 @@ const tripDto = (trip) => ({
 });
 
 // The compact driver shape shown to a rider (never the driver's own full profile/PII).
-const driverSummary = (driver) =>
-  driver
-    ? {
-        id: driver.id,
-        vehicleModel: driver.vehicleModel,
-        licensePlate: driver.licensePlate,
-        lat: driver.lat,
-        lng: driver.lng,
-        ratingAvg: driver.ratingAvg,
-        contact: driver.contact
-      }
-    : null;
+const driverSummary = async (driver) => {
+  if (!driver) return null;
+  const completedTripsCount = await prisma.rideTrip.count({ where: { driverId: driver.id, status: "completed" } });
+  return {
+    id: driver.id,
+    vehicleModel: driver.vehicleModel,
+    licensePlate: driver.licensePlate,
+    lat: driver.lat,
+    lng: driver.lng,
+    ratingAvg: driver.ratingAvg,
+    completedTripsCount,
+    contact: driver.contact
+  };
+};
 
 const driverDto = (driver) => ({
   id: driver.id,
@@ -381,7 +388,7 @@ export class RideService {
       }
     });
 
-    return { ...tripDto(trip), driver: driverSummary(match?.driver) };
+    return { ...tripDto(trip), driver: await driverSummary(match?.driver) };
   }
 
   // Called by the RIDER to confirm the auto-matched driver before the driver is ever notified.
@@ -400,7 +407,7 @@ export class RideService {
           })
         : null;
       if (trip.riderConfirmedAt) {
-        return { ...tripDto(trip), driver: driverSummary(candidate) };
+        return { ...tripDto(trip), driver: await driverSummary(candidate) };
       }
       if (trip.status !== "matched") {
         throw new AppError({ message: "This trip is no longer awaiting confirmation", statusCode: 409, code: "INVALID_TRIP_STATE" });
@@ -424,7 +431,7 @@ export class RideService {
           where: { id: tripId },
           data: { riderConfirmedAt: new Date(), offerExpiresAt: new Date(Date.now() + OFFER_TIMEOUT_MS) }
         });
-        return { ...tripDto(updated), driver: driverSummary(candidate) };
+        return { ...tripDto(updated), driver: await driverSummary(candidate) };
       }
 
       // The original match is gone (went offline) or was confirmed by another rider first -
@@ -440,7 +447,7 @@ export class RideService {
           offerExpiresAt: match ? new Date(Date.now() + OFFER_TIMEOUT_MS) : null
         }
       });
-      return { ...tripDto(updated), driver: driverSummary(match?.driver) };
+      return { ...tripDto(updated), driver: await driverSummary(match?.driver) };
     });
   }
 
@@ -455,7 +462,7 @@ export class RideService {
     if (!isRider && !isAssignedDriver) {
       throw new AppError({ message: "Trip not found", statusCode: 404, code: "TRIP_NOT_FOUND" });
     }
-    return { ...tripDto(trip), driver: driverSummary(driver) };
+    return { ...tripDto(trip), driver: await driverSummary(driver) };
   }
 
   async listMyTripsAsRider({ actorUserId, limit = 20 }) {
@@ -531,6 +538,21 @@ export class RideService {
         await this._passOverDriver(tx, fresh, fresh.driverId);
       });
     }
+
+    // A matched trip the RIDER never confirms (closed the tab, lost connectivity, walked away)
+    // has no dispatch timeout of its own - findNearestDriver doesn't treat it as busy, so it
+    // never strands the driver, but requestTrip's one-active-trip-per-rider check means the
+    // rider could otherwise never request another ride again. The conditional updateMany (not a
+    // transaction) is enough here: if the rider confirms in the same instant, riderConfirmedAt no
+    // longer matches the where clause and this simply updates zero rows.
+    await prisma.rideTrip.updateMany({
+      where: {
+        status: "matched",
+        riderConfirmedAt: null,
+        matchedAt: { lt: new Date(Date.now() - UNCONFIRMED_MATCH_TIMEOUT_MS) }
+      },
+      data: { status: "cancelled_by_rider", cancelledAt: new Date(), cancelReason: "Ride request expired" }
+    });
   }
 
   async updateTripStatus({ actorUserId, tripId, status }) {

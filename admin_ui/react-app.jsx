@@ -10543,7 +10543,7 @@ const Sidebar = ({ activeTab, onTabChange, currentUser, onLogout, open, onClose 
     { id: 'categories', label: 'Categories', icon: 'ph-folders', section: 'Menu' },
     { id: 'audiences', label: 'Target audiences', icon: 'ph-globe-hemisphere-west', section: 'Menu' },
     { id: 'listings', label: 'Listings', icon: 'ph-list-dashes', section: 'Menu' },
-    { id: 'rides', label: 'Gabla Ride', icon: 'ph-moped-front', section: 'Menu' },
+    { id: 'rides', label: 'Gabla Ride', icon: 'ph-car', section: 'Menu' },
     { id: 'bus', label: 'Bus ticketing', icon: 'ph-bus', section: 'Menu' },
     { id: 'jobs', label: 'Jobs & paid tasks', icon: 'ph-briefcase', section: 'Menu' },
     { id: 'events', label: 'Events', icon: 'ph-ticket', section: 'Menu' },
@@ -11046,7 +11046,7 @@ const RidesView = ({ token }) => {
     if (!items.length) {
       return (
         <div className="flex flex-col items-center justify-center py-24 text-center" style={{ color: '#94A3B8' }}>
-          <i className="ph ph-moped-front text-5xl mb-3 opacity-40"></i>
+          <i className="ph ph-car text-5xl mb-3 opacity-40"></i>
           <p className="font-medium">{emptyLabel}</p>
         </div>
       );

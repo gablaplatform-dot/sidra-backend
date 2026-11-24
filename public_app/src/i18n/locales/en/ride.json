@@ -66,6 +66,10 @@
         "title": "Finding your driver…",
         "subtitle": "This usually takes a few seconds."
       },
+      "matchedPending": {
+        "title": "Confirming your driver…",
+        "subtitle": "Waiting for them to accept."
+      },
       "matched": {
         "title": "Driver is on the way",
         "subtitle": "Track them below."
