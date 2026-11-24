@@ -9,7 +9,7 @@ export const API_BASE = (import.meta.env.VITE_API_URL || "/api/v1").replace(/\/$
 //  - home / shop shelves: reused for a minute while moving between pages.
 // Identical requests that are already in flight are shared instead of sent twice.
 const STORE_PREFIX = "gabla_api_cache:v1:";
-const TREES = /^\/(product-categories|service-categories|categories|shop-categories)(\?|$|\/(?!mine))/;
+const TREES = /^\/(product-categories|service-categories|categories|shop-categories|settings\/modules)(\?|$|\/(?!mine))/;
 const SHELVES = /^\/(listings\/(new-arrivals|best-sellers)|promotions\/featured|bus\/popular-routes|providers\?sort=top-rated)/;
 const TREE_FRESH_MS = 5 * 60 * 1000;
 const TREE_STALE_MS = 24 * 60 * 60 * 1000;
@@ -113,3 +113,7 @@ export const request = (path, options = {}) => {
   }
   return refresh();
 };
+
+// Which top-level modules (shop, services, bus, ride, jobs, events) an admin has switched on -
+// unauthenticated, cached like a category tree since it rarely changes.
+export const getEnabledModules = () => request("/settings/modules");

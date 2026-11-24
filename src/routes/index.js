@@ -8,7 +8,7 @@ import { buildCategoryRoutes } from "./category.routes.js";
 import { buildProductCategoryRoutes } from "./productCategory.routes.js";
 import { buildShopCategoryRoutes } from "./shopCategory.routes.js";
 import { buildListingRoutes } from "./listing.routes.js";
-import { buildAdminSettingsRoutes } from "./adminSettings.routes.js";
+import { buildAdminSettingsRoutes, buildPublicSettingsRoutes } from "./adminSettings.routes.js";
 import { buildAdminTransactionsRoutes } from "./adminTransactions.routes.js";
 import { buildPaymentRoutes } from "./payment.routes.js";
 import { buildStorageRoutes } from "./storage.routes.js";
@@ -89,6 +89,7 @@ export const buildRoutes = ({
   router.use("/documents", buildDocumentRoutes({ documentService }));
   router.use("/admin", buildAdminDataRoutes({ adminController }));
   router.use("/admin", buildAdminSettingsRoutes({ adminSettingsController }));
+  router.use("/settings", buildPublicSettingsRoutes({ adminSettingsController }));
   router.use("/admin/ai", buildAiAdminRoutes({ aiSettingsService, aiSearchService }));
   router.use("/admin", buildAdminTransactionsRoutes({ transactionController }));
   router.use("/admin/roles", buildAdminRoleRoutes({ adminRoleController }));

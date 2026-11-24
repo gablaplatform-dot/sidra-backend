@@ -33,7 +33,13 @@ export const buildAdminSettingsRoutes = ({ adminSettingsController }) => {
         platformName: Joi.string().trim().max(120).optional(),
         supportEmail: Joi.string().email().max(254).allow(null, "").optional(),
         supportPhone: Joi.string().trim().max(32).allow(null, "").optional(),
-        featureFlags: Joi.object().unknown(true).optional()
+        featureFlags: Joi.object().unknown(true).optional(),
+        moduleShopEnabled: Joi.boolean().optional(),
+        moduleServicesEnabled: Joi.boolean().optional(),
+        moduleBusEnabled: Joi.boolean().optional(),
+        moduleRideEnabled: Joi.boolean().optional(),
+        moduleJobsEnabled: Joi.boolean().optional(),
+        moduleEventsEnabled: Joi.boolean().optional()
       }).min(1)
     ),
     adminSettingsController.updateGlobal
@@ -66,5 +72,13 @@ export const buildAdminSettingsRoutes = ({ adminSettingsController }) => {
     adminSettingsController.updateProviderOverrides
   );
 
+  return router;
+};
+
+// Unauthenticated - the customer-facing apps (web + mobile) fetch this at startup to know which
+// top-level modules an admin has switched off, so they can hide those entry points.
+export const buildPublicSettingsRoutes = ({ adminSettingsController }) => {
+  const router = Router();
+  router.get("/modules", adminSettingsController.getPublicModules);
   return router;
 };

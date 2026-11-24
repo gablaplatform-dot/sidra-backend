@@ -1,7 +1,7 @@
 import { prisma } from '../config/db.js';
 import { CategoryService } from './category.service.js';
 import { ProductCategoryService } from './productCategory.service.js';
-import { scopedProductTree, categoryWithin } from '../domain/productTaxonomy.js';
+import { scopedProductTree, categoryWithin, idsWithNonEmptyDescendant, pruneBySurvivingIds, flattenTree } from '../domain/productTaxonomy.js';
 import { syncServiceNode } from '../domain/categoryMirrors.js';
 import { AppError } from '../utils/AppError.js';
 export const BOOKING_UNITS = ['night','day','hour'];
@@ -10,10 +10,22 @@ export const BOOKING_UNITS = ['night','day','hour'];
 export class ServiceCategoryService extends ProductCategoryService {
   get supportsProviderCategories() { return false; }
   get db() { return prisma.serviceCategory; }
-  async getNestedCategories({providerCategoryId}={}) {
+  async nonEmptyCategoryIds() {
+    const rows = await prisma.serviceProduct.groupBy({
+      by: ["serviceCategoryId"],
+      where: { type: "service", status: "approved", serviceCategoryId: { not: null }, provider: { isApproved: true, moderationStatus: "approved" } },
+      _count: { _all: true }
+    });
+    return new Set(rows.map((r) => r.serviceCategoryId));
+  }
+  async getNestedCategories({providerCategoryId, hideEmpty = true}={}) {
     const data=await new CategoryService().getNestedCategories({taxonomyKind:'service'});
     const decorate=(nodes)=>nodes.map(n=>({...n,providerCategoryId:n.id,bookable:Boolean(n.settings?.bookable),bookingUnit:n.settings?.bookingUnit || null,children:decorate(n.children)}));
     let items=decorate(data.items);
+    if(hideEmpty) {
+      const survivingIds=idsWithNonEmptyDescendant(flattenTree(items),await this.nonEmptyCategoryIds());
+      items=pruneBySurvivingIds(items,survivingIds);
+    }
     if(providerCategoryId) items=scopedProductTree(items,await prisma.category.findMany({select:{id:true,parentId:true}}),providerCategoryId);
     const count=(nodes)=>nodes.reduce((sum,n)=>sum+1+count(n.children),0);
     return {items,total:count(items)};

@@ -12,6 +12,15 @@ export class AdminSettingsController {
     }
   };
 
+  getPublicModules = async (_req, res, next) => {
+    try {
+      const result = await this.adminSettingsService.getPublicModules();
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   updateGlobal = async (req, res, next) => {
     try {
       const result = await this.adminSettingsService.updateGlobal(req.body);

@@ -259,6 +259,12 @@ CREATE TABLE IF NOT EXISTS admin_settings (
   supportEmail TEXT,
   supportPhone TEXT,
   featureFlags JSONB NOT NULL DEFAULT '{}',
+  moduleShopEnabled BOOLEAN NOT NULL DEFAULT 1,
+  moduleServicesEnabled BOOLEAN NOT NULL DEFAULT 1,
+  moduleBusEnabled BOOLEAN NOT NULL DEFAULT 1,
+  moduleRideEnabled BOOLEAN NOT NULL DEFAULT 1,
+  moduleJobsEnabled BOOLEAN NOT NULL DEFAULT 1,
+  moduleEventsEnabled BOOLEAN NOT NULL DEFAULT 1,
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -1495,3 +1501,12 @@ CREATE INDEX IF NOT EXISTS bus_routes_corridorId_idx ON bus_routes(corridorId);
 `);
 
 ensureColumn("ride_trips", "offerExpiresAt", "DATETIME");
+
+// Whole-module visibility toggles for the customer-facing apps - additive for existing databases
+// (the admin_settings CREATE TABLE above already has these for a fresh database).
+ensureColumn("admin_settings", "moduleShopEnabled", "BOOLEAN NOT NULL DEFAULT 1");
+ensureColumn("admin_settings", "moduleServicesEnabled", "BOOLEAN NOT NULL DEFAULT 1");
+ensureColumn("admin_settings", "moduleBusEnabled", "BOOLEAN NOT NULL DEFAULT 1");
+ensureColumn("admin_settings", "moduleRideEnabled", "BOOLEAN NOT NULL DEFAULT 1");
+ensureColumn("admin_settings", "moduleJobsEnabled", "BOOLEAN NOT NULL DEFAULT 1");
+ensureColumn("admin_settings", "moduleEventsEnabled", "BOOLEAN NOT NULL DEFAULT 1");

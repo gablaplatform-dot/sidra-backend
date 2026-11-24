@@ -11,6 +11,7 @@ import ProviderCard from "../components/ProviderCard";
 import { IconArrowRight } from "../components/icons";
 import { ProviderCardsSkeleton, Skel } from "../components/Skeleton";
 import { mapCategoryDto, mapProductDto } from "../lib/shopMappers";
+import { useEnabledModules } from "../lib/modules";
 import OrbitStage from "../components/home/OrbitStage";
 import Reveal from "../components/home/Reveal";
 import { busApi } from "../lib/bus";
@@ -41,9 +42,9 @@ const usePhone = () => {
 };
 
 const FOOTER_LINKS = [
-  { key: "shop", href: "/shop" },
-  { key: "ride", href: "/ride" },
-  { key: "busTickets", href: "/bus" },
+  { key: "shop", href: "/shop", module: "shop" },
+  { key: "ride", href: "/ride", module: "ride" },
+  { key: "busTickets", href: "/bus", module: "bus" },
   { key: "categories", href: "/home#categories" },
   { key: "providers", href: "/home#providers" },
   { key: "deleteAccount", href: "/account/delete" }
@@ -65,6 +66,7 @@ function DesktopHome() {
   const phone = usePhone();
   const stageCategories = phone ? STAGE_CATEGORIES_PHONE : STAGE_CATEGORIES_DESKTOP;
   const [busRoutes, setBusRoutes] = useState([]);
+  const modules = useEnabledModules();
 
   // The bus chapter is a bonus: if the bus API is unavailable the rest of Home is unaffected.
   useEffect(() => {
@@ -222,7 +224,7 @@ function DesktopHome() {
       ) : null}
 
       <section className="home-section community-home-entries" aria-label="Jobs and events">
-        {[['jobs','Make your next move.','Vacancies and paid tasks, all in one place.'],['events','Make a night of it.','Live music, local gatherings and great company.']].map(([kind,title,subtitle])=><Reveal key={kind}><Link to={`/${kind}`} className="community-home-entry"><img src={`/artwork/${kind}.png`} alt=""/><div><p>{kind.toUpperCase()}</p><h2>{title}</h2><span>{subtitle}</span></div></Link></Reveal>)}
+        {[['jobs','Make your next move.','Vacancies and paid tasks, all in one place.'],['events','Make a night of it.','Live music, local gatherings and great company.']].filter(([kind])=>modules[kind]!==false).map(([kind,title,subtitle])=><Reveal key={kind}><Link to={`/${kind}`} className="community-home-entry"><img src={`/artwork/${kind}.png`} alt=""/><div><p>{kind.toUpperCase()}</p><h2>{title}</h2><span>{subtitle}</span></div></Link></Reveal>)}
       </section>
       {error ? <div className="error-message home-error">{error}</div> : null}
 
@@ -261,7 +263,7 @@ function DesktopHome() {
             <strong>Gabla</strong>
           </Link>
           <nav className="home-footer-links">
-            {FOOTER_LINKS.map((link) => (
+            {FOOTER_LINKS.filter((link) => !link.module || modules[link.module] !== false).map((link) => (
               <Link key={link.key} to={link.href}>{t(`nav.${link.key}`)}</Link>
             ))}
           </nav>

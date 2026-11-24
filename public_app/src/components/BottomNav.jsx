@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { getCartCount } from "../lib/cart";
+import { useEnabledModules } from "../lib/modules";
 import { IconBookmark, IconBus, IconCalendar, IconCar, IconCart, IconGrid, IconList, IconSearch, IconStore, IconTicket, IconUser, IconWrench } from "./icons";
 
 // The phone's bottom navigation. One bar on every screen, and inside a module the bar turns into that module's own
@@ -100,9 +101,12 @@ export default function BottomNav() {
   const ref = useRef(null);
   const [typing, setTyping] = useState(false);
   const [cart, setCart] = useState(() => getCartCount());
+  const modules = useEnabledModules();
 
   const hidden = HIDDEN.some((re) => re.test(pathname));
-  const tabs = (MODULES.find((m) => m.test(pathname)) || { tabs: GLOBAL }).tabs;
+  // `modules` only has keys for whole-module tabs (shop/services/bus/ride) - a tab whose key
+  // isn't one of those (home, me, cart, categories, ...) is unaffected by this filter.
+  const tabs = (MODULES.find((m) => m.test(pathname)) || { tabs: GLOBAL }).tabs.filter((tab) => modules[tab.key] !== false);
 
   useEffect(() => {
     const sync = () => setCart(getCartCount());

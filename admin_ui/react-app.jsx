@@ -10344,6 +10344,12 @@ const SettingsView = ({ settingsData, token, onReload }) => {
     contact: true,
     wallet: true,
     ecom: false,
+    moduleShop: true,
+    moduleServices: true,
+    moduleBus: true,
+    moduleRide: true,
+    moduleJobs: true,
+    moduleEvents: true,
   });
 
   const [prices, setPrices] = useState({
@@ -10363,6 +10369,12 @@ const SettingsView = ({ settingsData, token, onReload }) => {
       contact: Boolean(settingsData.enableContactFee),
       wallet: Boolean(settingsData.enableWallet),
       ecom: Boolean(settingsData.enableEcommerce),
+      moduleShop: settingsData.moduleShopEnabled !== false,
+      moduleServices: settingsData.moduleServicesEnabled !== false,
+      moduleBus: settingsData.moduleBusEnabled !== false,
+      moduleRide: settingsData.moduleRideEnabled !== false,
+      moduleJobs: settingsData.moduleJobsEnabled !== false,
+      moduleEvents: settingsData.moduleEventsEnabled !== false,
     });
     setPrices({
       subFee: String(settingsData.subscriptionFee ?? '0'),
@@ -10388,6 +10400,12 @@ const SettingsView = ({ settingsData, token, onReload }) => {
           enableContactFee: toggles.contact,
           enableWallet: toggles.wallet,
           enableEcommerce: toggles.ecom,
+          moduleShopEnabled: toggles.moduleShop,
+          moduleServicesEnabled: toggles.moduleServices,
+          moduleBusEnabled: toggles.moduleBus,
+          moduleRideEnabled: toggles.moduleRide,
+          moduleJobsEnabled: toggles.moduleJobs,
+          moduleEventsEnabled: toggles.moduleEvents,
           subscriptionFee: prices.subFee || '0',
           contactFee: prices.contactFee || '0',
           transactionFeePercent: Number(prices.txFee || 0),
@@ -10435,6 +10453,36 @@ const SettingsView = ({ settingsData, token, onReload }) => {
                 { key: 'contact', label: 'Contact Unlock Fee', desc: 'Charge users a small fee to view provider contact details.' },
                 { key: 'wallet', label: 'Internal Wallet System', desc: 'Allow providers to accumulate earnings before withdrawal.' },
                 { key: 'ecom', label: 'E-commerce Module', desc: 'Allow providers to sell physical or digital products.' },
+              ].map(item => (
+                <div key={item.key} className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-sm" style={{ color: '#0F172A' }}>{item.label}</h4>
+                    <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>{item.desc}</p>
+                  </div>
+                  <ToggleSwitch
+                    id={`toggle_${item.key}`}
+                    name={`toggle_${item.key}`}
+                    checked={toggles[item.key]}
+                    onChange={() => handleToggle(item.key)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border p-8" style={{ boxShadow: '0 4px 24px -4px rgba(11,32,70,0.04), 0 2px 8px -2px rgba(11,32,70,0.02)', borderColor: '#E2E8F0' }}>
+            <div className="mb-6 pb-4 border-b" style={{ borderColor: '#E2E8F0' }}>
+              <h2 className="text-lg font-bold" style={{ color: '#0F172A' }}>Module Control</h2>
+              <p className="text-sm" style={{ color: '#64748B' }}>Turn a whole module off to hide it from the customer apps (web and mobile) - no data is deleted, and it stays available again the moment you switch it back on.</p>
+            </div>
+            <div className="space-y-6">
+              {[
+                { key: 'moduleShop', label: 'Shop', desc: 'Product browsing and e-commerce storefronts.' },
+                { key: 'moduleServices', label: 'Services', desc: 'Appointment-based and priced provider services.' },
+                { key: 'moduleBus', label: 'Bus Ticketing', desc: 'Route search and bus ticket bookings.' },
+                { key: 'moduleRide', label: 'Get Ride', desc: 'Gabla Ride car-hailing.' },
+                { key: 'moduleJobs', label: 'Jobs & Paid Tasks', desc: 'Vacancy and paid-task postings.' },
+                { key: 'moduleEvents', label: 'Events', desc: 'Event listings and RSVPs.' },
               ].map(item => (
                 <div key={item.key} className="flex items-center justify-between">
                   <div>

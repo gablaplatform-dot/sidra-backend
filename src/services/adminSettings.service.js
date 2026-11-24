@@ -58,6 +58,12 @@ export class AdminSettingsService {
     if (patch.supportEmail !== undefined) update.supportEmail = String(patch.supportEmail ?? "").trim() || null;
     if (patch.supportPhone !== undefined) update.supportPhone = String(patch.supportPhone ?? "").trim() || null;
     if (patch.featureFlags !== undefined) update.featureFlags = patch.featureFlags ?? {};
+    if (patch.moduleShopEnabled !== undefined) update.moduleShopEnabled = Boolean(patch.moduleShopEnabled);
+    if (patch.moduleServicesEnabled !== undefined) update.moduleServicesEnabled = Boolean(patch.moduleServicesEnabled);
+    if (patch.moduleBusEnabled !== undefined) update.moduleBusEnabled = Boolean(patch.moduleBusEnabled);
+    if (patch.moduleRideEnabled !== undefined) update.moduleRideEnabled = Boolean(patch.moduleRideEnabled);
+    if (patch.moduleJobsEnabled !== undefined) update.moduleJobsEnabled = Boolean(patch.moduleJobsEnabled);
+    if (patch.moduleEventsEnabled !== undefined) update.moduleEventsEnabled = Boolean(patch.moduleEventsEnabled);
 
     const existing = await prisma.adminSettings.findFirst({ orderBy: { createdAt: "desc" }, select: { id: true } });
     const updated = existing
@@ -175,8 +181,28 @@ export class AdminSettingsService {
       supportEmail: doc.supportEmail ?? null,
       supportPhone: doc.supportPhone ?? null,
       featureFlags: doc.featureFlags ?? {},
+      moduleShopEnabled: Boolean(doc.moduleShopEnabled ?? true),
+      moduleServicesEnabled: Boolean(doc.moduleServicesEnabled ?? true),
+      moduleBusEnabled: Boolean(doc.moduleBusEnabled ?? true),
+      moduleRideEnabled: Boolean(doc.moduleRideEnabled ?? true),
+      moduleJobsEnabled: Boolean(doc.moduleJobsEnabled ?? true),
+      moduleEventsEnabled: Boolean(doc.moduleEventsEnabled ?? true),
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt
+    };
+  }
+
+  // The slim, unauthenticated subset customer-facing apps fetch at startup to know which
+  // top-level modules to show - never the monetization/fee fields from toGlobalDto.
+  async getPublicModules() {
+    const doc = await this.getGlobalRaw();
+    return {
+      shop: Boolean(doc.moduleShopEnabled ?? true),
+      services: Boolean(doc.moduleServicesEnabled ?? true),
+      bus: Boolean(doc.moduleBusEnabled ?? true),
+      ride: Boolean(doc.moduleRideEnabled ?? true),
+      jobs: Boolean(doc.moduleJobsEnabled ?? true),
+      events: Boolean(doc.moduleEventsEnabled ?? true)
     };
   }
 

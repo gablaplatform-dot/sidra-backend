@@ -391,6 +391,14 @@ model AdminSettings {
   supportEmail          String?
   supportPhone          String?
   featureFlags          Json     @default("{}")
+  // Whole-module visibility in the customer-facing apps (web + mobile) - turning one off hides
+  // its entry points from the UI without touching any data, for maintenance or a soft launch.
+  moduleShopEnabled     Boolean  @default(true)
+  moduleServicesEnabled Boolean  @default(true)
+  moduleBusEnabled      Boolean  @default(true)
+  moduleRideEnabled     Boolean  @default(true)
+  moduleJobsEnabled     Boolean  @default(true)
+  moduleEventsEnabled   Boolean  @default(true)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 

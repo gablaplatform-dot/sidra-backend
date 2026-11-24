@@ -2,7 +2,7 @@ import { syncShopNode } from "../domain/categoryMirrors.js";
 import { AppError } from "../utils/AppError.js";
 import { prisma } from "../config/db.js";
 
-import { scopedProductTree, effectiveProviderCategory, categoryWithin } from "../domain/productTaxonomy.js";
+import { scopedProductTree, effectiveProviderCategory, categoryWithin, idsWithNonEmptyDescendant, pruneBySurvivingIds } from "../domain/productTaxonomy.js";
 
 const uniqueError = (e) => e?.code === "P2002";
 
@@ -100,12 +100,14 @@ export class ProductCategoryService {
 
   async getMine(userId, {listingId} = {}) {
     const provider = await this.getProviderForUser(userId);
-    const scoped = await this.getNestedCategories({providerCategoryId:provider.categoryId || '__unassigned__'});
+    // A provider must be able to pick any category their business is linked to, including one
+    // with no listings yet (they're about to create the first one) - never hide empties here.
+    const scoped = await this.getNestedCategories({providerCategoryId:provider.categoryId || '__unassigned__', hideEmpty:false});
     if (!listingId || typeof listingId !== 'string') return scoped;
     const listing=await prisma.serviceProduct.findFirst({where:{id:listingId,providerId:provider.id,type:this.supportsProviderCategories?'product':'service'}});
     const selected=this.supportsProviderCategories?listing?.productCategoryId:listing?.serviceCategoryId;
     if(!selected) return scoped;
-    const full=await this.getNestedCategories();
+    const full=await this.getNestedCategories({hideEmpty:false});
     const retain=nodes=>nodes.flatMap(n=>{const children=retain(n.children || []);return n.id===selected || children.length ? [{...n,children}] : [];});
     const merge=(a,b)=>{const rows=new Map(a.map(n=>[n.id,n]));for(const n of b){const prior=rows.get(n.id);rows.set(n.id,prior?{...prior,children:merge(prior.children || [],n.children || [])}:n);}return [...rows.values()];};
     return {...scoped,items:merge(scoped.items,retain(full.items))};
@@ -259,7 +261,20 @@ export class ProductCategoryService {
     return { reordered: true, parentId: normalizedParentId, orderedIds };
   }
 
-  async getNestedCategories({providerCategoryId} = {}) {
+  // The customer-facing listing endpoints that reach this (the raw `/product-categories` and
+  // `/service-categories` GET routes) always hide empties; a provider managing their own
+  // category picker (getMine, above) explicitly opts out since they need to see every category
+  // their business is linked to, not just the ones that already have listings.
+  async nonEmptyCategoryIds() {
+    const rows = await prisma.serviceProduct.groupBy({
+      by: ["productCategoryId"],
+      where: { type: "product", status: "approved", productCategoryId: { not: null }, provider: { isApproved: true, moderationStatus: "approved" } },
+      _count: { _all: true }
+    });
+    return new Set(rows.map((r) => r.productCategoryId));
+  }
+
+  async getNestedCategories({providerCategoryId, hideEmpty = true} = {}) {
     // Same shape as category.service.js#getNestedCategories: an inactive node drops its whole
     // subtree; a pending (provider-submitted) subcategory stays live, only flagged for review.
     const categories = await this.db.findMany({
@@ -300,22 +315,33 @@ export class ProductCategoryService {
     };
 
     let items = top.map((c) => toDto(c));
+    if (hideEmpty) {
+      const survivingIds = idsWithNonEmptyDescendant(categories, await this.nonEmptyCategoryIds());
+      items = pruneBySurvivingIds(items, survivingIds);
+    }
     if (this.supportsProviderCategories) {
       const directory = await prisma.category.findMany({select:{id:true,parentId:true}});
       const annotate = (nodes, inherited = null) => nodes.map((n) => ({...n, effectiveProviderCategoryId:n.providerCategoryId || inherited, children:annotate(n.children, n.providerCategoryId || inherited)}));
       items = providerCategoryId ? scopedProductTree(items, directory, providerCategoryId) : annotate(items);
     }
-    return { items, total: categories.length };
+    const countNodes = (nodes) => nodes.reduce((sum, n) => sum + 1 + countNodes(n.children || []), 0);
+    return { items, total: hideEmpty ? countNodes(items) : categories.length };
   }
 
-  async listRoots({ limit = 6 } = {}) {
+  async listRoots({ limit = 6, hideEmpty = true } = {}) {
     const normalizedLimit = Math.min(60, Math.max(1, Number(limit) || 6));
     const rows = await this.db.findMany({
       where: { parentId: null, isActive: true, moderationStatus: "approved" },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      take: normalizedLimit
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
     });
-    return { items: rows.map((r) => this.toDto(r)), total: rows.length };
+    let filtered = rows;
+    if (hideEmpty) {
+      const allActive = await this.db.findMany({ where: { isActive: true }, select: { id: true, parentId: true } });
+      const survivingIds = idsWithNonEmptyDescendant(allActive, await this.nonEmptyCategoryIds());
+      filtered = rows.filter((r) => survivingIds.has(r.id));
+    }
+    const page = filtered.slice(0, normalizedLimit);
+    return { items: page.map((r) => this.toDto(r)), total: filtered.length };
   }
 
   toDto(category) {

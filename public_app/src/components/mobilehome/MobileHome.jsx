@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { request } from "../../lib/api";
+import { useEnabledModules } from "../../lib/modules";
 import { mapCategoryDto } from "../../lib/shopMappers";
 import { loginPath } from "../../lib/authRedirect";
 import { Skel } from "../Skeleton";
@@ -52,6 +53,8 @@ export default function MobileHome({ session, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [serviceCats, setServiceCats] = useState(null);
   const [providers, setProviders] = useState(null);
+  const modules = useEnabledModules();
+  const tiles = useMemo(() => TILES.filter((tile) => modules[tile.key] !== false), [modules]);
 
   useEffect(() => {
     let active = true;
@@ -104,7 +107,7 @@ export default function MobileHome({ session, onLogout }) {
       <NearbyFinder session={session} />
 
       <nav className="mh-tiles" aria-label={t("mobileHome.quickActions")}>
-        {TILES.map(({ key, to, Icon, tone }) => (
+        {tiles.map(({ key, to, Icon, tone }) => (
           <Link key={key} to={to} className={`mh-tile mh-tile-${tone}`}>
             <span className="mh-tile-icon"><Icon /></span>
             <span className="mh-tile-label">{t(`mobileHome.tiles.${key}`)}</span>
@@ -160,12 +163,12 @@ export default function MobileHome({ session, onLogout }) {
               <button type="button" className="mh-round" onClick={() => setMenuOpen(false)} aria-label={t("nav.closeMenu")}><IconClose /></button>
             </div>
             <nav onClick={() => setMenuOpen(false)}>
-              <Link to="/shop">{t("mobileHome.tiles.shop")}</Link>
-              <Link to="/services">{t("mobileHome.tiles.services")}</Link>
-              <Link to="/bus">{t("mobileHome.busTickets")}</Link>
-              <Link to="/ride">{t("mobileHome.tiles.ride")}</Link>
+              {modules.shop !== false ? <Link to="/shop">{t("mobileHome.tiles.shop")}</Link> : null}
+              {modules.services !== false ? <Link to="/services">{t("mobileHome.tiles.services")}</Link> : null}
+              {modules.bus !== false ? <Link to="/bus">{t("mobileHome.busTickets")}</Link> : null}
+              {modules.ride !== false ? <Link to="/ride">{t("mobileHome.tiles.ride")}</Link> : null}
               {session ? <Link to="/orders">{t("nav.myOrders")}</Link> : null}
-              {session ? <Link to="/bus/tickets">{t("mobileHome.myBusTickets")}</Link> : null}
+              {session && modules.bus !== false ? <Link to="/bus/tickets">{t("mobileHome.myBusTickets")}</Link> : null}
               {isProvider ? <Link to="/profile">{t("mobileHome.myBusinessProfile")}</Link> : null}
               <Link to="/cart">{t("nav.cart")}</Link>
             </nav>
