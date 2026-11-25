@@ -7,6 +7,7 @@ import { geohashEncode, geohashSearchCells, haversineDistanceKm } from "../utils
 import { RideDriverWalletService } from "./rideDriverWallet.service.js";
 import { MobileMoneyService } from "./mobileMoney.service.js";
 import { RoutingService } from "./routing.service.js";
+import { PushService } from "./push.service.js";
 import { webhookKey } from "../utils/webhookKey.js";
 
 const VEHICLE_TYPES = ["car"];
@@ -103,11 +104,34 @@ export class RideService {
   constructor({
     rideDriverWalletService = new RideDriverWalletService(),
     mobileMoneyService = new MobileMoneyService(),
-    routingService = new RoutingService()
+    routingService = new RoutingService(),
+    pushService = new PushService()
   } = {}) {
     this.rideDriverWalletService = rideDriverWalletService;
     this.mobileMoneyService = mobileMoneyService;
     this.routingService = routingService;
+    this.pushService = pushService;
+  }
+
+  // A driver just got a live, respondable offer (right after rider confirmation, or after being
+  // passed the trip when the previous driver declined/timed out) - fetch their userId and push.
+  // Never awaited by its callers (they're mid-transaction or mid-response) - any failure here
+  // must stay contained to this method.
+  async _notifyDriverOffered(driverId) {
+    try {
+      if (!driverId) return;
+      const driver = await prisma.rideDriver.findUnique({ where: { id: driverId }, select: { userId: true } });
+      if (driver?.userId) {
+        await this.pushService.sendToUser({
+          userId: driver.userId,
+          title: "New ride request",
+          body: "A rider nearby needs a ride - open the app to respond.",
+          data: { type: "ride_offer" }
+        });
+      }
+    } catch (e) {
+      process.stderr.write(`[push] _notifyDriverOffered failed: ${e?.message ?? e}\n`);
+    }
   }
 
   mobileMoneyCallbackUrls() {
@@ -431,6 +455,7 @@ export class RideService {
           where: { id: tripId },
           data: { riderConfirmedAt: new Date(), offerExpiresAt: new Date(Date.now() + OFFER_TIMEOUT_MS) }
         });
+        this._notifyDriverOffered(updated.driverId);
         return { ...tripDto(updated), driver: await driverSummary(candidate) };
       }
 
@@ -447,6 +472,7 @@ export class RideService {
           offerExpiresAt: match ? new Date(Date.now() + OFFER_TIMEOUT_MS) : null
         }
       });
+      if (match) this._notifyDriverOffered(updated.driverId);
       return { ...tripDto(updated), driver: await driverSummary(match?.driver) };
     });
   }
@@ -495,6 +521,14 @@ export class RideService {
 
       if (accept) {
         const updated = await tx.rideTrip.update({ where: { id: tripId }, data: { acceptedAt: new Date() } });
+        this.pushService
+          .sendToUser({
+            userId: updated.riderId,
+            title: "Driver on the way",
+            body: "Your driver accepted the ride and is on the way.",
+            data: { type: "ride_accepted", tripId: updated.id }
+          })
+          .catch((e) => process.stderr.write(`[push] ride-accepted notify failed: ${e?.message ?? e}\n`));
         return tripDto(updated);
       }
 
@@ -509,7 +543,7 @@ export class RideService {
   async _passOverDriver(tx, trip, excludedDriverId) {
     const declinedIds = [...(trip.metadata?.declinedDriverIds ?? []), excludedDriverId];
     const match = await this.findNearestDriver({ lat: trip.pickupLat, lng: trip.pickupLng, vehicleType: trip.vehicleType, excludeDriverIds: declinedIds });
-    return tx.rideTrip.update({
+    const updated = await tx.rideTrip.update({
       where: { id: trip.id },
       data: {
         driverId: match?.driver?.id ?? null,
@@ -519,6 +553,8 @@ export class RideService {
         metadata: { ...(trip.metadata ?? {}), declinedDriverIds: declinedIds }
       }
     });
+    if (match && trip.riderConfirmedAt) this._notifyDriverOffered(updated.driverId);
+    return updated;
   }
 
   // Maintenance sweep (see src/jobs/maintenance.js): a driver who neither accepts nor declines

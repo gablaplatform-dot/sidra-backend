@@ -2,6 +2,7 @@ import 'core/motion/motion_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/notifications/push_notifications_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
@@ -22,6 +23,15 @@ class GablaApp extends ConsumerWidget {
     if (session.isLoading) {
       return const MaterialApp(home: _SplashScreen());
     }
+
+    // Fire-and-forget: sets up FCM once the session is known, and again registers the device
+    // token every time sign-in state flips to true (login, or an app restart that lands signed
+    // in) - `init`/`syncTokenWithSignInState` are both idempotent/cheap no-ops otherwise.
+    final pushService = ref.read(pushNotificationsServiceProvider);
+    ref.listen<bool>(isSignedInProvider, (previous, isSignedIn) {
+      if (isSignedIn) pushService.syncTokenWithSignInState();
+    });
+    pushService.init();
 
     final router = ref.watch(appRouterProvider);
     final preferences = ref.watch(themeControllerProvider);

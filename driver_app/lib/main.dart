@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'theme.dart';
 import 'services/api_client.dart';
+import 'services/push_notifications_service.dart';
 import 'services/session_store.dart';
 import 'screens/auth_screen.dart';
 import 'screens/driver_application_screen.dart';
@@ -40,6 +43,7 @@ class AppGate extends StatefulWidget {
 class _AppGateState extends State<AppGate> {
   final session = SessionStore();
   late final ApiClient api = ApiClient(session);
+  late final PushNotificationsService push = PushNotificationsService(api);
   GateState _state = GateState.loading;
   Map<String, dynamic>? _driver;
   String? _userName;
@@ -59,6 +63,9 @@ class _AppGateState extends State<AppGate> {
       return;
     }
     _userName = await session.getUserName();
+    // Fire-and-forget: a signed-in driver always gets their device registered for push,
+    // regardless of application/approval status - `init` is a cheap no-op after the first call.
+    unawaited(push.init());
 
     try {
       final driver = await api.request('/rides/drivers/me') as Map<String, dynamic>;
@@ -107,6 +114,7 @@ class _AppGateState extends State<AppGate> {
         return AuthScreen(api: api, session: session, onDone: _evaluate);
       case GateState.needsApplication:
         return DriverApplicationScreen(api: api, onSubmitted: _evaluate, onLogout: () async {
+          await push.unregisterCurrentToken();
           await session.clear();
           _evaluate();
         });
@@ -118,12 +126,14 @@ class _AppGateState extends State<AppGate> {
           isRejected: _state == GateState.rejected,
           onRefresh: _evaluate,
           onLogout: () async {
+            await push.unregisterCurrentToken();
             await session.clear();
             _evaluate();
           },
         );
       case GateState.approved:
         return HomeShell(api: api, driver: _driver!, userName: _userName, onLogout: () async {
+          await push.unregisterCurrentToken();
           await session.clear();
           _evaluate();
         });

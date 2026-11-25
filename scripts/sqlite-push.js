@@ -1510,3 +1510,13 @@ ensureColumn("admin_settings", "moduleBusEnabled", "BOOLEAN NOT NULL DEFAULT 1")
 ensureColumn("admin_settings", "moduleRideEnabled", "BOOLEAN NOT NULL DEFAULT 1");
 ensureColumn("admin_settings", "moduleJobsEnabled", "BOOLEAN NOT NULL DEFAULT 1");
 ensureColumn("admin_settings", "moduleEventsEnabled", "BOOLEAN NOT NULL DEFAULT 1");
+
+// FCM registration tokens for push notifications - one row per installed app instance.
+runSql(`
+CREATE TABLE IF NOT EXISTS device_tokens (
+ id TEXT PRIMARY KEY NOT NULL, userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ token TEXT NOT NULL UNIQUE, platform TEXT NOT NULL DEFAULT 'unknown',
+ createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS device_tokens_userId_idx ON device_tokens(userId);
+`);

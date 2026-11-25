@@ -36,6 +36,7 @@ model User {
 
   transactions   Transaction[]
   rideTrips      RideTrip[]
+  deviceTokens   DeviceToken[]
   contactUnlocks ContactUnlock[]
   favorites      Favorite[]
   reviews        Review[]
@@ -60,6 +61,25 @@ model User {
   @@index([authProvider])
   @@index([adminRoleId])
   @@map("users")
+}
+
+// One row per installed app instance that has registered for push (FCM registration token).
+// A user can hold several (phone + tablet, or a reinstall before the old token expired) - the
+// token itself, not the (userId, platform) pair, is the unique key, since re-registering the
+// same token (app restart, token unchanged) should update the row in place rather than duplicate
+// it, and a token FCM reports as no-longer-registered is deleted outright rather than kept stale.
+model DeviceToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String   @default("unknown") // "android" | "ios"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_tokens")
 }
 
 // Admin RBAC role - a named, DB-backed bundle of permission keys (from

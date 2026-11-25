@@ -49,7 +49,12 @@ export const env = {
   // API call fails, so it's safe to leave empty until Routes API is enabled for the key.
   // Fallback key for AI smart search; an admin-saved key (Settings -> AI smart search) takes priority.
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
-  googleRoutesApiKey: process.env.GOOGLE_ROUTES_API_KEY ?? ""
+  googleRoutesApiKey: process.env.GOOGLE_ROUTES_API_KEY ?? "",
+  // The whole downloaded Firebase service-account JSON file, pasted as one secret (not split into
+  // separate project-id/client-email/private-key vars) - that's the format Firebase's own console
+  // hands you, so there's nothing to reassemble. Push notifications are simply disabled (logged,
+  // never thrown) wherever this is unset, same as the other optional integrations above.
+  firebaseServiceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON ?? ""
 };
 
 export const assertRequiredEnv = () => {
