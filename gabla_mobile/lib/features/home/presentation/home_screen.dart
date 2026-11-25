@@ -1,6 +1,7 @@
 import '../../nearby/presentation/nearby_entry.dart';
 import '../../../core/motion/design_transitions.dart';
 import 'design_launcher.dart';
+import 'test_notification_card.dart';
 import '../../settings/application/theme_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -115,6 +116,7 @@ class HomeScreen extends ConsumerWidget {
         directory,
       ],
     };
+    sections.add(const TestNotificationCard());
 
     return Scaffold(
       bottomNavigationBar: _HomeDock(signedIn: signedIn),

@@ -34,5 +34,9 @@ export const buildDeviceRoutes = ({ deviceController }) => {
     deviceController.unregisterToken
   );
 
+  // Home screen's "test notifications" button - schedules a real push (through this server and
+  // FCM, not a local on-device notification) to every device this account has registered.
+  router.post("/test", requireAuth(anyAccount), deviceController.sendTestPush);
+
   return router;
 };

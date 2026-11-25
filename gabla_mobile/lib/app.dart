@@ -2,6 +2,7 @@ import 'core/motion/motion_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/notifications/in_app_notification_banner.dart';
 import 'core/notifications/push_notifications_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_colors.dart';
@@ -52,8 +53,9 @@ class GablaApp extends ConsumerWidget {
       ),
       themeMode: preferences.mode,
       routerConfig: router,
-      builder: (context, child) =>
-          AppMotionSurface(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => InAppNotificationBanner(
+        child: AppMotionSurface(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }

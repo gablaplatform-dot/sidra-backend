@@ -83,4 +83,19 @@ export class PushService {
       return { sent: 0, reason: "error" };
     }
   }
+
+  // The Home screen's "test notifications" button - proves the whole pipeline (this server ->
+  // FCM -> the device) rather than just a local, on-device notification. A plain setTimeout is
+  // enough for a one-off test fire a minute out; it isn't meant to survive a server restart the
+  // way a real business notification's delivery would need to.
+  scheduleTestPush({ userId, delayMs = 60_000 }) {
+    setTimeout(() => {
+      this.sendToUser({
+        userId,
+        title: "Test notification",
+        body: "This is what a real push from Gabla looks like.",
+        data: { type: "test" }
+      });
+    }, delayMs);
+  }
 }

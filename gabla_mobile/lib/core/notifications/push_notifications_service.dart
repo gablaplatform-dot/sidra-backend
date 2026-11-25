@@ -28,6 +28,12 @@ const _androidChannel = AndroidNotificationChannel(
 
 final _localNotifications = FlutterLocalNotificationsPlugin();
 
+/// The most recent push received while the app was in the foreground, for
+/// [InAppNotificationBanner] (see `in_app_notification_banner.dart`) to show as an in-app
+/// preview - a foreground push doesn't get a system notification on its own, and showing one
+/// anyway would just duplicate what the banner already makes visible.
+final foregroundNotificationProvider = StateProvider<RemoteMessage?>((ref) => null);
+
 // A background/terminated isolate has no app state of its own - Firebase must be reinitialized
 // here independently of the foreground app. There's nothing else to do: Android already shows
 // the system notification from the message's `notification` payload via the channel declared in
@@ -60,38 +66,24 @@ class PushNotificationsService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(_androidChannel);
+    // Only needed so the background/terminated system notification (shown by the OS itself, not
+    // by this plugin) renders under a real, already-created channel of the right importance.
     await _localNotifications.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
         iOS: DarwinInitializationSettings(),
       ),
-      onDidReceiveNotificationResponse: (details) => _navigate(details.payload),
     );
 
     final messaging = FirebaseMessaging.instance;
     await messaging.requestPermission(alert: true, badge: true, sound: true);
 
-    // A foreground message doesn't show a system notification on its own - without this it would
-    // silently do nothing while the app is open.
+    // A foreground message doesn't show a system notification on its own - surface it as an
+    // in-app banner (InAppNotificationBanner, mounted in app.dart) instead of a local
+    // notification, so the preview and the real background push are visibly two different things.
     FirebaseMessaging.onMessage.listen((message) {
-      final notification = message.notification;
-      if (notification == null) return;
-      _localNotifications.show(
-        id: notification.hashCode,
-        title: notification.title,
-        body: notification.body,
-        notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails(
-            _androidChannel.id,
-            _androidChannel.name,
-            channelDescription: _androidChannel.description,
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-          iOS: const DarwinNotificationDetails(),
-        ),
-        payload: _pathFor(message.data),
-      );
+      if (message.notification == null) return;
+      _ref.read(foregroundNotificationProvider.notifier).state = message;
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen(

@@ -20,4 +20,13 @@ export class DeviceController {
       next(e);
     }
   };
+
+  sendTestPush = (req, res, next) => {
+    try {
+      this.pushService.scheduleTestPush({ userId: req.user.id });
+      res.status(200).json({ data: { ok: true, arrivesInSeconds: 60 } });
+    } catch (e) {
+      next(e);
+    }
+  };
 }
