@@ -16,6 +16,7 @@ class BookingSubmission {
     required this.phone,
     this.email,
     this.notes,
+    this.selectedItems = const [],
   });
 
   final String listingId;
@@ -29,6 +30,10 @@ class BookingSubmission {
   final String phone;
   final String? email;
   final String? notes;
+
+  /// Names of the listing's add-on `items` the customer picked (required
+  /// items are force-included by the server regardless of this list).
+  final List<String> selectedItems;
 }
 
 /// Drives submitting a single booking request. `state.value` holds the
@@ -60,6 +65,7 @@ class BookingFlowController extends AutoDisposeNotifier<AsyncValue<Booking?>> {
             phone: input.phone,
             email: input.email,
             notes: input.notes,
+            selectedItems: input.selectedItems,
           );
       if (_alive) {
         state = AsyncData(booking);

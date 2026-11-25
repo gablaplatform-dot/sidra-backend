@@ -49,14 +49,20 @@ BookingSelection evaluateBooking({
     if (units < (config.minUnits ?? 1) || units > (config.maxUnits ?? 30))
       error =
           'Choose between ${config.minUnits ?? 1} and ${config.maxUnits ?? 30} ${config.unit.name}s.';
-    if (config.unit == BookingUnit.hour) {
+    if (config.unit == BookingUnit.hour || config.unit == BookingUnit.appointment) {
       if (startTime == null || hourly == null) {
         error = 'Choose an available start time.';
       } else {
         final parts = startTime.split(':');
         final hour = int.tryParse(parts.first) ?? -1;
+        final minute = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
+        // An appointment is a single fixed-length slot (`units` stays 1), so only the
+        // literal chosen time is ever looked up; an hour booking may span several whole
+        // hours from that start, each reconstructed as "HH:00".
         for (var i = 0; i < units; i++) {
-          final time = '${(hour + i).toString().padLeft(2, '0')}:00';
+          final time = i == 0
+              ? startTime
+              : '${(hour + i).toString().padLeft(2, '0')}:00';
           final slots = hourly.slots.where((s) => s.time == time);
           if (slots.isEmpty) {
             free = 0;
@@ -64,7 +70,13 @@ BookingSelection evaluateBooking({
             free = math.min(free, slots.first.free);
           }
         }
-        final at = DateTime.utc(start.year, start.month, start.day, hour - 3);
+        final at = DateTime.utc(
+          start.year,
+          start.month,
+          start.day,
+          hour - 3,
+          minute,
+        );
         if (at.difference((now ?? DateTime.now()).toUtc()).inMinutes <
                 (config.leadTimeHours ?? 0) * 60 ||
             at.isBefore((now ?? DateTime.now()).toUtc()))

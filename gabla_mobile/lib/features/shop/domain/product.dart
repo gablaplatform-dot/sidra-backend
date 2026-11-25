@@ -1,4 +1,5 @@
 import '../../../core/utils/parsing.dart';
+import '../../services/domain/add_on.dart';
 import '../../services/domain/booking_config.dart';
 
 /// A listing shown in the shop (type `product`) or services (type
@@ -31,6 +32,7 @@ class Product {
     this.onlinePaymentEnabled = true,
     this.providerOnlinePaymentsEnabled = true,
     this.booking,
+    this.items = const [],
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -79,6 +81,10 @@ class Product {
       booking: json['booking'] != null
           ? BookingConfig.fromJson(json['booking'] as Map<String, dynamic>)
           : null,
+      items: (json['items'] as List? ?? [])
+          .whereType<Map>()
+          .map((v) => AddOn.fromJson(Map<String, dynamic>.from(v)))
+          .toList(),
     );
   }
 
@@ -114,6 +120,9 @@ class Product {
   /// `POST /bookings` payload.
   final String? bookingMode;
   final BookingConfig? booking;
+
+  /// The add-ons a customer can pick when booking this listing.
+  final List<AddOn> items;
 
   bool get isOnSale => originalPrice != null && originalPrice! > price;
 }

@@ -1,4 +1,5 @@
 import '../../../core/utils/parsing.dart';
+import 'add_on.dart';
 import 'booking_config.dart';
 
 enum BookingStatus {
@@ -80,6 +81,7 @@ class Booking {
     this.depositNote,
     this.instructions,
     this.policyText,
+    this.items = const [],
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) => Booking(
@@ -117,6 +119,10 @@ class Booking {
     depositNote: json['depositNote'] as String?,
     instructions: json['instructions'] as String?,
     policyText: json['policyText'] as String?,
+    items: (json['items'] as List? ?? [])
+        .whereType<Map>()
+        .map((v) => AddOn.fromJson(Map<String, dynamic>.from(v)))
+        .toList(),
   );
 
   final String id;
@@ -145,4 +151,5 @@ class Booking {
   final String? depositNote;
   final String? instructions;
   final String? policyText;
+  final List<AddOn> items;
 }

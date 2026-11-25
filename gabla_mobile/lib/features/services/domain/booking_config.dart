@@ -28,6 +28,7 @@ class BookingConfig {
     this.checkOut,
     this.responseHours,
     this.payWithinHours,
+    this.slotMinutes,
   });
 
   factory BookingConfig.fromJson(Map<String, dynamic> json) => BookingConfig(
@@ -45,6 +46,7 @@ class BookingConfig {
     checkOut: json['checkOut'] as String?,
     responseHours: (json['responseHours'] as num?)?.toInt(),
     payWithinHours: (json['payWithinHours'] as num?)?.toInt(),
+    slotMinutes: (json['slotMinutes'] as num?)?.toInt(),
   );
 
   final BookingUnit unit;
@@ -61,4 +63,7 @@ class BookingConfig {
   final String? checkOut;
   final int? responseHours;
   final int? payWithinHours;
+
+  /// Minutes per slot for `unit == appointment` listings (e.g. 30/45/60).
+  final int? slotMinutes;
 }
