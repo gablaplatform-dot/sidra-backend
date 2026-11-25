@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/application/session_controller.dart';
+import '../../firebase_options.dart';
 import '../network/network_providers.dart';
 import '../router/app_router.dart';
 
@@ -33,7 +34,7 @@ final _localNotifications = FlutterLocalNotificationsPlugin();
 // AndroidManifest.xml, and iOS does the same at the OS level.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 }
 
 class PushNotificationsService {
@@ -47,7 +48,7 @@ class PushNotificationsService {
     _initialized = true;
 
     try {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     } catch (e) {
       debugPrint('[push] Firebase.initializeApp failed (no config files yet?): $e');
       return;

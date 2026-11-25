@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'api_client.dart';
+import '../firebase_options.dart';
 
 /// Sets up FCM so a driver gets a push the moment a ride offer comes in, even with the app
 /// backgrounded or the screen off. Everything here is best-effort - no Firebase project
@@ -27,7 +28,7 @@ final _localNotifications = FlutterLocalNotificationsPlugin();
 // AndroidManifest.xml, and iOS does the same at the OS level.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 }
 
 class PushNotificationsService {
@@ -41,7 +42,7 @@ class PushNotificationsService {
     _initialized = true;
 
     try {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     } catch (e) {
       debugPrint('[push] Firebase.initializeApp failed (no config files yet?): $e');
       return;
