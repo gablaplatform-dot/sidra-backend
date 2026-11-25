@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme_style.dart';
+import '../../../core/theme/style_tokens.dart';
+import '../../../core/widgets/gabla_brand_mark.dart';
 import '../../categories/domain/category.dart';
 import '../../categories/presentation/widgets/category_cover.dart';
 import '../application/commerce_providers.dart';
@@ -14,6 +16,7 @@ import '../application/discovery_feed.dart';
 import '../application/shop_providers.dart';
 import '../application/photo_search.dart';
 import '../domain/browse_query.dart';
+import '../../videoFeed/presentation/widgets/video_feed_banner.dart';
 import 'commerce_widgets.dart';
 import 'discovery_grid.dart';
 import 'shop_browse_screen.dart' show ShopFilterSheet;
@@ -256,6 +259,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   Widget build(BuildContext context) {
     final style = commerceStyle(ref);
     final c = Theme.of(context).colorScheme;
+    final tokens = Theme.of(context).extension<StyleTokens>()!;
     final roots = ref.watch(rootCategoriesProvider);
     final fullTree = ref.watch(productTreeProvider);
     final tree = (fullTree.valueOrNull ?? []).map(Category.fromJson).toList();
@@ -295,143 +299,186 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-                child: Row(
+              Container(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 18),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: tokens.heroGradient ?? [c.primaryContainer, c.primary],
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(tokens.cardRadius * 1.4),
+                    bottomRight: Radius.circular(tokens.cardRadius * 1.4),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (query != null)
-                      IconButton(
-                        tooltip: 'Back to categories',
-                        onPressed: _backToCategories,
-                        icon: const Icon(Icons.arrow_back_ios_new, size: 23),
-                      )
-                    else
-                      IconButton(
-                        tooltip: 'Back',
-                        onPressed: () => context.canPop()
-                            ? context.pop()
-                            : context.go('/home'),
-                        icon: const Icon(Icons.arrow_back_ios_new, size: 23),
-                      ),
-                    Expanded(
-                      key: const ValueKey('shop-search-field'),
-                      child: TextField(
-                        controller: _search,
-                        textInputAction: TextInputAction.search,
-                        onChanged: (value) {
-                          _debounce?.cancel();
-                          if (_photoSelection != null) {
-                            setState(() => _photoSelection = null);
-                          }
-                          if (_query == null) {
-                            setState(() => _categorySearch = value);
-                            final term = value.trim();
-                            if (term.length >= 2 &&
-                                !categories.any(
-                                  (category) =>
-                                      _matches(category, term.toLowerCase()),
-                                )) {
-                              _debounce = Timer(
-                                const Duration(milliseconds: 650),
-                                () {
-                                  if (mounted &&
-                                      _query == null &&
-                                      _search.text.trim() == term) {
-                                    _searchProducts(
-                                      term,
-                                      dismissKeyboard: false,
-                                    );
-                                  }
-                                },
-                              );
-                            }
-                          } else {
-                            _debounce = Timer(
-                              const Duration(milliseconds: 350),
-                              () {
-                                if (mounted && _query != null) {
-                                  _change(_query!.copyWith(q: value.trim()));
+                    Row(
+                      children: [
+                        IconButton(
+                          tooltip: query != null ? 'Back to categories' : 'Back',
+                          onPressed: query != null
+                              ? _backToCategories
+                              : () => context.canPop()
+                                    ? context.pop()
+                                    : context.go('/home'),
+                          icon: Icon(
+                            Icons.arrow_back_ios_new,
+                            size: 22,
+                            color: c.onPrimary,
+                          ),
+                        ),
+                        Expanded(
+                          child: GablaBrandMark(
+                            foreground: c.onPrimary,
+                            markBackground: c.onPrimary.withValues(alpha: .18),
+                            compact: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          key: const ValueKey('shop-search-field'),
+                          child: TextField(
+                            controller: _search,
+                            textInputAction: TextInputAction.search,
+                            onChanged: (value) {
+                              _debounce?.cancel();
+                              if (_photoSelection != null) {
+                                setState(() => _photoSelection = null);
+                              }
+                              if (_query == null) {
+                                setState(() => _categorySearch = value);
+                                final term = value.trim();
+                                if (term.length >= 2 &&
+                                    !categories.any(
+                                      (category) =>
+                                          _matches(category, term.toLowerCase()),
+                                    )) {
+                                  _debounce = Timer(
+                                    const Duration(milliseconds: 650),
+                                    () {
+                                      if (mounted &&
+                                          _query == null &&
+                                          _search.text.trim() == term) {
+                                        _searchProducts(
+                                          term,
+                                          dismissKeyboard: false,
+                                        );
+                                      }
+                                    },
+                                  );
                                 }
-                              },
-                            );
-                          }
-                        },
-                        onSubmitted: (value) {
-                          if (_query != null) {
-                            _change(_query!.copyWith(q: value.trim()));
-                          } else {
-                            _searchProducts(value);
-                          }
-                        },
-                        decoration: InputDecoration(
-                          hintText: query == null
-                              ? 'Search or describe an item'
-                              : root?.name ?? 'Search products',
-                          prefixIcon: query == null
-                              ? const Icon(Icons.search)
-                              : null,
-                          suffixIcon: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (_search.text.isNotEmpty)
-                                IconButton(
-                                  tooltip: 'Clear search',
-                                  icon: const Icon(Icons.close, size: 18),
-                                  onPressed: () {
-                                    if (_query != null && _rootId == null) {
-                                      _backToCategories();
-                                      return;
-                                    }
-                                    _search.clear();
-                                    if (_query == null) {
-                                      setState(() => _categorySearch = '');
-                                    } else {
-                                      _change(_query!.copyWith(q: ''));
+                              } else {
+                                _debounce = Timer(
+                                  const Duration(milliseconds: 350),
+                                  () {
+                                    if (mounted && _query != null) {
+                                      _change(_query!.copyWith(q: value.trim()));
                                     }
                                   },
-                                ),
-                              IconButton(
-                                tooltip: 'Search by photo',
-                                onPressed: _openingPhotoSearch
-                                    ? null
-                                    : _openPhotoSearch,
-                                icon: const Icon(
-                                  Icons.image_search_outlined,
-                                  size: 23,
-                                ),
+                                );
+                              }
+                            },
+                            onSubmitted: (value) {
+                              if (_query != null) {
+                                _change(_query!.copyWith(q: value.trim()));
+                              } else {
+                                _searchProducts(value);
+                              }
+                            },
+                            decoration: InputDecoration(
+                              hintText: query == null
+                                  ? 'Search or describe an item'
+                                  : root?.name ?? 'Search products',
+                              prefixIcon: query == null
+                                  ? const Icon(Icons.search)
+                                  : null,
+                              suffixIcon: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_search.text.isNotEmpty)
+                                    IconButton(
+                                      tooltip: 'Clear search',
+                                      icon: const Icon(Icons.close, size: 18),
+                                      onPressed: () {
+                                        if (_query != null && _rootId == null) {
+                                          _backToCategories();
+                                          return;
+                                        }
+                                        _search.clear();
+                                        if (_query == null) {
+                                          setState(() => _categorySearch = '');
+                                        } else {
+                                          _change(_query!.copyWith(q: ''));
+                                        }
+                                      },
+                                    ),
+                                  IconButton(
+                                    tooltip: 'Search by photo',
+                                    onPressed: _openingPhotoSearch
+                                        ? null
+                                        : _openPhotoSearch,
+                                    icon: const Icon(
+                                      Icons.image_search_outlined,
+                                      size: 23,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          isDense: true,
-                          filled: false,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 16,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(22),
-                            borderSide: BorderSide(color: c.outline),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(22),
-                            borderSide: BorderSide(color: c.outlineVariant),
+                              isDense: true,
+                              filled: true,
+                              fillColor: c.surface,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 16,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(22),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(22),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(22),
+                                borderSide: BorderSide(color: c.primary, width: 1.5),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        if (query != null) ...[
+                          const SizedBox(width: 8),
+                          Material(
+                            color: c.onPrimary.withValues(alpha: .18),
+                            shape: const CircleBorder(),
+                            child: IconButton(
+                              tooltip: 'Filters',
+                              onPressed: () => _filters(categories),
+                              icon: Badge(
+                                isLabelVisible: query.activeCount > 0,
+                                label: Text('${query.activeCount}'),
+                                child: Icon(Icons.tune, size: 24, color: c.onPrimary),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    if (query != null)
-                      IconButton(
-                        tooltip: 'Filters',
-                        onPressed: () => _filters(categories),
-                        icon: Badge(
-                          isLabelVisible: query.activeCount > 0,
-                          label: Text('${query.activeCount}'),
-                          child: const Icon(Icons.tune, size: 26),
-                        ),
-                      ),
                   ],
                 ),
               ),
+              if (query == null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: const VideoFeedBanner(),
+                ),
               if (_photoSelection case final selection?)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
