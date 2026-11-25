@@ -293,6 +293,59 @@ export class PromotionService {
     return { items: nationwide.map((ad) => this._toAdDto(ad)), total: nationwide.length };
   }
 
+  // The TikTok-style video feed on the Services tab: every live provider_ad that actually has a
+  // video, newest/featured first, optionally narrowed to one of the provider's own categories or
+  // a free-text match on the ad's own title/subtitle. Built as its own AND array (not spread from
+  // _adWindowWhere) so the date-window OR clauses can't collide with the search OR clause.
+  async listVideoAds({ q, categoryId, page = 1, limit = 10 } = {}) {
+    const normalizedPage = Math.max(1, Number(page) || 1);
+    const normalizedLimit = Math.min(30, Math.max(1, Number(limit) || 10));
+    const skip = (normalizedPage - 1) * normalizedLimit;
+    const now = new Date();
+
+    const and = [
+      { type: PromotionType.PROVIDER_AD },
+      { isActive: true },
+      { videoUrl: { not: null } },
+      { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+      { OR: [{ endsAt: null }, { endsAt: { gte: now } }] }
+    ];
+    const term = q ? String(q).trim() : "";
+    if (term) {
+      and.push({ OR: [{ title: { contains: term } }, { subtitle: { contains: term } }] });
+    }
+    if (categoryId) {
+      and.push({ provider: { categoryId: String(categoryId) } });
+    }
+    const where = { AND: and };
+
+    const [rows, total] = await Promise.all([
+      prisma.promotion.findMany({
+        where,
+        include: { provider: { select: { businessName: true, media: true, categoryId: true } } },
+        orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }, { createdAt: "desc" }],
+        skip,
+        take: normalizedLimit
+      }),
+      prisma.promotion.count({ where })
+    ]);
+
+    return {
+      items: rows.map((r) => this._toVideoAdDto(r)),
+      page: normalizedPage,
+      limit: normalizedLimit,
+      total
+    };
+  }
+
+  _toVideoAdDto(p) {
+    return {
+      ...this._toDto(p),
+      providerName: p.provider?.businessName ?? null,
+      providerAvatarUrl: p.provider?.media?.avatarUrl ?? p.provider?.media?.logoUrl ?? null
+    };
+  }
+
   async getProviderForUser(userId) {
     const provider = await prisma.provider.findUnique({ where: { userId } });
     if (!provider) {

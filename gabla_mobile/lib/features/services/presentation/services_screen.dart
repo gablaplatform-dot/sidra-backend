@@ -52,6 +52,12 @@ class ServicesScreen extends ConsumerWidget {
               child: _Hero(tokens: tokens),
             ),
             SliverPadding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+              sliver: SliverToBoxAdapter(
+                child: _VideoFeedBanner(onTap: () => context.push('/services/videos')),
+              ),
+            ),
+            SliverPadding(
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
               sliver: SliverToBoxAdapter(
                 child: AsyncValueView(
@@ -233,6 +239,46 @@ class _Hero extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The entry point into the TikTok-style provider video feed (see features/videoFeed).
+class _VideoFeedBanner extends StatelessWidget {
+  const _VideoFeedBanner({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Theme.of(context).colorScheme;
+    return Material(
+      color: c.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle),
+                child: Icon(Icons.play_arrow_rounded, color: c.onPrimary, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Tap for videos',
+                  style: TextStyle(fontWeight: FontWeight.w600, color: c.onSurface),
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: c.onSurfaceVariant),
+            ],
+          ),
+        ),
       ),
     );
   }
