@@ -50,6 +50,22 @@ export const buildPromotionRoutes = ({ promotionController }) => {
     promotionController.listNearbyAds
   );
 
+  // Public - powers the Services tab's "Tap for videos" feed, so it must sit ahead of the
+  // generic /:promotionId GET below or that route would swallow this path instead.
+  router.get(
+    "/ads/videos",
+    validate(
+      Joi.object({
+        q: Joi.string().trim().max(120).allow("").optional(),
+        categoryId: id.optional(),
+        page: Joi.number().integer().min(1).optional(),
+        limit: Joi.number().integer().min(1).max(30).optional()
+      }),
+      "query"
+    ),
+    promotionController.listVideoAds
+  );
+
   router.get(
     "/mine",
     requireAuth([Roles.PROVIDER]),

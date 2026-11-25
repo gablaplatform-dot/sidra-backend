@@ -54,6 +54,8 @@ import { SearchService } from "./services/search.service.js";
 import { SearchController } from "./controllers/search.controller.js";
 import { RideService } from "./services/ride.service.js";
 import { RideController } from "./controllers/ride.controller.js";
+import { PushService } from "./services/push.service.js";
+import { DeviceController } from "./controllers/device.controller.js";
 import { PromotionService } from "./services/promotion.service.js";
 import { PromotionController } from "./controllers/promotion.controller.js";
 import { InterestService } from "./services/interest.service.js";
@@ -178,7 +180,10 @@ export const buildApp = () => {
   const searchService = new SearchService({ aiSearchService });
   const searchController = new SearchController({ searchService, aiSearchService });
 
-  const rideService = new RideService();
+  const pushService = new PushService();
+  const deviceController = new DeviceController({ pushService });
+
+  const rideService = new RideService({ pushService });
   const rideController = new RideController({ rideService });
 
   const promotionService = new PromotionService();
@@ -246,7 +251,8 @@ export const buildApp = () => {
       documentService,
       aiSettingsService,
       aiSearchService,
-      serviceBookingService
+      serviceBookingService,
+      deviceController
     })
   );
 

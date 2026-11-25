@@ -25,6 +25,7 @@ import { buildDocumentRoutes } from "./document.routes.js";
 import { buildAudienceRoutes } from "./audience.routes.js";
 import { buildBookingRoutes } from "./booking.routes.js";
 import { buildAiAdminRoutes } from "./aiAdmin.routes.js";
+import { buildDeviceRoutes } from "./devices.routes.js";
 
 export const buildRoutes = ({
   authController,
@@ -52,11 +53,13 @@ export const buildRoutes = ({
   aiSettingsService,
   aiSearchService,
   serviceBookingService,
-  eventTicketsService
+  eventTicketsService,
+  deviceController
 }) => {
   const router = Router();
 
   router.get("/health", (_req, res) => res.status(200).json({ data: { ok: true } }));
+  router.use("/devices", buildDeviceRoutes({ deviceController }));
   router.use("/jobs", buildCommunityRoutes("job"));
   if (eventTicketsService) router.use("/events", buildEventTicketRoutes(eventTicketsService));
   router.use("/events", buildCommunityRoutes("event"));

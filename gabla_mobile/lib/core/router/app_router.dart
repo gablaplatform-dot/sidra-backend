@@ -45,6 +45,7 @@ import '../../features/search/presentation/search_results_screen.dart';
 import '../../features/settings/presentation/appearance_screen.dart';
 import '../../features/services/presentation/service_browse_screen.dart';
 import '../../features/services/presentation/services_screen.dart';
+import '../../features/videoFeed/presentation/video_feed_screen.dart';
 import '../../features/shop/presentation/product_detail_screen.dart';
 import '../../features/shop/presentation/shop_categories_screen.dart';
 import '../../features/shop/presentation/shop_collection_screen.dart';
@@ -340,6 +341,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/orders', builder: (c, s) => const MyOrdersScreen()),
       GoRoute(path: '/services', builder: (c, s) => const ServicesScreen()),
+      GoRoute(
+        path: '/services/videos',
+        builder: (c, s) => const VideoFeedScreen(),
+      ),
       GoRoute(
         path: '/services/all',
         builder: (c, s) =>

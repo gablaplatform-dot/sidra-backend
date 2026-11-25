@@ -9,6 +9,7 @@ import '../../provider/application/provider_providers.dart';
 import '../../provider/domain/provider_summary.dart';
 import '../../shop/domain/product.dart';
 import '../../shop/presentation/commerce_widgets.dart';
+import '../../videoFeed/presentation/widgets/video_feed_banner.dart';
 import 'widgets/service_category_chip.dart';
 import 'widgets/service_pin_card.dart';
 
@@ -50,6 +51,12 @@ class ServicesScreen extends ConsumerWidget {
           slivers: [
             SliverToBoxAdapter(
               child: _Hero(tokens: tokens),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+              sliver: SliverToBoxAdapter(
+                child: const VideoFeedBanner(),
+              ),
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),

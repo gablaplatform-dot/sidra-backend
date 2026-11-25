@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../../core/config/env.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/network_providers.dart';
+import '../../../core/notifications/push_notifications_service.dart';
 import '../data/auth_repository.dart';
 import 'session_controller.dart';
 
@@ -97,6 +98,9 @@ class AuthController extends Notifier<AsyncValue<void>> {
     try {
       await _googleSignIn().signOut();
     } catch (_) {}
+    // Before clearing the session - the unregister call needs the (still valid) auth token to
+    // identify whose token is being removed.
+    await ref.read(pushNotificationsServiceProvider).unregisterCurrentToken();
     await ref.read(sessionControllerProvider.notifier).clear();
   }
 }

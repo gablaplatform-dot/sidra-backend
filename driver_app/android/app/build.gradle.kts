@@ -7,6 +7,13 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Applied only once google-services.json exists (dropped in from the Firebase console - see the
+// push-notifications setup steps) so a build without it yet still succeeds instead of failing
+// with "File google-services.json is missing".
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 val mapsLocalProperties = Properties().apply {
     val localFile = rootProject.file("local.properties")
     if (localFile.exists()) localFile.inputStream().use { load(it) }

@@ -21,6 +21,15 @@ export class PromotionController {
     }
   };
 
+  listVideoAds = async (req, res, next) => {
+    try {
+      const result = await this.promotionService.listVideoAds(req.query);
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   getById = async (req, res, next) => {
     try {
       const result = await this.promotionService.getById({ id: req.params.promotionId });

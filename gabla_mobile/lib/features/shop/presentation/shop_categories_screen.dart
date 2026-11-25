@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../categories/domain/category.dart';
 import '../../categories/presentation/widgets/category_cover.dart';
+import '../../videoFeed/presentation/widgets/video_feed_banner.dart';
 import '../application/commerce_providers.dart';
 import 'commerce_widgets.dart';
 
@@ -54,6 +55,9 @@ class ShopCategoriesScreen extends ConsumerWidget {
             subtitle:
                 'Explore a category, then narrow it down to what you need.',
           ),
+          const SizedBox(height: 14),
+          const VideoFeedBanner(),
+          const SizedBox(height: 14),
           tree.when(
             loading: () => const CommerceLoading(),
             error: (e, _) => CommerceEmpty(
