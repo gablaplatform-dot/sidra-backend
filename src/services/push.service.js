@@ -3,9 +3,11 @@ import { env } from "../config/env.js";
 
 // Lazily imported - firebase-admin reaches out to Google's metadata/token endpoints on init, so
 // it's only worth loading at all when a service account is actually configured (keeps a bare
-// `npm install` + no Firebase project set up from ever touching the network).
+// `npm install` + no Firebase project set up from ever touching the network). firebase-admin v14
+// is modular - there is no `admin.credential`/`admin.messaging()` namespace on the default
+// export, only app-lifecycle functions; `cert` and `getMessaging` come from their own subpaths.
 let adminApp = null;
-let adminModule = null;
+let getMessaging = null;
 const initAdmin = async () => {
   if (adminApp) return adminApp;
   if (!env.firebaseServiceAccountJson) return null;
@@ -16,8 +18,9 @@ const initAdmin = async () => {
     process.stderr.write("[push] FIREBASE_SERVICE_ACCOUNT_JSON is set but isn't valid JSON - push notifications are disabled\n");
     return null;
   }
-  adminModule = await import("firebase-admin");
-  adminApp = adminModule.default.initializeApp({ credential: adminModule.default.credential.cert(serviceAccount) });
+  const { initializeApp, cert } = await import("firebase-admin/app");
+  ({ getMessaging } = await import("firebase-admin/messaging"));
+  adminApp = initializeApp({ credential: cert(serviceAccount) });
   return adminApp;
 };
 
@@ -57,7 +60,7 @@ export class PushService {
       if (!tokens.length) return { sent: 0, reason: "no_tokens" };
 
       const stringData = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]));
-      const response = await adminModule.default.messaging(app).sendEachForMulticast({
+      const response = await getMessaging(app).sendEachForMulticast({
         tokens: tokens.map((t) => t.token),
         notification: { title, body },
         data: stringData
