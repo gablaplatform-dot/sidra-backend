@@ -175,7 +175,7 @@ export const buildApp = () => {
   const engagementService = new EngagementService();
   const engagementController = new EngagementController({ engagementService });
 
-  const searchService = new SearchService();
+  const searchService = new SearchService({ aiSearchService });
   const searchController = new SearchController({ searchService, aiSearchService });
 
   const rideService = new RideService();
