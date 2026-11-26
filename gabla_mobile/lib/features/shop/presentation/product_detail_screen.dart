@@ -104,6 +104,16 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       }
     }
 
+    if (p.type == 'service') {
+      return _ServiceDetailBody(
+        product: p,
+        busy: fetched.isLoading,
+        categoryName: node?['name']?.toString(),
+        heroTag: widget.heroTag,
+        onPrimary: primary,
+      );
+    }
+
     final title = CommerceTitle(
       p.name,
       subtitle: [
@@ -366,6 +376,255 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ),
           const SizedBox(height: 28),
         ],
+      ),
+    );
+  }
+}
+
+/// A photo-forward, single-item detail layout for services - a square
+/// hero, name/description/price read top to bottom, a light preview of the
+/// listing's own add-on items (the real picker lives on the booking
+/// screen), and a save + primary-action bar pinned to the bottom. Kept
+/// deliberately simpler than the product detail layout above (no seller
+/// panel, no "more from this seller" rails): a service is booked, not
+/// compared against a shelf of similar goods.
+class _ServiceDetailBody extends ConsumerStatefulWidget {
+  const _ServiceDetailBody({
+    required this.product,
+    required this.busy,
+    required this.categoryName,
+    required this.heroTag,
+    required this.onPrimary,
+  });
+  final Product product;
+  final bool busy;
+  final String? categoryName;
+  final Object? heroTag;
+  final VoidCallback onPrimary;
+  @override
+  ConsumerState<_ServiceDetailBody> createState() => _ServiceDetailBodyState();
+}
+
+class _ServiceDetailBodyState extends ConsumerState<_ServiceDetailBody> {
+  bool _saved = false;
+
+  Widget _circleIcon(
+    IconData icon,
+    VoidCallback? onTap, {
+    String? tooltip,
+    Color? iconColor,
+  }) {
+    final c = Theme.of(context).colorScheme;
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: c.surface,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .08),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Tooltip(
+            message: tooltip ?? '',
+            child: Icon(icon, size: 19, color: iconColor ?? c.onSurface),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.product;
+    final style = commerceStyle(ref);
+    final c = Theme.of(context).colorScheme;
+    final radius = commerceRadius(style);
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Row(
+                children: [
+                  _circleIcon(
+                    Icons.arrow_back_rounded,
+                    () => Navigator.of(context).maybePop(),
+                    tooltip: 'Back',
+                  ),
+                  const Spacer(),
+                  _circleIcon(
+                    Icons.ios_share_outlined,
+                    () => shareGablaItem(
+                      context,
+                      type: 'service',
+                      id: p.id,
+                      title: p.name,
+                    ),
+                    tooltip: 'Share this service',
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(radius),
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: ProductGallery(
+                        images: p.images,
+                        heroTag: widget.heroTag,
+                        radius: radius,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  if (widget.categoryName != null || p.district != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        [
+                          widget.categoryName,
+                          p.district,
+                        ].whereType<String>().join(' · ').toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: .8,
+                          color: c.primary,
+                        ),
+                      ),
+                    ),
+                  Text(
+                    p.name,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (p.description?.isNotEmpty ?? false)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Text(
+                        p.description!,
+                        style: TextStyle(
+                          height: 1.6,
+                          color: c.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 18),
+                  Text(
+                    p.price > 0
+                        ? '${formatUgx(p.price)}${p.bookable ? ' / ${p.booking?.unit.name ?? 'booking'}' : ''}'
+                        : 'Contact for price',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: c.primary,
+                    ),
+                  ),
+                  if (p.items.isNotEmpty) ...[
+                    const SizedBox(height: 22),
+                    Text(
+                      'Add-ons available when you book',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: c.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final item in p.items)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: c.outlineVariant),
+                            ),
+                            child: Text(
+                              item.required
+                                  ? item.name
+                                  : item.price != null && item.price! > 0
+                                  ? '${item.name} · ${formatUgx(item.price!)}'
+                                  : item.name,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                  if (!p.bookable)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 22),
+                      child: Text(
+                        'Arrange service details directly with the provider.',
+                        style: TextStyle(
+                          color: c.onSurfaceVariant,
+                          fontSize: 12,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+          child: Row(
+            children: [
+              _circleIcon(
+                _saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                () => setState(() => _saved = !_saved),
+                tooltip: _saved ? 'Saved' : 'Save',
+                iconColor: _saved ? Colors.redAccent : null,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: FilledButton(
+                  onPressed: widget.busy ? null : widget.onPrimary,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  child: Text(
+                    p.bookable ? 'Book now' : 'Contact provider',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
