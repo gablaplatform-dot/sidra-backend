@@ -1220,6 +1220,18 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             if (b.providerName != null) Text(b.providerName!),
             if (b.instructions != null) Text(b.instructions!),
             if (b.contact?.address != null) Text(b.contact!.address!),
+            if (b.contact?.address == null &&
+                b.contactLocked &&
+                b.providerId != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: TextButton.icon(
+                  onPressed: () =>
+                      context.push('/provider/${b.providerId}'),
+                  icon: const Icon(Icons.lock_outline, size: 18),
+                  label: const Text('Unlock provider contact'),
+                ),
+              ),
             if (b.policyText != null) Text(b.policyText!),
           ],
         ),

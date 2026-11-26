@@ -27,7 +27,9 @@ export const buildPaymentRoutes = ({ paymentController }) => {
   router.post(
     "/contacts/unlock",
     optionalAuth(),
-    validate(Joi.object({ providerId: id.required(), phone })),
+    // `phone` is only actually required when unlocking isn't free - PaymentService#unlockContact
+    // enforces that once it knows whether a real charge applies.
+    validate(Joi.object({ providerId: id.required(), phone: phone.optional() })),
     paymentController.unlockContact
   );
 

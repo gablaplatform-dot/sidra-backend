@@ -354,7 +354,8 @@ export class ServiceBookingService {
     });
 
     this._notify("created", booking.id).catch(() => {});
-    return this.toDto(await this._load(booking.id), { viewer: "customer" });
+    const loaded = await this._load(booking.id);
+    return this.toDto(loaded, { viewer: "customer", contactUnlocked: await this._hasUnlockedContact(userId, listing.providerId) });
   }
 
   _load(id) {
@@ -380,7 +381,10 @@ export class ServiceBookingService {
         user: { select: { id: true, email: true } }
       }
     });
-    return { items: rows.map((r) => this.toDto(r, { viewer: "customer" })) };
+    const unlockedProviderIds = new Set(
+      (await prisma.contactUnlock.findMany({ where: { userId, paid: true, providerId: { in: [...new Set(rows.map((r) => r.providerId))] } }, select: { providerId: true } })).map((u) => u.providerId)
+    );
+    return { items: rows.map((r) => this.toDto(r, { viewer: "customer", contactUnlocked: unlockedProviderIds.has(r.providerId) })) };
   }
 
   async listForProvider(userId, { status } = {}) {
@@ -460,7 +464,16 @@ export class ServiceBookingService {
 
   // ----- output ---------------------------------------------------------------------------------
 
-  toDto(b, { viewer }) {
+  // Same gate as ProviderService#getProviderContactForUser - a paid (or bonus-free, see
+  // PaymentService#unlockContact) ContactUnlock row is what "unlocked" means everywhere, not just
+  // whatever this one booking's status happens to be.
+  async _hasUnlockedContact(userId, providerId) {
+    if (!userId) return false;
+    const unlock = await prisma.contactUnlock.findUnique({ where: { userId_providerId: { userId, providerId } } });
+    return Boolean(unlock?.paid);
+  }
+
+  toDto(b, { viewer, contactUnlocked = false }) {
     const confirmed = ["confirmed", "completed"].includes(b.status);
     const base = {
       id: b.id,
@@ -497,8 +510,10 @@ export class ServiceBookingService {
     if (viewer === "provider") {
       return { ...base, customer: b.customer, canComplete: b.status === "confirmed" && b.startAt <= new Date() };
     }
-    // Once the provider has said yes, the guest gets what they need to find and reach them.
-    const contact = confirmed
+    // Once the provider has said yes, the guest gets what they need to find and reach them - but
+    // only once the provider's contact is actually unlocked (same gate as the provider-profile
+    // screen), so an instant/free booking can't be used to skip the contact-unlock flow entirely.
+    const contact = confirmed && contactUnlocked
       ? {
           phone: b.provider?.contact?.phone ?? null,
           whatsapp: b.provider?.contact?.whatsapp ?? null,
@@ -507,7 +522,7 @@ export class ServiceBookingService {
           mapsUrl: Number.isFinite(b.provider?.location?.geo?.coordinates?.[1]) ? `https://www.google.com/maps/search/?api=1&query=${b.provider.location.geo.coordinates[1]},${b.provider.location.geo.coordinates[0]}` : null
         }
       : null;
-    return { ...base, contact, canCancel: HOLDING.includes(b.status), canPay: b.status === "confirmed" && b.paymentStatus === "payable" && (!b.payBy || b.payBy > new Date()) };
+    return { ...base, contact, contactLocked: confirmed && !contactUnlocked, canCancel: HOLDING.includes(b.status), canPay: b.status === "confirmed" && b.paymentStatus === "payable" && (!b.payBy || b.payBy > new Date()) };
   }
 
   // ----- emails (best effort, never block a booking) ----------------------------------------------
@@ -531,7 +546,9 @@ export class ServiceBookingService {
     if (!b) return;
     const providerEmail = b.provider?.user?.email;
     const customerEmail = b.customer?.email || b.user?.email;
-    const contact = event === "confirmed" ? this.toDto(b, { viewer: "customer" }).contact : null;
+    const contact = event === "confirmed"
+      ? this.toDto(b, { viewer: "customer", contactUnlocked: await this._hasUnlockedContact(b.user?.id, b.providerId) }).contact
+      : null;
     const ctx = {
       listingName: b.listingName,
       when: this._when(b),

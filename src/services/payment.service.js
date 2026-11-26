@@ -332,6 +332,42 @@ export class PaymentService {
     if (!providerId) {
       throw new AppError({ message: "Invalid providerId", statusCode: 400, code: "INVALID_PROVIDER_ID" });
     }
+
+    const [settings, provider] = await Promise.all([this.getSettings(), prisma.provider.findUnique({ where: { id: providerId } })]);
+    if (!provider || !provider.isApproved || provider.moderationStatus !== "approved") {
+      throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
+    }
+    const effective = this.computeEffectiveForProvider({ global: settings, provider });
+    const feeCents = parseMoneyToCents(effective.contactFee);
+    const isFree = !effective.enableContactFee || feeCents <= 0n;
+
+    if (actorUserId) {
+      const existing = await prisma.contactUnlock.findUnique({ where: { userId_providerId: { userId: actorUserId, providerId } } });
+      if (existing?.paid) {
+        throw new AppError({ message: "Already unlocked", statusCode: 409, code: "ALREADY_UNLOCKED" });
+      }
+    }
+
+    if (isFree) {
+      // Early-access bonus: the contact-fee feature is off (or has no price configured), so
+      // unlocking doesn't charge anything, but it still goes through the same "tap to unlock"
+      // interaction and ContactUnlock record a real purchase would - so switching on a real fee
+      // later doesn't feel like something that used to just work has suddenly broken.
+      const unlock = actorUserId
+        ? await prisma.contactUnlock.upsert({
+            where: { userId_providerId: { userId: actorUserId, providerId } },
+            update: { paid: true },
+            create: { userId: actorUserId, providerId, paid: true }
+          })
+        : await prisma.contactUnlock.create({ data: { userId: null, providerId, paid: true } });
+      return {
+        contactUnlockId: unlock.id,
+        status: "unlocked",
+        free: true,
+        message: "You've unlocked this as an early-access bonus feature - enjoy it while it lasts!"
+      };
+    }
+
     if (!phone) {
       throw new AppError({ message: "A phone number is required to pay by mobile money", statusCode: 400, code: "PHONE_REQUIRED" });
     }
