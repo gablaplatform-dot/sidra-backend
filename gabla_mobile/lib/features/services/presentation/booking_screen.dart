@@ -398,20 +398,17 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   }
 
   Widget _apptHeader() {
-    final canPop = Navigator.of(context).canPop();
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
       child: Row(
         children: [
           SizedBox(
             width: 40,
-            child: canPop
-                ? _circleIcon(
-                    Icons.arrow_back_ios_new_rounded,
-                    () => Navigator.of(context).maybePop(),
-                    tooltip: 'Back',
-                  )
-                : null,
+            child: _circleIcon(
+              Icons.arrow_back_ios_new_rounded,
+              () => context.canPop() ? context.pop() : context.go('/home'),
+              tooltip: 'Back',
+            ),
           ),
           Expanded(
             child: Center(

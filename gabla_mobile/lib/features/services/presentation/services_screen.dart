@@ -186,6 +186,26 @@ class _Hero extends StatelessWidget {
         children: [
           Row(
             children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: Material(
+                  color: c.onPrimary.withValues(alpha: .18),
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () =>
+                        context.canPop() ? context.pop() : context.go('/home'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(7),
+                      child: Icon(
+                        Icons.arrow_back_rounded,
+                        size: 18,
+                        color: c.onPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               Icon(Icons.auto_awesome, size: 16, color: c.onPrimary.withValues(alpha: .85)),
               const SizedBox(width: 6),
               Text(

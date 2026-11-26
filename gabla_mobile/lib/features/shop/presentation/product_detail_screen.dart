@@ -460,7 +460,7 @@ class _ServiceDetailBodyState extends ConsumerState<_ServiceDetailBody> {
                 children: [
                   _circleIcon(
                     Icons.arrow_back_rounded,
-                    () => Navigator.of(context).maybePop(),
+                    () => context.canPop() ? context.pop() : context.go('/home'),
                     tooltip: 'Back',
                   ),
                   const Spacer(),

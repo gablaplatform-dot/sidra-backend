@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/font_group.dart';
 import '../../../core/theme/style_tokens.dart';
@@ -107,20 +108,18 @@ class _ProviderBookingsScreenState
   }
 
   Widget _header() {
-    final canPop = Navigator.of(context).canPop();
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
       child: Row(
         children: [
           SizedBox(
             width: 40,
-            child: canPop
-                ? _roundIconButton(
-                    icon: Icons.arrow_back_ios_new_rounded,
-                    tooltip: 'Back',
-                    onTap: () => Navigator.of(context).maybePop(),
-                  )
-                : null,
+            child: _roundIconButton(
+              icon: Icons.arrow_back_ios_new_rounded,
+              tooltip: 'Back',
+              onTap: () =>
+                  context.canPop() ? context.pop() : context.go('/home'),
+            ),
           ),
           Expanded(
             child: Center(
