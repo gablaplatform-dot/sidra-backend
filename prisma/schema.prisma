@@ -515,6 +515,11 @@ model ServiceBooking {
   payBy         DateTime?
   paidAt        DateTime?
   transactionId String?
+  // "Remind me 1 hour before" (gabla_mobile booking screen): set to startAt minus the reminder
+  // lead time when the guest opts in; the maintenance sweep clears reminderSentAt once it fires so
+  // it only ever sends once.
+  remindAt       DateTime?
+  reminderSentAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

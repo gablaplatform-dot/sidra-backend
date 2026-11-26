@@ -3,12 +3,15 @@ import { sendMail } from "../emails/mailer.js";
 import { orderApprovedForBuyer, orderNewForSeller, orderPaidForSeller, orderStatusForBuyer } from "../emails/templates.js";
 import { PushService } from "./push.service.js";
 
+// Keyed on the real `Order.status` values (matches STATUS_COPY/STATUS_ALIAS in
+// src/emails/templates.js) - these must stay in sync with the email copy's keys, or the push
+// silently never fires for whatever's missing.
 const STATUS_PUSH_BODY = {
   accepted: "Your order was accepted by the seller.",
-  on_the_way: "Your order is on its way.",
-  delivered: "Your order has been delivered.",
-  declined: "Your order was declined.",
-  cancelled: "Your order was cancelled."
+  delivering: (pickup) => pickup ? "Your order is ready for pickup." : "Your order is on its way.",
+  fulfilled: "Your order has been delivered.",
+  rejected: "Your order was declined.",
+  canceled: "Your order was cancelled."
 };
 
 // Best-effort emails (and, alongside each, a push) around an order. Failures here must never
@@ -70,11 +73,13 @@ export class OrderNotificationService {
   // Every change the seller makes to an order is pushed/mailed to the buyer: accepted, on its way, delivered, declined, cancelled.
   async notifyBuyerOrderStatus({ orderId, status }) {
     const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true, provider: true, user: { select: { id: true, email: true } } } });
-    if (order?.user?.id && STATUS_PUSH_BODY[status]) {
+    const pushBody = STATUS_PUSH_BODY[status];
+    if (order?.user?.id && pushBody) {
+      const pickup = order.fulfillment?.method === "pickup";
       this.pushService.sendToUser({
         userId: order.user.id,
         title: "Order update",
-        body: STATUS_PUSH_BODY[status],
+        body: typeof pushBody === "function" ? pushBody(pickup) : pushBody,
         data: { type: "order", orderId, status }
       });
     }

@@ -5,6 +5,7 @@ import { AppError } from "../utils/AppError.js";
 import { flagRefundDue } from "../utils/refunds.js";
 import { sendMail } from "../emails/mailer.js";
 import { bookingEmail } from "../emails/templates.js";
+import { PushService } from "./push.service.js";
 import { addDaysToDateString, eatDateString, eatTimeString, eatToUtc, isDateString, isTimeString, todayEat, weekdayOf } from "../utils/busTime.js";
 
 const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
@@ -82,10 +83,11 @@ export const normalizeServiceItems = (input) => {
 };
 
 export class ServiceBookingService {
-  constructor({ emailService } = {}) {
+  constructor({ emailService, pushService = new PushService() } = {}) {
     // Overridable so tests can capture what would have been sent, instead of always hitting the
     // real Resend API (which silently no-ops without an API key - the production default).
     this.email = emailService ?? sendMail;
+    this.pushService = pushService;
   }
 
   // ----- availability -------------------------------------------------------------------------
@@ -95,6 +97,20 @@ export class ServiceBookingService {
     await prisma.serviceBooking.updateMany({ where: { status: "pending", expiresAt: { lt: now } }, data: { status: "expired" } });
     // A confirmed booking that asked for payment but wasn't paid in time frees its dates.
     await prisma.serviceBooking.updateMany({ where: { status: "confirmed", paymentStatus: "payable", payBy: { lt: now } }, data: { status: "expired", paymentStatus: "none" } });
+  }
+
+  // "Remind me 1 hour before" (maintenance sweep, see src/jobs/maintenance.js): a confirmed
+  // booking whose remindAt has arrived gets pushed/emailed exactly once.
+  async sendDueReminders() {
+    const due = await prisma.serviceBooking.findMany({
+      where: { status: "confirmed", remindAt: { lte: new Date() }, reminderSentAt: null },
+      select: { id: true },
+      take: 100
+    });
+    for (const { id } of due) {
+      await prisma.serviceBooking.update({ where: { id }, data: { reminderSentAt: new Date() } });
+      await this._notify("reminder", id).catch(() => {});
+    }
   }
 
   async _listing(listingId) {
@@ -330,7 +346,9 @@ export class ServiceBookingService {
           respondedAt: instant ? new Date() : null,
           amountDue,
           paymentStatus,
-          payBy: paymentStatus === "payable" ? new Date(Date.now() + config.payWithinHours * HOUR_MS) : null
+          payBy: paymentStatus === "payable" ? new Date(Date.now() + config.payWithinHours * HOUR_MS) : null,
+          // "Remind me 1 hour before" - only worth storing if that moment is still ahead of us.
+          remindAt: input.reminder && interval.startAt.getTime() - HOUR_MS > Date.now() ? new Date(interval.startAt.getTime() - HOUR_MS) : null
         }
       });
     });
@@ -344,7 +362,7 @@ export class ServiceBookingService {
       where: { id },
       include: {
         listing: { select: { id: true, name: true, media: true, price: true, booking: true } },
-        provider: { select: { id: true, businessName: true, contact: true, location: true, district: true, user: { select: { email: true } } } },
+        provider: { select: { id: true, businessName: true, contact: true, location: true, district: true, user: { select: { id: true, email: true } } } },
         user: { select: { id: true, email: true } }
       }
     });
@@ -423,7 +441,8 @@ export class ServiceBookingService {
       where: { id },
       data: { status: rule.to, providerNote: cleanNote, respondedAt: new Date(), ...extra, ...(action === "cancel" ? { cancelledBy: "provider" } : {}) }
     });
-    if (action !== "complete") this._notify(action === "accept" ? "confirmed" : action === "decline" ? "declined" : "cancelled_by_provider", id).catch(() => {});
+    const event = { accept: "confirmed", decline: "declined", cancel: "cancelled_by_provider", complete: "completed" }[action];
+    this._notify(event, id).catch(() => {});
     return this.toDto(await this._load(id), { viewer: "provider" });
   }
 
@@ -539,8 +558,32 @@ export class ServiceBookingService {
       paid: [["provider", providerEmail], ["customer", customerEmail]],
       declined: [["customer", customerEmail]],
       cancelled_by_provider: [["customer", customerEmail]],
-      cancelled_by_customer: [["provider", providerEmail]]
+      cancelled_by_customer: [["provider", providerEmail]],
+      completed: [["customer", customerEmail]],
+      reminder: [["customer", customerEmail]]
     }[event] || [];
     for (const [audience, to] of jobs) await this._send({ to, email: bookingEmail({ event, to: audience, ctx }) });
+
+    const providerUserId = b.provider?.user?.id;
+    const customerUserId = b.user?.id;
+    const pushJobs = {
+      created: [
+        { userId: providerUserId, title: "New booking", body: b.status === "confirmed" ? "A guest booked and it was confirmed automatically." : "You have a new booking request to review." },
+        { userId: customerUserId, title: b.status === "confirmed" ? "Booking confirmed" : "Request sent", body: b.status === "confirmed" ? "Your booking is confirmed." : "Your request was sent to the provider." }
+      ],
+      confirmed: [{ userId: customerUserId, title: "Booking confirmed", body: "The provider accepted your booking." }],
+      paid: [
+        { userId: providerUserId, title: "Booking paid", body: "The guest paid for their booking." },
+        { userId: customerUserId, title: "Payment received", body: "We received your payment." }
+      ],
+      declined: [{ userId: customerUserId, title: "Booking declined", body: "Sorry, the provider couldn't take this booking." }],
+      cancelled_by_provider: [{ userId: customerUserId, title: "Booking cancelled", body: "The provider had to cancel this booking." }],
+      cancelled_by_customer: [{ userId: providerUserId, title: "Booking cancelled", body: "The guest cancelled this booking." }],
+      completed: [{ userId: customerUserId, title: "Booking complete", body: "Hope it went well! Thanks for using Gabla." }],
+      reminder: [{ userId: customerUserId, title: "Upcoming booking", body: `${b.listingName} starts in about an hour.` }]
+    }[event] || [];
+    for (const { userId, title, body } of pushJobs) {
+      if (userId) this.pushService.sendToUser({ userId, title, body, data: { type: "booking", bookingId: id, status: b.status } });
+    }
   }
 }

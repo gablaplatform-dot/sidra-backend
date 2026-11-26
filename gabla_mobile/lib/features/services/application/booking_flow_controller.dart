@@ -17,6 +17,7 @@ class BookingSubmission {
     this.email,
     this.notes,
     this.selectedItems = const [],
+    this.reminder = false,
   });
 
   final String listingId;
@@ -30,6 +31,7 @@ class BookingSubmission {
   final String phone;
   final String? email;
   final String? notes;
+  final bool reminder;
 
   /// Names of the listing's add-on `items` the customer picked (required
   /// items are force-included by the server regardless of this list).
@@ -66,6 +68,7 @@ class BookingFlowController extends AutoDisposeNotifier<AsyncValue<Booking?>> {
             email: input.email,
             notes: input.notes,
             selectedItems: input.selectedItems,
+            reminder: input.reminder,
           );
       if (_alive) {
         state = AsyncData(booking);
