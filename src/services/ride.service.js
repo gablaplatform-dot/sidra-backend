@@ -851,7 +851,7 @@ export class RideService {
     const [items, total] = await Promise.all([
       prisma.rideDriver.findMany({
         where,
-        include: { user: { select: { name: true, phone: true, email: true } } },
+        include: { user: { select: { name: true, phone: true, email: true, avatarUrl: true } } },
         orderBy: { createdAt: "desc" },
         skip: (normalizedPage - 1) * normalizedLimit,
         take: normalizedLimit
