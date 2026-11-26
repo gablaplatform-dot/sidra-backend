@@ -347,6 +347,8 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                           child: TextField(
                             controller: _search,
                             textInputAction: TextInputAction.search,
+                            style: TextStyle(color: c.onSurface),
+                            cursorColor: c.onSurface,
                             onChanged: (value) {
                               _debounce?.cancel();
                               if (_photoSelection != null) {
@@ -396,8 +398,9 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                               hintText: query == null
                                   ? 'Search or describe an item'
                                   : root?.name ?? 'Search products',
+                              hintStyle: TextStyle(color: c.onSurfaceVariant),
                               prefixIcon: query == null
-                                  ? const Icon(Icons.search)
+                                  ? Icon(Icons.search, color: c.onSurfaceVariant)
                                   : null,
                               suffixIcon: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -405,7 +408,11 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                   if (_search.text.isNotEmpty)
                                     IconButton(
                                       tooltip: 'Clear search',
-                                      icon: const Icon(Icons.close, size: 18),
+                                      icon: Icon(
+                                        Icons.close,
+                                        size: 18,
+                                        color: c.onSurfaceVariant,
+                                      ),
                                       onPressed: () {
                                         if (_query != null && _rootId == null) {
                                           _backToCategories();
@@ -424,9 +431,10 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                     onPressed: _openingPhotoSearch
                                         ? null
                                         : _openPhotoSearch,
-                                    icon: const Icon(
+                                    icon: Icon(
                                       Icons.image_search_outlined,
                                       size: 23,
+                                      color: c.onSurfaceVariant,
                                     ),
                                   ),
                                 ],
