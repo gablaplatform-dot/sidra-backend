@@ -988,6 +988,20 @@ model RideDriver {
   @@map("ride_drivers")
 }
 
+// The searchable catalog a driver picks a vehicle model from when applying. Admin seeds it;
+// a driver typing one that isn't listed yet adds it here too (flagged addedByDriver) so it's
+// searchable for the next driver and admin can review/clean it up later.
+model RideVehicleModel {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  isActive      Boolean  @default(true)
+  addedByDriver Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("ride_vehicle_models")
+}
+
 // Deliberately separate from the marketplace Wallet model (providerId-scoped) rather than
 // retrofitted onto it - driver payouts are a distinct ledger from seller payouts, and this keeps
 // the proven marketplace wallet code untouched.

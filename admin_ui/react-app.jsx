@@ -10813,6 +10813,11 @@ const RidesView = ({ token }) => {
   const [rejectReason, setRejectReason] = useState('');
   const [savingDriverId, setSavingDriverId] = useState('');
   const [savingVehicleType, setSavingVehicleType] = useState('');
+  const [vehicleModels, setVehicleModels] = useState([]);
+  const [vehicleModelsLoading, setVehicleModelsLoading] = useState(true);
+  const [vehicleModelSearch, setVehicleModelSearch] = useState('');
+  const [newVehicleModelName, setNewVehicleModelName] = useState('');
+  const [vehicleModelSaving, setVehicleModelSaving] = useState(false);
 
   const loadDrivers = async (status) => {
     setDriversLoading(true);
@@ -10865,14 +10870,77 @@ const RidesView = ({ token }) => {
     }
   };
 
+  const loadVehicleModels = async (q) => {
+    setVehicleModelsLoading(true);
+    try {
+      const qs = q ? `?q=${encodeURIComponent(q)}&limit=200` : '?limit=200';
+      const result = await apiRequest(`/rides/admin/vehicle-models${qs}`, { token });
+      setVehicleModels(result?.items || []);
+    } catch (e) {
+      setError(e.message || 'Unable to load vehicle models.');
+    } finally {
+      setVehicleModelsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!token) return;
     if (subTab === 'pending') loadDrivers('pending');
     else if (subTab === 'drivers') loadDrivers(driverStatusFilter);
     else if (subTab === 'trips') loadTrips(tripStatusFilter);
     else if (subTab === 'settings') loadSettings();
+    else if (subTab === 'vehicleModels') loadVehicleModels(vehicleModelSearch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, subTab, driverStatusFilter, tripStatusFilter]);
+
+  // Debounced search-as-you-type, same pattern as the other admin search boxes.
+  useEffect(() => {
+    if (subTab !== 'vehicleModels' || !token) return;
+    const timer = setTimeout(() => loadVehicleModels(vehicleModelSearch), 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vehicleModelSearch]);
+
+  const addVehicleModel = async () => {
+    const name = newVehicleModelName.trim();
+    if (!name) return;
+    setVehicleModelSaving(true);
+    setError('');
+    try {
+      await apiRequest('/rides/admin/vehicle-models', { token, method: 'POST', body: JSON.stringify({ name }) });
+      setNewVehicleModelName('');
+      loadVehicleModels(vehicleModelSearch);
+    } catch (e) {
+      setError(e.message || 'Unable to add this vehicle model.');
+    } finally {
+      setVehicleModelSaving(false);
+    }
+  };
+
+  const toggleVehicleModelActive = async (model) => {
+    setError('');
+    try {
+      await apiRequest(`/rides/admin/vehicle-models/${model.id}`, {
+        token,
+        method: 'PATCH',
+        body: JSON.stringify({ isActive: !model.isActive })
+      });
+      loadVehicleModels(vehicleModelSearch);
+    } catch (e) {
+      setError(e.message || 'Unable to update this vehicle model.');
+    }
+  };
+
+  const deleteVehicleModel = async (model) => {
+    if (!window.confirm(`Remove "${model.name}" from the vehicle model list?`)) return;
+    setError('');
+    try {
+      await apiRequest(`/rides/admin/vehicle-models/${model.id}`, { token, method: 'DELETE' });
+      loadVehicleModels(vehicleModelSearch);
+    } catch (e) {
+      setError(e.message || 'Unable to remove this vehicle model.');
+    }
+  };
 
   // The dispatch view should feel live without the admin needing to refresh.
   useEffect(() => {
@@ -10986,7 +11054,8 @@ const RidesView = ({ token }) => {
       { id: 'pending', label: 'Pending Drivers' },
       { id: 'drivers', label: 'All Drivers' },
       { id: 'trips', label: 'Live Trips' },
-      { id: 'settings', label: 'Fare Settings' }
+      { id: 'settings', label: 'Fare Settings' },
+      { id: 'vehicleModels', label: 'Vehicle Models' }
     ];
     return (
       <div className="flex items-center gap-2 bg-slate-50 border rounded-xl p-1 w-fit" style={{ borderColor: '#E2E8F0' }}>
@@ -11285,6 +11354,82 @@ const RidesView = ({ token }) => {
             {RIDE_VEHICLE_TYPES.map((vt) => <SettingsCard key={vt.value} vehicleType={vt.value} label={vt.label} icon={vt.icon} />)}
           </div>
         )
+      ) : null}
+
+      {subTab === 'vehicleModels' ? (
+        <div className="bg-white border rounded-2xl p-5" style={{ borderColor: '#E2E8F0' }}>
+          <p className="text-sm mb-4" style={{ color: '#64748B' }}>
+            The list a driver searches and picks from when applying. Anything a driver types that
+            isn't here yet gets added automatically, marked "Added by driver" below so you can
+            clean up typos or duplicates.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 mb-5">
+            <div className="flex-1 flex items-center gap-2 border rounded-lg px-3 py-2" style={{ borderColor: '#E2E8F0' }}>
+              <i className="ph ph-magnifying-glass" style={{ color: '#94A3B8' }}></i>
+              <input
+                value={vehicleModelSearch}
+                onChange={(e) => setVehicleModelSearch(e.target.value)}
+                placeholder="Search vehicle models…"
+                className="flex-1 text-sm outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2 border rounded-lg px-3 py-2" style={{ borderColor: '#E2E8F0' }}>
+              <input
+                value={newVehicleModelName}
+                onChange={(e) => setNewVehicleModelName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') addVehicleModel(); }}
+                placeholder="e.g. Toyota Corolla"
+                className="flex-1 text-sm outline-none"
+              />
+              <button
+                type="button"
+                disabled={vehicleModelSaving || !newVehicleModelName.trim()}
+                onClick={addVehicleModel}
+                className="text-sm font-bold px-3 py-1.5 rounded-lg text-white disabled:opacity-50"
+                style={{ backgroundColor: '#0B2046' }}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
+          {vehicleModelsLoading ? (
+            <div className="flex items-center justify-center py-16" style={{ color: '#94A3B8' }}><i className="ph ph-circle-notch animate-spin text-3xl"></i></div>
+          ) : vehicleModels.length === 0 ? (
+            <p className="text-sm text-center py-12" style={{ color: '#94A3B8' }}>No vehicle models yet.</p>
+          ) : (
+            <div className="divide-y" style={{ borderColor: '#E2E8F0' }}>
+              {vehicleModels.map((m) => (
+                <div key={m.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate" style={{ color: m.isActive ? '#0F172A' : '#94A3B8' }}>{m.name}</p>
+                    {m.addedByDriver ? (
+                      <p className="text-xs mt-0.5" style={{ color: '#B45309' }}>Added by driver</p>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => toggleVehicleModelActive(m)}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg border"
+                      style={{ borderColor: '#E2E8F0', color: m.isActive ? '#64748B' : '#15803D' }}
+                    >
+                      {m.isActive ? 'Hide' : 'Unhide'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteVehicleModel(m)}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg border"
+                      style={{ borderColor: '#FECDD3', color: '#9F1239' }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       ) : null}
 
       <ModalShell open={Boolean(photoModal)} onClose={() => setPhotoModal('')}>

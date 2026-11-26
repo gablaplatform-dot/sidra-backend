@@ -47,17 +47,16 @@ export class AuthService {
         }
       });
 
-      const obj = created;
+      const accessToken = this.signAccessToken({
+        payload: { sub: created.id, role: created.role },
+        secret: this.jwt.secret,
+        issuer: this.jwt.issuer,
+        ttlSeconds: this.jwt.accessTtlSeconds
+      });
+
       return {
-        user: {
-          id: obj.id,
-          name: obj.name,
-          email: obj.email,
-          role: obj.role,
-          phone: obj.phone,
-          createdAt: obj.createdAt,
-          updatedAt: obj.updatedAt
-        }
+        accessToken,
+        user: await this.userDto(created)
       };
     } catch (e) {
       if (uniqueError(e, "email")) {

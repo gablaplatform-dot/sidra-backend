@@ -931,6 +931,15 @@ CREATE TABLE IF NOT EXISTS ride_settings (
   updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS ride_vehicle_models (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL UNIQUE,
+  isActive BOOLEAN NOT NULL DEFAULT 1,
+  addedByDriver BOOLEAN NOT NULL DEFAULT 0,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS ride_drivers_isOnline_vehicleType_geohash6_idx ON ride_drivers(isOnline, vehicleType, geohash6);
 CREATE INDEX IF NOT EXISTS ride_drivers_isOnline_vehicleType_geohash5_idx ON ride_drivers(isOnline, vehicleType, geohash5);
 CREATE INDEX IF NOT EXISTS ride_drivers_moderationStatus_createdAt_idx ON ride_drivers(moderationStatus, createdAt);

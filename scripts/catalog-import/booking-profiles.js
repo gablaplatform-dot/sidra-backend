@@ -13,9 +13,11 @@ export const BOOKING_PROFILES = {
       { name: 'Materials sourcing', price: null, required: false }
     ]
   },
+  // A one-off visit by a single tradesperson - no rooms/spaces or guest count to choose, just a
+  // date and a start time, like Health care/Veterinary below.
   'Service providers': {
     bookingMode: 'request',
-    booking: { unit: 'hour', responseHours: 24, leadTimeHours: 4 },
+    booking: { unit: 'appointment', slotMinutes: 60, responseHours: 24, leadTimeHours: 4 },
     items: [
       { name: 'Call-out fee', price: 15000, required: true },
       { name: 'Materials (if needed)', price: null, required: false }
@@ -23,7 +25,7 @@ export const BOOKING_PROFILES = {
   },
   'IT and Technology': {
     bookingMode: 'request',
-    booking: { unit: 'hour', responseHours: 12, leadTimeHours: 2 },
+    booking: { unit: 'appointment', slotMinutes: 60, responseHours: 12, leadTimeHours: 2 },
     items: [
       { name: 'Remote support session', price: null, required: false },
       { name: 'On-site visit', price: 30000, required: false }
@@ -39,7 +41,7 @@ export const BOOKING_PROFILES = {
   },
   'Legal consultancy services': {
     bookingMode: 'request',
-    booking: { unit: 'hour', responseHours: 24, leadTimeHours: 24 },
+    booking: { unit: 'appointment', slotMinutes: 60, responseHours: 24, leadTimeHours: 24 },
     items: [
       { name: 'Document review', price: 50000, required: false },
       { name: 'Follow-up consultation', price: null, required: false }
@@ -47,7 +49,7 @@ export const BOOKING_PROFILES = {
   },
   'Jobs': {
     bookingMode: 'request',
-    booking: { unit: 'hour', responseHours: 48 },
+    booking: { unit: 'appointment', slotMinutes: 30, responseHours: 48 },
     items: [{ name: 'Candidate shortlist call', price: null, required: false }]
   },
   'Drivers': {
@@ -94,7 +96,7 @@ export const BOOKING_PROFILES = {
   },
   'Venue': {
     bookingMode: 'request',
-    booking: { unit: 'day', responseHours: 48, advanceDays: 180, depositPercent: 50, cancellation: 'strict' },
+    booking: { unit: 'day', capacity: 100, responseHours: 48, advanceDays: 180, depositPercent: 50, cancellation: 'strict' },
     items: [
       { name: 'Decoration package', price: 150000, required: false },
       { name: 'Catering coordination', price: null, required: false }

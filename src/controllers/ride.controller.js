@@ -3,6 +3,19 @@ export class RideController {
     this.rideService = rideService;
   }
 
+  listNearbyDrivers = async (req, res, next) => {
+    try {
+      const result = await this.rideService.listNearbyDrivers({
+        vehicleType: req.query.vehicleType,
+        lat: Number(req.query.lat),
+        lng: Number(req.query.lng)
+      });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   estimateFare = async (req, res, next) => {
     try {
       const result = await this.rideService.estimateFare({
@@ -182,6 +195,51 @@ export class RideController {
     try {
       const result = await this.rideService.adminUpsertRideSettings(req.body);
       res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  listVehicleModels = async (req, res, next) => {
+    try {
+      const result = await this.rideService.listVehicleModels(req.query);
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  adminListVehicleModels = async (req, res, next) => {
+    try {
+      const result = await this.rideService.adminListVehicleModels(req.query);
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  adminCreateVehicleModel = async (req, res, next) => {
+    try {
+      const result = await this.rideService.adminCreateVehicleModel(req.body);
+      res.status(201).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  adminUpdateVehicleModel = async (req, res, next) => {
+    try {
+      const result = await this.rideService.adminUpdateVehicleModel({ id: req.params.modelId, ...req.body });
+      res.status(200).json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  adminDeleteVehicleModel = async (req, res, next) => {
+    try {
+      await this.rideService.adminDeleteVehicleModel({ id: req.params.modelId });
+      res.status(204).send();
     } catch (e) {
       next(e);
     }

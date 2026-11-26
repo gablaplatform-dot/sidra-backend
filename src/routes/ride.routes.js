@@ -30,6 +30,21 @@ export const buildRideRoutes = ({ rideController }) => {
     rideController.estimateFare
   );
 
+  // The rider's "choose your driver" screen - everyone nearby, available right now.
+  router.get(
+    "/nearby-drivers",
+    requireAuth(anyAccount),
+    validate(
+      Joi.object({
+        vehicleType: vehicleType.required(),
+        lat: Joi.number().min(-90).max(90).required(),
+        lng: Joi.number().min(-180).max(180).required()
+      }),
+      "query"
+    ),
+    rideController.listNearbyDrivers
+  );
+
   // --- Driver ---
   router.post(
     "/drivers/register",
@@ -80,6 +95,14 @@ export const buildRideRoutes = ({ rideController }) => {
   router.get("/drivers/me/trips", requireAuth([Roles.DRIVER]), rideController.listMyTripsAsDriver);
   router.get("/drivers/me/wallet", requireAuth([Roles.DRIVER]), rideController.getMyRideWallet);
 
+  // Searchable catalog a driver picks a vehicle model from when applying/updating their profile.
+  router.get(
+    "/vehicle-models",
+    requireAuth(anyAccount),
+    validate(Joi.object({ q: Joi.string().trim().max(120).allow("").optional() }), "query"),
+    rideController.listVehicleModels
+  );
+
   // --- Rider ---
   router.post(
     "/trips",
@@ -90,7 +113,8 @@ export const buildRideRoutes = ({ rideController }) => {
         pickup: point.required(),
         dropoff: point.required(),
         paymentMethod: Joi.string().valid("cash", "mobile_money").optional(),
-        phone: Joi.string().trim().min(6).max(20).optional()
+        phone: Joi.string().trim().min(6).max(20).optional(),
+        preferredDriverId: id.optional()
       })
     ),
     rideController.requestTrip
@@ -184,6 +208,40 @@ export const buildRideRoutes = ({ rideController }) => {
       })
     ),
     rideController.adminUpsertRideSettings
+  );
+  router.get(
+    "/admin/vehicle-models",
+    requireAuth([Roles.ADMIN]), requirePermission("rides"),
+    validate(
+      Joi.object({
+        q: Joi.string().trim().max(120).allow("").optional(),
+        page: Joi.number().integer().min(1).optional(),
+        limit: Joi.number().integer().min(1).max(200).optional()
+      }),
+      "query"
+    ),
+    rideController.adminListVehicleModels
+  );
+  router.post(
+    "/admin/vehicle-models",
+    requireAuth([Roles.ADMIN]), requirePermission("rides"),
+    validate(Joi.object({ name: Joi.string().trim().min(1).max(120).required() })),
+    rideController.adminCreateVehicleModel
+  );
+  router.patch(
+    "/admin/vehicle-models/:modelId",
+    requireAuth([Roles.ADMIN]), requirePermission("rides"),
+    validate(Joi.object({ modelId: id.required() }), "params"),
+    validate(
+      Joi.object({ name: Joi.string().trim().min(1).max(120).optional(), isActive: Joi.boolean().optional() }).min(1)
+    ),
+    rideController.adminUpdateVehicleModel
+  );
+  router.delete(
+    "/admin/vehicle-models/:modelId",
+    requireAuth([Roles.ADMIN]), requirePermission("rides"),
+    validate(Joi.object({ modelId: id.required() }), "params"),
+    rideController.adminDeleteVehicleModel
   );
 
   return router;

@@ -442,18 +442,35 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                             labelText: 'Price unit',
                           ),
                           items: [
-                            for (final u in ['night', 'day', 'hour'])
+                            for (final u in [
+                              'night',
+                              'day',
+                              'hour',
+                              'appointment',
+                            ])
                               DropdownMenuItem(value: u, child: Text(u)),
                           ],
                           onChanged: (v) =>
                               setState(() => _booking['unit'] = v),
                         ),
+                        if (_booking['unit'] == 'appointment')
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8),
+                            child: Text(
+                              'Appointments are a single fixed slot - customers '
+                              'pick a date and start time, with no rooms/spaces '
+                              'or guest count to set.',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
                         for (final entry in {
                           'advanceDays': 'Days ahead bookable',
-                          'minUnits': 'Minimum duration',
-                          'maxUnits': 'Maximum duration',
-                          'inventory': 'Rooms / spaces',
-                          'capacity': 'Guests per room / space',
+                          if (_booking['unit'] != 'appointment') ...{
+                            'minUnits': 'Minimum duration',
+                            'maxUnits': 'Maximum duration',
+                            'inventory': 'Rooms / spaces',
+                            'capacity': 'Guests per room / space',
+                          },
                           'leadTimeHours': 'Advance notice (hours)',
                           'responseHours': 'Response window (hours)',
                           'payWithinHours': 'Payment window (hours)',
