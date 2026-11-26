@@ -91,7 +91,19 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               p.items.where((it) => it.required).map((it) => it.name),
             );
           }
-          if (flow.valueOrNull != null) return _confirmation(flow.valueOrNull!);
+          if (flow.valueOrNull != null) {
+            final confirmation = _confirmation(flow.valueOrNull!);
+            return isAppointment
+                ? SafeArea(
+                    child: Column(
+                      children: [
+                        _apptHeader(),
+                        Expanded(child: confirmation),
+                      ],
+                    ),
+                  )
+                : confirmation;
+          }
           if (!p.bookable || p.booking == null)
             return CommerceEmpty(
               title: 'Arrange this with the provider',
