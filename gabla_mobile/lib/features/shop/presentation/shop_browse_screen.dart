@@ -61,6 +61,7 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
   final _resultsScroll = ScrollController();
   bool _uriRead = false;
   bool _list = false;
+  bool _searchOpen = false;
   String? _notice;
   @override
   void initState() {
@@ -98,6 +99,7 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
       page: int.tryParse(p['page'] ?? '') ?? 1,
     );
     _search.text = _query.q;
+    _searchOpen = _query.q.isNotEmpty;
     _restore();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (p['near'] == '1') _loadNear();
@@ -277,6 +279,46 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
     }
     if (!mounted || result == null) return;
     _change(result);
+  }
+
+  /// A compact round icon button - search, filters and sort used to each sit
+  /// behind a labelled control (a full-width field, a "Filters" button, a
+  /// sort chip), which ate a few rows of vertical space even when nothing
+  /// was active. Collapsed to icons; tapping search "sketches out" into the
+  /// real field via the [AnimatedSize] around it in [build].
+  Widget _iconAction({
+    required IconData icon,
+    required String tooltip,
+    VoidCallback? onTap,
+    int? badge,
+  }) {
+    final c = Theme.of(context).colorScheme;
+    final button = Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: c.surfaceContainerHigh,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, size: 19, color: c.onSurface),
+    );
+    final child = onTap == null
+        ? button
+        : Material(
+            type: MaterialType.transparency,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              child: button,
+            ),
+          );
+    return Tooltip(
+      message: tooltip,
+      child: badge == null
+          ? child
+          : Badge(label: Text('$badge'), child: child),
+    );
   }
 
   @override
@@ -484,86 +526,119 @@ class _ShopBrowseScreenState extends ConsumerState<ShopBrowseScreen> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 20),
-                    TextField(
-                      controller: _search,
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: 'Search this collection',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: IconButton(
-                          tooltip: 'Search',
-                          icon: const Icon(Icons.arrow_forward),
-                          onPressed: () {
-                            _change(_query.copyWith(q: _search.text));
-                            trackCommerce(ref, {
-                              'type': 'search',
-                              'query': _search.text.trim(),
-                            });
-                          },
-                        ),
-                      ),
-                      onSubmitted: (v) {
-                        _change(_query.copyWith(q: v));
-                        if (v.trim().isNotEmpty)
-                          trackCommerce(ref, {
-                            'type': 'search',
-                            'query': v.trim(),
-                          });
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        FilledButton.tonalIcon(
-                          onPressed: _filters,
-                          icon: const Icon(Icons.tune, size: 18),
-                          label: Text(
-                            'Filters${filterCount > 0 ? ' · $filterCount' : ''}',
-                          ),
-                        ),
-                        PopupMenuButton<String>(
-                          tooltip: 'Sort listings',
-                          initialValue: _query.sort,
-                          onSelected: (s) => _change(_query.copyWith(sort: s)),
-                          itemBuilder: (_) => [
-                            for (final entry in shopSortLabels.entries)
-                              PopupMenuItem(
-                                value: entry.key,
-                                child: Text(entry.value),
-                              ),
-                          ],
-                          child: Chip(
-                            avatar: const Icon(Icons.swap_vert, size: 17),
-                            label: Text(shopSortLabels[_query.sort] ?? 'Sort'),
-                          ),
-                        ),
-                        SegmentedButton<bool>(
-                          showSelectedIcon: false,
-                          segments: const [
-                            ButtonSegment(
-                              value: false,
-                              icon: Icon(Icons.grid_view, size: 18),
-                              tooltip: 'Grid view',
+                    const SizedBox(height: 16),
+                    AnimatedSize(
+                      duration: MediaQuery.disableAnimationsOf(context)
+                          ? Duration.zero
+                          : const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      alignment: Alignment.topCenter,
+                      child: _searchOpen
+                          ? Row(
+                              key: const ValueKey('search-open'),
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _search,
+                                    autofocus: _search.text.isEmpty,
+                                    textInputAction: TextInputAction.search,
+                                    decoration: InputDecoration(
+                                      hintText: 'Search this collection',
+                                      prefixIcon: const Icon(Icons.search),
+                                      suffixIcon: IconButton(
+                                        tooltip: 'Close search',
+                                        icon: const Icon(Icons.close),
+                                        onPressed: () {
+                                          _search.clear();
+                                          setState(() => _searchOpen = false);
+                                          if (_query.q.isNotEmpty) {
+                                            _change(_query.copyWith(q: ''));
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    onSubmitted: (v) {
+                                      _change(_query.copyWith(q: v));
+                                      if (v.trim().isNotEmpty) {
+                                        trackCommerce(ref, {
+                                          'type': 'search',
+                                          'query': v.trim(),
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Row(
+                              key: const ValueKey('search-closed'),
+                              children: [
+                                _iconAction(
+                                  icon: Icons.search,
+                                  tooltip: 'Search this collection',
+                                  onTap: () =>
+                                      setState(() => _searchOpen = true),
+                                ),
+                                const SizedBox(width: 10),
+                                _iconAction(
+                                  icon: Icons.tune,
+                                  tooltip: 'Filters',
+                                  onTap: _filters,
+                                  badge: filterCount > 0 ? filterCount : null,
+                                ),
+                                const SizedBox(width: 10),
+                                PopupMenuButton<String>(
+                                  tooltip: 'Sort listings',
+                                  initialValue: _query.sort,
+                                  onSelected: (s) =>
+                                      _change(_query.copyWith(sort: s)),
+                                  itemBuilder: (_) => [
+                                    for (final entry in shopSortLabels.entries)
+                                      PopupMenuItem(
+                                        value: entry.key,
+                                        child: Text(entry.value),
+                                      ),
+                                  ],
+                                  child: _iconAction(
+                                    icon: Icons.swap_vert,
+                                    tooltip: 'Sort: ${shopSortLabels[_query.sort] ?? 'Sort'}',
+                                  ),
+                                ),
+                                const Spacer(),
+                                SegmentedButton<bool>(
+                                  showSelectedIcon: false,
+                                  style: const ButtonStyle(
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                  segments: const [
+                                    ButtonSegment(
+                                      value: false,
+                                      icon: Icon(Icons.grid_view, size: 18),
+                                      tooltip: 'Grid view',
+                                    ),
+                                    ButtonSegment(
+                                      value: true,
+                                      icon: Icon(
+                                        Icons.view_agenda_outlined,
+                                        size: 18,
+                                      ),
+                                      tooltip: 'List view',
+                                    ),
+                                  ],
+                                  selected: {_list},
+                                  onSelectionChanged: (selection) async {
+                                    final list = selection.single;
+                                    setState(() => _list = list);
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
+                                    await prefs.setBool(
+                                      'gabla_shop_list',
+                                      list,
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
-                            ButtonSegment(
-                              value: true,
-                              icon: Icon(Icons.view_agenda_outlined, size: 18),
-                              tooltip: 'List view',
-                            ),
-                          ],
-                          selected: {_list},
-                          onSelectionChanged: (selection) async {
-                            final list = selection.single;
-                            setState(() => _list = list);
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.setBool('gabla_shop_list', list);
-                          },
-                        ),
-                      ],
                     ),
                     if (_query.activeCount > 0 ||
                         _query.q.isNotEmpty ||
