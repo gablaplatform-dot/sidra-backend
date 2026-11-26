@@ -63,9 +63,16 @@ const tripDto = (trip) => ({
 // The compact driver shape shown to a rider (never the driver's own full profile/PII).
 const driverSummary = async (driver) => {
   if (!driver) return null;
-  const completedTripsCount = await prisma.rideTrip.count({ where: { driverId: driver.id, status: "completed" } });
+  // Callers pass a RideDriver fetched different ways - some already include `user`, some don't
+  // (see getDriverForUser) - so this looks it up itself rather than silently returning no name.
+  const [completedTripsCount, user] = await Promise.all([
+    prisma.rideTrip.count({ where: { driverId: driver.id, status: "completed" } }),
+    driver.user ?? prisma.user.findUnique({ where: { id: driver.userId }, select: { name: true, avatarUrl: true } })
+  ]);
   return {
     id: driver.id,
+    name: user?.name ?? null,
+    avatarUrl: user?.avatarUrl ?? null,
     vehicleModel: driver.vehicleModel,
     licensePlate: driver.licensePlate,
     lat: driver.lat,
@@ -82,6 +89,7 @@ const driverDto = (driver) => ({
   userName: driver.user?.name ?? null,
   userPhone: driver.user?.phone ?? null,
   userEmail: driver.user?.email ?? null,
+  userAvatarUrl: driver.user?.avatarUrl ?? null,
   vehicleType: driver.vehicleType,
   vehicleModel: driver.vehicleModel,
   licensePlate: driver.licensePlate,
@@ -98,6 +106,15 @@ const driverDto = (driver) => ({
   contact: driver.contact,
   createdAt: driver.createdAt,
   updatedAt: driver.updatedAt
+});
+
+const vehicleModelDto = (m) => ({
+  id: m.id,
+  name: m.name,
+  isActive: m.isActive,
+  addedByDriver: m.addedByDriver,
+  createdAt: m.createdAt,
+  updatedAt: m.updatedAt
 });
 
 export class RideService {
@@ -148,11 +165,25 @@ export class RideService {
   }
 
   async getDriverForUser(userId) {
-    const driver = await prisma.rideDriver.findUnique({ where: { userId } });
+    const driver = await prisma.rideDriver.findUnique({
+      where: { userId },
+      include: { user: { select: { name: true, phone: true, email: true, avatarUrl: true } } }
+    });
     if (!driver) {
       throw new AppError({ message: "Driver profile not found", statusCode: 404, code: "DRIVER_NOT_FOUND" });
     }
     return driver;
+  }
+
+  // A driver typing a model that isn't in the catalog yet adds it here (flagged addedByDriver)
+  // so it's searchable for the next driver, instead of rejecting the submission outright.
+  async ensureVehicleModel(name) {
+    const trimmed = String(name ?? "").trim();
+    if (!trimmed) return;
+    const existing = await prisma.rideVehicleModel.findUnique({ where: { name: trimmed } });
+    if (!existing) {
+      await prisma.rideVehicleModel.create({ data: { name: trimmed, addedByDriver: true } });
+    }
   }
 
   async getRideSettings(vehicleType, session) {
@@ -175,6 +206,7 @@ export class RideService {
     if (existing) {
       throw new AppError({ message: "You already have a driver profile", statusCode: 409, code: "DRIVER_ALREADY_EXISTS" });
     }
+    if (vehicleModel) await this.ensureVehicleModel(vehicleModel);
 
     const created = await prisma.$transaction(async (tx) => {
       const driver = await tx.rideDriver.create({
@@ -213,7 +245,10 @@ export class RideService {
   async updateMyDriverProfile({ actorUserId, updates }) {
     const driver = await this.getDriverForUser(actorUserId);
     const data = {};
-    if (updates.vehicleModel !== undefined) data.vehicleModel = updates.vehicleModel;
+    if (updates.vehicleModel !== undefined) {
+      data.vehicleModel = updates.vehicleModel;
+      if (updates.vehicleModel) await this.ensureVehicleModel(updates.vehicleModel);
+    }
     if (updates.licensePlate !== undefined) data.licensePlate = updates.licensePlate;
     if (updates.contact !== undefined) data.contact = updates.contact ?? {};
     if (updates.vehicleType !== undefined) {
@@ -261,14 +296,11 @@ export class RideService {
 
   // --- Matching ------------------------------------------------------------------
 
-  // Never compares against every driver: queries only the geohash cells around the pickup
-  // point (an indexed lookup), computes exact distance for just that small candidate set, and
-  // only widens to a coarser grid if the fine one comes up empty. See src/utils/geohash.js.
-  async findNearestDriver({ lat, lng, vehicleType, excludeDriverIds = [] }) {
-    // A driver already on an active trip must never be handed a second one, or they'd end up
-    // double-booked with two riders expecting the same physical vehicle at once. A "matched"
-    // trip the rider hasn't confirmed yet doesn't count - otherwise an abandoned, unconfirmed
-    // match would tie up a driver indefinitely.
+  // A driver already on an active trip must never be handed a second one, or they'd end up
+  // double-booked with two riders expecting the same physical vehicle at once. A "matched"
+  // trip the rider hasn't confirmed yet doesn't count - otherwise an abandoned, unconfirmed
+  // match would tie up a driver indefinitely.
+  async _busyDriverIds() {
     const busyDrivers = await prisma.rideTrip.findMany({
       where: {
         driverId: { not: null },
@@ -280,7 +312,14 @@ export class RideService {
       select: { driverId: true },
       distinct: ["driverId"]
     });
-    const excludeIds = [...new Set([...excludeDriverIds, ...busyDrivers.map((t) => t.driverId)])];
+    return busyDrivers.map((t) => t.driverId);
+  }
+
+  // Never compares against every driver: queries only the geohash cells around the pickup
+  // point (an indexed lookup), computes exact distance for just that small candidate set, and
+  // only widens to a coarser grid if the fine one comes up empty. See src/utils/geohash.js.
+  async findNearestDriver({ lat, lng, vehicleType, excludeDriverIds = [] }) {
+    const excludeIds = [...new Set([...excludeDriverIds, ...(await this._busyDriverIds())])];
 
     const tryPrecision = async (precision) => {
       const cells = geohashSearchCells(lat, lng, precision);
@@ -313,6 +352,50 @@ export class RideService {
     };
 
     return (await tryPrecision(GEOHASH_PRECISION_FINE)) ?? (await tryPrecision(GEOHASH_PRECISION_COARSE));
+  }
+
+  // The full list behind the rider's "choose your driver" screen - same candidate search as
+  // findNearestDriver, but returns everyone nearby (sorted, capped) instead of just the closest,
+  // with the name/photo/vehicle/plate the rider needs to pick one.
+  async listNearbyDrivers({ lat, lng, vehicleType }) {
+    this.assertVehicleType(vehicleType);
+    const excludeIds = await this._busyDriverIds();
+
+    const tryPrecision = async (precision) => {
+      const cells = geohashSearchCells(lat, lng, precision);
+      const geohashField = precision === GEOHASH_PRECISION_FINE ? "geohash6" : "geohash5";
+      return prisma.rideDriver.findMany({
+        where: {
+          isOnline: true,
+          vehicleType,
+          isApproved: true,
+          moderationStatus: "approved",
+          [geohashField]: { in: cells },
+          id: excludeIds.length ? { notIn: excludeIds } : undefined,
+          lat: { not: null },
+          lng: { not: null }
+        },
+        include: { user: { select: { name: true, avatarUrl: true } } },
+        take: 50
+      });
+    };
+
+    const fine = await tryPrecision(GEOHASH_PRECISION_FINE);
+    const candidates = fine.length ? fine : await tryPrecision(GEOHASH_PRECISION_COARSE);
+
+    const withDistance = candidates.map((d) => ({
+      id: d.id,
+      name: d.user?.name ?? null,
+      avatarUrl: d.user?.avatarUrl ?? null,
+      vehicleModel: d.vehicleModel,
+      licensePlate: d.licensePlate,
+      ratingAvg: d.ratingAvg,
+      lat: d.lat,
+      lng: d.lng,
+      distanceKm: haversineDistanceKm(lat, lng, d.lat, d.lng)
+    }));
+    withDistance.sort((a, b) => a.distanceKm - b.distanceKm);
+    return { items: withDistance.slice(0, 20) };
   }
 
   // --- Fare estimation -------------------------------------------------------------
@@ -366,7 +449,7 @@ export class RideService {
 
   // --- Trip lifecycle -------------------------------------------------------------
 
-  async requestTrip({ actorUserId, vehicleType, pickup, dropoff, paymentMethod = "cash", phone }) {
+  async requestTrip({ actorUserId, vehicleType, pickup, dropoff, paymentMethod = "cash", phone, preferredDriverId }) {
     this.assertVehicleType(vehicleType);
     if (!["cash", "mobile_money"].includes(paymentMethod)) {
       throw new AppError({ message: "Invalid payment method", statusCode: 400, code: "INVALID_PAYMENT_METHOD" });
@@ -388,7 +471,34 @@ export class RideService {
     }
 
     const estimate = await this.estimateFare({ vehicleType, pickup, dropoff });
-    const match = await this.findNearestDriver({ lat: pickup.lat, lng: pickup.lng, vehicleType });
+
+    let match;
+    if (preferredDriverId) {
+      // The rider picked a specific driver off the nearby-drivers list - honor that pick rather
+      // than silently handing them someone else, but re-check it's still a live option (could
+      // have gone offline, or - unlike the auto-match path, where two riders landing on the same
+      // unconfirmed driver is a rare, self-resolving race - a popular driver being hand-picked by
+      // several riders at once is the common case here, so an existing unconfirmed match against
+      // them also counts as busy, not just a confirmed/active one).
+      const alreadyOffered = await prisma.rideTrip.findFirst({
+        where: { driverId: preferredDriverId, status: { in: ["searching", "matched", "arrived", "in_progress"] } }
+      });
+      const picked = alreadyOffered
+        ? null
+        : await prisma.rideDriver.findFirst({
+            where: { id: preferredDriverId, vehicleType, isOnline: true, isApproved: true, moderationStatus: "approved" }
+          });
+      if (!picked) {
+        throw new AppError({
+          message: "That driver is no longer available. Please pick another.",
+          statusCode: 409,
+          code: "DRIVER_UNAVAILABLE"
+        });
+      }
+      match = { driver: picked, distanceKm: haversineDistanceKm(pickup.lat, pickup.lng, picked.lat, picked.lng) };
+    } else {
+      match = await this.findNearestDriver({ lat: pickup.lat, lng: pickup.lng, vehicleType });
+    }
 
     const trip = await prisma.rideTrip.create({
       data: {
@@ -785,5 +895,83 @@ export class RideService {
       create: { vehicleType, ...data }
     });
     return updated;
+  }
+
+  // --- Vehicle model catalog -------------------------------------------------------
+
+  // Searchable by the driver app's model picker - only the active catalog, newest first.
+  async listVehicleModels({ q } = {}) {
+    const query = String(q ?? "").trim();
+    const items = await prisma.rideVehicleModel.findMany({
+      where: {
+        isActive: true,
+        ...(query ? { name: { contains: query } } : {})
+      },
+      orderBy: { name: "asc" },
+      take: 50
+    });
+    return { items: items.map(vehicleModelDto) };
+  }
+
+  async adminListVehicleModels({ q, page = 1, limit = 50 } = {}) {
+    const normalizedPage = Math.max(1, Number(page) || 1);
+    const normalizedLimit = Math.min(200, Math.max(1, Number(limit) || 50));
+    const query = String(q ?? "").trim();
+    const where = query ? { name: { contains: query } } : {};
+    const [items, total] = await Promise.all([
+      prisma.rideVehicleModel.findMany({
+        where,
+        orderBy: { name: "asc" },
+        skip: (normalizedPage - 1) * normalizedLimit,
+        take: normalizedLimit
+      }),
+      prisma.rideVehicleModel.count({ where })
+    ]);
+    return { items: items.map(vehicleModelDto), page: normalizedPage, limit: normalizedLimit, total };
+  }
+
+  async adminCreateVehicleModel({ name }) {
+    const trimmed = String(name ?? "").trim();
+    if (!trimmed) {
+      throw new AppError({ message: "Name is required", statusCode: 400, code: "NAME_REQUIRED" });
+    }
+    try {
+      const created = await prisma.rideVehicleModel.create({ data: { name: trimmed } });
+      return vehicleModelDto(created);
+    } catch (e) {
+      if (e?.code === "P2002") {
+        throw new AppError({ message: "This vehicle model already exists", statusCode: 409, code: "VEHICLE_MODEL_EXISTS" });
+      }
+      throw e;
+    }
+  }
+
+  async adminUpdateVehicleModel({ id, name, isActive }) {
+    const data = {};
+    if (name !== undefined) data.name = String(name).trim();
+    if (isActive !== undefined) data.isActive = Boolean(isActive);
+    try {
+      const updated = await prisma.rideVehicleModel.update({ where: { id }, data });
+      return vehicleModelDto(updated);
+    } catch (e) {
+      if (e?.code === "P2002") {
+        throw new AppError({ message: "This vehicle model already exists", statusCode: 409, code: "VEHICLE_MODEL_EXISTS" });
+      }
+      if (e?.code === "P2025") {
+        throw new AppError({ message: "Vehicle model not found", statusCode: 404, code: "VEHICLE_MODEL_NOT_FOUND" });
+      }
+      throw e;
+    }
+  }
+
+  async adminDeleteVehicleModel({ id }) {
+    try {
+      await prisma.rideVehicleModel.delete({ where: { id } });
+    } catch (e) {
+      if (e?.code === "P2025") {
+        throw new AppError({ message: "Vehicle model not found", statusCode: 404, code: "VEHICLE_MODEL_NOT_FOUND" });
+      }
+      throw e;
+    }
   }
 }
