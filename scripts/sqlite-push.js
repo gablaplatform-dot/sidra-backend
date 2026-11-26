@@ -1240,7 +1240,9 @@ const ensureColumn = (table, column, definition) => {
   ["service_products", "booking", "JSONB NOT NULL DEFAULT '{}'"],
   ["ai_settings", "moderateServices", "BOOLEAN NOT NULL DEFAULT 1"],
   ["promotions", "videoUrl", "TEXT"],
-  ["promotions", "moderationStatus", "TEXT NOT NULL DEFAULT 'approved'"]
+  ["promotions", "moderationStatus", "TEXT NOT NULL DEFAULT 'approved'"],
+  ["service_bookings", "remindAt", "DATETIME"],
+  ["service_bookings", "reminderSentAt", "DATETIME"]
 ].forEach(([table, column, definition]) => ensureColumn(table, column, definition));
 
 // These indexes have to be created after the ensureColumn pass above, since on a database

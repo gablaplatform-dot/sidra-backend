@@ -9,21 +9,33 @@ import {
 import { busBookingUpdate } from "../emails/busBookingUpdate.js";
 import { sendMail } from "../emails/mailer.js";
 import { centsToDecimal, parseMoneyToCents } from "../utils/money.js";
+import { PushService } from "./push.service.js";
 
 const fail = (message, code = "BUS_INVALID", statusCode = 409) =>
   new AppError({ message, code, statusCode });
+
+// Push copy per BusNotification.kind - mirrors the email sent alongside it (busBookingUpdate).
+const PUSH_BY_KIND = {
+  ticket: { title: "Ticket confirmed", body: "Your bus ticket is confirmed - it's in your email too." },
+  cancelled: { title: "Booking cancelled", body: "Your bus booking was cancelled." },
+  refund_due: { title: "Refund pending", body: "Your bus booking was cancelled and a refund is being processed." },
+  locked: { title: "Booking locked in", body: "The cancellation window has closed for your upcoming trip." },
+};
+
 export class BusManagementService {
   constructor({
     catalogService,
     operatorService,
     bookingService,
     mail = sendMail,
+    pushService = new PushService(),
   }) {
     Object.assign(this, {
       catalogService,
       operatorService,
       bookingService,
       mail,
+      pushService,
     });
   }
   async createCompany(input) {
@@ -408,6 +420,12 @@ export class BusManagementService {
         });
         if (!result?.sent)
           throw new Error(result?.deliveryStatus || "delivery_failed");
+        const push = PUSH_BY_KIND[j.kind];
+        if (push && b.user?.id) {
+          this.pushService
+            .sendToUser({ userId: b.user.id, title: push.title, body: push.body, data: { type: "bus_booking", bookingId: b.id, kind: j.kind } })
+            .catch((e) => process.stderr.write(`[push] bus notify failed: ${e?.message ?? e}\n`));
+        }
         await prisma.busNotification.update({
           where: { id: j.id },
           data: {

@@ -151,6 +151,15 @@ export class RideService {
     }
   }
 
+  // Fire-and-forget push to either party on a trip - never awaited by callers, any failure stays
+  // contained here (same contract as _notifyDriverOffered).
+  _notifyTripUser(userId, title, body, data = {}) {
+    if (!userId) return;
+    this.pushService
+      .sendToUser({ userId, title, body, data })
+      .catch((e) => process.stderr.write(`[push] ride trip notify failed: ${e?.message ?? e}\n`));
+  }
+
   mobileMoneyCallbackUrls() {
     return {
       successUrl: `${env.apiBaseUrl}/api/v1/payments/webhooks/mobilemoney/success?k=${webhookKey()}`,
@@ -722,6 +731,11 @@ export class RideService {
 
     const timestampField = { arrived: "arrivedAt", in_progress: "startedAt" }[status];
     const updated = await prisma.rideTrip.update({ where: { id: tripId }, data: { status, [timestampField]: new Date() } });
+    if (status === "arrived") {
+      this._notifyTripUser(updated.riderId, "Driver has arrived", "Your driver is waiting at the pickup point.", { type: "ride_status", tripId, status });
+    } else if (status === "in_progress") {
+      this._notifyTripUser(updated.riderId, "Trip started", "Your trip is now in progress.", { type: "ride_status", tripId, status });
+    }
     return tripDto(updated);
   }
 
@@ -743,6 +757,7 @@ export class RideService {
         where: { id: trip.id },
         data: { status: "completed", completedAt: new Date(), finalFare, platformFee, driverEarning, paymentStatus: "succeeded" }
       });
+      this._notifyTripUser(updated.riderId, "Trip complete", `Your ride is done - UGX ${finalFare} paid in cash.`, { type: "ride_completed", tripId: trip.id });
       return tripDto(updated);
     }
 
@@ -786,6 +801,7 @@ export class RideService {
       throw gatewayError;
     }
 
+    this._notifyTripUser(trip.riderId, "Trip complete", `Your ride is done - we're charging UGX ${finalFare} to your mobile money.`, { type: "ride_completed", tripId: trip.id });
     const updated = await prisma.rideTrip.findUnique({ where: { id: trip.id } });
     return tripDto(updated);
   }
@@ -813,6 +829,11 @@ export class RideService {
         cancelReason: reason ?? null
       }
     });
+    if (isRider) {
+      this._notifyTripUser(driver?.userId, "Trip cancelled", "The rider cancelled this trip.", { type: "ride_cancelled", tripId });
+    } else {
+      this._notifyTripUser(updated.riderId, "Trip cancelled", "Your driver had to cancel this trip.", { type: "ride_cancelled", tripId });
+    }
     return tripDto(updated);
   }
 

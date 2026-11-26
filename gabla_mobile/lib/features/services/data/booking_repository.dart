@@ -56,6 +56,7 @@ class BookingRepository {
     String? email,
     String? notes,
     List<String> selectedItems = const [],
+    bool reminder = false,
   }) async {
     final data = await _client.post<Map<String, dynamic>>(
       '/bookings',
@@ -68,6 +69,7 @@ class BookingRepository {
         'quantity': quantity,
         'guests': guests,
         if (selectedItems.isNotEmpty) 'items': selectedItems,
+        'reminder': reminder,
         'customer': {
           'name': name,
           'phone': phone,

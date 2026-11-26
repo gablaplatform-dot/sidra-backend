@@ -12,6 +12,7 @@ export const runMaintenance = async ({ serviceBookingService, eventTicketsServic
     data: { status: "failed" }
   });
   await serviceBookingService?._expireStale();
+  await serviceBookingService?.sendDueReminders();
   await eventTicketsService?.retryConfirmations();
   await busManagementService?.maintenance();
 };

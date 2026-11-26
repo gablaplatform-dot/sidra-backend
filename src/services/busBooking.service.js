@@ -14,6 +14,7 @@ import {
   parseMoneyToCents,
 } from "../utils/money.js";
 import { makeBookingReference, makeTicketNumber } from "../utils/busIds.js";
+import { PushService } from "./push.service.js";
 import {
   addDaysToDateString,
   eatDateString,
@@ -60,6 +61,7 @@ export class BusBookingService {
     catalogService,
     operatorService,
     callbackUrls,
+    pushService = new PushService(),
   }) {
     this.mobileMoneyService = mobileMoneyService;
     this.emailService = emailService;
@@ -67,6 +69,7 @@ export class BusBookingService {
     this.catalogService = catalogService;
     this.operatorService = operatorService;
     this.callbackUrls = callbackUrls;
+    this.pushService = pushService;
   }
 
   // ------------------------------------------------------------------ availability
@@ -761,10 +764,21 @@ export class BusBookingService {
       where: { id: booking.id },
       data: { status: "confirmed", confirmedAt: new Date() },
     });
-    await tx.busOperator.update({
+    const operator = await tx.busOperator.update({
       where: { id: booking.operatorId },
       data: { walletBalance: { increment: transaction.netAmount } },
+      select: { userId: true },
     });
+    if (operator.userId) {
+      this.pushService
+        .sendToUser({
+          userId: operator.userId,
+          title: "New bus booking",
+          body: `${booking.passengerName} booked ${booking.seatCount} seat${booking.seatCount === 1 ? "" : "s"}.`,
+          data: { type: "bus_booking", bookingId: booking.id },
+        })
+        .catch((e) => process.stderr.write(`[push] bus operator new-booking notify failed: ${e?.message ?? e}\n`));
+    }
     if (Number(transaction.fee) > 0)
       await walletService.creditBalance({
         providerId: null,

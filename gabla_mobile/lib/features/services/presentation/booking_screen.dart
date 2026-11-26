@@ -141,6 +141,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             phone: user?.phone ?? '',
             email: user?.email,
             selectedItems: _addOns.toList(),
+            reminder: _reminder,
           ),
         );
   }
