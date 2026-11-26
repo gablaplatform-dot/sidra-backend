@@ -3,6 +3,7 @@ import '../../ride/domain/ride_location.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/network/network_providers.dart';
 import '../../../core/utils/money.dart';
@@ -83,11 +84,50 @@ class ProviderContactPanel extends ConsumerWidget {
             : null;
         if (locked) {
           final fee = double.tryParse(p['contactFee']?.toString() ?? '') ?? 0;
+          final isFree = p['contactUnlockFree'] == true;
           return _ContactPass(
             providerName: p['businessName']?.toString(),
             fee: fee,
+            isFree: isFree,
             style: commerceStyle(ref),
             onUnlock: () async {
+              // While the contact-fee feature is off (or has no price set), unlocking is free -
+              // still a real tap-to-unlock step, so people are used to it before it ever charges,
+              // but with no payment sheet since there's nothing to pay.
+              if (isFree) {
+                try {
+                  final result = await ref
+                      .read(apiClientProvider)
+                      .post<Map<String, dynamic>>(
+                        '/payments/contacts/unlock',
+                        body: {'providerId': providerId},
+                      );
+                  final unlockId = result['contactUnlockId']?.toString();
+                  if (unlockId != null) {
+                    await const FlutterSecureStorage().write(
+                      key: 'gabla_unlock_$providerId',
+                      value: unlockId,
+                    );
+                  }
+                  if (context.mounted) {
+                    ref.invalidate(providerDetailProvider(providerId));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          result['message']?.toString() ??
+                              "You've unlocked this as an early-access bonus feature!",
+                        ),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted)
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Could not unlock: $e')),
+                    );
+                }
+                return;
+              }
               final success = await showCommercePayment(
                 context,
                 endpoint: '/payments/contacts/unlock',
@@ -180,12 +220,14 @@ class _ContactPass extends StatelessWidget {
   const _ContactPass({
     required this.providerName,
     required this.fee,
+    required this.isFree,
     required this.style,
     required this.onUnlock,
   });
 
   final String? providerName;
   final double fee;
+  final bool isFree;
   final AppThemeStyle style;
   final VoidCallback onUnlock;
 
@@ -234,7 +276,7 @@ class _ContactPass extends StatelessWidget {
         child: Icon(Icons.lock_outline, color: ink),
       ),
     );
-    final price = formatUgx(fee);
+    final price = isFree ? 'Free' : formatUgx(fee);
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -267,7 +309,9 @@ class _ContactPass extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
             children: [
               Text(
-                'See the seller’s available contact details and exact location.',
+                isFree
+                    ? "See the seller’s available contact details and exact location - free for now, as an early-access bonus feature."
+                    : 'See the seller’s available contact details and exact location.',
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 10),
@@ -301,11 +345,15 @@ class _ContactPass extends StatelessWidget {
                 spacing: 12,
                 runSpacing: 8,
                 children: [
-                  Text('One-time fee', style: theme.textTheme.labelMedium),
+                  Text(
+                    isFree ? 'Unlock fee' : 'One-time fee',
+                    style: theme.textTheme.labelMedium,
+                  ),
                   Text(
                     price,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
+                      color: isFree ? c.primary : null,
                     ),
                   ),
                 ],
@@ -314,7 +362,7 @@ class _ContactPass extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onUnlock,
                 icon: const Icon(Icons.lock_open_outlined, size: 18),
-                label: const Text('Continue to payment'),
+                label: Text(isFree ? 'Unlock' : 'Continue to payment'),
               ),
             ],
           ),

@@ -189,6 +189,13 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                                 ),
                                 icon: const Icon(Icons.phone_outlined),
                                 label: const Text('Call provider'),
+                              )
+                            else if (b.contactLocked && b.providerId != null)
+                              TextButton.icon(
+                                onPressed: () =>
+                                    context.push('/provider/${b.providerId}'),
+                                icon: const Icon(Icons.lock_outline),
+                                label: const Text('Unlock provider contact'),
                               ),
                             if (b.canPay)
                               Padding(

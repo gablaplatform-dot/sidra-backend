@@ -640,10 +640,9 @@ export class ProviderService {
           ? [{ createdAt: "desc" }]
           : [{ createdAt: "desc" }];
 
-    const [fetched, total, globalSettings] = await Promise.all([
+    const [fetched, total] = await Promise.all([
       prisma.provider.findMany({ where, orderBy, skip, take: normalizedLimit }),
-      prisma.provider.count({ where }),
-      this.paymentService.getSettings()
+      prisma.provider.count({ where })
     ]);
     // Providers that named the chosen country or culture come before those that serve everyone (stable within each group).
     let items = fetched;
@@ -654,15 +653,12 @@ export class ProviderService {
 
     return {
       items: items.map((p) => ({
-        ...(() => {
-          const effective = this.paymentService.computeEffectiveForProvider({ global: globalSettings, provider: p });
-          const contactLocked = Boolean(effective.enableContactFee);
-          return {
-            contact: contactLocked ? this.redactContact(p.contact) : p.contact,
-            location: contactLocked ? this.redactLocation(p.location) : p.location,
-            contactLocked
-          };
-        })(),
+        // This is an anonymous bulk listing - there's no viewer to resolve "already unlocked"
+        // against, so it always shows locked; the real per-viewer unlock check happens on the
+        // provider-detail screen via getProviderContactForUser/getUnlockedContactByProof.
+        contact: this.redactContact(p.contact),
+        location: this.redactLocation(p.location),
+        contactLocked: true,
         id: p.id,
         businessName: p.businessName,
         description: p.description,
@@ -697,8 +693,13 @@ export class ProviderService {
       throw new AppError({ message: "Provider not found", statusCode: 404, code: "PROVIDER_NOT_FOUND" });
     }
 
-    const effective = includeUnapproved ? null : await this.getEffectiveSettingsForProvider(provider);
-    const contactLocked = Boolean(effective?.enableContactFee);
+    const effective = await this.getEffectiveSettingsForProvider(provider);
+    // Always locked for a customer viewing someone else's profile - even with the contact-fee
+    // feature off, tapping "unlock" is just free (see PaymentService#unlockContact) rather than
+    // skipping the interaction, so people are used to it before it ever actually charges them.
+    // `includeUnapproved` is the provider/admin's own view of this profile, which is never locked.
+    const contactLocked = !includeUnapproved;
+    const contactUnlockFree = !(effective.enableContactFee && Number(effective.contactFee) > 0);
 
     // What the buyer gets by unlocking, without revealing it: which channels exist, and how many people
     // have already paid to unlock this provider.
@@ -719,7 +720,8 @@ export class ProviderService {
       location: contactLocked ? this.redactLocation(provider.location) : provider.location,
       contact: contactLocked ? this.redactContact(provider.contact) : provider.contact,
       contactLocked,
-      contactFee: effective ? (effective.contactFee?.toString?.() ?? "0.00") : null,
+      contactUnlockFree,
+      contactFee: effective.contactFee?.toString?.() ?? "0.00",
       contactAvailable: {
         phone: Boolean(rawContact.phone),
         whatsapp: Boolean(rawContact.whatsapp),
@@ -754,10 +756,9 @@ export class ProviderService {
     }
 
     const effective = await this.getEffectiveSettingsForProvider(provider);
-    if (!effective.enableContactFee) {
-      return { providerId: provider.id, unlocked: true, contact: provider.contact, location: provider.location };
-    }
-
+    // Unlocking is always a required, explicit step now - see PaymentService#unlockContact,
+    // which grants it for free when the contact-fee feature (or its price) is off, instead of
+    // this bypassing the interaction entirely.
     const unlocked = await prisma.contactUnlock.findUnique({
       where: { userId_providerId: { userId: actorUserId, providerId } }
     });
@@ -766,7 +767,7 @@ export class ProviderService {
         message: "Contact is locked",
         statusCode: 403,
         code: "CONTACT_LOCKED",
-        details: { providerId: provider.id, fee: effective.contactFee?.toString?.() ?? "0.00" }
+        details: { providerId: provider.id, fee: effective.contactFee?.toString?.() ?? "0.00", free: !(effective.enableContactFee && Number(effective.contactFee) > 0) }
       });
     }
 

@@ -68,8 +68,10 @@ class Booking {
     required this.guests,
     required this.total,
     this.providerName,
+    this.providerId,
     this.listing,
     this.contact,
+    this.contactLocked = false,
     this.paymentStatus,
     this.amountDue,
     this.amountPaid,
@@ -98,12 +100,14 @@ class Booking {
     guests: (json['guests'] as num?)?.toInt() ?? 1,
     total: asDouble(json['total']),
     providerName: (json['provider'] as Map?)?['businessName'] as String?,
+    providerId: (json['provider'] as Map?)?['id'] as String?,
     listing: json['listing'] != null
         ? BookingListingRef.fromJson(json['listing'] as Map<String, dynamic>)
         : null,
     contact: json['contact'] != null
         ? BookingContact.fromJson(json['contact'] as Map<String, dynamic>)
         : null,
+    contactLocked: json['contactLocked'] as bool? ?? false,
     paymentStatus: json['paymentStatus'] as String?,
     amountDue: asNum(json['amountDue'])?.toDouble(),
     amountPaid: asNum(json['amountPaid'])?.toDouble(),
@@ -138,8 +142,10 @@ class Booking {
   final int guests;
   final double total;
   final String? providerName;
+  final String? providerId;
   final BookingListingRef? listing;
   final BookingContact? contact;
+  final bool contactLocked;
   final String? paymentStatus;
   final double? amountDue;
   final double? amountPaid;
